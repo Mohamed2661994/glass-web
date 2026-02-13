@@ -8,6 +8,13 @@ import api from "@/services/api";
 import { ProductCard } from "@/components/product-card";
 import { ProductCardSkeleton } from "@/components/product-card-skeleton";
 import { ProductFormDialog } from "@/components/product-form-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 interface Product {
   id: number;
@@ -32,9 +39,15 @@ export default function ProductsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
+  // Barcode print modal
+  const [barcodePrintProduct, setBarcodePrintProduct] =
+    useState<Product | null>(null);
+  const [barcodePrintCount, setBarcodePrintCount] = useState("1");
+  const [showBarcodePrintModal, setShowBarcodePrintModal] = useState(false);
+
   // Pagination
   const [page, setPage] = useState(1);
-  const limit = 10;
+  const limit = 15;
 
   useEffect(() => {
     fetchProducts();
@@ -53,9 +66,13 @@ export default function ProductsPage() {
   };
 
   // فلترة
-  const filteredProducts = allProducts.filter((product) =>
-    product.name.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filteredProducts = allProducts.filter((product) => {
+    const q = search.toLowerCase();
+    return (
+      product.name.toLowerCase().includes(q) ||
+      (product.barcode && product.barcode.toLowerCase().includes(q))
+    );
+  });
 
   // حساب الصفحات
   const totalPages = Math.ceil(filteredProducts.length / limit);
@@ -122,7 +139,7 @@ export default function ProductsPage() {
       <Card>
         <CardContent className="p-4">
           <Input
-            placeholder="ابحث عن منتج..."
+            placeholder="ابحث باسم المنتج أو الباركود..."
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -134,8 +151,8 @@ export default function ProductsPage() {
 
       {/* Content */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 10 }).map((_, i) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 max-w-6xl mx-auto">
+          {Array.from({ length: 15 }).map((_, i) => (
             <ProductCardSkeleton key={i} />
           ))}
         </div>
@@ -147,7 +164,7 @@ export default function ProductsPage() {
         </Card>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 max-w-6xl mx-auto">
             {currentProducts.map((product) => (
               <ProductCard
                 key={product.id}
@@ -156,6 +173,11 @@ export default function ProductsPage() {
                 onEdit={() => {
                   setSelectedProduct(product);
                   setDialogOpen(true);
+                }}
+                onPrintBarcode={(p) => {
+                  setBarcodePrintProduct(p);
+                  setBarcodePrintCount("1");
+                  setShowBarcodePrintModal(true);
                 }}
               />
             ))}
@@ -195,6 +217,53 @@ export default function ProductsPage() {
         product={selectedProduct || undefined}
         onSuccess={fetchProducts}
       />
+
+      {/* Barcode Print Modal */}
+      <Dialog
+        open={showBarcodePrintModal}
+        onOpenChange={setShowBarcodePrintModal}
+      >
+        <DialogContent dir="rtl" className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>طباعة باركود</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              {barcodePrintProduct?.name} — {barcodePrintProduct?.barcode}
+            </p>
+            <div className="space-y-2">
+              <Label>عدد النسخ</Label>
+              <Input
+                type="number"
+                min="1"
+                value={barcodePrintCount}
+                onChange={(e) => setBarcodePrintCount(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button
+                className="flex-1"
+                onClick={() => {
+                  const count = Number(barcodePrintCount) || 1;
+                  const url = `/products/${barcodePrintProduct?.id}/barcode?count=${count}`;
+                  window.open(url, "_blank");
+                  setShowBarcodePrintModal(false);
+                }}
+              >
+                طباعة
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowBarcodePrintModal(false)}
+              >
+                إلغاء
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

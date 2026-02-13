@@ -1,15 +1,19 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Sidebar } from "@/components/sidebar";
 import { MobileSidebar } from "@/components/mobile-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/app/context/auth-context";
+import { NotificationBell } from "@/components/notification-bell";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   const branchName =
     user?.branch_id === 1
@@ -26,40 +30,43 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* ===== HEADER FULL WIDTH ===== */}
-        <header className="h-16 border-b bg-background/80 backdrop-blur-md flex items-center justify-between px-6 shrink-0">
-          <div className="flex items-center gap-4">
-            <MobileSidebar />
-            <div>
-              <h1 className="text-lg font-semibold">Dashboard</h1>
-              <span className="text-xs text-muted-foreground">
-                {branchName}
-              </span>
-            </div>
-          </div>
+        <header className="h-16 border-b bg-background/80 relative">
+          <div className="absolute inset-0 backdrop-blur-md pointer-events-none" />
 
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-muted-foreground hidden md:block">
-              {user?.username}
+          <div className="relative flex items-center justify-between px-6 h-full">
+            {/* LEFT */}
+            <div className="flex items-center gap-3">
+              <MobileSidebar />
+              <div>
+                <h1 className="text-lg font-semibold">Dashboard</h1>
+                <span className="text-xs text-muted-foreground">
+                  {branchName}
+                </span>
+              </div>
             </div>
-            <ThemeToggle />
-            <Button variant="outline" size="sm" onClick={logout}>
-              تسجيل خروج
-            </Button>
+
+            {/* RIGHT */}
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-muted-foreground hidden md:block">
+                {user?.username}
+              </div>
+
+              {mounted && user?.id && user?.branch_id === 2 && (
+                <NotificationBell userId={user.id} branchId={user.branch_id} />
+              )}
+
+              <ThemeToggle />
+
+              <Button variant="outline" size="sm" onClick={logout}>
+                تسجيل خروج
+              </Button>
+            </div>
           </div>
         </header>
 
         {/* ===== CONTENT ONLY ===== */}
-        <main className="flex-1 overflow-auto py-6">
-          <div
-            className="w-full flex justify-center transition-all duration-300"
-            style={{
-              paddingInlineStart: sidebarOpen ? 240 : 50,
-              paddingInlineEnd: 50,
-            }}
-          >
-            {/* 👇 العرض الجديد (أريح بصريًا) */}
-            <div className="w-full max-w-[680px] px-4">{children}</div>
-          </div>
+        <main className="flex-1 overflow-auto scrollbar-hide py-6">
+          <div className="w-full px-4">{children}</div>
         </main>
       </div>
     </div>

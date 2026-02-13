@@ -16,13 +16,16 @@ import { toast } from "sonner";
 import { Eye, Pencil, Trash2, Printer } from "lucide-react";
 import axios from "@/services/api";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/context/auth-context";
 
 interface Invoice {
   id: number;
   invoice_type: "retail" | "wholesale";
   movement_type: "sale" | "purchase";
   customer_name: string;
+  subtotal: number;
   total: number;
+  previous_balance: number;
   paid_amount: number;
   remaining_amount: number;
   payment_status: "paid" | "partial" | "unpaid";
@@ -33,8 +36,10 @@ export default function InvoicesPage() {
   const [data, setData] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { user } = useAuth();
 
-  const [invoiceType, setInvoiceType] = useState<string>("all");
+  // branch_id 1 = retail, branch_id 2 = wholesale
+  const invoiceType = user?.branch_id === 1 ? "retail" : "wholesale";
   const [movementType, setMovementType] = useState<string>("all");
   const [search, setSearch] = useState("");
 
@@ -48,9 +53,9 @@ export default function InvoicesPage() {
       const params: any = {
         limit,
         offset: (page - 1) * limit,
+        invoice_type: invoiceType,
       };
 
-      if (invoiceType !== "all") params.invoice_type = invoiceType;
       if (movementType !== "all") params.movement_type = movementType;
       if (search) params.customer_name = search;
 
@@ -66,7 +71,7 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     fetchInvoices();
-  }, [page, invoiceType, movementType]);
+  }, [page, invoiceType, movementType, search]);
 
   const getStatusBadge = (status: string) => {
     if (status === "paid")
@@ -90,7 +95,9 @@ export default function InvoicesPage() {
 
   return (
     <div className="p-6 space-y-6" dir="rtl">
-      <h1 className="text-2xl font-bold">الفواتير</h1>
+      <h1 className="text-2xl font-bold">
+        فواتير {invoiceType === "retail" ? "القطاعي" : "الجملة"}
+      </h1>
 
       {/* Filters */}
       <Card>
@@ -98,21 +105,12 @@ export default function InvoicesPage() {
           <Input
             placeholder="بحث باسم العميل..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onBlur={() => fetchInvoices()}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             className="w-64"
           />
-
-          <Select value={invoiceType} onValueChange={setInvoiceType}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="نوع الفاتورة" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">الكل</SelectItem>
-              <SelectItem value="retail">قطاعي</SelectItem>
-              <SelectItem value="wholesale">جملة</SelectItem>
-            </SelectContent>
-          </Select>
 
           <Select value={movementType} onValueChange={setMovementType}>
             <SelectTrigger className="w-40">
@@ -134,11 +132,12 @@ export default function InvoicesPage() {
             <thead className="bg-muted">
               <tr>
                 <th className="p-3 text-right">رقم</th>
-                <th className="p-3 text-right">النوع</th>
                 <th className="p-3 text-right">الحركة</th>
                 <th className="p-3 text-right">العميل</th>
-                <th className="p-3 text-right">الإجمالي</th>
-                <th className="p-3 text-right">المتبقي</th>
+                <th className="p-3 text-right">إجمالي الأصناف</th>
+                <th className="p-3 text-right">حساب سابق</th>
+                <th className="p-3 text-right">المدفوع</th>
+                <th className="p-3 text-right">الباقي</th>
                 <th className="p-3 text-right">الحالة</th>
                 <th className="p-3 text-center">إجراءات</th>
               </tr>
@@ -146,13 +145,13 @@ export default function InvoicesPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="p-6 text-center">
+                  <td colSpan={9} className="p-6 text-center">
                     جاري التحميل...
                   </td>
                 </tr>
               ) : data.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-6 text-center">
+                  <td colSpan={9} className="p-6 text-center">
                     لا توجد فواتير
                   </td>
                 </tr>
@@ -161,13 +160,18 @@ export default function InvoicesPage() {
                   <tr key={invoice.id} className="border-b hover:bg-muted/50">
                     <td className="p-3">{invoice.id}</td>
                     <td className="p-3">
-                      {invoice.invoice_type === "retail" ? "قطاعي" : "جملة"}
-                    </td>
-                    <td className="p-3">
                       {invoice.movement_type === "sale" ? "بيع" : "شراء"}
                     </td>
                     <td className="p-3">{invoice.customer_name || "نقدي"}</td>
-                    <td className="p-3">{Number(invoice.total).toFixed(2)}</td>
+                    <td className="p-3">
+                      {Number(invoice.subtotal).toFixed(2)}
+                    </td>
+                    <td className="p-3">
+                      {Number(invoice.previous_balance || 0).toFixed(2)}
+                    </td>
+                    <td className="p-3">
+                      {Number(invoice.paid_amount).toFixed(2)}
+                    </td>
                     <td className="p-3">
                       {Number(invoice.remaining_amount).toFixed(2)}
                     </td>
@@ -183,7 +187,15 @@ export default function InvoicesPage() {
                         <Eye size={16} />
                       </Button>
 
-                      <Button size="icon" variant="outline">
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        onClick={() =>
+                          router.push(
+                            `/invoices/${invoice.id}/edit/${invoice.invoice_type}`,
+                          )
+                        }
+                      >
                         <Pencil size={16} />
                       </Button>
 

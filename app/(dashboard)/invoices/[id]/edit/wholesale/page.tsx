@@ -5,6 +5,7 @@
    ========================================================= */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import api from "@/services/api";
 import { Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -18,7 +19,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { PageContainer } from "@/components/layout/page-container";
 import {
   Dialog,
   DialogContent,
@@ -30,22 +30,22 @@ import {
    Main Component
    ========================================================= */
 
-export default function CreateWholesaleInvoicePage() {
+export default function EditWholesaleInvoicePage() {
+  const { id } = useParams();
+  const router = useRouter();
+  const [loadingInvoice, setLoadingInvoice] = useState(true);
+
   /* =========================================================
      1️⃣ Invoice Header States
      ========================================================= */
 
   const [movementType, setMovementType] = useState<"sale" | "purchase">("sale");
-  const [invoiceDate, setInvoiceDate] = useState(
-    new Date().toISOString().substring(0, 10),
-  );
+  const [invoiceDate, setInvoiceDate] = useState("");
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerId, setCustomerId] = useState<number | null>(null);
   const [previousBalance, setPreviousBalance] = useState("0");
-  const [savedInvoiceId, setSavedInvoiceId] = useState<number | null>(null);
-  const [showSavedModal, setShowSavedModal] = useState(false);
 
   /* =========================================================
      2️⃣ Customer Search States
@@ -79,9 +79,62 @@ export default function CreateWholesaleInvoicePage() {
 
   const [extraDiscount, setExtraDiscount] = useState("0");
   const [paidAmount, setPaidAmount] = useState("0");
+  const [applyItemsDiscount, setApplyItemsDiscount] = useState(false);
 
   /* =========================================================
-     5️⃣ Fetch Products From Backend
+     5️⃣ Fetch Invoice Data
+     ========================================================= */
+
+  useEffect(() => {
+    const fetchInvoice = async () => {
+      try {
+        setLoadingInvoice(true);
+        const res = await api.get(`/invoices/${id}/edit`);
+        const inv = res.data;
+
+        if (inv.invoice_type !== "wholesale") {
+          toast.error("هذه فاتورة قطاعي وليست جملة");
+          router.push("/invoices");
+          return;
+        }
+
+        setMovementType(inv.movement_type);
+        setInvoiceDate(
+          inv.invoice_date
+            ? new Date(inv.invoice_date).toISOString().substring(0, 10)
+            : "",
+        );
+        setCustomerName(inv.customer_name || "");
+        setCustomerPhone(inv.customer_phone || "");
+        setPreviousBalance(String(inv.previous_balance || 0));
+        setExtraDiscount(String(inv.extra_discount || 0));
+        setPaidAmount(String(inv.paid_amount || 0));
+        setApplyItemsDiscount(inv.apply_items_discount ?? false);
+
+        setItems(
+          (inv.items || []).map((item: any) => ({
+            product_id: item.product_id,
+            product_name: item.product_name,
+            manufacturer: item.manufacturer || "-",
+            package: item.package || "-",
+            price: item.price,
+            quantity: item.quantity,
+            discount: item.discount || 0,
+          })),
+        );
+      } catch {
+        toast.error("فشل تحميل بيانات الفاتورة");
+        router.push("/invoices");
+      } finally {
+        setLoadingInvoice(false);
+      }
+    };
+
+    if (id) fetchInvoice();
+  }, [id]);
+
+  /* =========================================================
+     6️⃣ Fetch Products From Backend
      ========================================================= */
 
   const fetchProducts = async () => {
@@ -109,7 +162,7 @@ export default function CreateWholesaleInvoicePage() {
   }, [movementType]);
 
   /* =========================================================
-     6️⃣ Customer Search By Name
+     7️⃣ Customer Search By Name
      ========================================================= */
 
   const nameTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -133,7 +186,7 @@ export default function CreateWholesaleInvoicePage() {
   };
 
   /* =========================================================
-     7️⃣ Customer Search By Phone
+     8️⃣ Customer Search By Phone
      ========================================================= */
 
   const searchCustomerByPhone = async (phone: string) => {
@@ -195,12 +248,12 @@ export default function CreateWholesaleInvoicePage() {
   }, []);
 
   /* =========================================================
-     8️⃣ Fetch Customer Balance
+     9️⃣ Fetch Customer Balance
      ========================================================= */
 
-  const fetchCustomerBalance = async (id: number) => {
+  const fetchCustomerBalance = async (cid: number) => {
     try {
-      const res = await api.get(`/customers/${id}/balance`, {
+      const res = await api.get(`/customers/${cid}/balance`, {
         params: { invoice_type: "wholesale" },
       });
 
@@ -211,7 +264,7 @@ export default function CreateWholesaleInvoicePage() {
   };
 
   /* =========================================================
-     9️⃣ Add Item To Invoice
+     🔟 Add Item To Invoice
      ========================================================= */
 
   const addItem = useCallback((product: any) => {
@@ -257,15 +310,15 @@ export default function CreateWholesaleInvoicePage() {
   }, [lastAddedId]);
 
   /* =========================================================
-     🔟 Remove Item
+     1️⃣1️⃣ Remove Item
      ========================================================= */
 
-  const removeItem = (id: number) => {
-    setItems(items.filter((i) => i.product_id !== id));
+  const removeItem = (pid: number) => {
+    setItems(items.filter((i) => i.product_id !== pid));
   };
 
   /* =========================================================
-     1️⃣1️⃣ Calculations
+     1️⃣2️⃣ Calculations
      ========================================================= */
 
   const totalBeforeDiscount = useMemo(() => {
@@ -288,10 +341,10 @@ export default function CreateWholesaleInvoicePage() {
   const remaining = totalWithPrevious - (Number(paidAmount) || 0);
 
   /* =========================================================
-     1️⃣2️⃣ Save Invoice
+     1️⃣3️⃣ Update Invoice
      ========================================================= */
 
-  const saveInvoice = async () => {
+  const updateInvoice = async () => {
     if (items.length === 0) {
       toast.error("لا يوجد أصناف");
       return;
@@ -303,32 +356,20 @@ export default function CreateWholesaleInvoicePage() {
     }
 
     try {
-      const res = await api.post("/invoices", {
-        invoice_type: "wholesale",
-        movement_type: movementType,
-        invoice_date: invoiceDate,
-        customer_id: customerId,
+      await api.put(`/invoices/${id}`, {
         customer_name: customerName,
         customer_phone: customerPhone || null,
-        manual_discount: extraDiscount,
+        manual_discount: Number(extraDiscount) || 0,
         items,
         paid_amount: Number(paidAmount) || 0,
         previous_balance: Number(previousBalance) || 0,
+        apply_items_discount: applyItemsDiscount,
       });
 
-      const newId = res.data?.id || res.data?.invoice_id;
-      setSavedInvoiceId(newId);
-      setShowSavedModal(true);
-
-      setItems([]);
-      setCustomerName("");
-      setCustomerPhone("");
-      setCustomerId(null);
-      setPreviousBalance("0");
-      setExtraDiscount("0");
-      setPaidAmount("0");
+      toast.success("تم تعديل الفاتورة بنجاح");
+      router.push("/invoices");
     } catch (err: any) {
-      toast.error(err.response?.data?.error || "فشل الحفظ");
+      toast.error(err.response?.data?.error || "فشل التعديل");
     }
   };
 
@@ -376,7 +417,6 @@ export default function CreateWholesaleInvoicePage() {
         e.preventDefault();
         if (filteredProducts.length > 0) {
           setFocusedIndex(0);
-          // Focus the first item in the list
           setTimeout(() => {
             const firstItem = listRef.current?.querySelector(
               "[data-product-index='0']",
@@ -422,19 +462,27 @@ export default function CreateWholesaleInvoicePage() {
   /* =========================================================
      JSX
      ========================================================= */
+
+  if (loadingInvoice) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <p className="text-muted-foreground">جاري تحميل الفاتورة...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto px-4" style={{ maxWidth: 950, width: "100%" }}>
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-center">إنشاء فاتورة جملة</h1>
+        <h1 className="text-2xl font-bold text-center">
+          تعديل فاتورة جملة #{id}
+        </h1>
 
         <Card className="p-6 space-y-6">
           <div className="space-y-6">
             <div>
               <label className="text-sm mb-2 block">نوع الحركة</label>
-              <Select
-                value={movementType}
-                onValueChange={(v: any) => setMovementType(v)}
-              >
+              <Select value={movementType} disabled>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -447,11 +495,7 @@ export default function CreateWholesaleInvoicePage() {
 
             <div>
               <label className="text-sm mb-2 block">التاريخ</label>
-              <Input
-                type="date"
-                value={invoiceDate}
-                onChange={(e) => setInvoiceDate(e.target.value)}
-              />
+              <Input type="date" value={invoiceDate} disabled />
             </div>
 
             <div className="relative" ref={nameDropdownRef}>
@@ -761,44 +805,11 @@ export default function CreateWholesaleInvoicePage() {
               <span />
             </div>
 
-            <Button onClick={saveInvoice} className="w-full" size="lg">
-              حفظ الفاتورة
+            <Button onClick={updateInvoice} className="w-full" size="lg">
+              تحديث الفاتورة
             </Button>
           </Card>
         )}
-
-        {/* ================= Product Modal ================= */}
-
-        {/* ===== مودل تم الحفظ ===== */}
-        <Dialog open={showSavedModal} onOpenChange={setShowSavedModal}>
-          <DialogContent dir="rtl" className="max-w-sm text-center">
-            <DialogHeader>
-              <DialogTitle>تم حفظ الفاتورة</DialogTitle>
-            </DialogHeader>
-            <p className="text-lg py-4">
-              تم حفظ الفاتورة برقم{" "}
-              <span className="font-bold text-primary">{savedInvoiceId}</span>
-            </p>
-            <div className="flex gap-3">
-              <Button
-                className="flex-1"
-                onClick={() => {
-                  window.open(`/invoices/${savedInvoiceId}/print`, "_blank");
-                  setShowSavedModal(false);
-                }}
-              >
-                طباعة
-              </Button>
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setShowSavedModal(false)}
-              >
-                إلغاء
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
 
         {/* ================= Product Modal ================= */}
         <Dialog open={showProductModal} onOpenChange={setShowProductModal}>

@@ -6,16 +6,28 @@ import { cn } from "@/lib/utils";
 interface PageContainerProps {
   children: ReactNode;
   className?: string;
+
+  /**
+   * sm  → فورمات صغيرة
+   * md  → فواتير / صفحات إدخال (المناسب لك)
+   * lg  → صفحات عادية
+   * xl  → داشبوردات كبيرة
+   * full → بدون قيود
+   */
   size?: "sm" | "md" | "lg" | "xl" | "full";
 }
 
+/* ================= WIDTH PRESETS ================= */
+
 const sizes = {
   sm: "max-w-[640px]",
-  md: "max-w-[760px]", // 👈 PERFECT للفواتير
+  md: "max-w-[780px]", // 👈 الأفضل للفواتير
   lg: "max-w-[980px]",
   xl: "max-w-[1200px]",
   full: "max-w-none",
 };
+
+/* ================= COMPONENT ================= */
 
 export function PageContainer({
   children,

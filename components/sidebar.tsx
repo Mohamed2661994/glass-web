@@ -8,21 +8,33 @@ import {
   FileText,
   PanelLeftClose,
   PanelLeftOpen,
+  ArrowLeftRight,
+  Truck,
+  CalendarDays,
+  Wallet,
+  List,
+  BookOpen,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface SidebarProps {
   onExpandChange?: (open: boolean) => void;
+  isMobile?: boolean;
+  onNavigate?: () => void;
 }
 
-export function Sidebar({ onExpandChange }: SidebarProps) {
+export function Sidebar({
+  onExpandChange,
+  isMobile,
+  onNavigate,
+}: SidebarProps) {
   const pathname = usePathname();
 
   const [pinned, setPinned] = useState(false);
   const [branchId, setBranchId] = useState<number | null>(null);
 
-  const open = pinned;
+  const open = isMobile ? true : pinned;
 
   useEffect(() => {
     onExpandChange?.(open);
@@ -44,6 +56,36 @@ export function Sidebar({ onExpandChange }: SidebarProps) {
             icon: FileText,
             href: "/invoices/create/retail",
           },
+          {
+            label: "إنشاء فاتورة جملة",
+            icon: FileText,
+            href: "/invoices/create/wholesale",
+          },
+          {
+            label: "صرف نقدي",
+            icon: Wallet,
+            href: "/cash/out",
+          },
+          {
+            label: "عرض المنصرف",
+            icon: List,
+            href: "/cash/out/list",
+          },
+          {
+            label: "وارد الخزنة",
+            icon: Wallet,
+            href: "/cash/in",
+          },
+          {
+            label: "عرض الوارد",
+            icon: List,
+            href: "/cash/in/list",
+          },
+          {
+            label: "اليومية",
+            icon: BookOpen,
+            href: "/cash/summary",
+          },
         ]
       : branchId === 2
         ? [
@@ -52,6 +94,21 @@ export function Sidebar({ onExpandChange }: SidebarProps) {
               icon: FileText,
               href: "/invoices/create/wholesale",
             },
+            {
+              label: "استبدال مصنع",
+              icon: ArrowLeftRight,
+              href: "/replace",
+            },
+            {
+              label: "تحويل للمعرض",
+              icon: Truck,
+              href: "/stock-transfer",
+            },
+            {
+              label: "تحويلات حسب التاريخ",
+              icon: CalendarDays,
+              href: "/transfers/by-date",
+            },
           ]
         : []),
   ];
@@ -59,7 +116,8 @@ export function Sidebar({ onExpandChange }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "hidden lg:flex h-screen flex-col border-l bg-background transition-all duration-300",
+        "h-screen flex-col border-l bg-background transition-all duration-300",
+        isMobile ? "flex w-64" : "hidden lg:flex",
         open ? "w-60" : "w-[72px]",
       )}
     >
@@ -89,6 +147,7 @@ export function Sidebar({ onExpandChange }: SidebarProps) {
             <Link
               key={route.href}
               href={route.href}
+              onClick={onNavigate}
               className={cn(
                 "flex items-center gap-3 rounded-xl px-2 py-2 text-sm transition-colors",
                 isActive

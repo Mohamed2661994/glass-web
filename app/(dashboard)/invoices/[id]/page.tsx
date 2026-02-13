@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import axios from "@/services/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { toast } from "sonner";
 
 export default function InvoiceDetailsPage() {
   const { id } = useParams();
+  const router = useRouter();
   const [invoice, setInvoice] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -51,11 +52,23 @@ export default function InvoiceDetailsPage() {
         </CardContent>
       </Card>
 
-      <Button
-        onClick={() => window.open(`/invoices/${invoice.id}/print`, "_blank")}
-      >
-        طباعة
-      </Button>
+      <div className="flex gap-3">
+        <Button
+          variant="outline"
+          onClick={() =>
+            router.push(
+              `/invoices/${invoice.id}/edit/${invoice.invoice_type === "retail" ? "retail" : "wholesale"}`,
+            )
+          }
+        >
+          تعديل الفاتورة
+        </Button>
+        <Button
+          onClick={() => window.open(`/invoices/${invoice.id}/print`, "_blank")}
+        >
+          طباعة
+        </Button>
+      </div>
     </div>
   );
 }

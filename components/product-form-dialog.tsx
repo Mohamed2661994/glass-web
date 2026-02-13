@@ -52,6 +52,7 @@ export function ProductFormDialog({
     wholesale_package_qty: "",
     retail_package_type: "",
     retail_package_qty: "",
+    retail_package_qty2: "",
     purchase_price: "",
     wholesale_price: "",
     retail_purchase_price: "",
@@ -75,12 +76,16 @@ export function ProductFormDialog({
       };
 
       const parseRetail = (value: string) => {
-        if (!value) return { qty: "", type: "" };
+        if (!value) return { qty: "", qty2: "", type: "" };
+        // Handle "3,6 علبة" format
         const parts = value.split(" ");
-        return {
-          qty: parts[0] || "",
-          type: parts[1] || "",
-        };
+        const qtyPart = parts[0] || "";
+        const type = parts[1] || "";
+        if (qtyPart.includes(",")) {
+          const [q1, q2] = qtyPart.split(",");
+          return { qty: q1, qty2: q2, type };
+        }
+        return { qty: qtyPart, qty2: "", type };
       };
 
       const wholesaleParsed = parseWholesale(product.wholesale_package);
@@ -91,6 +96,7 @@ export function ProductFormDialog({
         wholesale_package_qty: wholesaleParsed.qty,
         wholesale_package_type: wholesaleParsed.type,
         retail_package_qty: retailParsed.qty,
+        retail_package_qty2: retailParsed.qty2 || "",
         retail_package_type: retailParsed.type,
       });
     } else {
@@ -199,7 +205,10 @@ export function ProductFormDialog({
 
       // 🔹 تكوين نص العبوات بالشكل اللي الباك مستنيه
       const wholesale_package = `كرتونة ${form.wholesale_package_qty || 0} ${form.wholesale_package_type || ""}`;
-      const retail_package = `${form.retail_package_qty || 0} ${form.retail_package_type || ""}`;
+      const retailQty = form.retail_package_qty2
+        ? `${form.retail_package_qty || 0},${form.retail_package_qty2}`
+        : `${form.retail_package_qty || 0}`;
+      const retail_package = `${retailQty} ${form.retail_package_type || ""}`;
 
       const payload = {
         name: form.name,
@@ -372,7 +381,7 @@ export function ProductFormDialog({
           </div>
 
           {/* Retail Package */}
-          <div className="grid grid-cols-2 gap-2 items-center">
+          <div className="grid grid-cols-3 gap-2 items-center">
             <Select
               value={form.retail_package_type}
               onValueChange={(val) =>
@@ -395,13 +404,25 @@ export function ProductFormDialog({
             </Select>
 
             <Input
-              placeholder="عدد"
+              placeholder="عدد 1"
               type="number"
               value={form.retail_package_qty}
               onChange={(e) =>
                 setForm({
                   ...form,
                   retail_package_qty: e.target.value,
+                })
+              }
+            />
+
+            <Input
+              placeholder="عدد 2 (اختياري)"
+              type="number"
+              value={form.retail_package_qty2}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  retail_package_qty2: e.target.value,
                 })
               }
             />
