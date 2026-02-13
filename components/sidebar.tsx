@@ -14,9 +14,28 @@ import {
   Wallet,
   List,
   BookOpen,
+  ChevronDown,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import type { LucideIcon } from "lucide-react";
+
+type RouteItem = {
+  label: string;
+  icon: LucideIcon;
+  href: string;
+};
+
+type RouteGroup = {
+  label: string;
+  icon: LucideIcon;
+  children: RouteItem[];
+};
+
+type SidebarEntry = RouteItem | RouteGroup;
+
+const isGroup = (entry: SidebarEntry): entry is RouteGroup =>
+  "children" in entry;
 
 interface SidebarProps {
   onExpandChange?: (open: boolean) => void;
@@ -33,8 +52,13 @@ export function Sidebar({
 
   const [pinned, setPinned] = useState(false);
   const [branchId, setBranchId] = useState<number | null>(null);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
   const open = isMobile ? true : pinned;
+
+  const toggleGroup = (label: string) => {
+    setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
+  };
 
   useEffect(() => {
     onExpandChange?.(open);
@@ -45,7 +69,26 @@ export function Sidebar({
     if (user) setBranchId(JSON.parse(user).branch_id);
   }, []);
 
-  const routes = [
+  // Auto-open cash group if current path is inside /cash
+  useEffect(() => {
+    if (pathname.startsWith("/cash")) {
+      setOpenGroups((prev) => ({ ...prev, "الخزنة": true }));
+    }
+  }, [pathname]);
+
+  const cashGroup: RouteGroup = {
+    label: "الخزنة",
+    icon: Wallet,
+    children: [
+      { label: "صرف نقدي", icon: Wallet, href: "/cash/out" },
+      { label: "عرض المنصرف", icon: List, href: "/cash/out/list" },
+      { label: "وارد الخزنة", icon: Wallet, href: "/cash/in" },
+      { label: "عرض الوارد", icon: List, href: "/cash/in/list" },
+      { label: "اليومية", icon: BookOpen, href: "/cash/summary" },
+    ],
+  };
+
+  const routes: SidebarEntry[] = [
     { label: "Dashboard", icon: LayoutDashboard, href: "/" },
     { label: "الاصناف", icon: Package, href: "/products" },
     { label: "قائمة الفواتير", icon: FileText, href: "/invoices" },
@@ -61,31 +104,7 @@ export function Sidebar({
             icon: FileText,
             href: "/invoices/create/wholesale",
           },
-          {
-            label: "صرف نقدي",
-            icon: Wallet,
-            href: "/cash/out",
-          },
-          {
-            label: "عرض المنصرف",
-            icon: List,
-            href: "/cash/out/list",
-          },
-          {
-            label: "وارد الخزنة",
-            icon: Wallet,
-            href: "/cash/in",
-          },
-          {
-            label: "عرض الوارد",
-            icon: List,
-            href: "/cash/in/list",
-          },
-          {
-            label: "اليومية",
-            icon: BookOpen,
-            href: "/cash/summary",
-          },
+          cashGroup,
         ]
       : branchId === 2
         ? [
@@ -138,15 +157,86 @@ export function Sidebar({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-2 space-y-1">
-        {routes.map((route) => {
-          const Icon = route.icon;
-          const isActive = pathname === route.href;
+      <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
+        {routes.map((entry) => {
+          if (isGroup(entry)) {
+            const groupOpen = openGroups[entry.label] ?? false;
+            const GroupIcon = entry.icon;
+            const hasActiveChild = entry.children.some(
+              (c) => pathname === c.href,
+            );
+
+            return (
+              <div key={entry.label}>
+                {/* Group header */}
+                <button
+                  onClick={() => toggleGroup(entry.label)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-xl px-2 py-2 text-sm transition-colors w-full",
+                    hasActiveChild
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground hover:bg-muted",
+                  )}
+                >
+                  <div className="w-8 flex justify-center">
+                    <GroupIcon className="h-5 w-5" />
+                  </div>
+
+                  {open && (
+                    <>
+                      <span className="mr-2 whitespace-nowrap flex-1 text-right">
+                        {entry.label}
+                      </span>
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 transition-transform duration-200",
+                          groupOpen && "rotate-180",
+                        )}
+                      />
+                    </>
+                  )}
+                </button>
+
+                {/* Group children */}
+                {open && groupOpen && (
+                  <div className="mr-6 mt-1 space-y-1 border-r pr-2">
+                    {entry.children.map((child) => {
+                      const ChildIcon = child.icon;
+                      const isActive = pathname === child.href;
+
+                      return (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          onClick={onNavigate}
+                          className={cn(
+                            "flex items-center gap-3 rounded-xl px-2 py-1.5 text-sm transition-colors",
+                            isActive
+                              ? "bg-muted text-foreground"
+                              : "text-muted-foreground hover:bg-muted",
+                          )}
+                        >
+                          <div className="w-6 flex justify-center">
+                            <ChildIcon className="h-4 w-4" />
+                          </div>
+                          <span className="whitespace-nowrap">{child.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          // Regular route item
+          const Icon = entry.icon;
+          const isActive = pathname === entry.href;
 
           return (
             <Link
-              key={route.href}
-              href={route.href}
+              key={entry.href}
+              href={entry.href}
               onClick={onNavigate}
               className={cn(
                 "flex items-center gap-3 rounded-xl px-2 py-2 text-sm transition-colors",
@@ -155,14 +245,12 @@ export function Sidebar({
                   : "text-muted-foreground hover:bg-muted",
               )}
             >
-              {/* icon */}
               <div className="w-8 flex justify-center">
                 <Icon className="h-5 w-5" />
               </div>
 
-              {/* النص يظهر فقط لما يفتح */}
               {open && (
-                <span className="mr-2 whitespace-nowrap">{route.label}</span>
+                <span className="mr-2 whitespace-nowrap">{entry.label}</span>
               )}
             </Link>
           );
