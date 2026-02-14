@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +17,15 @@ import { toast } from "sonner";
 import api from "@/services/api";
 import { useSearchParams } from "next/navigation";
 
-export default function CashOutPage() {
+export default function CashOutPageWrapper() {
+  return (
+    <Suspense>
+      <CashOutPage />
+    </Suspense>
+  );
+}
+
+function CashOutPage() {
   const searchParams = useSearchParams();
   const editId = searchParams.get("edit");
   const isEdit = !!editId;

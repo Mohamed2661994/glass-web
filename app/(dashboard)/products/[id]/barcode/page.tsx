@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import api from "@/services/api";
 import JsBarcode from "jsbarcode";
@@ -12,7 +12,15 @@ interface Product {
   retail_price: number;
 }
 
-export default function BarcodePrintPage() {
+export default function BarcodePrintPageWrapper() {
+  return (
+    <Suspense>
+      <BarcodePrintPage />
+    </Suspense>
+  );
+}
+
+function BarcodePrintPage() {
   const { id } = useParams();
   const searchParams = useSearchParams();
   const count = Number(searchParams.get("count")) || 1;

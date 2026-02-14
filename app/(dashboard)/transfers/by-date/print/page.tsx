@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import api from "@/services/api";
 
@@ -25,7 +25,15 @@ interface TransferRow {
   status: string;
 }
 
-export default function TransfersPrintPage() {
+export default function TransfersPrintPageWrapper() {
+  return (
+    <Suspense>
+      <TransfersPrintPage />
+    </Suspense>
+  );
+}
+
+function TransfersPrintPage() {
   const searchParams = useSearchParams();
   const date = searchParams.get("date") || "";
   const [rows, setRows] = useState<TransferRow[]>([]);
