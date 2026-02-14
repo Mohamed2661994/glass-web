@@ -38,6 +38,7 @@ type MovementItem = {
   note?: string | null;
   party_name?: string | null;
   invoice_type?: string | null;
+  invoice_movement_type?: string | null;
   package_name?: string | null;
 };
 
@@ -289,7 +290,13 @@ export default function ProductMovementPage() {
                   </TableHeader>
                   <TableBody>
                     {filteredData.map((item, idx) => {
-                      const isIn = ["purchase", "transfer_in", "replace_in", "in"].includes(item.movement_type);
+                      const mt = item.movement_type || item.invoice_movement_type || "";
+                      const isIn = [
+                        "purchase",
+                        "transfer_in",
+                        "replace_in",
+                        "in",
+                      ].includes(mt);
 
                       return (
                         <TableRow key={idx}>
@@ -316,7 +323,7 @@ export default function ProductMovementPage() {
                             {item.party_name || "—"}
                           </TableCell>
                           <TableCell className="text-center text-xs text-muted-foreground">
-                            {item.note || item.invoice_type || "—"}
+                            {item.note || "—"}
                           </TableCell>
                         </TableRow>
                       );
