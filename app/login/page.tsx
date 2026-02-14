@@ -38,7 +38,7 @@ export default function LoginPage() {
     if (token && storedUser) {
       // تأخير بسيط عشان يشوف صفحة الدخول الأول
       const timer = setTimeout(() => {
-        router.push("/products");
+        router.push("/");
       }, 800);
       return () => clearTimeout(timer);
     }
@@ -60,7 +60,7 @@ export default function LoginPage() {
 
       setUser(res.data.user);
 
-      router.push("/products");
+      router.push("/");
     } catch (err: any) {
       setError(err.response?.data?.error || "حدث خطأ أثناء تسجيل الدخول");
     } finally {
