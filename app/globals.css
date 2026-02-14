@@ -125,11 +125,11 @@
   }
 }
 
-/* Hide scrollbar but keep scroll functionality */
-.scrollbar-hide {
+/* Hide scrollbar globally but keep scroll functionality */
+* {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-.scrollbar-hide::-webkit-scrollbar {
+*::-webkit-scrollbar {
   display: none;
 }
