@@ -212,10 +212,17 @@ export default function CashSummaryPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold">ملخص الخزنة</h1>
-            <p className="text-xs text-muted-foreground">تقرير الوارد والمنصرف</p>
+            <p className="text-xs text-muted-foreground">
+              تقرير الوارد والمنصرف
+            </p>
           </div>
         </div>
-        <Button onClick={handlePrint} size="sm" variant="outline" className="gap-2">
+        <Button
+          onClick={handlePrint}
+          size="sm"
+          variant="outline"
+          className="gap-2"
+        >
           <Printer className="h-4 w-4" />
           طباعة
         </Button>
@@ -251,7 +258,9 @@ export default function CashSummaryPage() {
             <div className="flex items-center gap-2">
               <History className="h-4 w-4 text-muted-foreground" />
               <div>
-                <p className="font-semibold text-sm">احتساب رصيد اليومية السابقة</p>
+                <p className="font-semibold text-sm">
+                  احتساب رصيد اليومية السابقة
+                </p>
                 {!includeOpeningBalance && (
                   <p className="text-[11px] text-muted-foreground mt-0.5">
                     سيتم تجاهل رصيد اليوم السابق
@@ -277,15 +286,21 @@ export default function CashSummaryPage() {
             <div className="grid grid-cols-3 gap-3 text-center">
               <div>
                 <p className="text-xs text-muted-foreground">الوارد</p>
-                <p className="text-green-500 font-bold text-lg">{prevSummary.totalIn}</p>
+                <p className="text-green-500 font-bold text-lg">
+                  {prevSummary.totalIn}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">المنصرف</p>
-                <p className="text-red-500 font-bold text-lg">{prevSummary.totalOut}</p>
+                <p className="text-red-500 font-bold text-lg">
+                  {prevSummary.totalOut}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">الرصيد</p>
-                <p className={`font-black text-lg ${prevSummary.balance >= 0 ? "text-green-500" : "text-red-500"}`}>
+                <p
+                  className={`font-black text-lg ${prevSummary.balance >= 0 ? "text-green-500" : "text-red-500"}`}
+                >
                   {prevSummary.balance}
                 </p>
               </div>
@@ -303,7 +318,9 @@ export default function CashSummaryPage() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">إجمالي الوارد</p>
-              <p className="text-xl font-extrabold text-green-500">{summary.totalIn} ج.م</p>
+              <p className="text-xl font-extrabold text-green-500">
+                {summary.totalIn} ج.م
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -315,19 +332,29 @@ export default function CashSummaryPage() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">إجمالي المنصرف</p>
-              <p className="text-xl font-extrabold text-red-500">{summary.totalOut} ج.م</p>
+              <p className="text-xl font-extrabold text-red-500">
+                {summary.totalOut} ج.م
+              </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className={`${summary.balance >= 0 ? "bg-emerald-500/5 border-emerald-500/20" : "bg-red-500/5 border-red-500/20"}`}>
+        <Card
+          className={`${summary.balance >= 0 ? "bg-emerald-500/5 border-emerald-500/20" : "bg-red-500/5 border-red-500/20"}`}
+        >
           <CardContent className="p-4 flex items-center gap-3">
-            <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${summary.balance >= 0 ? "bg-emerald-500/10" : "bg-red-500/10"}`}>
-              <Landmark className={`h-5 w-5 ${summary.balance >= 0 ? "text-emerald-500" : "text-red-500"}`} />
+            <div
+              className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${summary.balance >= 0 ? "bg-emerald-500/10" : "bg-red-500/10"}`}
+            >
+              <Landmark
+                className={`h-5 w-5 ${summary.balance >= 0 ? "text-emerald-500" : "text-red-500"}`}
+              />
             </div>
             <div>
               <p className="text-xs text-muted-foreground">رصيد الخزنة</p>
-              <p className={`text-xl font-black ${summary.balance >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+              <p
+                className={`text-xl font-black ${summary.balance >= 0 ? "text-emerald-500" : "text-red-500"}`}
+              >
                 {summary.balance} ج.م
               </p>
             </div>
@@ -358,11 +385,15 @@ export default function CashSummaryPage() {
               )}
 
               {filteredCashIn.map((i, idx) => (
-                <div key={i.id} className={`py-3 space-y-1.5 ${idx > 0 ? "border-t" : ""}`}>
+                <div
+                  key={i.id}
+                  className={`py-3 space-y-1.5 ${idx > 0 ? "border-t" : ""}`}
+                >
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-sm">{i.customer_name}</span>
                     <span className="text-green-500 font-extrabold tabular-nums">
-                      {i.source_type === "invoice" ? i.paid_amount : i.amount} ج.م
+                      {i.source_type === "invoice" ? i.paid_amount : i.amount}{" "}
+                      ج.م
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -419,7 +450,10 @@ export default function CashSummaryPage() {
               )}
 
               {filteredCashOut.map((o, idx) => (
-                <div key={o.id} className={`py-3 space-y-1.5 ${idx > 0 ? "border-t" : ""}`}>
+                <div
+                  key={o.id}
+                  className={`py-3 space-y-1.5 ${idx > 0 ? "border-t" : ""}`}
+                >
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-sm">{o.name}</span>
                     <span className="text-red-500 font-extrabold tabular-nums">
@@ -432,7 +466,9 @@ export default function CashSummaryPage() {
                       {formatCardDate(o.transaction_date)}
                     </div>
                     <Badge
-                      variant={o.entry_type === "purchase" ? "default" : "destructive"}
+                      variant={
+                        o.entry_type === "purchase" ? "default" : "destructive"
+                      }
                       className="text-[10px] px-1.5 py-0"
                     >
                       {o.entry_type === "purchase" ? "مشتريات" : "مصروفات"}

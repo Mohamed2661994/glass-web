@@ -779,6 +779,11 @@ export default function CreateWholesaleInvoicePage() {
               تم حفظ الفاتورة برقم{" "}
               <span className="font-bold text-primary">{savedInvoiceId}</span>
             </p>
+            {movementType === "sale" && (
+              <p className="text-sm text-muted-foreground -mt-2 mb-2">
+                تم ترحيل المبالغ إلى اليومية
+              </p>
+            )}
             <div className="flex gap-3">
               <Button
                 className="flex-1"
