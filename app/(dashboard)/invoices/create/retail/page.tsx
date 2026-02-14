@@ -69,8 +69,8 @@ export default function CreateRetailInvoicePage() {
   const [search, setSearch] = useState("");
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
-  const [lastAddedId, setLastAddedId] = useState<number | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [lastAddedId, setLastAddedId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -441,9 +441,11 @@ export default function CreateRetailInvoicePage() {
         return prev;
       }
 
+      const vid = product.variant_id || 0;
       return [
         ...prev,
         {
+          uid: `${product.id}_${vid}`,
           product_id: product.id,
           product_name: product.name,
           manufacturer: product.manufacturer || "-",
@@ -451,7 +453,7 @@ export default function CreateRetailInvoicePage() {
           price: product.price,
           quantity: 1,
           discount: product.discount_amount || 0,
-          variant_id: product.variant_id || 0,
+          variant_id: vid,
         },
       ];
     });
@@ -461,7 +463,7 @@ export default function CreateRetailInvoicePage() {
       new Audio("/sounds/beep-7.mp3").play().catch(() => {});
       setTimeout(() => barcodeRef.current?.focus(), 100);
     } else {
-      setLastAddedId(product.id);
+      setLastAddedId(`${product.id}_${product.variant_id || 0}`);
       setShowProductModal(false);
     }
   };
@@ -510,8 +512,8 @@ export default function CreateRetailInvoicePage() {
      🔟 Remove Item
      ========================================================= */
 
-  const removeItem = (id: number) => {
-    setItems(items.filter((i) => i.product_id !== id));
+  const removeItem = (uid: string) => {
+    setItems(items.filter((i) => i.uid !== uid));
   };
 
   /* =========================================================
@@ -812,7 +814,7 @@ export default function CreateRetailInvoicePage() {
                   } else if (items.length > 0) {
                     const lastItem = items[items.length - 1];
                     const el = document.querySelector(
-                      `[data-quantity-id="${lastItem.product_id}"]`,
+                      `[data-quantity-id="${lastItem.uid}"]`,
                     ) as HTMLInputElement;
                     if (el) {
                       el.focus();
@@ -880,7 +882,7 @@ export default function CreateRetailInvoicePage() {
                 </thead>
                 <tbody>
                   {items.map((item) => (
-                    <tr key={item.product_id} className="border-b">
+                    <tr key={item.uid} className="border-b">
                       <td className="p-3">
                         <div>
                           {item.product_name} - {item.manufacturer}
@@ -893,7 +895,7 @@ export default function CreateRetailInvoicePage() {
                       <td className="p-3 text-center">
                         <Input
                           type="number"
-                          data-quantity-id={item.product_id}
+                          data-quantity-id={item.uid}
                           className="w-20 mx-auto text-center"
                           value={item.quantity}
                           onKeyDown={(e) => {
@@ -906,7 +908,7 @@ export default function CreateRetailInvoicePage() {
                           onChange={(e) =>
                             setItems((prev) =>
                               prev.map((i) =>
-                                i.product_id === item.product_id
+                                i.uid === item.uid
                                   ? {
                                       ...i,
                                       quantity:
@@ -933,12 +935,12 @@ export default function CreateRetailInvoicePage() {
                             : 0)}
                       </td>
                       <td className="p-3 text-center">
-                        {confirmDeleteId === item.product_id ? (
+                        {confirmDeleteId === item.uid ? (
                           <Button
                             variant="destructive"
                             size="icon-xs"
                             onClick={() => {
-                              removeItem(item.product_id);
+                              removeItem(item.uid);
                               setConfirmDeleteId(null);
                             }}
                           >
@@ -949,11 +951,11 @@ export default function CreateRetailInvoicePage() {
                             variant="ghost"
                             size="icon-xs"
                             onClick={() => {
-                              setConfirmDeleteId(item.product_id);
+                              setConfirmDeleteId(item.uid);
                               setTimeout(
                                 () =>
                                   setConfirmDeleteId((prev) =>
-                                    prev === item.product_id ? null : prev,
+                                    prev === item.uid ? null : prev,
                                   ),
                                 2000,
                               );

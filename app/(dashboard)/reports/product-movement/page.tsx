@@ -290,7 +290,8 @@ export default function ProductMovementPage() {
                   </TableHeader>
                   <TableBody>
                     {filteredData.map((item, idx) => {
-                      const mt = item.movement_type || item.invoice_movement_type || "";
+                      const mt =
+                        item.movement_type || item.invoice_movement_type || "";
                       const isIn = [
                         "purchase",
                         "transfer_in",
