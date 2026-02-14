@@ -171,7 +171,17 @@ export function Sidebar({
               <div key={entry.label}>
                 {/* Group header */}
                 <button
-                  onClick={() => toggleGroup(entry.label)}
+                  onClick={() => {
+                    if (!open) {
+                      setPinned(true);
+                      setOpenGroups((prev) => ({
+                        ...prev,
+                        [entry.label]: true,
+                      }));
+                    } else {
+                      toggleGroup(entry.label);
+                    }
+                  }}
                   className={cn(
                     "flex items-center gap-3 rounded-xl px-2 py-2 text-sm transition-colors w-full",
                     hasActiveChild
