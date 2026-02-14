@@ -16,7 +16,7 @@ import {
   BookOpen,
   ChevronDown,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 
@@ -53,8 +53,21 @@ export function Sidebar({
   const [pinned, setPinned] = useState(false);
   const [branchId, setBranchId] = useState<number | null>(null);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const sidebarRef = useRef<HTMLElement>(null);
 
   const open = isMobile ? true : pinned;
+
+  // Close sidebar when clicking outside
+  useEffect(() => {
+    if (isMobile || !pinned) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (sidebarRef.current && !sidebarRef.current.contains(e.target as Node)) {
+        setPinned(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [pinned, isMobile]);
 
   const toggleGroup = (label: string) => {
     setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
@@ -135,6 +148,7 @@ export function Sidebar({
 
   return (
     <aside
+      ref={sidebarRef}
       className={cn(
         "h-screen flex-col border-l bg-background transition-all duration-300",
         isMobile ? "flex w-64" : "hidden lg:flex",
