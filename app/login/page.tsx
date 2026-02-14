@@ -31,11 +31,16 @@ export default function LoginPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ✅ لو مسجل دخول قبل كده يروح للدashboard
+  // ✅ لو مسجل دخول قبل كده → يدخل تلقائي بعد لحظة
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (token) {
-      router.push("/");
+    const storedUser = localStorage.getItem("user");
+    if (token && storedUser) {
+      // تأخير بسيط عشان يشوف صفحة الدخول الأول
+      const timer = setTimeout(() => {
+        router.push("/products");
+      }, 800);
+      return () => clearTimeout(timer);
     }
   }, [router]);
 
@@ -55,7 +60,7 @@ export default function LoginPage() {
 
       setUser(res.data.user);
 
-      router.push("/");
+      router.push("/products");
     } catch (err: any) {
       setError(err.response?.data?.error || "حدث خطأ أثناء تسجيل الدخول");
     } finally {
