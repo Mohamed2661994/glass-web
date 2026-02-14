@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Printer, CalendarDays } from "lucide-react";
 import api from "@/services/api";
+import { useAuth } from "@/app/context/auth-context";
 
 /* ================= TYPES ================= */
 
@@ -54,6 +55,7 @@ const getPreviousDay = (d: Date) =>
 
 export default function CashSummaryPage() {
   const router = useRouter();
+  const { user } = useAuth();
 
   const [cashIn, setCashIn] = useState<CashInItem[]>([]);
   const [cashOut, setCashOut] = useState<CashOutItem[]>([]);
@@ -67,11 +69,12 @@ export default function CashSummaryPage() {
   /* ================= FETCH ================= */
 
   useEffect(() => {
+    if (!user?.branch_id) return;
     (async () => {
       try {
         const [inRes, outRes] = await Promise.all([
-          api.get("/cash-in"),
-          api.get("/cash/out", { params: { branch_id: 1 } }),
+          api.get("/cash-in", { params: { branch_id: user.branch_id } }),
+          api.get("/cash/out", { params: { branch_id: user.branch_id } }),
         ]);
 
         const mappedCashIn = (inRes.data.data || []).map(
@@ -89,7 +92,7 @@ export default function CashSummaryPage() {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [user?.branch_id]);
 
   /* ================= FILTER ================= */
 

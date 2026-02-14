@@ -72,7 +72,7 @@ export function Sidebar({
   // Auto-open cash group if current path is inside /cash
   useEffect(() => {
     if (pathname.startsWith("/cash")) {
-      setOpenGroups((prev) => ({ ...prev, "الخزنة": true }));
+      setOpenGroups((prev) => ({ ...prev, الخزنة: true }));
     }
   }, [pathname]);
 
@@ -128,6 +128,7 @@ export function Sidebar({
               icon: CalendarDays,
               href: "/transfers/by-date",
             },
+            cashGroup,
           ]
         : []),
   ];
@@ -219,7 +220,9 @@ export function Sidebar({
                           <div className="w-6 flex justify-center">
                             <ChildIcon className="h-4 w-4" />
                           </div>
-                          <span className="whitespace-nowrap">{child.label}</span>
+                          <span className="whitespace-nowrap">
+                            {child.label}
+                          </span>
                         </Link>
                       );
                     })}

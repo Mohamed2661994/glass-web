@@ -55,11 +55,13 @@ function CashSummaryPrintInner() {
   /* ================= FETCH ================= */
 
   useEffect(() => {
+    const stored = localStorage.getItem("user");
+    const branchId = stored ? JSON.parse(stored).branch_id : 1;
     (async () => {
       try {
         const [inRes, outRes] = await Promise.all([
-          api.get("/cash-in"),
-          api.get("/cash/out", { params: { branch_id: 1 } }),
+          api.get("/cash-in", { params: { branch_id: branchId } }),
+          api.get("/cash/out", { params: { branch_id: branchId } }),
         ]);
         setCashIn(inRes.data.data || []);
         setCashOut(outRes.data.data || []);
