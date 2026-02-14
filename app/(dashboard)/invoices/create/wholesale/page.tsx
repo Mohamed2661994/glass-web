@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { useAuth } from "@/app/context/auth-context";
 import { PageContainer } from "@/components/layout/page-container";
 import {
   Dialog,
@@ -31,6 +32,9 @@ import {
    ========================================================= */
 
 export default function CreateWholesaleInvoicePage() {
+  const { user } = useAuth();
+  const isRetailUser = user?.branch_id === 1;
+
   /* =========================================================
      1️⃣ Invoice Header States
      ========================================================= */
@@ -773,33 +777,45 @@ export default function CreateWholesaleInvoicePage() {
         <Dialog open={showSavedModal} onOpenChange={setShowSavedModal}>
           <DialogContent dir="rtl" className="max-w-sm text-center">
             <DialogHeader>
-              <DialogTitle>تم حفظ الفاتورة</DialogTitle>
+              <DialogTitle>
+                {isRetailUser ? "تم ارسال الفاتورة" : "تم حفظ الفاتورة"}
+              </DialogTitle>
             </DialogHeader>
-            <p className="text-lg py-4">
-              تم حفظ الفاتورة برقم{" "}
-              <span className="font-bold text-primary">{savedInvoiceId}</span>
-            </p>
-            {movementType === "sale" && (
-              <p className="text-sm text-muted-foreground -mt-2 mb-2">
-                تم ترحيل المبالغ إلى اليومية
-              </p>
+            {isRetailUser ? (
+              <p className="text-lg py-4">تم ارسال الفاتورة الى المخزن</p>
+            ) : (
+              <>
+                <p className="text-lg py-4">
+                  تم حفظ الفاتورة برقم{" "}
+                  <span className="font-bold text-primary">
+                    {savedInvoiceId}
+                  </span>
+                </p>
+                {movementType === "sale" && (
+                  <p className="text-sm text-muted-foreground -mt-2 mb-2">
+                    تم ترحيل المبالغ إلى اليومية
+                  </p>
+                )}
+              </>
             )}
             <div className="flex gap-3">
+              {!isRetailUser && (
+                <Button
+                  className="flex-1"
+                  onClick={() => {
+                    window.open(`/invoices/${savedInvoiceId}/print`, "_blank");
+                    setShowSavedModal(false);
+                  }}
+                >
+                  طباعة
+                </Button>
+              )}
               <Button
-                className="flex-1"
-                onClick={() => {
-                  window.open(`/invoices/${savedInvoiceId}/print`, "_blank");
-                  setShowSavedModal(false);
-                }}
-              >
-                طباعة
-              </Button>
-              <Button
-                variant="outline"
+                variant={isRetailUser ? "default" : "outline"}
                 className="flex-1"
                 onClick={() => setShowSavedModal(false)}
               >
-                إلغاء
+                {isRetailUser ? "تم" : "إلغاء"}
               </Button>
             </div>
           </DialogContent>

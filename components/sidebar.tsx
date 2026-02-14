@@ -15,9 +15,19 @@ import {
   List,
   BookOpen,
   ChevronDown,
+  BarChart3,
+  AlertTriangle,
+  Users,
+  DollarSign,
+  Activity,
+  Settings,
+  LogOut,
+  ClipboardList,
+  FilePlus2,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/app/context/auth-context";
 import type { LucideIcon } from "lucide-react";
 
 type RouteItem = {
@@ -49,6 +59,7 @@ export function Sidebar({
   onNavigate,
 }: SidebarProps) {
   const pathname = usePathname();
+  const { logout } = useAuth();
 
   const [pinned, setPinned] = useState(false);
   const [branchId, setBranchId] = useState<number | null>(null);
@@ -85,10 +96,13 @@ export function Sidebar({
     if (user) setBranchId(JSON.parse(user).branch_id);
   }, []);
 
-  // Auto-open cash group if current path is inside /cash
+  // Auto-open groups if current path is inside them
   useEffect(() => {
     if (pathname.startsWith("/cash")) {
       setOpenGroups((prev) => ({ ...prev, الخزنة: true }));
+    }
+    if (pathname.startsWith("/reports")) {
+      setOpenGroups((prev) => ({ ...prev, التقارير: true }));
     }
   }, [pathname]);
 
@@ -104,29 +118,63 @@ export function Sidebar({
     ],
   };
 
+  const reportsGroup: RouteGroup = {
+    label: "التقارير",
+    icon: BarChart3,
+    children: [
+      {
+        label: "حركة المخزون",
+        icon: Activity,
+        href: "/reports/inventory-summary",
+      },
+      { label: "نقص المخزون", icon: AlertTriangle, href: "/reports/low-stock" },
+      {
+        label: "قيمة المخزون",
+        icon: DollarSign,
+        href: "/reports/inventory-value",
+      },
+      {
+        label: "مديونية العملاء",
+        icon: Users,
+        href: "/reports/customer-balances",
+      },
+      {
+        label: "حركة الأصناف",
+        icon: BarChart3,
+        href: "/reports/product-movement",
+      },
+    ],
+  };
+
   const routes: SidebarEntry[] = [
     { label: "Dashboard", icon: LayoutDashboard, href: "/" },
     { label: "الاصناف", icon: Package, href: "/products" },
-    { label: "قائمة الفواتير", icon: FileText, href: "/invoices" },
+    { label: "قائمة الفواتير", icon: ClipboardList, href: "/invoices" },
     ...(branchId === 1
       ? [
           {
-            label: "إنشاء فاتورة قطاعي",
+            label: "فاتورة قطاعي",
             icon: FileText,
             href: "/invoices/create/retail",
           },
           {
-            label: "إنشاء فاتورة جملة",
-            icon: FileText,
+            label: "فاتورة جملة",
+            icon: FilePlus2,
             href: "/invoices/create/wholesale",
           },
+          {
+            label: "فاتورة تحويل",
+            icon: Truck,
+            href: "/stock-transfer",
+          },
           cashGroup,
+          reportsGroup,
         ]
       : branchId === 2
         ? [
             {
-              label: "إنشاء فاتورة جملة",
-              icon: FileText,
+              label: "فاتورة جملة",
+              icon: FilePlus2,
               href: "/invoices/create/wholesale",
             },
             {
@@ -145,6 +193,7 @@ export function Sidebar({
               href: "/transfers/by-date",
             },
             cashGroup,
+            reportsGroup,
           ]
         : []),
   ];
@@ -153,7 +202,7 @@ export function Sidebar({
     <aside
       ref={sidebarRef}
       className={cn(
-        "h-screen flex-col border-l bg-background transition-all duration-300",
+        "h-screen flex-col border-l bg-background transition-all duration-300 sticky top-0",
         isMobile ? "flex w-64" : "hidden lg:flex",
         open ? "w-60" : "w-[72px]",
       )}
@@ -286,6 +335,41 @@ export function Sidebar({
           );
         })}
       </nav>
+
+      {/* Logout + Settings at bottom */}
+      <div className="p-2 border-t space-y-1">
+        <button
+          onClick={() => {
+            onNavigate?.();
+            logout();
+          }}
+          className={cn(
+            "w-full flex items-center gap-3 rounded-xl px-2 py-2 text-sm transition-colors",
+            "text-muted-foreground hover:bg-destructive/10 hover:text-destructive",
+          )}
+        >
+          <div className="w-8 flex justify-center">
+            <LogOut className="h-5 w-5" />
+          </div>
+          {open && <span className="mr-2 whitespace-nowrap">تسجيل خروج</span>}
+        </button>
+
+        <Link
+          href="/settings"
+          onClick={onNavigate}
+          className={cn(
+            "flex items-center gap-3 rounded-xl px-2 py-2 text-sm transition-colors",
+            pathname === "/settings" || pathname.startsWith("/settings/")
+              ? "bg-muted text-foreground"
+              : "text-muted-foreground hover:bg-muted",
+          )}
+        >
+          <div className="w-8 flex justify-center">
+            <Settings className="h-5 w-5" />
+          </div>
+          {open && <span className="mr-2 whitespace-nowrap">الإعدادات</span>}
+        </Link>
+      </div>
     </aside>
   );
 }

@@ -39,7 +39,12 @@ export default function InvoicesPage() {
   const { user } = useAuth();
 
   // branch_id 1 = retail, branch_id 2 = wholesale
-  const invoiceType = user?.branch_id === 1 ? "retail" : "wholesale";
+  const invoiceType =
+    user?.branch_id === 1
+      ? "retail"
+      : user?.branch_id === 2
+        ? "wholesale"
+        : null;
   const [movementType, setMovementType] = useState<string>("all");
   const [search, setSearch] = useState("");
 
@@ -47,6 +52,7 @@ export default function InvoicesPage() {
   const limit = 10;
 
   const fetchInvoices = async () => {
+    if (!invoiceType) return;
     try {
       setLoading(true);
 
@@ -94,7 +100,7 @@ export default function InvoicesPage() {
   };
 
   return (
-    <div className="p-6 space-y-6" dir="rtl">
+    <div className="p-6 space-y-6 max-w-5xl mx-auto" dir="rtl">
       <h1 className="text-2xl font-bold">
         فواتير {invoiceType === "retail" ? "القطاعي" : "الجملة"}
       </h1>

@@ -13,18 +13,21 @@ export function ThemeToggle() {
     setMounted(true);
   }, []);
 
-  if (!mounted) return null;
-
   return (
     <Button
       variant="outline"
       size="icon"
       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      suppressHydrationWarning
     >
-      {theme === "dark" ? (
-        <Sun className="h-4 w-4" />
+      {mounted ? (
+        theme === "dark" ? (
+          <Sun className="h-4 w-4" />
+        ) : (
+          <Moon className="h-4 w-4" />
+        )
       ) : (
-        <Moon className="h-4 w-4" />
+        <Sun className="h-4 w-4 opacity-0" />
       )}
     </Button>
   );

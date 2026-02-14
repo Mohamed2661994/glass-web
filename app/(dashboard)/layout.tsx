@@ -4,12 +4,11 @@ import { ReactNode, useEffect, useState } from "react";
 import { Sidebar } from "@/components/sidebar";
 import { MobileSidebar } from "@/components/mobile-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/app/context/auth-context";
 import { NotificationBell } from "@/components/notification-bell";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -25,12 +24,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen flex bg-background">
       {/* Sidebar */}
-      <Sidebar onExpandChange={setSidebarOpen} />
+      <div className="print:hidden">
+        <Sidebar onExpandChange={setSidebarOpen} />
+      </div>
 
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* ===== HEADER FULL WIDTH ===== */}
-        <header className="h-16 border-b bg-background/80 relative">
+        <header className="h-16 border-b bg-background/80 relative print:hidden">
           <div className="absolute inset-0 backdrop-blur-md pointer-events-none" />
 
           <div className="relative flex items-center justify-between px-6 h-full">
@@ -45,28 +46,25 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               </div>
             </div>
 
+            {/* CENTER - Username */}
+            <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
+              <span className="text-base font-bold">{user?.username}</span>
+            </div>
+
             {/* RIGHT */}
             <div className="flex items-center gap-4">
-              <div className="text-sm text-muted-foreground hidden md:block">
-                {user?.username}
-              </div>
-
               {mounted && user?.id && user?.branch_id === 2 && (
                 <NotificationBell userId={user.id} branchId={user.branch_id} />
               )}
 
               <ThemeToggle />
-
-              <Button variant="outline" size="sm" onClick={logout}>
-                تسجيل خروج
-              </Button>
             </div>
           </div>
         </header>
 
         {/* ===== CONTENT ONLY ===== */}
-        <main className="flex-1 overflow-auto scrollbar-hide py-6">
-          <div className="w-full px-4">{children}</div>
+        <main className="flex-1 overflow-auto scrollbar-hide py-6 print:py-0">
+          <div className="w-full px-4 print:px-0">{children}</div>
         </main>
       </div>
     </div>

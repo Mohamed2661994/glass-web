@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import api from "@/services/api";
 
 interface User {
   id: number;
@@ -29,7 +30,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const logout = () => {
+  const logout = async () => {
+    // تسجيل الخروج في السيرفر (بدون انتظار لو فشل)
+    try {
+      await api.post("/logout");
+    } catch {
+      // لو فشل التسجيل مش نوقف الخروج
+    }
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUser(null);
