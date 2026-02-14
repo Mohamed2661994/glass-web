@@ -48,6 +48,11 @@ export default function StockTransferPage() {
   const [search, setSearch] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
 
+  // Variant package picker
+  const [variantsMap, setVariantsMap] = useState<Record<number, any[]>>({});
+  const [packagePickerProduct, setPackagePickerProduct] =
+    useState<Product | null>(null);
+
   const FROM_BRANCH_ID = 2;
   const TO_BRANCH_ID = 1;
 
@@ -58,7 +63,26 @@ export default function StockTransferPage() {
         const { data } = await api.get("/products/for-replace", {
           params: { branch_id: FROM_BRANCH_ID },
         });
-        setProducts(Array.isArray(data) ? data : []);
+        const prods = Array.isArray(data) ? data : [];
+        setProducts(prods);
+
+        // جلب الأكواد الفرعية
+        if (prods.length > 0) {
+          try {
+            const ids = prods.map((p: any) => p.id).join(",");
+            const vRes = await api.get("/products/variants", {
+              params: { product_ids: ids },
+            });
+            const map: Record<number, any[]> = {};
+            for (const v of vRes.data || []) {
+              if (!map[v.product_id]) map[v.product_id] = [];
+              map[v.product_id].push(v);
+            }
+            setVariantsMap(map);
+          } catch {
+            /* silent */
+          }
+        }
       } catch {
         toast.error("فشل تحميل الأصناف");
       } finally {
@@ -77,8 +101,25 @@ export default function StockTransferPage() {
 
   /* ========== Add Product ========== */
   const addProduct = (product: Product) => {
-    if (items.find((i) => i.product_id === product.id)) {
-      toast.warning("الصنف مضاف بالفعل");
+    // لو الصنف عنده أكواد فرعية → نعرض اختيار العبوة
+    const variants = variantsMap[product.id];
+    if (variants && variants.length > 0) {
+      setPackagePickerProduct(product);
+      setShowModal(false);
+      return;
+    }
+
+    finalizeAddProduct(
+      product,
+      product.wholesale_package,
+      product.wholesale_price,
+    );
+  };
+
+  const finalizeAddProduct = (product: Product, pkg: string, price: number) => {
+    const key = `${product.id}_${pkg}`;
+    if (items.find((i) => `${i.product_id}_${i.wholesale_package}` === key)) {
+      toast.warning("الصنف بهذه العبوة مضاف بالفعل");
       return;
     }
 
@@ -90,13 +131,14 @@ export default function StockTransferPage() {
         manufacturer: product.manufacturer,
         quantity: 1,
         percent: 0,
-        wholesale_package: product.wholesale_package,
+        wholesale_package: pkg,
         retail_package: product.retail_package,
-        wholesale_price: product.wholesale_price,
+        wholesale_price: price,
         available_quantity: product.available_quantity,
       },
     ]);
     setShowModal(false);
+    setPackagePickerProduct(null);
   };
 
   /* ========== Update Item ========== */
@@ -304,8 +346,15 @@ export default function StockTransferPage() {
                   className="w-full text-right px-3 py-2.5 rounded-lg hover:bg-muted transition-colors"
                   onClick={() => addProduct(p)}
                 >
-                  <div className="font-semibold text-sm">
-                    {p.name} – {p.manufacturer}
+                  <div className="flex items-center gap-2">
+                    <div className="font-semibold text-sm">
+                      {p.name} – {p.manufacturer}
+                    </div>
+                    {variantsMap[p.id]?.length > 0 && (
+                      <span className="text-[10px] bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded-full">
+                        {variantsMap[p.id].length + 1} عبوات
+                      </span>
+                    )}
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5">
                     {p.wholesale_package} • رصيد: {p.available_quantity}
@@ -313,6 +362,68 @@ export default function StockTransferPage() {
                 </button>
               ))
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ===== مودال اختيار العبوة ===== */}
+      <Dialog
+        open={!!packagePickerProduct}
+        onOpenChange={(open) => {
+          if (!open) setPackagePickerProduct(null);
+        }}
+      >
+        <DialogContent dir="rtl" className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              اختر العبوة — {packagePickerProduct?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            {/* العبوة الأساسية */}
+            {packagePickerProduct && (
+              <button
+                className="w-full p-3 rounded-lg border hover:bg-muted transition text-right"
+                onClick={() => {
+                  finalizeAddProduct(
+                    packagePickerProduct,
+                    packagePickerProduct.wholesale_package,
+                    packagePickerProduct.wholesale_price,
+                  );
+                }}
+              >
+                <div className="font-medium">
+                  {packagePickerProduct.wholesale_package}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  السعر: {packagePickerProduct.wholesale_price} ج
+                </div>
+              </button>
+            )}
+
+            {/* العبوات الفرعية */}
+            {packagePickerProduct &&
+              variantsMap[packagePickerProduct.id]?.map((v: any) => (
+                <button
+                  key={v.id}
+                  className="w-full p-3 rounded-lg border hover:bg-muted transition text-right"
+                  onClick={() => {
+                    finalizeAddProduct(
+                      packagePickerProduct,
+                      v.wholesale_package || "-",
+                      Number(v.wholesale_price),
+                    );
+                  }}
+                >
+                  <div className="font-medium">
+                    {v.wholesale_package || "-"}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    السعر: {v.wholesale_price} ج
+                    {v.label && <span className="mr-2">({v.label})</span>}
+                  </div>
+                </button>
+              ))}
           </div>
         </DialogContent>
       </Dialog>

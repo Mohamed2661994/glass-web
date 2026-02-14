@@ -15,6 +15,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Product {
   id: number;
@@ -35,6 +42,8 @@ export default function ProductsPage() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [selectedManufacturer, setSelectedManufacturer] =
+    useState<string>("الكل");
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -44,6 +53,9 @@ export default function ProductsPage() {
     useState<Product | null>(null);
   const [barcodePrintCount, setBarcodePrintCount] = useState("1");
   const [showBarcodePrintModal, setShowBarcodePrintModal] = useState(false);
+
+  // Variants
+  const [variantsMap, setVariantsMap] = useState<Record<number, any[]>>({});
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -57,7 +69,26 @@ export default function ProductsPage() {
     try {
       setLoading(true);
       const res = await api.get("/admin/products");
-      setAllProducts(res.data);
+      const prods = res.data;
+      setAllProducts(prods);
+
+      // جلب كل الأكواد الفرعية
+      if (prods.length > 0) {
+        try {
+          const ids = prods.map((p: any) => p.id).join(",");
+          const vRes = await api.get("/products/variants", {
+            params: { product_ids: ids },
+          });
+          const map: Record<number, any[]> = {};
+          for (const v of vRes.data || []) {
+            if (!map[v.product_id]) map[v.product_id] = [];
+            map[v.product_id].push(v);
+          }
+          setVariantsMap(map);
+        } catch {
+          /* silent */
+        }
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -65,13 +96,24 @@ export default function ProductsPage() {
     }
   };
 
+  // استخراج المصانع
+  const manufacturers = [
+    "الكل",
+    ...Array.from(
+      new Set(allProducts.map((p) => p.manufacturer).filter(Boolean)),
+    ),
+  ];
+
   // فلترة
   const filteredProducts = allProducts.filter((product) => {
     const q = search.toLowerCase();
-    return (
+    const matchesSearch =
       product.name.toLowerCase().includes(q) ||
-      (product.barcode && product.barcode.toLowerCase().includes(q))
-    );
+      (product.barcode && product.barcode.toLowerCase().includes(q));
+    const matchesManufacturer =
+      selectedManufacturer === "الكل" ||
+      product.manufacturer === selectedManufacturer;
+    return matchesSearch && matchesManufacturer;
   });
 
   // حساب الصفحات
@@ -135,17 +177,40 @@ export default function ProductsPage() {
         </Button>
       </div>
 
-      {/* Search */}
+      {/* Search + Manufacturer Filter */}
       <Card>
-        <CardContent className="p-4">
-          <Input
-            placeholder="ابحث باسم المنتج أو الباركود..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-          />
+        <CardContent className="p-4 space-y-3">
+          <div className="flex gap-2">
+            <Input
+              placeholder="ابحث باسم المنتج أو الباركود..."
+              value={search}
+              className="flex-1"
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+            />
+            {manufacturers.length > 2 && (
+              <Select
+                value={selectedManufacturer}
+                onValueChange={(val) => {
+                  setSelectedManufacturer(val);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="المصنع" />
+                </SelectTrigger>
+                <SelectContent>
+                  {manufacturers.map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {m}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -169,6 +234,7 @@ export default function ProductsPage() {
               <ProductCard
                 key={product.id}
                 product={product}
+                variants={variantsMap[product.id] || []}
                 onToggle={(value) => handleToggle(product.id, value)}
                 onEdit={() => {
                   setSelectedProduct(product);

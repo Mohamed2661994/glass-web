@@ -92,7 +92,7 @@ export default function DashboardPage() {
     (async () => {
       try {
         const { data } = await api.get("/invoices", {
-          params: { limit: 10, _t: Date.now() },
+          params: { limit: 10, invoice_type: invoiceType, _t: Date.now() },
         });
         setInvoices(Array.isArray(data) ? data : (data.data ?? []));
       } catch {
@@ -101,7 +101,7 @@ export default function DashboardPage() {
         setLoadingInv(false);
       }
     })();
-  }, [branchId, refreshKey]);
+  }, [branchId, invoiceType, refreshKey]);
 
   /* fetch transfers (branch 2 only) */
   useEffect(() => {

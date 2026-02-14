@@ -77,6 +77,26 @@ export default function CreateWholesaleInvoicePage() {
   const listRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // Variant package picker
+  const [variantsMap, setVariantsMap] = useState<Record<number, any[]>>({});
+  const [packagePickerProduct, setPackagePickerProduct] = useState<any>(null);
+  const [packagePickerStock, setPackagePickerStock] = useState<Record<
+    number,
+    number
+  > | null>(null);
+
+  // Fetch stock when package picker opens
+  useEffect(() => {
+    if (!packagePickerProduct) return;
+    setPackagePickerStock(null);
+    api
+      .get("/stock/quantity-all", {
+        params: { product_id: packagePickerProduct.id, branch_id: 2 },
+      })
+      .then((res) => setPackagePickerStock(res.data || {}))
+      .catch(() => setPackagePickerStock({}));
+  }, [packagePickerProduct]);
+
   /* =========================================================
      4️⃣ Invoice Payment States
      ========================================================= */
@@ -100,7 +120,26 @@ export default function CreateWholesaleInvoicePage() {
         },
       });
 
-      setProducts(res.data || []);
+      const prods = res.data || [];
+      setProducts(prods);
+
+      // جلب الأكواد الفرعية لكل الأصناف
+      if (prods.length > 0) {
+        try {
+          const ids = prods.map((p: any) => p.id).join(",");
+          const vRes = await api.get("/products/variants", {
+            params: { product_ids: ids },
+          });
+          const map: Record<number, any[]> = {};
+          for (const v of vRes.data || []) {
+            if (!map[v.product_id]) map[v.product_id] = [];
+            map[v.product_id].push(v);
+          }
+          setVariantsMap(map);
+        } catch {
+          /* silent */
+        }
+      }
     } catch {
       toast.error("فشل تحميل الأصناف");
     } finally {
@@ -218,31 +257,53 @@ export default function CreateWholesaleInvoicePage() {
      9️⃣ Add Item To Invoice
      ========================================================= */
 
-  const addItem = useCallback((product: any) => {
-    setItems((prev) => {
-      const exists = prev.find((i) => i.product_id === product.id);
-      if (exists) {
-        toast.warning("الصنف مضاف بالفعل");
-        return prev;
+  const addItem = useCallback(
+    (product: any) => {
+      // لو الصنف عنده أكواد فرعية → نعرض اختيار العبوة
+      const variants = variantsMap[product.id];
+      if (variants && variants.length > 0) {
+        setPackagePickerProduct(product);
+        setShowProductModal(false);
+        return;
       }
 
-      return [
-        ...prev,
-        {
-          product_id: product.id,
-          product_name: product.name,
-          manufacturer: product.manufacturer || "-",
-          package: product.wholesale_package || "-",
-          price: product.price,
-          quantity: 1,
-          discount: 0,
-        },
-      ];
-    });
+      finalizeAddItem(product, product.wholesale_package || "-", product.price);
+    },
+    [variantsMap],
+  );
 
-    setLastAddedId(product.id);
-    setShowProductModal(false);
-  }, []);
+  const finalizeAddItem = useCallback(
+    (product: any, pkg: string, price: number) => {
+      setItems((prev) => {
+        // نعمل unique key من المنتج + العبوة
+        const key = `${product.id}_${pkg}`;
+        const exists = prev.find((i) => `${i.product_id}_${i.package}` === key);
+        if (exists) {
+          toast.warning("الصنف بهذه العبوة مضاف بالفعل");
+          return prev;
+        }
+
+        return [
+          ...prev,
+          {
+            product_id: product.id,
+            product_name: product.name,
+            manufacturer: product.manufacturer || "-",
+            package: pkg,
+            price: price,
+            quantity: 1,
+            discount: 0,
+            variant_id: product.variant_id || 0,
+          },
+        ];
+      });
+
+      setLastAddedId(product.id);
+      setShowProductModal(false);
+      setPackagePickerProduct(null);
+    },
+    [],
+  );
 
   /* Focus quantity input of last added item */
   useEffect(() => {
@@ -872,7 +933,14 @@ export default function CreateWholesaleInvoicePage() {
                         : ""
                     }`}
                   >
-                    <div className="font-medium">{product.name}</div>
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium">{product.name}</div>
+                      {variantsMap[product.id]?.length > 0 && (
+                        <span className="text-[10px] bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded-full">
+                          {variantsMap[product.id].length + 1} عبوات
+                        </span>
+                      )}
+                    </div>
                     <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3">
                       <span>المصنع: {product.manufacturer || "-"}</span>
                       <span>العبوة: {product.wholesale_package || "-"}</span>
@@ -882,6 +950,86 @@ export default function CreateWholesaleInvoicePage() {
                   </div>
                 ))
               )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* ================= Package Picker Modal ================= */}
+        <Dialog
+          open={!!packagePickerProduct}
+          onOpenChange={(open) => {
+            if (!open) {
+              setPackagePickerProduct(null);
+              setPackagePickerStock(null);
+            }
+          }}
+        >
+          <DialogContent dir="rtl" className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                اختر العبوة — {packagePickerProduct?.name}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-2 py-2">
+              {/* العبوة الأساسية */}
+              <button
+                className="w-full p-3 rounded-lg border hover:bg-muted transition text-right"
+                onClick={() => {
+                  if (packagePickerProduct) {
+                    finalizeAddItem(
+                      packagePickerProduct,
+                      packagePickerProduct.wholesale_package || "-",
+                      packagePickerProduct.price,
+                    );
+                  }
+                }}
+              >
+                <div className="font-medium">
+                  {packagePickerProduct?.wholesale_package || "-"}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  السعر: {packagePickerProduct?.price} ج
+                  {packagePickerStock !== null && (
+                    <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-semibold mr-2">
+                      الرصيد: {packagePickerStock[0] ?? 0}
+                    </span>
+                  )}
+                </div>
+              </button>
+
+              {/* العبوات الفرعية */}
+              {packagePickerProduct &&
+                variantsMap[packagePickerProduct.id]?.map((v: any) => (
+                  <button
+                    key={v.id}
+                    className="w-full p-3 rounded-lg border hover:bg-muted transition text-right"
+                    onClick={() => {
+                      finalizeAddItem(
+                        { ...packagePickerProduct, variant_id: v.id },
+                        v.wholesale_package || "-",
+                        movementType === "sale"
+                          ? Number(v.wholesale_price)
+                          : Number(v.purchase_price),
+                      );
+                    }}
+                  >
+                    <div className="font-medium">
+                      {v.wholesale_package || "-"}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      السعر:{" "}
+                      {movementType === "sale"
+                        ? v.wholesale_price
+                        : v.purchase_price}{" "}
+                      ج{v.label && <span className="mr-2">({v.label})</span>}
+                      {packagePickerStock !== null && (
+                        <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-semibold mr-2">
+                          الرصيد: {packagePickerStock[v.id] ?? 0}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                ))}
             </div>
           </DialogContent>
         </Dialog>

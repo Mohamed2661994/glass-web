@@ -24,6 +24,7 @@ type LowStockItem = {
   manufacturer_name?: string | null;
   warehouse_name: string;
   current_stock: number;
+  package_name?: string | null;
 };
 
 type WarehouseFilter = "الكل" | "المخزن الرئيسي" | "مخزن المعرض";
@@ -126,6 +127,7 @@ export default function LowStockReportPage() {
                     <TableRow>
                       <TableHead className="text-right">الصنف</TableHead>
                       <TableHead className="text-center">المخزن</TableHead>
+                      <TableHead className="text-center">العبوات</TableHead>
                       <TableHead className="text-center">
                         الرصيد الحالي
                       </TableHead>
@@ -154,6 +156,9 @@ export default function LowStockReportPage() {
                           </TableCell>
                           <TableCell className="text-center text-xs">
                             {item.warehouse_name}
+                          </TableCell>
+                          <TableCell className="text-center text-xs">
+                            {item.package_name || "—"}
                           </TableCell>
                           <TableCell
                             className={`text-center font-bold ${isCritical ? "text-red-600" : ""}`}

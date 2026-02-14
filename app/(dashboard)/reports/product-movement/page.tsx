@@ -38,6 +38,7 @@ type MovementItem = {
   note?: string | null;
   party_name?: string | null;
   invoice_type?: string | null;
+  package_name?: string | null;
 };
 
 type Product = {
@@ -281,13 +282,14 @@ export default function ProductMovementPage() {
                       <TableHead className="text-center">المخزن</TableHead>
                       <TableHead className="text-center">النوع</TableHead>
                       <TableHead className="text-center">الكمية</TableHead>
+                      <TableHead className="text-center">العبوة</TableHead>
                       <TableHead className="text-center">الطرف</TableHead>
                       <TableHead className="text-center">ملاحظات</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredData.map((item, idx) => {
-                      const isIn = item.movement_type === "in";
+                      const isIn = ["purchase", "transfer_in", "replace_in", "in"].includes(item.movement_type);
 
                       return (
                         <TableRow key={idx}>
@@ -306,6 +308,9 @@ export default function ProductMovementPage() {
                             className={`text-center font-bold ${isIn ? "text-green-600" : "text-red-600"}`}
                           >
                             {item.quantity}
+                          </TableCell>
+                          <TableCell className="text-center text-xs">
+                            {item.package_name || "—"}
                           </TableCell>
                           <TableCell className="text-center text-xs font-medium">
                             {item.party_name || "—"}

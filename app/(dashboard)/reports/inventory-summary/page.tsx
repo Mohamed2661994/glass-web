@@ -27,6 +27,7 @@ type InventoryItem = {
   total_in: number;
   total_out: number;
   current_stock: number;
+  package_name?: string | null;
 };
 
 type WarehouseFilter = "الكل" | "المخزن الرئيسي" | "مخزن المعرض";
@@ -171,6 +172,7 @@ export default function InventorySummaryPage() {
                     <TableRow>
                       <TableHead className="text-right">الصنف</TableHead>
                       <TableHead className="text-center">المخزن</TableHead>
+                      <TableHead className="text-center">العبوات</TableHead>
                       <TableHead className="text-center">وارد</TableHead>
                       <TableHead className="text-center">صادر</TableHead>
                       <TableHead className="text-center">الرصيد</TableHead>
@@ -205,6 +207,9 @@ export default function InventorySummaryPage() {
                           </TableCell>
                           <TableCell className="text-center text-xs">
                             {item.warehouse_name}
+                          </TableCell>
+                          <TableCell className="text-center text-xs">
+                            {item.package_name || "—"}
                           </TableCell>
                           <TableCell className="text-center">
                             {totalIn}

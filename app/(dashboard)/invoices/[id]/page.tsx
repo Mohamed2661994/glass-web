@@ -15,7 +15,7 @@ export default function InvoiceDetailsPage() {
 
   const fetchInvoice = async () => {
     try {
-      const res = await axios.get(`/invoices/${id}`);
+      const res = await axios.get(`/invoices/${id}/edit`);
       setInvoice(res.data);
     } catch (err) {
       toast.error("فشل تحميل الفاتورة");

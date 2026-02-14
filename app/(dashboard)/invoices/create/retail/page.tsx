@@ -79,6 +79,13 @@ export default function CreateRetailInvoicePage() {
   const [packagePickerSource, setPackagePickerSource] = useState<
     "barcode" | "manual"
   >("barcode");
+  const [packagePickerStock, setPackagePickerStock] = useState<Record<
+    number,
+    number
+  > | null>(null);
+
+  // Variant package picker
+  const [variantsMap, setVariantsMap] = useState<Record<number, any[]>>({});
 
   /* =========================================================
      3.5 Barcode State
@@ -203,7 +210,26 @@ export default function CreateRetailInvoicePage() {
         },
       });
 
-      setProducts(res.data || []);
+      const prods = res.data || [];
+      setProducts(prods);
+
+      // جلب الأكواد الفرعية لكل الأصناف
+      if (prods.length > 0) {
+        try {
+          const ids = prods.map((p: any) => p.id).join(",");
+          const vRes = await api.get("/products/variants", {
+            params: { product_ids: ids },
+          });
+          const map: Record<number, any[]> = {};
+          for (const v of vRes.data || []) {
+            if (!map[v.product_id]) map[v.product_id] = [];
+            map[v.product_id].push(v);
+          }
+          setVariantsMap(map);
+        } catch {
+          /* silent */
+        }
+      }
     } catch {
       toast.error("فشل تحميل الأصناف");
     } finally {
@@ -214,6 +240,18 @@ export default function CreateRetailInvoicePage() {
   useEffect(() => {
     fetchProducts();
   }, [movementType]);
+
+  // Fetch stock when package picker opens
+  useEffect(() => {
+    if (!packagePickerProduct) return;
+    setPackagePickerStock(null);
+    api
+      .get("/stock/quantity-all", {
+        params: { product_id: packagePickerProduct.id, branch_id: 1 },
+      })
+      .then((res) => setPackagePickerStock(res.data || {}))
+      .catch(() => setPackagePickerStock({}));
+  }, [packagePickerProduct]);
 
   /* =========================================================
      5.5 Barcode Scan
@@ -231,6 +269,25 @@ export default function CreateRetailInvoicePage() {
       });
 
       const product = res.data;
+
+      // لو الباركود جاي من كود فرعي → نضيف بالعبوة والسعر بتاعه مباشرة
+      if (product.is_variant) {
+        finalizeAddItem(
+          { ...product, price: product.price },
+          product.retail_package || "-",
+          "barcode",
+        );
+        return;
+      }
+
+      // لو عنده أكواد فرعية → نعرض اختيار العبوة
+      const variants = variantsMap[product.id];
+      if (variants && variants.length > 0) {
+        setPackagePickerProduct(product);
+        setPackagePickerSource("barcode");
+        return;
+      }
+
       const pkg = product.retail_package || "-";
       const qtyPart = pkg.split(" ")[0] || "";
 
@@ -369,11 +426,13 @@ export default function CreateRetailInvoicePage() {
     source: "barcode" | "manual",
   ) => {
     setItems((prev) => {
-      const exists = prev.find((i) => i.product_id === product.id);
+      const exists = prev.find(
+        (i) => i.product_id === product.id && i.package === chosenPackage,
+      );
       if (exists) {
         if (source === "barcode") {
           return prev.map((i) =>
-            i.product_id === product.id
+            i.product_id === product.id && i.package === chosenPackage
               ? { ...i, quantity: (Number(i.quantity) || 0) + 1 }
               : i,
           );
@@ -392,6 +451,7 @@ export default function CreateRetailInvoicePage() {
           price: product.price,
           quantity: 1,
           discount: product.discount_amount || 0,
+          variant_id: product.variant_id || 0,
         },
       ];
     });
@@ -406,18 +466,29 @@ export default function CreateRetailInvoicePage() {
     }
   };
 
-  const addItem = useCallback((product: any) => {
-    const pkg = product.retail_package || "-";
-    const qtyPart = pkg.split(" ")[0] || "";
+  const addItem = useCallback(
+    (product: any) => {
+      // لو الصنف عنده أكواد فرعية → نعرض اختيار العبوة
+      const variants = variantsMap[product.id];
+      if (variants && variants.length > 0) {
+        setPackagePickerProduct(product);
+        setPackagePickerSource("manual");
+        return;
+      }
 
-    if (qtyPart.includes(",")) {
-      setPackagePickerProduct(product);
-      setPackagePickerSource("manual");
-      return;
-    }
+      const pkg = product.retail_package || "-";
+      const qtyPart = pkg.split(" ")[0] || "";
 
-    finalizeAddItem(product, pkg, "manual");
-  }, []);
+      if (qtyPart.includes(",")) {
+        setPackagePickerProduct(product);
+        setPackagePickerSource("manual");
+        return;
+      }
+
+      finalizeAddItem(product, pkg, "manual");
+    },
+    [variantsMap],
+  );
 
   /* Focus quantity input of last added item */
   useEffect(() => {
@@ -1050,7 +1121,10 @@ export default function CreateRetailInvoicePage() {
         <Dialog
           open={!!packagePickerProduct}
           onOpenChange={(open) => {
-            if (!open) setPackagePickerProduct(null);
+            if (!open) {
+              setPackagePickerProduct(null);
+              setPackagePickerStock(null);
+            }
           }}
         >
           <DialogContent dir="rtl" className="max-w-sm">
@@ -1061,6 +1135,7 @@ export default function CreateRetailInvoicePage() {
               {packagePickerProduct?.name}
             </p>
             <div className="flex flex-col gap-2 mt-2">
+              {/* العبوة الأساسية (comma-separated أو عادية) */}
               {packagePickerProduct &&
                 (() => {
                   const pkg = (
@@ -1087,9 +1162,56 @@ export default function CreateRetailInvoicePage() {
                       }}
                     >
                       {q.trim()} {type}
+                      <span className="text-xs text-muted-foreground mr-2">
+                        — {packagePickerProduct.price} ج
+                      </span>
+                      {packagePickerStock !== null && (
+                        <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-semibold mr-2">
+                          الرصيد: {packagePickerStock[0] ?? 0}
+                        </span>
+                      )}
                     </Button>
                   ));
                 })()}
+
+              {/* العبوات الفرعية (variants) */}
+              {packagePickerProduct &&
+                variantsMap[packagePickerProduct.id]?.map((v: any) => (
+                  <Button
+                    key={v.id}
+                    variant="outline"
+                    className="w-full text-base py-6"
+                    onClick={() => {
+                      finalizeAddItem(
+                        {
+                          ...packagePickerProduct,
+                          price:
+                            movementType === "sale"
+                              ? Number(v.retail_price)
+                              : Number(v.retail_purchase_price),
+                          variant_id: v.id,
+                        },
+                        v.retail_package || "-",
+                        packagePickerSource,
+                      );
+                      setPackagePickerProduct(null);
+                    }}
+                  >
+                    {v.retail_package || "-"}
+                    <span className="text-xs text-muted-foreground mr-2">
+                      —{" "}
+                      {movementType === "sale"
+                        ? v.retail_price
+                        : v.retail_purchase_price}{" "}
+                      ج{v.label && ` (${v.label})`}
+                    </span>
+                    {packagePickerStock !== null && (
+                      <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-semibold mr-2">
+                        الرصيد: {packagePickerStock[v.id] ?? 0}
+                      </span>
+                    )}
+                  </Button>
+                ))}
             </div>
           </DialogContent>
         </Dialog>
@@ -1145,7 +1267,14 @@ export default function CreateRetailInvoicePage() {
                         : ""
                     }`}
                   >
-                    <div className="font-medium">{product.name}</div>
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium">{product.name}</div>
+                      {variantsMap[product.id]?.length > 0 && (
+                        <span className="text-[10px] bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded-full">
+                          {variantsMap[product.id].length + 1} عبوات
+                        </span>
+                      )}
+                    </div>
                     <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3">
                       <span>المصنع: {product.manufacturer || "-"}</span>
                       <span>العبوة: {product.retail_package || "-"}</span>

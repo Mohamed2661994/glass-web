@@ -34,6 +34,8 @@ type InventoryItem = {
   total_value: number;
   warehouse_id: number;
   warehouse_name: string;
+  packages?: string | null;
+  package_name?: string | null;
 };
 
 type Product = {
@@ -230,6 +232,7 @@ export default function InventoryValuePage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="text-right">الصنف</TableHead>
+                      <TableHead className="text-center">العبوات</TableHead>
                       <TableHead className="text-center">الكمية</TableHead>
                       <TableHead className="text-center">سعر الشراء</TableHead>
                       <TableHead className="text-center">الإجمالي</TableHead>
@@ -247,11 +250,9 @@ export default function InventoryValuePage() {
                               - {item.manufacturer}
                             </span>
                           )}
-                          {packageMap.get(item.product_id) && (
-                            <span className="text-xs text-muted-foreground mr-2">
-                              - {packageMap.get(item.product_id)}
-                            </span>
-                          )}
+                        </TableCell>
+                        <TableCell className="text-center text-xs">
+                          {item.package_name || item.packages || "—"}
                         </TableCell>
                         <TableCell className="text-center">
                           {item.quantity}

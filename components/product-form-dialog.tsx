@@ -16,10 +16,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CheckCircle, Plus } from "lucide-react";
+import { CheckCircle, Plus, Trash2 } from "lucide-react";
 import api from "@/services/api";
 import { toast } from "sonner";
 import { AlertCircle, Loader2 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 interface Props {
   open: boolean;
@@ -30,6 +31,23 @@ interface Props {
 
 const wholesaleTypes = ["دستة", "طقم", "قطعة"];
 const retailTypes = ["شيالة", "علبة", "طقم", "قطعة"];
+
+interface VariantForm {
+  _key: string; // مفتاح فريد للـ React
+  id?: number; // لو موجود يبقى variant محفوظ في الداتابيز
+  barcode: string;
+  wholesale_package_type: string;
+  wholesale_package_qty: string;
+  retail_package_type: string;
+  retail_package_qty: string;
+  retail_package_qty2: string;
+  purchase_price: string;
+  wholesale_price: string;
+  retail_purchase_price: string;
+  retail_price: string;
+  discount_amount: string;
+  _deleted?: boolean; // علشان نعرف نحذفه من الباك
+}
 
 export function ProductFormDialog({
   open,
@@ -61,33 +79,31 @@ export function ProductFormDialog({
   };
 
   const [form, setForm] = useState<any>(emptyForm);
+  const [variantForms, setVariantForms] = useState<VariantForm[]>([]);
+
+  // ========= Parse helpers =========
+  const parseWholesale = (value: string) => {
+    if (!value) return { qty: "", type: "" };
+    const parts = value.split(" ");
+    return { qty: parts[1] || "", type: parts[2] || "" };
+  };
+
+  const parseRetail = (value: string) => {
+    if (!value) return { qty: "", qty2: "", type: "" };
+    const parts = value.split(" ");
+    const qtyPart = parts[0] || "";
+    const type = parts[1] || "";
+    if (qtyPart.includes(",")) {
+      const [q1, q2] = qtyPart.split(",");
+      return { qty: q1, qty2: q2, type };
+    }
+    return { qty: qtyPart, qty2: "", type };
+  };
 
   useEffect(() => {
     fetchManufacturers();
 
     if (product) {
-      const parseWholesale = (value: string) => {
-        if (!value) return { qty: "", type: "" };
-        const parts = value.split(" ");
-        return {
-          qty: parts[1] || "",
-          type: parts[2] || "",
-        };
-      };
-
-      const parseRetail = (value: string) => {
-        if (!value) return { qty: "", qty2: "", type: "" };
-        // Handle "3,6 علبة" format
-        const parts = value.split(" ");
-        const qtyPart = parts[0] || "";
-        const type = parts[1] || "";
-        if (qtyPart.includes(",")) {
-          const [q1, q2] = qtyPart.split(",");
-          return { qty: q1, qty2: q2, type };
-        }
-        return { qty: qtyPart, qty2: "", type };
-      };
-
       const wholesaleParsed = parseWholesale(product.wholesale_package);
       const retailParsed = parseRetail(product.retail_package);
 
@@ -99,64 +115,56 @@ export function ProductFormDialog({
         retail_package_qty2: retailParsed.qty2 || "",
         retail_package_type: retailParsed.type,
       });
+
+      // جلب العبوات الفرعية الموجودة
+      fetchExistingVariants(product.id);
     } else {
-      // 👈 لو مفيش product يبقى إضافة جديدة
       setForm(emptyForm);
+      setVariantForms([]);
     }
   }, [product, open]);
+
+  const fetchExistingVariants = async (productId: number) => {
+    try {
+      const res = await api.get(`/admin/products/${productId}/variants`);
+      const loaded: VariantForm[] = (res.data || []).map((v: any) => {
+        const wp = parseWholesale(v.wholesale_package);
+        const rp = parseRetail(v.retail_package);
+        return {
+          _key: `existing_${v.id}`,
+          id: v.id,
+          barcode: v.barcode || "",
+          wholesale_package_type: wp.type,
+          wholesale_package_qty: wp.qty,
+          retail_package_type: rp.type,
+          retail_package_qty: rp.qty,
+          retail_package_qty2: rp.qty2 || "",
+          purchase_price: String(v.purchase_price || ""),
+          wholesale_price: String(v.wholesale_price || ""),
+          retail_purchase_price: String(v.retail_purchase_price || ""),
+          retail_price: String(v.retail_price || ""),
+          discount_amount: String(v.discount_amount || ""),
+        };
+      });
+      setVariantForms(loaded);
+    } catch {
+      setVariantForms([]);
+    }
+  };
 
   // =========================
   // فحص الباركود (Debounce)
   // =========================
-  const checkBarcode = async (value: string) => {
-    if (!value) {
-      setBarcodeExists(false);
-      setBarcodeValid(false);
-      return;
-    }
-
-    try {
-      setCheckingBarcode(true);
-
-      const res = await api.get("/admin/products");
-      const products = res.data;
-
-      const exists = products.some(
-        (p: any) => p.barcode === value && (!isEdit || p.id !== product?.id), // مهم عشان التعديل
-      );
-
-      setBarcodeExists(exists);
-      setBarcodeValid(!exists);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setCheckingBarcode(false);
-    }
-  };
-
-  useEffect(() => {
-    const delay = setTimeout(() => {
-      if (form.barcode) {
-        checkBarcode(form.barcode);
-      } else {
-        setBarcodeExists(false);
-        setBarcodeValid(false);
-      }
-    }, 500);
-
-    return () => clearTimeout(delay);
-  }, [form.barcode]);
-
   useEffect(() => {
     if (!form.barcode) {
       setBarcodeExists(false);
+      setBarcodeValid(false);
       return;
     }
 
     const timeout = setTimeout(async () => {
       try {
         setCheckingBarcode(true);
-
         const res = await api.get(
           `/admin/products/check-barcode/${form.barcode}`,
           {
@@ -165,8 +173,8 @@ export function ProductFormDialog({
             },
           },
         );
-
         setBarcodeExists(res.data.exists);
+        setBarcodeValid(!res.data.exists);
       } catch (err) {
         console.error(err);
       } finally {
@@ -185,10 +193,51 @@ export function ProductFormDialog({
     } catch (err) {}
   };
 
-  const generateBarcode = async () => {
-    const res = await api.get("/admin/products");
-    const count = res.data.length + 1;
-    return `900000${count}`;
+  // ========= إضافة عبوة فرعية جديدة =========
+  const addVariantForm = () => {
+    const activeVariants = variantForms.filter((v) => !v._deleted);
+    const nextNum = activeVariants.length + 1;
+    const autoBarcode = form.barcode ? `${form.barcode}${nextNum}` : "";
+    setVariantForms((prev) => [
+      ...prev,
+      {
+        _key: `new_${Date.now()}`,
+        barcode: autoBarcode,
+        wholesale_package_type: "",
+        wholesale_package_qty: "",
+        retail_package_type: "",
+        retail_package_qty: "",
+        retail_package_qty2: "",
+        purchase_price: "",
+        wholesale_price: "",
+        retail_purchase_price: "",
+        retail_price: "",
+        discount_amount: "",
+      },
+    ]);
+  };
+
+  // ========= تعديل variant form =========
+  const updateVariantForm = (key: string, field: string, value: string) => {
+    setVariantForms((prev) =>
+      prev.map((v) => (v._key === key ? { ...v, [field]: value } : v)),
+    );
+  };
+
+  // ========= حذف variant form =========
+  const removeVariantForm = (key: string) => {
+    setVariantForms(
+      (prev) =>
+        prev
+          .map((v) => {
+            if (v._key !== key) return v;
+            // لو محفوظ في الداتابيز، نعلّمه بالحذف
+            if (v.id) return { ...v, _deleted: true };
+            // لو جديد، نشيله من الأراي
+            return null;
+          })
+          .filter(Boolean) as VariantForm[],
+    );
   };
 
   const handleSubmit = async () => {
@@ -203,7 +252,6 @@ export function ProductFormDialog({
     try {
       setLoading(true);
 
-      // 🔹 تكوين نص العبوات بالشكل اللي الباك مستنيه
       const wholesale_package = `كرتونة ${form.wholesale_package_qty || 0} ${form.wholesale_package_type || ""}`;
       const retailQty = form.retail_package_qty2
         ? `${form.retail_package_qty || 0},${form.retail_package_qty2}`
@@ -223,14 +271,59 @@ export function ProductFormDialog({
         barcode: form.barcode || undefined,
       };
 
+      let productId = product?.id;
+
       if (isEdit) {
         await api.put(`/admin/products/${product.id}`, payload);
       } else {
-        await api.post("/admin/products", payload);
+        const res = await api.post("/admin/products", payload);
+        productId = res.data?.id || res.data?.product?.id;
+      }
+
+      // ========= حفظ العبوات الفرعية =========
+      if (productId) {
+        for (const vf of variantForms) {
+          // حذف
+          if (vf._deleted && vf.id) {
+            await api.delete(`/admin/products/variants/${vf.id}`);
+            continue;
+          }
+          if (vf._deleted) continue;
+
+          const vWholesale = `كرتونة ${vf.wholesale_package_qty || 0} ${vf.wholesale_package_type || ""}`;
+          const vRetailQty = vf.retail_package_qty2
+            ? `${vf.retail_package_qty || 0},${vf.retail_package_qty2}`
+            : `${vf.retail_package_qty || 0}`;
+          const vRetail = `${vRetailQty} ${vf.retail_package_type || ""}`;
+
+          const variantPayload = {
+            label: "",
+            barcode: vf.barcode || "",
+            wholesale_package: vWholesale,
+            retail_package: vRetail,
+            purchase_price: Number(vf.purchase_price || 0),
+            wholesale_price: Number(vf.wholesale_price || 0),
+            retail_purchase_price: Number(vf.retail_purchase_price || 0),
+            retail_price: Number(vf.retail_price || 0),
+            discount_amount: Number(vf.discount_amount || 0),
+          };
+
+          if (vf.id) {
+            // تعديل
+            await api.put(`/admin/products/variants/${vf.id}`, variantPayload);
+          } else {
+            // إضافة
+            await api.post(
+              `/admin/products/${productId}/variants`,
+              variantPayload,
+            );
+          }
+        }
       }
 
       toast.success("تم الحفظ بنجاح");
-      setForm(emptyForm); // 👈 دي مهمة
+      setForm(emptyForm);
+      setVariantForms([]);
       onSuccess();
       onOpenChange(false);
     } catch (err) {
@@ -241,9 +334,14 @@ export function ProductFormDialog({
     }
   };
 
+  const activeVariants = variantForms.filter((v) => !v._deleted);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent dir="rtl" className="max-w-xl">
+      <DialogContent
+        dir="rtl"
+        className="max-w-xl max-h-[90vh] overflow-y-auto"
+      >
         <DialogHeader>
           <DialogTitle>{isEdit ? "تعديل صنف" : "إضافة صنف جديد"}</DialogTitle>
         </DialogHeader>
@@ -478,11 +576,198 @@ export function ProductFormDialog({
             }
           />
 
+          {/* ========= العبوات الفرعية ========= */}
+          {activeVariants.length > 0 && (
+            <div className="space-y-4">
+              {activeVariants.map((vf, idx) => (
+                <div key={vf._key}>
+                  <Separator className="my-2" />
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-semibold text-muted-foreground">
+                      عبوة فرعية {idx + 1}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-destructive"
+                      onClick={() => removeVariantForm(vf._key)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* Barcode */}
+                    <Input
+                      placeholder="باركود العبوة"
+                      value={vf.barcode}
+                      onChange={(e) =>
+                        updateVariantForm(vf._key, "barcode", e.target.value)
+                      }
+                    />
+
+                    {/* Wholesale Package */}
+                    <div className="grid grid-cols-3 gap-2 items-center">
+                      <Input value="كرتونة" disabled />
+                      <Input
+                        placeholder="عدد"
+                        type="number"
+                        value={vf.wholesale_package_qty}
+                        onChange={(e) =>
+                          updateVariantForm(
+                            vf._key,
+                            "wholesale_package_qty",
+                            e.target.value,
+                          )
+                        }
+                      />
+                      <Select
+                        value={vf.wholesale_package_type}
+                        onValueChange={(val) =>
+                          updateVariantForm(
+                            vf._key,
+                            "wholesale_package_type",
+                            val,
+                          )
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="اختر" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {wholesaleTypes.map((p) => (
+                            <SelectItem key={p} value={p}>
+                              {p}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Retail Package */}
+                    <div className="grid grid-cols-3 gap-2 items-center">
+                      <Select
+                        value={vf.retail_package_type}
+                        onValueChange={(val) =>
+                          updateVariantForm(vf._key, "retail_package_type", val)
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="اختر" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {retailTypes.map((p) => (
+                            <SelectItem key={p} value={p}>
+                              {p}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        placeholder="عدد 1"
+                        type="number"
+                        value={vf.retail_package_qty}
+                        onChange={(e) =>
+                          updateVariantForm(
+                            vf._key,
+                            "retail_package_qty",
+                            e.target.value,
+                          )
+                        }
+                      />
+                      <Input
+                        placeholder="عدد 2 (اختياري)"
+                        type="number"
+                        value={vf.retail_package_qty2}
+                        onChange={(e) =>
+                          updateVariantForm(
+                            vf._key,
+                            "retail_package_qty2",
+                            e.target.value,
+                          )
+                        }
+                      />
+                    </div>
+
+                    {/* Prices */}
+                    <Input
+                      type="number"
+                      placeholder="سعر الشراء جملة"
+                      value={vf.purchase_price}
+                      onChange={(e) =>
+                        updateVariantForm(
+                          vf._key,
+                          "purchase_price",
+                          e.target.value,
+                        )
+                      }
+                    />
+                    <Input
+                      type="number"
+                      placeholder="سعر البيع جملة"
+                      value={vf.wholesale_price}
+                      onChange={(e) =>
+                        updateVariantForm(
+                          vf._key,
+                          "wholesale_price",
+                          e.target.value,
+                        )
+                      }
+                    />
+                    <Input
+                      type="number"
+                      placeholder="سعر الشراء قطاعي"
+                      value={vf.retail_purchase_price}
+                      onChange={(e) =>
+                        updateVariantForm(
+                          vf._key,
+                          "retail_purchase_price",
+                          e.target.value,
+                        )
+                      }
+                    />
+                    <Input
+                      type="number"
+                      placeholder="سعر البيع قطاعي"
+                      value={vf.retail_price}
+                      onChange={(e) =>
+                        updateVariantForm(
+                          vf._key,
+                          "retail_price",
+                          e.target.value,
+                        )
+                      }
+                    />
+                    <Input
+                      type="number"
+                      placeholder="خصم ثابت"
+                      value={vf.discount_amount}
+                      onChange={(e) =>
+                        updateVariantForm(
+                          vf._key,
+                          "discount_amount",
+                          e.target.value,
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* زرار إضافة عبوة أخرى */}
           <Button
-            className="w-full mt-4"
-            onClick={handleSubmit}
-            disabled={loading}
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={addVariantForm}
           >
+            <Plus className="h-4 w-4 ml-2" />
+            إضافة عبوة أخرى
+          </Button>
+
+          <Button className="w-full" onClick={handleSubmit} disabled={loading}>
             {loading ? "جاري الحفظ..." : "حفظ الصنف"}
           </Button>
         </div>
