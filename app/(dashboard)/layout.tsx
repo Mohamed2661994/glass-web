@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { Sidebar } from "@/components/sidebar";
 import { MobileSidebar } from "@/components/mobile-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -11,10 +12,21 @@ import { NotificationBell } from "@/components/notification-bell";
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const router = useRouter();
+  const { setTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
+
+  // استعادة ثيم اليوزر عند الدخول
+  useEffect(() => {
+    if (user?.id) {
+      const savedTheme = localStorage.getItem(`theme_user_${user.id}`);
+      if (savedTheme) {
+        setTheme(savedTheme);
+      }
+    }
+  }, [user?.id, setTheme]);
 
   // ✅ لو مفيش توكن → يروح لصفحة الدخول
   useEffect(() => {
