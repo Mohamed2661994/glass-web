@@ -80,14 +80,16 @@ export function ProductCard({
     })),
   ];
   const pkgCount = packages.length;
+  const base = packages[0];
 
-  // تحديد أي عبوة ليها بيانات قطاعي خاصة
+  // عمود القطاعي يظهر بس لو البيانات مختلفة عن الأساسي
   const pkgHasRetail = packages.map((pkg, i) => {
     if (i === 0) return true; // الأساسية دايماً تظهر
-    return (
-      Number(pkg.retail_price) > 0 ||
-      Number(pkg.retail_purchase_price) > 0
-    );
+    const samePrice = Number(pkg.retail_price) === Number(base.retail_price);
+    const samePurchase = Number(pkg.retail_purchase_price) === Number(base.retail_purchase_price);
+    const samePackage = (pkg.retail_package || "") === (base.retail_package || "");
+    // لو كل القيم متطابقة مع الأساسي → نخفي العمود
+    return !(samePrice && samePurchase && samePackage);
   });
   const retailCount = pkgHasRetail.filter(Boolean).length;
   const totalCols = pkgCount + retailCount;
@@ -237,55 +239,59 @@ export function ProductCard({
             {/* Retail columns - only for packages with retail data */}
             {packages.map((pkg, i) =>
               !pkgHasRetail[i] ? null : (
-              <div
-                key={`r-${i}`}
-                className={`bg-amber-500/10 dark:bg-amber-500/15 p-2 space-y-1.5 ${
-                  i < pkgCount - 1 && pkgHasRetail.slice(i + 1).some(Boolean)
-                    ? "border-l border-dashed border-amber-500/30"
-                    : ""
-                }`}
-              >
-                <div>
-                  <div className="text-[10px] text-muted-foreground">بيع</div>
-                  <div className="text-sm font-black text-amber-600 dark:text-amber-400">
-                    {fmt(pkg.retail_price)}
+                <div
+                  key={`r-${i}`}
+                  className={`bg-amber-500/10 dark:bg-amber-500/15 p-2 space-y-1.5 ${
+                    i < pkgCount - 1 && pkgHasRetail.slice(i + 1).some(Boolean)
+                      ? "border-l border-dashed border-amber-500/30"
+                      : ""
+                  }`}
+                >
+                  <div>
+                    <div className="text-[10px] text-muted-foreground">بيع</div>
+                    <div className="text-sm font-black text-amber-600 dark:text-amber-400">
+                      {fmt(pkg.retail_price)}
+                    </div>
                   </div>
+                  <div>
+                    <div className="text-[10px] text-muted-foreground">
+                      شراء
+                    </div>
+                    <div className="text-xs font-semibold">
+                      {fmt(pkg.retail_purchase_price)}
+                    </div>
+                  </div>
+                  <div className="pt-1 border-t border-amber-500/20">
+                    <div className="text-[10px] text-muted-foreground">
+                      العبوة
+                    </div>
+                    <div className="text-[10px] font-medium truncate">
+                      {pkg.retail_package || "-"}
+                    </div>
+                  </div>
+                  {pkg.barcode && i > 0 && (
+                    <div className="flex items-center justify-center gap-0.5 text-[9px] text-muted-foreground font-mono">
+                      <span>{pkg.barcode}</span>
+                      <button
+                        onClick={() =>
+                          navigator.clipboard.writeText(pkg.barcode)
+                        }
+                        className="p-0.5 rounded hover:bg-muted transition-colors"
+                      >
+                        <Copy className="h-2.5 w-2.5" />
+                      </button>
+                      <button
+                        onClick={() =>
+                          onPrintBarcode?.({ ...product, barcode: pkg.barcode })
+                        }
+                        className="p-0.5 rounded hover:bg-muted transition-colors"
+                      >
+                        <Printer className="h-2.5 w-2.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <div className="text-[10px] text-muted-foreground">شراء</div>
-                  <div className="text-xs font-semibold">
-                    {fmt(pkg.retail_purchase_price)}
-                  </div>
-                </div>
-                <div className="pt-1 border-t border-amber-500/20">
-                  <div className="text-[10px] text-muted-foreground">
-                    العبوة
-                  </div>
-                  <div className="text-[10px] font-medium truncate">
-                    {pkg.retail_package || "-"}
-                  </div>
-                </div>
-                {pkg.barcode && i > 0 && (
-                  <div className="flex items-center justify-center gap-0.5 text-[9px] text-muted-foreground font-mono">
-                    <span>{pkg.barcode}</span>
-                    <button
-                      onClick={() => navigator.clipboard.writeText(pkg.barcode)}
-                      className="p-0.5 rounded hover:bg-muted transition-colors"
-                    >
-                      <Copy className="h-2.5 w-2.5" />
-                    </button>
-                    <button
-                      onClick={() =>
-                        onPrintBarcode?.({ ...product, barcode: pkg.barcode })
-                      }
-                      className="p-0.5 rounded hover:bg-muted transition-colors"
-                    >
-                      <Printer className="h-2.5 w-2.5" />
-                    </button>
-                  </div>
-                )}
-              </div>
-              )
+              ),
             )}
           </div>
 
@@ -298,23 +304,26 @@ export function ProductCard({
               <div style={{ gridColumn: `span ${pkgCount}` }} />
               {packages.map((pkg, i) =>
                 !pkgHasRetail[i] ? null : (
-                <div
-                  key={`d-${i}`}
-                  className={`bg-red-500/10 py-1.5 ${
-                    i < pkgCount - 1 && pkgHasRetail.slice(i + 1).some(Boolean)
-                      ? "border-l border-dashed border-red-500/30"
-                      : ""
-                  }`}
-                >
-                  {pkg.discount_amount > 0 ? (
-                    <span className="text-red-500 text-xs font-bold">
-                      خصم {fmt(pkg.discount_amount)} ج
-                    </span>
-                  ) : (
-                    <span className="text-[10px] text-muted-foreground">—</span>
-                  )}
-                </div>
-                )
+                  <div
+                    key={`d-${i}`}
+                    className={`bg-red-500/10 py-1.5 ${
+                      i < pkgCount - 1 &&
+                      pkgHasRetail.slice(i + 1).some(Boolean)
+                        ? "border-l border-dashed border-red-500/30"
+                        : ""
+                    }`}
+                  >
+                    {pkg.discount_amount > 0 ? (
+                      <span className="text-red-500 text-xs font-bold">
+                        خصم {fmt(pkg.discount_amount)} ج
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground">
+                        —
+                      </span>
+                    )}
+                  </div>
+                ),
               )}
             </div>
           )}
