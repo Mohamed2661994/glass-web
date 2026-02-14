@@ -86,8 +86,10 @@ export function ProductCard({
   const pkgHasRetail = packages.map((pkg, i) => {
     if (i === 0) return true; // الأساسية دايماً تظهر
     const samePrice = Number(pkg.retail_price) === Number(base.retail_price);
-    const samePurchase = Number(pkg.retail_purchase_price) === Number(base.retail_purchase_price);
-    const samePackage = (pkg.retail_package || "") === (base.retail_package || "");
+    const samePurchase =
+      Number(pkg.retail_purchase_price) === Number(base.retail_purchase_price);
+    const samePackage =
+      (pkg.retail_package || "") === (base.retail_package || "");
     // لو كل القيم متطابقة مع الأساسي → نخفي العمود
     return !(samePrice && samePurchase && samePackage);
   });
