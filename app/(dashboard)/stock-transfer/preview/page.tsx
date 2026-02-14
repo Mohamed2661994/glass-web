@@ -16,8 +16,10 @@ import { Loader2, AlertTriangle } from "lucide-react";
 
 interface PreviewItem {
   product_id: number;
+  variant_id?: number;
   product_name?: string;
   manufacturer?: string;
+  package_name?: string;
   quantity: number;
   from_quantity: number;
   to_quantity: number;
@@ -61,7 +63,9 @@ export default function StockTransferPreviewPage() {
 
         const merged = res.data.map((row: any) => {
           const localItem = parsedPayload.items.find(
-            (i: any) => i.product_id === row.product_id,
+            (i: any) =>
+              i.product_id === row.product_id &&
+              (i.variant_id || 0) === (row.variant_id || 0),
           );
           return {
             ...row,
@@ -148,6 +152,11 @@ export default function StockTransferPreviewPage() {
                   <div className="grid grid-cols-4 text-white text-sm text-center">
                     <div className="py-3 font-bold text-right pr-3">
                       {item.product_name} - {item.manufacturer}
+                      {item.package_name && (
+                        <div className="text-xs text-blue-200 mt-0.5">
+                          {item.package_name}
+                        </div>
+                      )}
                     </div>
                     <div className="py-3 font-semibold">
                       {item.from_quantity}

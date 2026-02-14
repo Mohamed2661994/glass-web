@@ -28,7 +28,9 @@ interface Product {
 }
 
 interface TransferItem {
+  uid: string;
   product_id: number;
+  variant_id: number;
   product_name: string;
   manufacturer: string;
   quantity: number;
@@ -116,9 +118,15 @@ export default function StockTransferPage() {
     );
   };
 
-  const finalizeAddProduct = (product: Product, pkg: string, price: number) => {
-    const key = `${product.id}_${pkg}`;
-    if (items.find((i) => `${i.product_id}_${i.wholesale_package}` === key)) {
+  const finalizeAddProduct = (
+    product: any,
+    pkg: string,
+    price: number,
+    variantId: number = 0,
+    retailPkg?: string,
+  ) => {
+    const uid = `${product.id}_${variantId}`;
+    if (items.find((i) => i.uid === uid)) {
       toast.warning("الصنف بهذه العبوة مضاف بالفعل");
       return;
     }
@@ -126,13 +134,15 @@ export default function StockTransferPage() {
     setItems((prev) => [
       ...prev,
       {
+        uid,
         product_id: product.id,
+        variant_id: variantId,
         product_name: product.name,
         manufacturer: product.manufacturer,
         quantity: 1,
         percent: 0,
         wholesale_package: pkg,
-        retail_package: product.retail_package,
+        retail_package: retailPkg || product.retail_package,
         wholesale_price: price,
         available_quantity: product.available_quantity,
       },
@@ -143,18 +153,18 @@ export default function StockTransferPage() {
 
   /* ========== Update Item ========== */
   const updateItem = (
-    id: number,
+    uid: string,
     field: "quantity" | "percent",
     value: number,
   ) => {
     setItems((prev) =>
-      prev.map((i) => (i.product_id === id ? { ...i, [field]: value } : i)),
+      prev.map((i) => (i.uid === uid ? { ...i, [field]: value } : i)),
     );
   };
 
   /* ========== Remove Item ========== */
-  const removeItem = (id: number) => {
-    setItems((prev) => prev.filter((i) => i.product_id !== id));
+  const removeItem = (uid: string) => {
+    setItems((prev) => prev.filter((i) => i.uid !== uid));
   };
 
   /* ========== Total ========== */
@@ -180,6 +190,7 @@ export default function StockTransferPage() {
         const discount = base * (i.percent / 100);
         return {
           product_id: i.product_id,
+          variant_id: i.variant_id,
           quantity: i.quantity,
           final_price: base - discount,
         };
@@ -223,7 +234,7 @@ export default function StockTransferPage() {
         const final = base - discount;
 
         return (
-          <Card key={item.product_id}>
+          <Card key={item.uid}>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 {/* حذف */}
@@ -231,7 +242,7 @@ export default function StockTransferPage() {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 shrink-0"
-                  onClick={() => removeItem(item.product_id)}
+                  onClick={() => removeItem(item.uid)}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -243,11 +254,7 @@ export default function StockTransferPage() {
                   className="w-16 text-center"
                   value={item.percent || ""}
                   onChange={(e) =>
-                    updateItem(
-                      item.product_id,
-                      "percent",
-                      Number(e.target.value) || 0,
-                    )
+                    updateItem(item.uid, "percent", Number(e.target.value) || 0)
                   }
                 />
 
@@ -258,7 +265,7 @@ export default function StockTransferPage() {
                   value={item.quantity || ""}
                   onChange={(e) =>
                     updateItem(
-                      item.product_id,
+                      item.uid,
                       "quantity",
                       Number(e.target.value) || 1,
                     )
@@ -389,6 +396,8 @@ export default function StockTransferPage() {
                     packagePickerProduct,
                     packagePickerProduct.wholesale_package,
                     packagePickerProduct.wholesale_price,
+                    0,
+                    packagePickerProduct.retail_package,
                   );
                 }}
               >
@@ -412,6 +421,8 @@ export default function StockTransferPage() {
                       packagePickerProduct,
                       v.wholesale_package || "-",
                       Number(v.wholesale_price),
+                      v.id,
+                      v.retail_package,
                     );
                   }}
                 >
