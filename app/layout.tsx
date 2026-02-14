@@ -33,8 +33,18 @@ export default function RootLayout({
     <html lang="ar" dir="rtl" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="32x32" />
-        <link rel="icon" type="image/png" href="/icons/icon-32.png" sizes="32x32" />
-        <link rel="icon" type="image/png" href="/icons/icon-16.png" sizes="16x16" />
+        <link
+          rel="icon"
+          type="image/png"
+          href="/icons/icon-32.png"
+          sizes="32x32"
+        />
+        <link
+          rel="icon"
+          type="image/png"
+          href="/icons/icon-16.png"
+          sizes="16x16"
+        />
         <link rel="apple-touch-icon" href="/icons/icon-180.png" />
         <link rel="apple-touch-startup-image" href="/images/splash.png" />
       </head>
