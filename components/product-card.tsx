@@ -80,7 +80,17 @@ export function ProductCard({
     })),
   ];
   const pkgCount = packages.length;
-  const totalCols = pkgCount * 2;
+
+  // تحديد أي عبوة ليها بيانات قطاعي خاصة
+  const pkgHasRetail = packages.map((pkg, i) => {
+    if (i === 0) return true; // الأساسية دايماً تظهر
+    return (
+      Number(pkg.retail_price) > 0 ||
+      Number(pkg.retail_purchase_price) > 0
+    );
+  });
+  const retailCount = pkgHasRetail.filter(Boolean).length;
+  const totalCols = pkgCount + retailCount;
   const hasAnyDiscount = packages.some((p) => p.discount_amount > 0);
 
   return (
@@ -159,7 +169,7 @@ export function ProductCard({
             </div>
             <div
               className="bg-amber-500/10 dark:bg-amber-500/15 py-1.5"
-              style={{ gridColumn: `span ${pkgCount}` }}
+              style={{ gridColumn: `span ${retailCount}` }}
             >
               <div className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">
                 قطاعي
@@ -224,12 +234,13 @@ export function ProductCard({
               </div>
             ))}
 
-            {/* Retail columns */}
-            {packages.map((pkg, i) => (
+            {/* Retail columns - only for packages with retail data */}
+            {packages.map((pkg, i) =>
+              !pkgHasRetail[i] ? null : (
               <div
                 key={`r-${i}`}
                 className={`bg-amber-500/10 dark:bg-amber-500/15 p-2 space-y-1.5 ${
-                  i < pkgCount - 1
+                  i < pkgCount - 1 && pkgHasRetail.slice(i + 1).some(Boolean)
                     ? "border-l border-dashed border-amber-500/30"
                     : ""
                 }`}
@@ -274,7 +285,8 @@ export function ProductCard({
                   </div>
                 )}
               </div>
-            ))}
+              )
+            )}
           </div>
 
           {/* Discount row under retail columns */}
@@ -284,11 +296,12 @@ export function ProductCard({
               style={{ gridTemplateColumns: `repeat(${totalCols}, 1fr)` }}
             >
               <div style={{ gridColumn: `span ${pkgCount}` }} />
-              {packages.map((pkg, i) => (
+              {packages.map((pkg, i) =>
+                !pkgHasRetail[i] ? null : (
                 <div
                   key={`d-${i}`}
                   className={`bg-red-500/10 py-1.5 ${
-                    i < pkgCount - 1
+                    i < pkgCount - 1 && pkgHasRetail.slice(i + 1).some(Boolean)
                       ? "border-l border-dashed border-red-500/30"
                       : ""
                   }`}
@@ -301,7 +314,8 @@ export function ProductCard({
                     <span className="text-[10px] text-muted-foreground">—</span>
                   )}
                 </div>
-              ))}
+                )
+              )}
             </div>
           )}
         </div>
