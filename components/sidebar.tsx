@@ -61,7 +61,10 @@ export function Sidebar({
   useEffect(() => {
     if (isMobile || !pinned) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (sidebarRef.current && !sidebarRef.current.contains(e.target as Node)) {
+      if (
+        sidebarRef.current &&
+        !sidebarRef.current.contains(e.target as Node)
+      ) {
         setPinned(false);
       }
     };

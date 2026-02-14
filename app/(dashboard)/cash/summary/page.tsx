@@ -9,7 +9,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { Printer, CalendarDays } from "lucide-react";
+import {
+  Printer,
+  CalendarDays,
+  TrendingUp,
+  TrendingDown,
+  Landmark,
+  History,
+  ArrowDownCircle,
+  ArrowUpCircle,
+} from "lucide-react";
 import api from "@/services/api";
 import { useAuth } from "@/app/context/auth-context";
 
@@ -194,201 +203,249 @@ export default function CashSummaryPage() {
   /* ================= RENDER ================= */
 
   return (
-    <div className="max-w-5xl mx-auto p-4 space-y-4" dir="rtl">
-      <h1 className="text-xl font-bold text-center">ملخص الخزنة</h1>
-
-      {/* Print Button */}
-      <Button onClick={handlePrint} className="w-full">
-        <Printer className="h-4 w-4 ml-2" />
-        طباعة
-      </Button>
-
-      {/* Date Filters */}
-      <Card>
-        <CardContent className="p-4 flex flex-wrap gap-4 items-end">
-          <div className="flex-1 min-w-[140px]">
-            <Label>من تاريخ</Label>
-            <Input
-              type="date"
-              value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
-              className="mt-1"
-            />
+    <div className="max-w-5xl mx-auto p-4 space-y-5" dir="rtl">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Landmark className="h-5 w-5 text-primary" />
           </div>
-          <div className="flex-1 min-w-[140px]">
-            <Label>إلى تاريخ</Label>
-            <Input
-              type="date"
-              value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
-              className="mt-1"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Opening Balance Toggle */}
-      <Card
-        className="cursor-pointer"
-        onClick={() => setIncludeOpeningBalance((v) => !v)}
-      >
-        <CardContent className="p-4 flex items-center justify-between">
           <div>
-            <p className="font-bold text-sm">احتساب رصيد اليومية السابقة</p>
-            {!includeOpeningBalance && (
-              <p className="text-xs text-muted-foreground mt-1">
-                عند الإلغاء سيتم تجاهل رصيد اليوم السابق من الحساب
-              </p>
-            )}
+            <h1 className="text-xl font-bold">ملخص الخزنة</h1>
+            <p className="text-xs text-muted-foreground">تقرير الوارد والمنصرف</p>
           </div>
-          <Switch
-            checked={includeOpeningBalance}
-            onCheckedChange={setIncludeOpeningBalance}
-          />
+        </div>
+        <Button onClick={handlePrint} size="sm" variant="outline" className="gap-2">
+          <Printer className="h-4 w-4" />
+          طباعة
+        </Button>
+      </div>
+
+      {/* Date Filters + Toggle */}
+      <Card className="overflow-hidden">
+        <CardContent className="p-0">
+          <div className="p-4 flex flex-wrap gap-4 items-end border-b">
+            <div className="flex-1 min-w-[140px]">
+              <Label className="text-xs text-muted-foreground">من تاريخ</Label>
+              <Input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div className="flex-1 min-w-[140px]">
+              <Label className="text-xs text-muted-foreground">إلى تاريخ</Label>
+              <Input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <div
+            className="p-4 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => setIncludeOpeningBalance((v) => !v)}
+          >
+            <div className="flex items-center gap-2">
+              <History className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="font-semibold text-sm">احتساب رصيد اليومية السابقة</p>
+                {!includeOpeningBalance && (
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    سيتم تجاهل رصيد اليوم السابق
+                  </p>
+                )}
+              </div>
+            </div>
+            <Switch
+              checked={includeOpeningBalance}
+              onCheckedChange={setIncludeOpeningBalance}
+            />
+          </div>
         </CardContent>
       </Card>
+
+      {/* Previous Day Summary */}
+      {includeOpeningBalance && (
+        <Card className="border-dashed">
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground font-medium mb-3">
+              اليومية السابقة ({formatLocalDate(previousDate)})
+            </p>
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div>
+                <p className="text-xs text-muted-foreground">الوارد</p>
+                <p className="text-green-500 font-bold text-lg">{prevSummary.totalIn}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">المنصرف</p>
+                <p className="text-red-500 font-bold text-lg">{prevSummary.totalOut}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">الرصيد</p>
+                <p className={`font-black text-lg ${prevSummary.balance >= 0 ? "text-green-500" : "text-red-500"}`}>
+                  {prevSummary.balance}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Previous Day */}
-        {includeOpeningBalance && (
-          <Card className="sm:col-span-2">
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground mb-2">
-                اليومية السابقة ({formatLocalDate(previousDate)})
-              </p>
-              <p className="text-green-500 font-bold">
-                الوارد: {prevSummary.totalIn} ج.م
-              </p>
-              <p className="text-red-500 font-bold">
-                المنصرف: {prevSummary.totalOut} ج.م
-              </p>
-              <p
-                className={`mt-2 text-lg font-black ${prevSummary.balance >= 0 ? "text-green-500" : "text-red-500"}`}
-              >
-                الرصيد: {prevSummary.balance} ج.م
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">إجمالي المنصرف</p>
-            <p className="text-2xl font-extrabold text-red-500">
-              {summary.totalOut} ج.م
-            </p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card className="bg-green-500/5 border-green-500/20">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
+              <TrendingUp className="h-5 w-5 text-green-500" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">إجمالي الوارد</p>
+              <p className="text-xl font-extrabold text-green-500">{summary.totalIn} ج.م</p>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">إجمالي الوارد</p>
-            <p className="text-2xl font-extrabold text-green-500">
-              {summary.totalIn} ج.م
-            </p>
+        <Card className="bg-red-500/5 border-red-500/20">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-red-500/10 flex items-center justify-center shrink-0">
+              <TrendingDown className="h-5 w-5 text-red-500" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">إجمالي المنصرف</p>
+              <p className="text-xl font-extrabold text-red-500">{summary.totalOut} ج.م</p>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="sm:col-span-2">
-          <CardContent className="p-4 text-center">
-            <p className="text-sm text-muted-foreground">رصيد الخزنة</p>
-            <p
-              className={`text-3xl font-black ${summary.balance >= 0 ? "text-green-500" : "text-red-500"}`}
-            >
-              {summary.balance} ج.م
-            </p>
+        <Card className={`${summary.balance >= 0 ? "bg-emerald-500/5 border-emerald-500/20" : "bg-red-500/5 border-red-500/20"}`}>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${summary.balance >= 0 ? "bg-emerald-500/10" : "bg-red-500/10"}`}>
+              <Landmark className={`h-5 w-5 ${summary.balance >= 0 ? "text-emerald-500" : "text-red-500"}`} />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">رصيد الخزنة</p>
+              <p className={`text-xl font-black ${summary.balance >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                {summary.balance} ج.م
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Lists */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* المنصرف */}
+        {/* الوارد */}
         <Card>
-          <CardContent className="p-4">
-            <h2 className="text-muted-foreground font-bold mb-3">المنصرف</h2>
-
-            {filteredCashOut.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                لا توجد بيانات
-              </p>
-            )}
-
-            {filteredCashOut.map((o) => (
-              <div key={o.id} className="border-t py-3 space-y-1">
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <CalendarDays className="h-3 w-3" />
-                  {formatCardDate(o.transaction_date)}
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="font-bold text-sm flex-1">{o.name}</span>
-                  <span className="text-red-500 font-extrabold">
-                    {o.amount}
-                  </span>
-                  <Badge
-                    variant={
-                      o.entry_type === "purchase" ? "default" : "destructive"
-                    }
-                    className="text-[11px]"
-                  >
-                    {o.entry_type === "purchase" ? "مشتريات" : "مصروفات"}
-                  </Badge>
-                </div>
-                {o.notes && (
-                  <p className="text-xs text-blue-600">📝 {o.notes}</p>
-                )}
+          <CardContent className="p-0">
+            <div className="p-4 border-b flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ArrowDownCircle className="h-4 w-4 text-green-500" />
+                <h2 className="font-bold text-sm">الوارد</h2>
               </div>
-            ))}
+              <Badge variant="secondary" className="text-[11px]">
+                {filteredCashIn.length} عملية
+              </Badge>
+            </div>
+
+            <div className="p-4">
+              {filteredCashIn.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  لا توجد بيانات
+                </p>
+              )}
+
+              {filteredCashIn.map((i, idx) => (
+                <div key={i.id} className={`py-3 space-y-1.5 ${idx > 0 ? "border-t" : ""}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-sm">{i.customer_name}</span>
+                    <span className="text-green-500 font-extrabold tabular-nums">
+                      {i.source_type === "invoice" ? i.paid_amount : i.amount} ج.م
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <CalendarDays className="h-3 w-3" />
+                      {formatCardDate(i.transaction_date)}
+                    </div>
+                    <Badge
+                      className="text-[10px] px-1.5 py-0"
+                      variant={
+                        i.source_type === "invoice"
+                          ? "secondary"
+                          : i.source_type === "customer_payment"
+                            ? "default"
+                            : "outline"
+                      }
+                    >
+                      {i.source_type === "invoice"
+                        ? "فاتورة"
+                        : i.source_type === "customer_payment"
+                          ? "سداد عميل"
+                          : "وارد يدوي"}
+                    </Badge>
+                  </div>
+                  {i.notes && (
+                    <p className="text-[11px] text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 rounded px-2 py-1">
+                      {i.notes}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
-        {/* الوارد */}
+        {/* المنصرف */}
         <Card>
-          <CardContent className="p-4">
-            <h2 className="text-muted-foreground font-bold mb-3">الوارد</h2>
-
-            {filteredCashIn.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                لا توجد بيانات
-              </p>
-            )}
-
-            {filteredCashIn.map((i) => (
-              <div key={i.id} className="border-t py-3 space-y-1">
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <CalendarDays className="h-3 w-3" />
-                  {formatCardDate(i.transaction_date)}
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="font-bold text-sm flex-1">
-                    {i.customer_name}
-                  </span>
-                  <span className="text-green-500 font-extrabold">
-                    {i.source_type === "invoice" ? i.paid_amount : i.amount}
-                  </span>
-                  <Badge
-                    className="text-[11px]"
-                    variant={
-                      i.source_type === "invoice"
-                        ? "secondary"
-                        : i.source_type === "customer_payment"
-                          ? "default"
-                          : "outline"
-                    }
-                  >
-                    {i.source_type === "invoice"
-                      ? "فاتورة"
-                      : i.source_type === "customer_payment"
-                        ? "سداد عميل"
-                        : "وارد يدوي"}
-                  </Badge>
-                </div>
-                {i.notes && (
-                  <p className="text-xs text-blue-600">📝 {i.notes}</p>
-                )}
+          <CardContent className="p-0">
+            <div className="p-4 border-b flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ArrowUpCircle className="h-4 w-4 text-red-500" />
+                <h2 className="font-bold text-sm">المنصرف</h2>
               </div>
-            ))}
+              <Badge variant="secondary" className="text-[11px]">
+                {filteredCashOut.length} عملية
+              </Badge>
+            </div>
+
+            <div className="p-4">
+              {filteredCashOut.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  لا توجد بيانات
+                </p>
+              )}
+
+              {filteredCashOut.map((o, idx) => (
+                <div key={o.id} className={`py-3 space-y-1.5 ${idx > 0 ? "border-t" : ""}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-sm">{o.name}</span>
+                    <span className="text-red-500 font-extrabold tabular-nums">
+                      {o.amount} ج.م
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <CalendarDays className="h-3 w-3" />
+                      {formatCardDate(o.transaction_date)}
+                    </div>
+                    <Badge
+                      variant={o.entry_type === "purchase" ? "default" : "destructive"}
+                      className="text-[10px] px-1.5 py-0"
+                    >
+                      {o.entry_type === "purchase" ? "مشتريات" : "مصروفات"}
+                    </Badge>
+                  </div>
+                  {o.notes && (
+                    <p className="text-[11px] text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 rounded px-2 py-1">
+                      {o.notes}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       </div>
