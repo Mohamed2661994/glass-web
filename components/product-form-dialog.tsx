@@ -488,7 +488,7 @@ export function ProductFormDialog({
           </div>
 
           {/* Retail Package */}
-          <div className="grid grid-cols-3 gap-3 items-center">
+          <div className="grid grid-cols-2 gap-3 items-center">
             <Select
               value={form.retail_package_type}
               onValueChange={(val) =>
@@ -511,25 +511,13 @@ export function ProductFormDialog({
             </Select>
 
             <Input
-              placeholder="عدد 1"
+              placeholder="عدد"
               type="number"
               value={form.retail_package_qty}
               onChange={(e) =>
                 setForm({
                   ...form,
                   retail_package_qty: e.target.value,
-                })
-              }
-            />
-
-            <Input
-              placeholder="عدد 2 (اختياري)"
-              type="number"
-              value={form.retail_package_qty2}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  retail_package_qty2: e.target.value,
                 })
               }
             />
@@ -654,7 +642,7 @@ export function ProductFormDialog({
                     </div>
 
                     {/* Retail Package */}
-                    <div className="grid grid-cols-3 gap-3 items-center">
+                    <div className="grid grid-cols-2 gap-3 items-center">
                       <Select
                         value={vf.retail_package_type}
                         onValueChange={(val) =>
@@ -673,25 +661,13 @@ export function ProductFormDialog({
                         </SelectContent>
                       </Select>
                       <Input
-                        placeholder="عدد 1"
+                        placeholder="عدد"
                         type="number"
                         value={vf.retail_package_qty}
                         onChange={(e) =>
                           updateVariantForm(
                             vf._key,
                             "retail_package_qty",
-                            e.target.value,
-                          )
-                        }
-                      />
-                      <Input
-                        placeholder="عدد 2 (اختياري)"
-                        type="number"
-                        value={vf.retail_package_qty2}
-                        onChange={(e) =>
-                          updateVariantForm(
-                            vf._key,
-                            "retail_package_qty2",
                             e.target.value,
                           )
                         }
