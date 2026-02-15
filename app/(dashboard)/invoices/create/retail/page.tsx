@@ -20,8 +20,6 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -39,7 +37,6 @@ export default function CreateRetailInvoicePage() {
      ========================================================= */
 
   const [movementType, setMovementType] = useState<"sale" | "purchase">("sale");
-  const [isReturn, setIsReturn] = useState(false);
   const [invoiceDate, setInvoiceDate] = useState(
     new Date().toISOString().substring(0, 10),
   );
@@ -570,7 +567,6 @@ export default function CreateRetailInvoicePage() {
         branch_id: 1,
         invoice_type: "retail",
         movement_type: movementType,
-        is_return: isReturn,
         invoice_date: invoiceDate,
         customer_id: customerId,
         customer_name: customerName || "نقدي",
@@ -718,18 +714,6 @@ export default function CreateRetailInvoicePage() {
                   <SelectItem value="purchase">شراء</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            {/* مرتجع toggle */}
-            <div className="flex items-center gap-3">
-              <Switch
-                id="is-return-retail"
-                checked={isReturn}
-                onCheckedChange={setIsReturn}
-              />
-              <Label htmlFor="is-return-retail" className="text-sm cursor-pointer">
-                مرتجع
-              </Label>
             </div>
 
             <div>
@@ -902,6 +886,7 @@ export default function CreateRetailInvoicePage() {
                     <th className="p-3 text-center">الكمية</th>
                     <th className="p-3 text-center">الخصم</th>
                     <th className="p-3 text-center">الإجمالي</th>
+                    <th className="p-3 text-center">مرتجع</th>
                     <th className="p-3 text-center">حذف</th>
                   </tr>
                 </thead>
@@ -953,11 +938,29 @@ export default function CreateRetailInvoicePage() {
                         </span>
                       </td>
                       <td className="p-3 text-center font-semibold">
-                        {Number(item.price) * (Number(item.quantity) || 0) -
-                          (applyItemsDiscount
-                            ? (Number(item.discount) || 0) *
-                              (Number(item.quantity) || 0)
-                            : 0)}
+                        {(() => {
+                          const raw =
+                            Number(item.price) * (Number(item.quantity) || 0) -
+                            (applyItemsDiscount
+                              ? (Number(item.discount) || 0) *
+                                (Number(item.quantity) || 0)
+                              : 0);
+                          return item.is_return ? -raw : raw;
+                        })()}
+                      </td>
+                      <td className="p-3 text-center">
+                        <Checkbox
+                          checked={item.is_return || false}
+                          onCheckedChange={(checked) =>
+                            setItems((prev) =>
+                              prev.map((i) =>
+                                i.uid === item.uid
+                                  ? { ...i, is_return: !!checked }
+                                  : i,
+                              ),
+                            )
+                          }
+                        />
                       </td>
                       <td className="p-3 text-center">
                         {confirmDeleteId === item.uid ? (

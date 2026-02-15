@@ -20,8 +20,6 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -43,7 +41,6 @@ export default function EditRetailInvoicePage() {
      ========================================================= */
 
   const [movementType, setMovementType] = useState<"sale" | "purchase">("sale");
-  const [isReturn, setIsReturn] = useState(false);
   const [invoiceDate, setInvoiceDate] = useState("");
 
   const [customerName, setCustomerName] = useState("");
@@ -110,7 +107,6 @@ export default function EditRetailInvoicePage() {
         }
 
         setMovementType(inv.movement_type);
-        setIsReturn(inv.is_return || false);
         setInvoiceDate(
           inv.invoice_date
             ? new Date(inv.invoice_date).toISOString().substring(0, 10)
@@ -132,6 +128,7 @@ export default function EditRetailInvoicePage() {
             price: item.price,
             quantity: item.quantity,
             discount: item.discount || 0,
+            is_return: item.is_return || false,
           })),
         );
       } catch {
@@ -574,16 +571,6 @@ export default function EditRetailInvoicePage() {
               </Select>
             </div>
 
-            {/* مرتجع toggle */}
-            {isReturn && (
-              <div className="flex items-center gap-3">
-                <Switch id="is-return-edit-retail" checked disabled />
-                <Label htmlFor="is-return-edit-retail" className="text-sm">
-                  مرتجع
-                </Label>
-              </div>
-            )}
-
             <div>
               <label className="text-sm mb-2 block">التاريخ</label>
               <Input type="date" value={invoiceDate} disabled />
@@ -716,6 +703,7 @@ export default function EditRetailInvoicePage() {
                     <th className="p-3 text-center">الكمية</th>
                     <th className="p-3 text-center">الخصم</th>
                     <th className="p-3 text-center">الإجمالي</th>
+                    <th className="p-3 text-center">مرتجع</th>
                     <th className="p-3 text-center">حذف</th>
                   </tr>
                 </thead>
@@ -767,11 +755,29 @@ export default function EditRetailInvoicePage() {
                         </span>
                       </td>
                       <td className="p-3 text-center font-semibold">
-                        {Number(item.price) * (Number(item.quantity) || 0) -
-                          (applyItemsDiscount
-                            ? (Number(item.discount) || 0) *
-                              (Number(item.quantity) || 0)
-                            : 0)}
+                        {(() => {
+                          const raw =
+                            Number(item.price) * (Number(item.quantity) || 0) -
+                            (applyItemsDiscount
+                              ? (Number(item.discount) || 0) *
+                                (Number(item.quantity) || 0)
+                              : 0);
+                          return item.is_return ? -raw : raw;
+                        })()}
+                      </td>
+                      <td className="p-3 text-center">
+                        <Checkbox
+                          checked={item.is_return || false}
+                          onCheckedChange={(checked) =>
+                            setItems((prev) =>
+                              prev.map((i) =>
+                                i.product_id === item.product_id
+                                  ? { ...i, is_return: !!checked }
+                                  : i,
+                              ),
+                            )
+                          }
+                        />
                       </td>
                       <td className="p-3 text-center">
                         {confirmDeleteId === item.product_id ? (

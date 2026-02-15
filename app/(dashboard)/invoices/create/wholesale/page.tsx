@@ -20,8 +20,7 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/app/context/auth-context";
 import { PageContainer } from "@/components/layout/page-container";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -42,7 +41,6 @@ export default function CreateWholesaleInvoicePage() {
      ========================================================= */
 
   const [movementType, setMovementType] = useState<"sale" | "purchase">("sale");
-  const [isReturn, setIsReturn] = useState(false);
   const [invoiceDate, setInvoiceDate] = useState(
     new Date().toISOString().substring(0, 10),
   );
@@ -378,7 +376,6 @@ export default function CreateWholesaleInvoicePage() {
       const res = await api.post("/invoices", {
         invoice_type: "wholesale",
         movement_type: movementType,
-        is_return: isReturn,
         invoice_date: invoiceDate,
         customer_id: customerId,
         customer_name: customerName,
@@ -524,18 +521,6 @@ export default function CreateWholesaleInvoicePage() {
               </Select>
             </div>
 
-            {/* مرتجع toggle */}
-            <div className="flex items-center gap-3">
-              <Switch
-                id="is-return"
-                checked={isReturn}
-                onCheckedChange={setIsReturn}
-              />
-              <Label htmlFor="is-return" className="text-sm cursor-pointer">
-                مرتجع
-              </Label>
-            </div>
-
             <div>
               <label className="text-sm mb-2 block">التاريخ</label>
               <Input
@@ -638,6 +623,7 @@ export default function CreateWholesaleInvoicePage() {
                     <th className="p-3 text-center">الكمية</th>
                     <th className="p-3 text-center">الخصم</th>
                     <th className="p-3 text-center">الإجمالي</th>
+                    <th className="p-3 text-center">مرتجع</th>
                     <th className="p-3 text-center">حذف</th>
                   </tr>
                 </thead>
@@ -716,8 +702,26 @@ export default function CreateWholesaleInvoicePage() {
                         />
                       </td>
                       <td className="p-3 text-center font-semibold">
-                        {Number(item.price) * (Number(item.quantity) || 0) -
-                          (Number(item.discount) || 0)}
+                        {(() => {
+                          const raw =
+                            Number(item.price) * (Number(item.quantity) || 0) -
+                            (Number(item.discount) || 0);
+                          return item.is_return ? -raw : raw;
+                        })()}
+                      </td>
+                      <td className="p-3 text-center">
+                        <Checkbox
+                          checked={item.is_return || false}
+                          onCheckedChange={(checked) =>
+                            setItems((prev) =>
+                              prev.map((i) =>
+                                i.uid === item.uid
+                                  ? { ...i, is_return: !!checked }
+                                  : i,
+                              ),
+                            )
+                          }
+                        />
                       </td>
                       <td className="p-3 text-center">
                         {confirmDeleteId === item.uid ? (

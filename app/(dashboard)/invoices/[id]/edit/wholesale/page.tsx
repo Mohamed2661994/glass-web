@@ -19,8 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -42,7 +41,6 @@ export default function EditWholesaleInvoicePage() {
      ========================================================= */
 
   const [movementType, setMovementType] = useState<"sale" | "purchase">("sale");
-  const [isReturn, setIsReturn] = useState(false);
   const [invoiceDate, setInvoiceDate] = useState("");
 
   const [customerName, setCustomerName] = useState("");
@@ -102,7 +100,6 @@ export default function EditWholesaleInvoicePage() {
         }
 
         setMovementType(inv.movement_type);
-        setIsReturn(inv.is_return || false);
         setInvoiceDate(
           inv.invoice_date
             ? new Date(inv.invoice_date).toISOString().substring(0, 10)
@@ -117,13 +114,14 @@ export default function EditWholesaleInvoicePage() {
 
         setItems(
           (inv.items || []).map((item: any) => ({
-            product_id: item.product_id,
             product_name: item.product_name,
+            product_id: item.product_id,
             manufacturer: item.manufacturer || "-",
             package: item.package || "-",
             price: item.price,
             quantity: item.quantity,
             discount: item.discount || 0,
+            is_return: item.is_return || false,
           })),
         );
       } catch {
@@ -506,16 +504,6 @@ export default function EditWholesaleInvoicePage() {
               </Select>
             </div>
 
-            {/* مرتجع toggle */}
-            {isReturn && (
-              <div className="flex items-center gap-3">
-                <Switch id="is-return-edit" checked disabled />
-                <Label htmlFor="is-return-edit" className="text-sm">
-                  مرتجع
-                </Label>
-              </div>
-            )}
-
             <div>
               <label className="text-sm mb-2 block">التاريخ</label>
               <Input type="date" value={invoiceDate} disabled />
@@ -614,6 +602,7 @@ export default function EditWholesaleInvoicePage() {
                     <th className="p-3 text-center">الكمية</th>
                     <th className="p-3 text-center">الخصم</th>
                     <th className="p-3 text-center">الإجمالي</th>
+                    <th className="p-3 text-center">مرتجع</th>
                     <th className="p-3 text-center">حذف</th>
                   </tr>
                 </thead>
@@ -692,8 +681,26 @@ export default function EditWholesaleInvoicePage() {
                         />
                       </td>
                       <td className="p-3 text-center font-semibold">
-                        {Number(item.price) * (Number(item.quantity) || 0) -
-                          (Number(item.discount) || 0)}
+                        {(() => {
+                          const raw =
+                            Number(item.price) * (Number(item.quantity) || 0) -
+                            (Number(item.discount) || 0);
+                          return item.is_return ? -raw : raw;
+                        })()}
+                      </td>
+                      <td className="p-3 text-center">
+                        <Checkbox
+                          checked={item.is_return || false}
+                          onCheckedChange={(checked) =>
+                            setItems((prev) =>
+                              prev.map((i) =>
+                                i.product_id === item.product_id
+                                  ? { ...i, is_return: !!checked }
+                                  : i,
+                              ),
+                            )
+                          }
+                        />
                       </td>
                       <td className="p-3 text-center">
                         {confirmDeleteId === item.product_id ? (
