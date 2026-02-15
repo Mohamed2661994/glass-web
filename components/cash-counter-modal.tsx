@@ -273,9 +273,9 @@ export function CashCounterModal() {
                 key={denom}
                 className="grid grid-cols-[1fr_auto_1fr] items-center gap-3"
               >
-                {/* Row Total */}
-                <span className="text-sm text-muted-foreground text-start tabular-nums">
-                  {rowTotal(denom) || 0}
+                {/* Denomination Label */}
+                <span className="text-start font-semibold tabular-nums">
+                  {denom}
                 </span>
 
                 {/* Count Input */}
@@ -293,9 +293,9 @@ export function CashCounterModal() {
                   dir="ltr"
                 />
 
-                {/* Denomination Label */}
-                <span className="text-end font-semibold tabular-nums">
-                  {denom}
+                {/* Row Total */}
+                <span className="text-end text-sm text-muted-foreground tabular-nums">
+                  {rowTotal(denom) || 0}
                 </span>
               </div>
             ))}
@@ -303,12 +303,12 @@ export function CashCounterModal() {
 
           {/* Grand Total */}
           <div className="flex items-center justify-between border-t pt-3 mt-1">
+            <span className="font-bold text-sm">الإجمالي الكلي</span>
             <span
               className={`text-2xl font-black tabular-nums ${grandTotal > 0 ? "text-red-500" : "text-muted-foreground"}`}
             >
               {grandTotal}
             </span>
-            <span className="font-bold text-sm">الإجمالي الكلي</span>
           </div>
 
           {/* Print */}
