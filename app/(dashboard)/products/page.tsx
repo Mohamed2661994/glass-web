@@ -62,7 +62,7 @@ export default function ProductsPage() {
 
   // Pagination
   const [page, setPage] = useState(1);
-  const limit = 15;
+  const limit = 30;
 
   useEffect(() => {
     fetchProducts();
@@ -146,10 +146,34 @@ export default function ProductsPage() {
     }
   };
 
-  // أزرار أرقام الصفحات
+  // أزرار أرقام الصفحات (محدودة)
   const renderPaginationNumbers = () => {
-    const pages = [];
-    for (let i = 1; i <= totalPages; i++) {
+    const pages: React.ReactNode[] = [];
+    const maxVisible = 5; // عدد الأزرار المرئية
+    let start = Math.max(1, page - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPages, start + maxVisible - 1);
+
+    // لو قربنا من الآخر، نرجع البداية
+    if (end - start < maxVisible - 1) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+
+    if (start > 1) {
+      pages.push(
+        <Button key={1} variant="outline" size="sm" onClick={() => setPage(1)}>
+          1
+        </Button>
+      );
+      if (start > 2) {
+        pages.push(
+          <span key="dots-start" className="text-muted-foreground px-1">
+            ...
+          </span>
+        );
+      }
+    }
+
+    for (let i = start; i <= end; i++) {
       pages.push(
         <Button
           key={i}
@@ -158,9 +182,30 @@ export default function ProductsPage() {
           onClick={() => setPage(i)}
         >
           {i}
-        </Button>,
+        </Button>
       );
     }
+
+    if (end < totalPages) {
+      if (end < totalPages - 1) {
+        pages.push(
+          <span key="dots-end" className="text-muted-foreground px-1">
+            ...
+          </span>
+        );
+      }
+      pages.push(
+        <Button
+          key={totalPages}
+          variant="outline"
+          size="sm"
+          onClick={() => setPage(totalPages)}
+        >
+          {totalPages}
+        </Button>
+      );
+    }
+
     return pages;
   };
 
