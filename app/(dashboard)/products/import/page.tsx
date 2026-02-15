@@ -107,7 +107,7 @@ export default function ImportProductsPage() {
             (h) =>
               h === col.label ||
               h === col.key ||
-              h.toLowerCase().includes(col.key.toLowerCase())
+              h.toLowerCase().includes(col.key.toLowerCase()),
           );
           if (match) {
             autoMap[col.key] = match;
@@ -118,7 +118,7 @@ export default function ImportProductsPage() {
       };
       reader.readAsArrayBuffer(file);
     },
-    []
+    [],
   );
 
   /* ========== STEP 2: Mapping ========== */
@@ -130,7 +130,7 @@ export default function ImportProductsPage() {
   };
 
   const requiredMapped = DB_COLUMNS.filter((c) => c.required).every(
-    (c) => mapping[c.key]
+    (c) => mapping[c.key],
   );
 
   /* ========== STEP 3: Preview (mapped data) ========== */
@@ -145,15 +145,47 @@ export default function ImportProductsPage() {
     });
   }, [excelData, mapping]);
 
-  /* ========== STEP 4: Import ========== */
+  /* ========== STEP 4: Import (batched) ========== */
+  const [progress, setProgress] = useState(0);
+
   const handleImport = async () => {
     setImporting(true);
+    setProgress(0);
     try {
       const products = getMappedProducts();
-      const { data } = await api.post("/admin/products/import", { products });
-      setResult(data);
+      const BATCH_SIZE = 200;
+      let totalImported = 0;
+      let totalSkipped = 0;
+      const allErrors: { row: number; error: string }[] = [];
+
+      for (let i = 0; i < products.length; i += BATCH_SIZE) {
+        const batch = products.slice(i, i + BATCH_SIZE);
+        const { data } = await api.post(
+          "/admin/products/import",
+          { products: batch, startRow: i },
+          { timeout: 120000 }
+        );
+        totalImported += data.imported;
+        totalSkipped += data.skipped;
+        if (data.errors?.length) {
+          // Adjust row numbers to reflect actual position
+          allErrors.push(
+            ...data.errors.map((e: { row: number; error: string }) => ({
+              row: e.row + i,
+              error: e.error,
+            }))
+          );
+        }
+        setProgress(Math.min(i + BATCH_SIZE, products.length));
+      }
+
+      setResult({
+        imported: totalImported,
+        skipped: totalSkipped,
+        errors: allErrors,
+      });
       setStep("result");
-      toast.success(`تم استيراد ${data.imported} صنف بنجاح`);
+      toast.success(`تم استيراد ${totalImported} صنف بنجاح`);
     } catch (err) {
       toast.error("حدث خطأ أثناء الاستيراد");
     } finally {
@@ -164,7 +196,9 @@ export default function ImportProductsPage() {
   /* ========== RENDER ========== */
   return (
     <PageContainer size="xl">
-      <h2 className="text-2xl font-bold mb-4 text-center">استيراد أصناف من Excel</h2>
+      <h2 className="text-2xl font-bold mb-4 text-center">
+        استيراد أصناف من Excel
+      </h2>
 
       {/* Stepper */}
       <div className="flex items-center justify-center gap-2 mb-6 flex-wrap">
@@ -182,9 +216,7 @@ export default function ImportProductsPage() {
 
           return (
             <div key={s.key} className="flex items-center gap-2">
-              {i > 0 && (
-                <ArrowLeft className="h-4 w-4 text-muted-foreground" />
-              )}
+              {i > 0 && <ArrowLeft className="h-4 w-4 text-muted-foreground" />}
               <div
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                   isActive
@@ -217,9 +249,7 @@ export default function ImportProductsPage() {
               onClick={() => fileInputRef.current?.click()}
             >
               <FileSpreadsheet className="h-12 w-12 mx-auto mb-3 text-green-600" />
-              <p className="text-lg font-medium mb-1">
-                اضغط هنا لاختيار ملف
-              </p>
+              <p className="text-lg font-medium mb-1">اضغط هنا لاختيار ملف</p>
               <p className="text-sm text-muted-foreground">
                 يدعم ملفات .xlsx و .xls و .csv
               </p>
@@ -299,7 +329,10 @@ export default function ImportProductsPage() {
                 <ArrowRight className="h-4 w-4 ml-1" />
                 رجوع
               </Button>
-              <Button disabled={!requiredMapped} onClick={() => setStep("preview")}>
+              <Button
+                disabled={!requiredMapped}
+                onClick={() => setStep("preview")}
+              >
                 معاينة البيانات
                 <ArrowLeft className="h-4 w-4 mr-1" />
               </Button>
@@ -327,7 +360,10 @@ export default function ImportProductsPage() {
                   <TableRow>
                     <TableHead className="text-center w-12">#</TableHead>
                     {DB_COLUMNS.filter((c) => mapping[c.key]).map((col) => (
-                      <TableHead key={col.key} className="text-center whitespace-nowrap">
+                      <TableHead
+                        key={col.key}
+                        className="text-center whitespace-nowrap"
+                      >
                         {col.label}
                       </TableHead>
                     ))}
@@ -366,7 +402,7 @@ export default function ImportProductsPage() {
                 {importing ? (
                   <>
                     <Loader2 className="h-4 w-4 ml-1 animate-spin" />
-                    جاري الاستيراد...
+                    جاري الاستيراد... ({progress}/{excelData.length})
                   </>
                 ) : (
                   <>
