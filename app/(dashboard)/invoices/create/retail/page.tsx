@@ -1416,14 +1416,14 @@ export default function CreateRetailInvoicePage() {
           onOpenChange={(open) => !open && setPendingDuplicate(null)}
         >
           <AlertDialogContent>
-            <AlertDialogHeader>
+            <AlertDialogHeader className="text-center sm:text-center">
               <AlertDialogTitle>الصنف موجود مسبقاً</AlertDialogTitle>
               <AlertDialogDescription>
                 الصنف &quot;{pendingDuplicate?.product?.name}&quot; موجود بالفعل
                 في الفاتورة. هل تريد إضافته كسطر جديد؟
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter className="flex-row gap-3 sm:justify-start">
+            <AlertDialogFooter className="flex-row justify-center gap-3 sm:justify-center">
               <AlertDialogAction onClick={confirmDuplicateAdd}>
                 نعم، أضف سطر جديد
               </AlertDialogAction>
