@@ -20,6 +20,8 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/app/context/auth-context";
 import { PageContainer } from "@/components/layout/page-container";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +42,7 @@ export default function CreateWholesaleInvoicePage() {
      ========================================================= */
 
   const [movementType, setMovementType] = useState<"sale" | "purchase">("sale");
+  const [isReturn, setIsReturn] = useState(false);
   const [invoiceDate, setInvoiceDate] = useState(
     new Date().toISOString().substring(0, 10),
   );
@@ -375,6 +378,7 @@ export default function CreateWholesaleInvoicePage() {
       const res = await api.post("/invoices", {
         invoice_type: "wholesale",
         movement_type: movementType,
+        is_return: isReturn,
         invoice_date: invoiceDate,
         customer_id: customerId,
         customer_name: customerName,
@@ -433,8 +437,10 @@ export default function CreateWholesaleInvoicePage() {
     () =>
       products.filter((p) => {
         const s = search.toLowerCase();
-        return p.name.toLowerCase().includes(s) ||
-          (p.description && p.description.toLowerCase().includes(s));
+        return (
+          p.name.toLowerCase().includes(s) ||
+          (p.description && p.description.toLowerCase().includes(s))
+        );
       }),
     [products, search],
   );
@@ -516,6 +522,18 @@ export default function CreateWholesaleInvoicePage() {
                   <SelectItem value="purchase">شراء</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* مرتجع toggle */}
+            <div className="flex items-center gap-3">
+              <Switch
+                id="is-return"
+                checked={isReturn}
+                onCheckedChange={setIsReturn}
+              />
+              <Label htmlFor="is-return" className="text-sm cursor-pointer">
+                مرتجع
+              </Label>
             </div>
 
             <div>

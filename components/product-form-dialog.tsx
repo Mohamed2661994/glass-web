@@ -431,7 +431,9 @@ export function ProductFormDialog({
             <Input
               placeholder="وصف / كلمات مفتاحية (اختياري)"
               value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, description: e.target.value })
+              }
               autoFocus
             />
           )}

@@ -19,6 +19,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +42,7 @@ export default function EditWholesaleInvoicePage() {
      ========================================================= */
 
   const [movementType, setMovementType] = useState<"sale" | "purchase">("sale");
+  const [isReturn, setIsReturn] = useState(false);
   const [invoiceDate, setInvoiceDate] = useState("");
 
   const [customerName, setCustomerName] = useState("");
@@ -99,6 +102,7 @@ export default function EditWholesaleInvoicePage() {
         }
 
         setMovementType(inv.movement_type);
+        setIsReturn(inv.is_return || false);
         setInvoiceDate(
           inv.invoice_date
             ? new Date(inv.invoice_date).toISOString().substring(0, 10)
@@ -408,8 +412,10 @@ export default function EditWholesaleInvoicePage() {
     () =>
       products.filter((p) => {
         const s = search.toLowerCase();
-        return p.name.toLowerCase().includes(s) ||
-          (p.description && p.description.toLowerCase().includes(s));
+        return (
+          p.name.toLowerCase().includes(s) ||
+          (p.description && p.description.toLowerCase().includes(s))
+        );
       }),
     [products, search],
   );
@@ -499,6 +505,16 @@ export default function EditWholesaleInvoicePage() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* مرتجع toggle */}
+            {isReturn && (
+              <div className="flex items-center gap-3">
+                <Switch id="is-return-edit" checked disabled />
+                <Label htmlFor="is-return-edit" className="text-sm">
+                  مرتجع
+                </Label>
+              </div>
+            )}
 
             <div>
               <label className="text-sm mb-2 block">التاريخ</label>

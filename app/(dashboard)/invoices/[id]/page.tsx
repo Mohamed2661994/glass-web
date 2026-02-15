@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import axios from "@/services/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
 export default function InvoiceDetailsPage() {
@@ -33,7 +34,12 @@ export default function InvoiceDetailsPage() {
 
   return (
     <div className="p-6 space-y-6" dir="rtl">
-      <h1 className="text-2xl font-bold">تفاصيل الفاتورة #{invoice.id}</h1>
+      <h1 className="text-2xl font-bold">
+        تفاصيل الفاتورة #{invoice.id}
+        {invoice.is_return && (
+          <Badge className="bg-orange-500 mr-3 text-sm">مرتجع</Badge>
+        )}
+      </h1>
 
       <Card>
         <CardContent className="p-4 space-y-2">

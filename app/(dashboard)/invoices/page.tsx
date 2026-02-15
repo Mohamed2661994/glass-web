@@ -22,6 +22,7 @@ interface Invoice {
   id: number;
   invoice_type: "retail" | "wholesale";
   movement_type: "sale" | "purchase";
+  is_return?: boolean;
   customer_name: string;
   subtotal: number;
   total: number;
@@ -166,7 +167,10 @@ export default function InvoicesPage() {
                   <tr key={invoice.id} className="border-b hover:bg-muted/50">
                     <td className="p-3">{invoice.id}</td>
                     <td className="p-3">
-                      {invoice.movement_type === "sale" ? "بيع" : "شراء"}
+                      <span>{invoice.movement_type === "sale" ? "بيع" : "شراء"}</span>
+                      {invoice.is_return && (
+                        <Badge className="bg-orange-500 mr-2 text-xs">مرتجع</Badge>
+                      )}
                     </td>
                     <td className="p-3">{invoice.customer_name || "نقدي"}</td>
                     <td className="p-3">
