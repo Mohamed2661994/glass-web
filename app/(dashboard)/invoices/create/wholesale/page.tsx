@@ -431,9 +431,11 @@ export default function CreateWholesaleInvoicePage() {
 
   const filteredProducts = useMemo(
     () =>
-      products.filter((p) =>
-        p.name.toLowerCase().includes(search.toLowerCase()),
-      ),
+      products.filter((p) => {
+        const s = search.toLowerCase();
+        return p.name.toLowerCase().includes(s) ||
+          (p.description && p.description.toLowerCase().includes(s));
+      }),
     [products, search],
   );
 

@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CheckCircle, Plus, Trash2 } from "lucide-react";
+import { CheckCircle, Plus, Trash2, FileText } from "lucide-react";
 import api from "@/services/api";
 import { toast } from "sonner";
 import { AlertCircle, Loader2 } from "lucide-react";
@@ -81,6 +81,7 @@ export function ProductFormDialog({
 
   const [form, setForm] = useState<any>(emptyForm);
   const [variantForms, setVariantForms] = useState<VariantForm[]>([]);
+  const [showDescription, setShowDescription] = useState(false);
 
   // ========= Parse helpers =========
   const parseWholesale = (value: string) => {
@@ -117,11 +118,15 @@ export function ProductFormDialog({
         retail_package_type: retailParsed.type,
       });
 
+      // لو فيه وصف → نفتح الحقل تلقائي
+      setShowDescription(!!product.description);
+
       // جلب العبوات الفرعية الموجودة
       fetchExistingVariants(product.id);
     } else {
       setForm(emptyForm);
       setVariantForms([]);
+      setShowDescription(false);
     }
   }, [product, open]);
 
@@ -402,18 +407,34 @@ export function ProductFormDialog({
           </div>
 
           {/* Name */}
-          <Input
-            placeholder="اسم الصنف"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-          />
+          <div className="flex gap-2 items-center">
+            <Input
+              placeholder="اسم الصنف"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="flex-1"
+            />
+            <Button
+              type="button"
+              variant={showDescription ? "default" : "outline"}
+              size="icon"
+              className="shrink-0 h-9 w-9"
+              onClick={() => setShowDescription(!showDescription)}
+              title="إضافة وصف"
+            >
+              <FileText className="h-4 w-4" />
+            </Button>
+          </div>
 
           {/* Description / Keywords */}
-          <Input
-            placeholder="وصف / كلمات مفتاحية (اختياري)"
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-          />
+          {showDescription && (
+            <Input
+              placeholder="وصف / كلمات مفتاحية (اختياري)"
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              autoFocus
+            />
+          )}
 
           {/* Manufacturer */}
           <div className="flex gap-2">
@@ -490,7 +511,9 @@ export function ProductFormDialog({
 
           {/* Retail Package */}
           <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">عبوة القطاعي</label>
+            <label className="text-xs text-muted-foreground">
+              عبوة القطاعي
+            </label>
             <div className="grid grid-cols-2 gap-3 items-center">
               <Input
                 placeholder="عدد"
@@ -636,7 +659,9 @@ export function ProductFormDialog({
 
                     {/* Wholesale Package */}
                     <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">عبوة الجملة</label>
+                      <label className="text-xs text-muted-foreground">
+                        عبوة الجملة
+                      </label>
                       <div className="grid grid-cols-2 gap-3 items-center">
                         <Input
                           placeholder="عدد"
@@ -676,7 +701,9 @@ export function ProductFormDialog({
 
                     {/* Retail Package */}
                     <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">عبوة القطاعي</label>
+                      <label className="text-xs text-muted-foreground">
+                        عبوة القطاعي
+                      </label>
                       <div className="grid grid-cols-2 gap-3 items-center">
                         <Input
                           placeholder="عدد"
@@ -693,7 +720,11 @@ export function ProductFormDialog({
                         <Select
                           value={vf.retail_package_type}
                           onValueChange={(val) =>
-                            updateVariantForm(vf._key, "retail_package_type", val)
+                            updateVariantForm(
+                              vf._key,
+                              "retail_package_type",
+                              val,
+                            )
                           }
                         >
                           <SelectTrigger>
