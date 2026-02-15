@@ -231,23 +231,23 @@ export default function CashSummaryPage() {
       {/* Date Filters + Toggle */}
       <Card className="overflow-hidden">
         <CardContent className="p-0">
-          <div className="p-4 flex flex-wrap gap-4 items-end border-b">
-            <div className="flex-1 min-w-[140px]">
+          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 border-b">
+            <div>
               <Label className="text-xs text-muted-foreground">من تاريخ</Label>
               <Input
                 type="date"
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
-                className="mt-1"
+                className="mt-1.5"
               />
             </div>
-            <div className="flex-1 min-w-[140px]">
+            <div>
               <Label className="text-xs text-muted-foreground">إلى تاريخ</Label>
               <Input
                 type="date"
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
-                className="mt-1"
+                className="mt-1.5"
               />
             </div>
           </div>

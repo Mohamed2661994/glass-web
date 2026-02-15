@@ -8,6 +8,7 @@ import { MobileSidebar } from "@/components/mobile-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/app/context/auth-context";
 import { NotificationBell } from "@/components/notification-bell";
+import { CashCounterModal } from "@/components/cash-counter-modal";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -79,6 +80,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <NotificationBell userId={user.id} branchId={user.branch_id} />
               )}
 
+              <CashCounterModal />
               <ThemeToggle />
             </div>
           </div>

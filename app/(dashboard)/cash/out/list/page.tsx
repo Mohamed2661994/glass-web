@@ -108,29 +108,29 @@ export default function CashOutListPage() {
 
       {/* Filters */}
       <Card>
-        <CardContent className="p-4 space-y-3">
+        <CardContent className="p-4 space-y-4">
           <Input
             placeholder="🔍 بحث بالاسم"
             value={searchName}
             onChange={(e) => setSearchName(e.target.value)}
           />
-          <div className="flex gap-3">
-            <div className="flex-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
               <Label>من تاريخ</Label>
               <Input
                 type="date"
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
-                className="mt-1"
+                className="mt-1.5"
               />
             </div>
-            <div className="flex-1">
+            <div>
               <Label>إلى تاريخ</Label>
               <Input
                 type="date"
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
-                className="mt-1"
+                className="mt-1.5"
               />
             </div>
           </div>

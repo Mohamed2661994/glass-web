@@ -389,8 +389,8 @@ export default function UsersPage() {
           isOpen={openSections["password"] ?? false}
           onToggle={() => toggleSection("password")}
         >
-          <div className="space-y-3 max-w-md">
-            <div className="space-y-1">
+          <div className="space-y-4 max-w-md">
+            <div className="space-y-1.5">
               <Label className="text-xs">كلمة المرور الحالية</Label>
               <div className="relative">
                 <Input
@@ -412,7 +412,7 @@ export default function UsersPage() {
                 </button>
               </div>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <Label className="text-xs">كلمة المرور الجديدة</Label>
               <div className="relative">
                 <Input
@@ -434,7 +434,7 @@ export default function UsersPage() {
                 </button>
               </div>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <Label className="text-xs">تأكيد كلمة المرور الجديدة</Label>
               <Input
                 type="password"
@@ -547,9 +547,9 @@ export default function UsersPage() {
                   إضافة مستخدم جديد
                 </Button>
               ) : (
-                <div className="rounded-lg border p-4 space-y-3 bg-muted/20">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="space-y-1">
+                <div className="rounded-lg border p-4 space-y-4 bg-muted/20">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-1.5">
                       <Label className="text-xs">اسم المستخدم</Label>
                       <Input
                         value={newUsername}
@@ -557,7 +557,7 @@ export default function UsersPage() {
                         placeholder="username"
                       />
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       <Label className="text-xs">كلمة المرور</Label>
                       <Input
                         type="password"
@@ -566,7 +566,7 @@ export default function UsersPage() {
                         placeholder="••••••"
                       />
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       <Label className="text-xs">الفرع</Label>
                       <select
                         className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"

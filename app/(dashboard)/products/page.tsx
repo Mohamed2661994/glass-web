@@ -239,11 +239,10 @@ export default function ProductsPage() {
       {/* Search + Manufacturer Filter */}
       <Card>
         <CardContent className="p-4 space-y-3">
-          <div className="flex gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
               placeholder="ابحث باسم المنتج أو الباركود..."
               value={search}
-              className="flex-1"
               onChange={(e) => {
                 setSearch(e.target.value);
                 setPage(1);
@@ -257,7 +256,7 @@ export default function ProductsPage() {
                   setPage(1);
                 }}
               >
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger>
                   <SelectValue placeholder="المصنع" />
                 </SelectTrigger>
                 <SelectContent>

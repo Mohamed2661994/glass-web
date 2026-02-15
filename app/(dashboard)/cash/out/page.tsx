@@ -107,7 +107,7 @@ function CashOutPage() {
       </p>
 
       <Card>
-        <CardContent className="p-5 space-y-4">
+        <CardContent className="p-6 space-y-5">
           {/* رقم الإذن */}
           <div>
             <Label>رقم الإذن</Label>
@@ -118,7 +118,7 @@ function CashOutPage() {
                   : "— سيتم توليده تلقائيًا —"
               }
               disabled
-              className="mt-1"
+              className="mt-2"
             />
           </div>
 
@@ -129,7 +129,7 @@ function CashOutPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="مثال: كهرباء – مصروفات"
-              className="mt-1"
+              className="mt-2"
             />
           </div>
 
@@ -139,7 +139,7 @@ function CashOutPage() {
             <RadioGroup
               value={entryType}
               onValueChange={(v) => setEntryType(v as "expense" | "purchase")}
-              className="flex gap-4 mt-2"
+              className="flex gap-4 mt-3"
             >
               <div className="flex items-center gap-2">
                 <RadioGroupItem value="expense" id="expense" />
@@ -163,7 +163,7 @@ function CashOutPage() {
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="mt-1"
+              className="mt-2"
             />
           </div>
 
@@ -177,7 +177,7 @@ function CashOutPage() {
                 setAmount(e.target.value.replace(/[^0-9.]/g, ""))
               }
               placeholder="0.00"
-              className="mt-1"
+              className="mt-2"
             />
           </div>
 
@@ -188,7 +188,7 @@ function CashOutPage() {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="أي تفاصيل إضافية"
-              className="mt-1 min-h-[80px]"
+              className="mt-2 min-h-[80px]"
             />
           </div>
 

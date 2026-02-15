@@ -84,7 +84,7 @@ export default function CashInPage() {
       </p>
 
       <Card>
-        <CardContent className="p-5 space-y-4">
+        <CardContent className="p-6 space-y-5">
           {/* الاسم */}
           <div>
             <Label>
@@ -94,14 +94,14 @@ export default function CashInPage() {
               value={sourceName}
               onChange={(e) => setSourceName(e.target.value)}
               placeholder="اسم القيد"
-              className="mt-1"
+              className="mt-2"
             />
           </div>
 
           {/* نوع القيد */}
           <div>
             <Label>نوع القيد</Label>
-            <div className="flex gap-3 mt-2">
+            <div className="flex gap-3 mt-3">
               <Button
                 type="button"
                 variant={entryType === "manual" ? "default" : "outline"}
@@ -131,7 +131,7 @@ export default function CashInPage() {
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0"
-              className="mt-1 text-center font-semibold"
+              className="mt-2 text-center font-semibold"
             />
           </div>
 
@@ -142,7 +142,7 @@ export default function CashInPage() {
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="mt-1"
+              className="mt-2"
             />
           </div>
 
@@ -153,7 +153,7 @@ export default function CashInPage() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="سبب الوارد"
-              className="mt-1 min-h-[80px]"
+              className="mt-2 min-h-[80px]"
             />
           </div>
 

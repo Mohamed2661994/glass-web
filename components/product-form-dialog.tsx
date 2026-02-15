@@ -450,7 +450,7 @@ export function ProductFormDialog({
           </div>
 
           {/* Wholesale Package */}
-          <div className="grid grid-cols-3 gap-2 items-center">
+          <div className="grid grid-cols-3 gap-3 items-center">
             <Input value="كرتونة" disabled />
 
             <Input
@@ -488,7 +488,7 @@ export function ProductFormDialog({
           </div>
 
           {/* Retail Package */}
-          <div className="grid grid-cols-3 gap-2 items-center">
+          <div className="grid grid-cols-3 gap-3 items-center">
             <Select
               value={form.retail_package_type}
               onValueChange={(val) =>
@@ -616,7 +616,7 @@ export function ProductFormDialog({
                     />
 
                     {/* Wholesale Package */}
-                    <div className="grid grid-cols-3 gap-2 items-center">
+                    <div className="grid grid-cols-3 gap-3 items-center">
                       <Input value="كرتونة" disabled />
                       <Input
                         placeholder="عدد"
@@ -654,7 +654,7 @@ export function ProductFormDialog({
                     </div>
 
                     {/* Retail Package */}
-                    <div className="grid grid-cols-3 gap-2 items-center">
+                    <div className="grid grid-cols-3 gap-3 items-center">
                       <Select
                         value={vf.retail_package_type}
                         onValueChange={(val) =>
