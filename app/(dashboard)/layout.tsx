@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Sidebar } from "@/components/sidebar";
@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/app/context/auth-context";
 import { NotificationBell } from "@/components/notification-bell";
 import { CashCounterModal } from "@/components/cash-counter-modal";
+import { ProductFormDialog } from "@/components/product-form-dialog";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -16,8 +17,21 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { setTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [productDialogOpen, setProductDialogOpen] = useState(false);
 
   useEffect(() => setMounted(true), []);
+
+  // F4 → open add product dialog
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "F4") {
+        e.preventDefault();
+        setProductDialogOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   // استعادة ثيم اليوزر عند الدخول
   useEffect(() => {
@@ -91,6 +105,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <div className="w-full px-4 print:px-0">{children}</div>
         </main>
       </div>
+
+      {/* F4 Add Product Dialog */}
+      <ProductFormDialog
+        open={productDialogOpen}
+        onOpenChange={setProductDialogOpen}
+        onSuccess={() => setProductDialogOpen(false)}
+      />
     </div>
   );
 }
