@@ -54,7 +54,7 @@ type DBColumnKey = (typeof DB_COLUMNS)[number]["key"];
 type ColumnMapping = Record<DBColumnKey, string>; // db_key → excel_col_header
 
 /* ---------- Step type ---------- */
-type Step = "upload" | "mapping" | "preview" | "result";
+type Step = "upload" | "pickHeader" | "mapping" | "preview" | "result";
 
 export default function ImportProductsPage() {
   const router = useRouter();
@@ -63,6 +63,8 @@ export default function ImportProductsPage() {
   // State
   const [step, setStep] = useState<Step>("upload");
   const [fileName, setFileName] = useState("");
+  const [rawRows, setRawRows] = useState<string[][]>([]); // all rows as arrays
+  const [headerRowIdx, setHeaderRowIdx] = useState(0); // which row is the header
   const [excelHeaders, setExcelHeaders] = useState<string[]>([]);
   const [excelData, setExcelData] = useState<Record<string, string>[]>([]);
   const [mapping, setMapping] = useState<ColumnMapping>({} as ColumnMapping);
@@ -87,39 +89,70 @@ export default function ImportProductsPage() {
         const workbook = XLSX.read(data, { type: "array" });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
-        const json = XLSX.utils.sheet_to_json<Record<string, string>>(sheet, {
+        
+        // Read as array of arrays (no headers assumption)
+        const aoa = XLSX.utils.sheet_to_json<string[]>(sheet, {
+          header: 1,
           defval: "",
         });
 
-        if (json.length === 0) {
-          toast.error("الملف فارغ أو لا يحتوي على بيانات");
+        if (aoa.length < 2) {
+          toast.error("الملف فارغ أو لا يحتوي على بيانات كافية");
           return;
         }
 
-        const headers = Object.keys(json[0]);
-        setExcelHeaders(headers);
-        setExcelData(json);
+        setRawRows(aoa.map((row) => row.map((cell) => String(cell ?? ""))));
+        
+        // Auto-detect header row: first row that has at least 3 non-empty cells
+        const autoIdx = aoa.findIndex(
+          (row) => row.filter((c) => String(c ?? "").trim() !== "").length >= 3
+        );
+        setHeaderRowIdx(autoIdx >= 0 ? autoIdx : 0);
 
-        // Auto-map: try to match excel headers to DB columns
-        const autoMap: Partial<ColumnMapping> = {};
-        for (const col of DB_COLUMNS) {
-          const match = headers.find(
-            (h) =>
-              h === col.label ||
-              h === col.key ||
-              h.toLowerCase().includes(col.key.toLowerCase()),
-          );
-          if (match) {
-            autoMap[col.key] = match;
-          }
-        }
-        setMapping(autoMap as ColumnMapping);
-        setStep("mapping");
+        setStep("pickHeader");
       };
       reader.readAsArrayBuffer(file);
     },
     [],
   );
+
+  /* ========== STEP 1.5: Confirm header row ========== */
+  const confirmHeaderRow = () => {
+    const headers = rawRows[headerRowIdx].map((h, i) =>
+      h.trim() || `عمود_${i + 1}`
+    );
+    setExcelHeaders(headers);
+
+    // Build data rows (everything after header row)
+    const dataRows = rawRows.slice(headerRowIdx + 1).map((row) => {
+      const obj: Record<string, string> = {};
+      headers.forEach((h, i) => {
+        obj[h] = row[i] ?? "";
+      });
+      return obj;
+    });
+    // Filter out completely empty rows
+    const filtered = dataRows.filter((row) =>
+      Object.values(row).some((v) => String(v).trim() !== "")
+    );
+    setExcelData(filtered);
+
+    // Auto-map
+    const autoMap: Partial<ColumnMapping> = {};
+    for (const col of DB_COLUMNS) {
+      const match = headers.find(
+        (h) =>
+          h === col.label ||
+          h === col.key ||
+          h.toLowerCase().includes(col.key.toLowerCase())
+      );
+      if (match) {
+        autoMap[col.key] = match;
+      }
+    }
+    setMapping(autoMap as ColumnMapping);
+    setStep("mapping");
+  };
 
   /* ========== STEP 2: Mapping ========== */
   const handleMappingChange = (dbKey: DBColumnKey, excelCol: string) => {
@@ -163,7 +196,7 @@ export default function ImportProductsPage() {
         const { data } = await api.post(
           "/admin/products/import",
           { products: batch, startRow: i },
-          { timeout: 120000 }
+          { timeout: 120000 },
         );
         totalImported += data.imported;
         totalSkipped += data.skipped;
@@ -173,7 +206,7 @@ export default function ImportProductsPage() {
             ...data.errors.map((e: { row: number; error: string }) => ({
               row: e.row + i,
               error: e.error,
-            }))
+            })),
           );
         }
         setProgress(Math.min(i + BATCH_SIZE, products.length));
@@ -204,11 +237,18 @@ export default function ImportProductsPage() {
       <div className="flex items-center justify-center gap-2 mb-6 flex-wrap">
         {[
           { key: "upload", label: "رفع الملف", icon: Upload },
+          { key: "pickHeader", label: "صف العناوين", icon: FileSpreadsheet },
           { key: "mapping", label: "ربط الأعمدة", icon: FileSpreadsheet },
           { key: "preview", label: "معاينة", icon: AlertTriangle },
           { key: "result", label: "النتيجة", icon: CheckCircle2 },
         ].map((s, i) => {
-          const stepOrder: Step[] = ["upload", "mapping", "preview", "result"];
+          const stepOrder: Step[] = [
+            "upload",
+            "pickHeader",
+            "mapping",
+            "preview",
+            "result",
+          ];
           const currentIdx = stepOrder.indexOf(step);
           const thisIdx = stepOrder.indexOf(s.key as Step);
           const isActive = thisIdx === currentIdx;
@@ -261,6 +301,76 @@ export default function ImportProductsPage() {
               className="hidden"
               onChange={handleFileUpload}
             />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ===== STEP: Pick Header Row ===== */}
+      {step === "pickHeader" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5" />
+              اختر صف العناوين
+            </CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              اضغط على الصف اللي فيه أسماء الأعمدة (مثلاً: اسم الصنف، الباركود، السعر...)
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border overflow-auto max-h-[400px]">
+              <Table>
+                <TableBody>
+                  {rawRows.slice(0, 20).map((row, i) => (
+                    <TableRow
+                      key={i}
+                      className={`cursor-pointer transition-colors ${
+                        headerRowIdx === i
+                          ? "bg-primary/10 border-r-4 border-primary font-bold"
+                          : "hover:bg-muted/50"
+                      }`}
+                      onClick={() => setHeaderRowIdx(i)}
+                    >
+                      <TableCell className="text-center w-12 text-muted-foreground">
+                        {i + 1}
+                      </TableCell>
+                      {row.slice(0, 10).map((cell, j) => (
+                        <TableCell key={j} className="text-center text-sm whitespace-nowrap">
+                          {String(cell).trim() || (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            {rawRows.length > 20 && (
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                يعرض أول 20 صف فقط
+              </p>
+            )}
+
+            <div className="flex items-center gap-3 mt-6 justify-between">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setStep("upload");
+                  setRawRows([]);
+                }}
+              >
+                <ArrowRight className="h-4 w-4 ml-1" />
+                رجوع
+              </Button>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">صف العناوين: {headerRowIdx + 1}</Badge>
+                <Button onClick={confirmHeaderRow}>
+                  تأكيد والمتابعة
+                  <ArrowLeft className="h-4 w-4 mr-1" />
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -320,7 +430,7 @@ export default function ImportProductsPage() {
               <Button
                 variant="outline"
                 onClick={() => {
-                  setStep("upload");
+                  setStep("pickHeader");
                   setExcelData([]);
                   setExcelHeaders([]);
                   setMapping({} as ColumnMapping);
