@@ -741,24 +741,23 @@ export default function CreateWholesaleInvoicePage() {
         {items.length > 0 && (
           <Card className="p-6 space-y-4">
             {/* الإجمالي */}
-            <div className="flex items-center justify-between py-2 border-b">
+            <div className="grid grid-cols-3 items-center py-2 border-b">
               <span className="text-muted-foreground text-sm">
                 إجمالي الأصناف
               </span>
-              <span className="text-xl font-semibold">
+              <span className="text-xl font-semibold text-center">
                 {totalBeforeDiscount} ج.م
               </span>
+              <span />
             </div>
 
             {/* خصم إضافي */}
-            <div className="flex items-center justify-between gap-3">
-              <label className="text-sm text-muted-foreground whitespace-nowrap">
-                خصم إضافي
-              </label>
+            <div className="grid grid-cols-3 items-center gap-3">
+              <label className="text-sm text-muted-foreground">خصم إضافي</label>
               <Input
                 data-field="extra-discount"
                 type="number"
-                className="text-center max-w-[160px]"
+                className="text-center"
                 value={extraDiscount}
                 onChange={(e) => setExtraDiscount(e.target.value)}
                 onKeyDown={(e) => {
@@ -772,17 +771,16 @@ export default function CreateWholesaleInvoicePage() {
                   }
                 }}
               />
+              <span />
             </div>
 
             {/* حساب سابق */}
-            <div className="flex items-center justify-between gap-3">
-              <label className="text-sm text-muted-foreground whitespace-nowrap">
-                حساب سابق
-              </label>
+            <div className="grid grid-cols-3 items-center gap-3">
+              <label className="text-sm text-muted-foreground">حساب سابق</label>
               <Input
                 data-field="previous-balance"
                 type="number"
-                className="text-center max-w-[160px]"
+                className="text-center"
                 value={previousBalance}
                 onChange={(e) => setPreviousBalance(e.target.value)}
                 onKeyDown={(e) => {
@@ -796,40 +794,42 @@ export default function CreateWholesaleInvoicePage() {
                   }
                 }}
               />
+              <span />
             </div>
 
             {/* الإجمالي النهائي */}
-            <div className="flex items-center justify-between py-2 border-b">
+            <div className="grid grid-cols-3 items-center py-2 border-b">
               <span className="font-bold text-green-600 text-sm">
                 الإجمالي النهائي
               </span>
-              <span className="text-xl font-bold text-green-600">
+              <span className="text-xl font-bold text-green-600 text-center">
                 {totalWithPrevious} ج.م
               </span>
+              <span />
             </div>
 
             {/* المدفوع */}
-            <div className="flex items-center justify-between gap-3">
-              <label className="text-sm text-muted-foreground whitespace-nowrap">
-                المدفوع
-              </label>
+            <div className="grid grid-cols-3 items-center gap-3">
+              <label className="text-sm text-muted-foreground">المدفوع</label>
               <Input
                 data-field="paid-amount"
                 type="number"
-                className="text-center max-w-[160px]"
+                className="text-center"
                 value={paidAmount}
                 onChange={(e) => setPaidAmount(e.target.value)}
               />
+              <span />
             </div>
 
             {/* المتبقي */}
-            <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-destructive/10 border border-destructive/20">
+            <div className="grid grid-cols-3 items-center py-3 px-4 rounded-lg bg-destructive/10 border border-destructive/20">
               <span className="font-bold text-destructive text-sm">
                 المتبقي
               </span>
-              <span className="text-2xl font-bold text-destructive">
+              <span className="text-2xl font-bold text-destructive text-center">
                 {remaining} ج.م
               </span>
+              <span />
             </div>
 
             <Button

@@ -358,7 +358,9 @@ export default function UsersPage() {
                       <p className="font-bold text-lg">
                         {user?.full_name || "—"}
                       </p>
-                      <p className="text-xs text-muted-foreground">الاسم بالكامل</p>
+                      <p className="text-xs text-muted-foreground">
+                        الاسم بالكامل
+                      </p>
                     </div>
                     <Button
                       variant="ghost"
@@ -416,7 +418,8 @@ export default function UsersPage() {
                         {user?.username || "—"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        اسم المستخدم • {user ? branchLabel(user.branch_id) : "—"}
+                        اسم المستخدم •{" "}
+                        {user ? branchLabel(user.branch_id) : "—"}
                       </p>
                     </div>
                     <Button
@@ -580,7 +583,9 @@ export default function UsersPage() {
                           <Shield className="h-4 w-4 text-primary" />
                         </div>
                         <div>
-                          <p className="font-medium text-sm">{u.full_name || u.username}</p>
+                          <p className="font-medium text-sm">
+                            {u.full_name || u.username}
+                          </p>
                           <p className="text-xs text-muted-foreground">
                             {u.username} • {branchLabel(u.branch_id)}
                           </p>
