@@ -366,13 +366,12 @@ export default function EditWholesaleInvoicePage() {
      ========================================================= */
 
   const totalBeforeDiscount = useMemo(() => {
-    return items.reduce(
-      (sum, item) =>
-        sum +
-        (Number(item.price) * (Number(item.quantity) || 0) -
-          (Number(item.discount) || 0)),
-      0,
-    );
+    return items.reduce((sum, item) => {
+      const raw =
+        Number(item.price) * (Number(item.quantity) || 0) -
+        (Number(item.discount) || 0);
+      return sum + (item.is_return ? -raw : raw);
+    }, 0);
   }, [items]);
 
   const finalTotal = useMemo(() => {
@@ -973,11 +972,11 @@ export default function EditWholesaleInvoicePage() {
                 في الفاتورة. هل تريد إضافته كسطر جديد؟
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter className="gap-2 sm:gap-0">
-              <AlertDialogCancel>لا</AlertDialogCancel>
+            <AlertDialogFooter className="flex-row gap-3 sm:justify-start">
               <AlertDialogAction onClick={confirmDuplicateAdd}>
-                نعم
+                نعم، أضف سطر جديد
               </AlertDialogAction>
+              <AlertDialogCancel>لا</AlertDialogCancel>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
