@@ -148,7 +148,9 @@ export function ProductCard({
           {product.barcode && (
             <>
               <button
-                onClick={() => handleCopy(product.barcode, `main-${product.id}`)}
+                onClick={() =>
+                  handleCopy(product.barcode, `main-${product.id}`)
+                }
                 className="p-0.5 rounded hover:bg-muted transition-colors"
               >
                 {copiedId === `main-${product.id}` ? (
@@ -234,10 +236,10 @@ export function ProductCard({
                   <div className="flex items-center justify-center gap-0.5 text-[9px] text-muted-foreground font-mono">
                     <span>{pkg.barcode}</span>
                     <button
-                      onClick={() => handleCopy(pkg.barcode, `var1-${pkg.id}`)}
+                      onClick={() => handleCopy(pkg.barcode, `var1-${product.id}-${i}`)}
                       className="p-0.5 rounded hover:bg-muted transition-colors"
                     >
-                      {copiedId === `var1-${pkg.id}` ? (
+                      {copiedId === `var1-${product.id}-${i}` ? (
                         <Check className="h-2.5 w-2.5 text-green-600" />
                       ) : (
                         <Copy className="h-2.5 w-2.5" />
@@ -293,10 +295,12 @@ export function ProductCard({
                     <div className="flex items-center justify-center gap-0.5 text-[9px] text-muted-foreground font-mono">
                       <span>{pkg.barcode}</span>
                       <button
-                        onClick={() => handleCopy(pkg.barcode, `var2-${pkg.id}`)}
+                        onClick={() =>
+                          handleCopy(pkg.barcode, `var2-${product.id}-${i}`)
+                        }
                         className="p-0.5 rounded hover:bg-muted transition-colors"
                       >
-                        {copiedId === `var2-${pkg.id}` ? (
+                        {copiedId === `var2-${product.id}-${i}` ? (
                           <Check className="h-2.5 w-2.5 text-green-600" />
                         ) : (
                           <Copy className="h-2.5 w-2.5" />
