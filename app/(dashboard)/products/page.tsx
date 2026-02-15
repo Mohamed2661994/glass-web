@@ -22,6 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useRouter } from "next/navigation";
+import { FileSpreadsheet } from "lucide-react";
 
 interface Product {
   id: number;
@@ -39,6 +41,7 @@ interface Product {
 }
 
 export default function ProductsPage() {
+  const router = useRouter();
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -167,14 +170,23 @@ export default function ProductsPage() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <h2 className="text-2xl font-bold">إدارة المنتجات</h2>
 
-        <Button
-          onClick={() => {
-            setSelectedProduct(null);
-            setDialogOpen(true);
-          }}
-        >
-          إضافة منتج
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => router.push("/products/import")}
+          >
+            <FileSpreadsheet className="h-4 w-4 ml-1" />
+            استيراد Excel
+          </Button>
+          <Button
+            onClick={() => {
+              setSelectedProduct(null);
+              setDialogOpen(true);
+            }}
+          >
+            إضافة منتج
+          </Button>
+        </div>
       </div>
 
       {/* Search + Manufacturer Filter */}
