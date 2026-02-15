@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/services/api";
-import { Trash2 } from "lucide-react";
+import { Trash2, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -415,12 +415,15 @@ export default function EditRetailInvoicePage() {
      1️⃣3️⃣ Update Invoice
      ========================================================= */
 
+  const [saving, setSaving] = useState(false);
+
   const updateInvoice = async () => {
     if (items.length === 0) {
       toast.error("لا يوجد أصناف");
       return;
     }
 
+    setSaving(true);
     try {
       await api.put(`/invoices/retail/${id}`, {
         customer_name: customerName || "نقدي",
@@ -438,6 +441,8 @@ export default function EditRetailInvoicePage() {
       router.push("/invoices");
     } catch (err: any) {
       toast.error(err.response?.data?.error || "فشل التعديل");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -898,8 +903,12 @@ export default function EditRetailInvoicePage() {
               <span />
             </div>
 
-            <Button onClick={updateInvoice} className="w-full" size="lg">
-              تحديث الفاتورة
+            <Button onClick={updateInvoice} className="w-full" size="lg" disabled={saving}>
+              {saving ? (
+                <><Loader2 className="h-4 w-4 ml-2 animate-spin" /> جارٍ التحديث...</>
+              ) : (
+                "تحديث الفاتورة"
+              )}
             </Button>
           </Card>
         )}

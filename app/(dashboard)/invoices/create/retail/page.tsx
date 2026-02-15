@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "@/services/api";
-import { Trash2, Camera, X } from "lucide-react";
+import { Trash2, Camera, X, Loader2 } from "lucide-react";
 import { BarcodeDetector } from "barcode-detector";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -545,12 +545,15 @@ export default function CreateRetailInvoicePage() {
      1️⃣2️⃣ Save Invoice
      ========================================================= */
 
+  const [saving, setSaving] = useState(false);
+
   const saveInvoice = async () => {
     if (items.length === 0) {
       toast.error("لا يوجد أصناف");
       return;
     }
 
+    setSaving(true);
     try {
       const itemsDiscount = applyItemsDiscount
         ? items.reduce(
@@ -592,6 +595,8 @@ export default function CreateRetailInvoicePage() {
       setPaidAmount("0");
     } catch (err: any) {
       toast.error(err.response?.data?.error || "فشل الحفظ");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -1082,8 +1087,12 @@ export default function CreateRetailInvoicePage() {
               <span />
             </div>
 
-            <Button onClick={saveInvoice} className="w-full" size="lg">
-              حفظ الفاتورة
+            <Button onClick={saveInvoice} className="w-full" size="lg" disabled={saving}>
+              {saving ? (
+                <><Loader2 className="h-4 w-4 ml-2 animate-spin" /> جارٍ الحفظ...</>
+              ) : (
+                "حفظ الفاتورة"
+              )}
             </Button>
           </Card>
         )}

@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "@/services/api";
-import { Trash2 } from "lucide-react";
+import { Trash2, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -74,6 +74,7 @@ export default function CreateWholesaleInvoicePage() {
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -369,6 +370,7 @@ export default function CreateWholesaleInvoicePage() {
       return;
     }
 
+    setSaving(true);
     try {
       const res = await api.post("/invoices", {
         invoice_type: "wholesale",
@@ -396,6 +398,8 @@ export default function CreateWholesaleInvoicePage() {
       setPaidAmount("0");
     } catch (err: any) {
       toast.error(err.response?.data?.error || "فشل الحفظ");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -828,8 +832,12 @@ export default function CreateWholesaleInvoicePage() {
               <span />
             </div>
 
-            <Button onClick={saveInvoice} className="w-full" size="lg">
-              حفظ الفاتورة
+            <Button onClick={saveInvoice} className="w-full" size="lg" disabled={saving}>
+              {saving ? (
+                <><Loader2 className="h-4 w-4 ml-2 animate-spin" /> جارٍ الحفظ...</>
+              ) : (
+                "حفظ الفاتورة"
+              )}
             </Button>
           </Card>
         )}

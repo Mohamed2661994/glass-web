@@ -162,13 +162,13 @@ export default function ProductsPage() {
       pages.push(
         <Button key={1} variant="outline" size="sm" onClick={() => setPage(1)}>
           1
-        </Button>
+        </Button>,
       );
       if (start > 2) {
         pages.push(
           <span key="dots-start" className="text-muted-foreground px-1">
             ...
-          </span>
+          </span>,
         );
       }
     }
@@ -182,7 +182,7 @@ export default function ProductsPage() {
           onClick={() => setPage(i)}
         >
           {i}
-        </Button>
+        </Button>,
       );
     }
 
@@ -191,7 +191,7 @@ export default function ProductsPage() {
         pages.push(
           <span key="dots-end" className="text-muted-foreground px-1">
             ...
-          </span>
+          </span>,
         );
       }
       pages.push(
@@ -202,7 +202,7 @@ export default function ProductsPage() {
           onClick={() => setPage(totalPages)}
         >
           {totalPages}
-        </Button>
+        </Button>,
       );
     }
 
