@@ -9,6 +9,7 @@ interface User {
   username: string;
   branch_id: number;
   theme?: string;
+  full_name?: string;
 }
 
 interface AuthContextType {

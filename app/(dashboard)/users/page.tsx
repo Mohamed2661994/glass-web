@@ -42,6 +42,7 @@ type ManagedUser = {
   id: number;
   username: string;
   branch_id: number;
+  full_name?: string;
 };
 
 /* ========== Section Card (collapsible) ========== */
@@ -107,6 +108,11 @@ export default function UsersPage() {
   const [newDisplayName, setNewDisplayName] = useState("");
   const [savingName, setSavingName] = useState(false);
 
+  /* ---- Edit full name state ---- */
+  const [editingFullName, setEditingFullName] = useState(false);
+  const [newFullName, setNewFullName] = useState("");
+  const [savingFullName, setSavingFullName] = useState(false);
+
   /* ---- Change password state ---- */
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -122,6 +128,7 @@ export default function UsersPage() {
   const [newUsername, setNewUsername] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserBranch, setNewUserBranch] = useState(1);
+  const [newUserFullName, setNewUserFullName] = useState("");
   const [addingUser, setAddingUser] = useState(false);
 
   /* ---- Reset password dialog (admin only) ---- */
@@ -191,6 +198,29 @@ export default function UsersPage() {
     }
   };
 
+  const handleUpdateFullName = async () => {
+    setSavingFullName(true);
+    try {
+      const res = await api.put(`/users/${user?.id}/full-name`, {
+        full_name: newFullName.trim(),
+      });
+      toast.success("تم تحديث الاسم بالكامل بنجاح");
+      if (user) {
+        const updated = {
+          ...user,
+          full_name: res.data.full_name ?? newFullName.trim(),
+        };
+        setUser(updated);
+        localStorage.setItem("user", JSON.stringify(updated));
+      }
+      setEditingFullName(false);
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "فشل تحديث الاسم");
+    } finally {
+      setSavingFullName(false);
+    }
+  };
+
   const handleChangePassword = async () => {
     if (!currentPassword || !newPassword) {
       toast.error("أدخل كلمة المرور الحالية والجديدة");
@@ -232,10 +262,12 @@ export default function UsersPage() {
         username: newUsername,
         password: newUserPassword,
         branch_id: newUserBranch,
+        full_name: newUserFullName,
       });
       toast.success("تم إضافة المستخدم بنجاح");
       setNewUsername("");
       setNewUserPassword("");
+      setNewUserFullName("");
       setShowAddUser(false);
       fetchUsers();
     } catch {
@@ -318,15 +350,73 @@ export default function UsersPage() {
               <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
                 <User className="h-7 w-7 text-primary" />
               </div>
-              <div className="flex-1">
-                {!editingName ? (
+              <div className="flex-1 space-y-2">
+                {/* Full Name */}
+                {!editingFullName ? (
                   <div className="flex items-center gap-2">
                     <div>
                       <p className="font-bold text-lg">
+                        {user?.full_name || "—"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">الاسم بالكامل</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-primary"
+                      onClick={() => {
+                        setNewFullName(user?.full_name || "");
+                        setEditingFullName(true);
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={newFullName}
+                      onChange={(e) => setNewFullName(e.target.value)}
+                      className="h-9"
+                      placeholder="الاسم بالكامل"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleUpdateFullName();
+                        if (e.key === "Escape") setEditingFullName(false);
+                      }}
+                      autoFocus
+                    />
+                    <Button
+                      size="sm"
+                      onClick={handleUpdateFullName}
+                      disabled={savingFullName}
+                      className="gap-1"
+                    >
+                      {savingFullName ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="h-3 w-3" />
+                      )}
+                      حفظ
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditingFullName(false)}
+                    >
+                      إلغاء
+                    </Button>
+                  </div>
+                )}
+
+                {/* Username */}
+                {!editingName ? (
+                  <div className="flex items-center gap-2">
+                    <div>
+                      <p className="font-medium text-sm text-muted-foreground">
                         {user?.username || "—"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {user ? branchLabel(user.branch_id) : "—"}
+                        اسم المستخدم • {user ? branchLabel(user.branch_id) : "—"}
                       </p>
                     </div>
                     <Button
@@ -490,9 +580,9 @@ export default function UsersPage() {
                           <Shield className="h-4 w-4 text-primary" />
                         </div>
                         <div>
-                          <p className="font-medium text-sm">{u.username}</p>
+                          <p className="font-medium text-sm">{u.full_name || u.username}</p>
                           <p className="text-xs text-muted-foreground">
-                            {branchLabel(u.branch_id)}
+                            {u.username} • {branchLabel(u.branch_id)}
                           </p>
                         </div>
                       </div>
@@ -548,13 +638,21 @@ export default function UsersPage() {
                 </Button>
               ) : (
                 <div className="rounded-lg border p-4 space-y-4 bg-muted/20">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <Label className="text-xs">اسم المستخدم</Label>
                       <Input
                         value={newUsername}
                         onChange={(e) => setNewUsername(e.target.value)}
                         placeholder="username"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">الاسم بالكامل</Label>
+                      <Input
+                        value={newUserFullName}
+                        onChange={(e) => setNewUserFullName(e.target.value)}
+                        placeholder="الاسم بالكامل"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -601,6 +699,7 @@ export default function UsersPage() {
                         setShowAddUser(false);
                         setNewUsername("");
                         setNewUserPassword("");
+                        setNewUserFullName("");
                       }}
                     >
                       إلغاء

@@ -83,9 +83,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               </div>
             </div>
 
-            {/* CENTER - Username */}
+            {/* CENTER - Name */}
             <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
-              <span className="text-base font-bold">{user?.username}</span>
+              <span className="text-base font-bold">{user?.full_name || user?.username}</span>
             </div>
 
             {/* RIGHT */}
