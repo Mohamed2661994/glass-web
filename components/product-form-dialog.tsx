@@ -348,7 +348,7 @@ export function ProductFormDialog({
           <DialogTitle>{isEdit ? "تعديل صنف" : "إضافة صنف جديد"}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-5">
           {/* Barcode */}
           <div className="space-y-1">
             <div className="relative">
@@ -524,54 +524,71 @@ export function ProductFormDialog({
           </div>
 
           {/* Prices */}
-          <Input
-            type="number"
-            placeholder="سعر الشراء جملة"
-            value={form.purchase_price}
-            onChange={(e) =>
-              setForm({ ...form, purchase_price: e.target.value })
-            }
-          />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">سعر الشراء جملة</label>
+              <Input
+                type="number"
+                placeholder="0.00"
+                value={form.purchase_price}
+                onChange={(e) =>
+                  setForm({ ...form, purchase_price: e.target.value })
+                }
+              />
+            </div>
 
-          <Input
-            type="number"
-            placeholder="سعر البيع جملة"
-            value={form.wholesale_price}
-            onChange={(e) =>
-              setForm({ ...form, wholesale_price: e.target.value })
-            }
-          />
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">سعر البيع جملة</label>
+              <Input
+                type="number"
+                placeholder="0.00"
+                value={form.wholesale_price}
+                onChange={(e) =>
+                  setForm({ ...form, wholesale_price: e.target.value })
+                }
+              />
+            </div>
 
-          <Input
-            type="number"
-            placeholder="سعر الشراء قطاعي"
-            value={form.retail_purchase_price}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                retail_purchase_price: e.target.value,
-              })
-            }
-          />
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">سعر الشراء قطاعي</label>
+              <Input
+                type="number"
+                placeholder="0.00"
+                value={form.retail_purchase_price}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    retail_purchase_price: e.target.value,
+                  })
+                }
+              />
+            </div>
 
-          <Input
-            type="number"
-            placeholder="سعر البيع قطاعي"
-            value={form.retail_price}
-            onChange={(e) => setForm({ ...form, retail_price: e.target.value })}
-          />
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">سعر البيع قطاعي</label>
+              <Input
+                type="number"
+                placeholder="0.00"
+                value={form.retail_price}
+                onChange={(e) => setForm({ ...form, retail_price: e.target.value })}
+              />
+            </div>
+          </div>
 
-          <Input
-            type="number"
-            placeholder="خصم ثابت"
-            value={form.discount_amount}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                discount_amount: e.target.value,
-              })
-            }
-          />
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">خصم ثابت</label>
+            <Input
+              type="number"
+              placeholder="0"
+              value={form.discount_amount}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  discount_amount: e.target.value,
+                })
+              }
+            />
+          </div>
 
           {/* ========= العبوات الفرعية ========= */}
           {activeVariants.length > 0 && (
@@ -675,66 +692,83 @@ export function ProductFormDialog({
                     </div>
 
                     {/* Prices */}
-                    <Input
-                      type="number"
-                      placeholder="سعر الشراء جملة"
-                      value={vf.purchase_price}
-                      onChange={(e) =>
-                        updateVariantForm(
-                          vf._key,
-                          "purchase_price",
-                          e.target.value,
-                        )
-                      }
-                    />
-                    <Input
-                      type="number"
-                      placeholder="سعر البيع جملة"
-                      value={vf.wholesale_price}
-                      onChange={(e) =>
-                        updateVariantForm(
-                          vf._key,
-                          "wholesale_price",
-                          e.target.value,
-                        )
-                      }
-                    />
-                    <Input
-                      type="number"
-                      placeholder="سعر الشراء قطاعي"
-                      value={vf.retail_purchase_price}
-                      onChange={(e) =>
-                        updateVariantForm(
-                          vf._key,
-                          "retail_purchase_price",
-                          e.target.value,
-                        )
-                      }
-                    />
-                    <Input
-                      type="number"
-                      placeholder="سعر البيع قطاعي"
-                      value={vf.retail_price}
-                      onChange={(e) =>
-                        updateVariantForm(
-                          vf._key,
-                          "retail_price",
-                          e.target.value,
-                        )
-                      }
-                    />
-                    <Input
-                      type="number"
-                      placeholder="خصم ثابت"
-                      value={vf.discount_amount}
-                      onChange={(e) =>
-                        updateVariantForm(
-                          vf._key,
-                          "discount_amount",
-                          e.target.value,
-                        )
-                      }
-                    />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">سعر الشراء جملة</label>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          value={vf.purchase_price}
+                          onChange={(e) =>
+                            updateVariantForm(
+                              vf._key,
+                              "purchase_price",
+                              e.target.value,
+                            )
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">سعر البيع جملة</label>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          value={vf.wholesale_price}
+                          onChange={(e) =>
+                            updateVariantForm(
+                              vf._key,
+                              "wholesale_price",
+                              e.target.value,
+                            )
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">سعر الشراء قطاعي</label>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          value={vf.retail_purchase_price}
+                          onChange={(e) =>
+                            updateVariantForm(
+                              vf._key,
+                              "retail_purchase_price",
+                              e.target.value,
+                            )
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">سعر البيع قطاعي</label>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          value={vf.retail_price}
+                          onChange={(e) =>
+                            updateVariantForm(
+                              vf._key,
+                              "retail_price",
+                              e.target.value,
+                            )
+                          }
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">خصم ثابت</label>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        value={vf.discount_amount}
+                        onChange={(e) =>
+                          updateVariantForm(
+                            vf._key,
+                            "discount_amount",
+                            e.target.value,
+                          )
+                        }
+                      />
+                    </div>
                   </div>
                 </div>
               ))}
