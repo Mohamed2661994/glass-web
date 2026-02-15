@@ -2,12 +2,14 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Copy, Pencil, Printer } from "lucide-react";
+import { Copy, Pencil, Printer, Check } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 interface Variant {
   id: number;
   product_id: number;
+
   label: string;
   barcode: string;
   wholesale_package: string;
@@ -36,6 +38,14 @@ export function ProductCard({
 }: ProductCardProps) {
   const [active, setActive] = useState(product.is_active);
   const [toggling, setToggling] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopy = (barcode: string, id: string) => {
+    navigator.clipboard.writeText(barcode);
+    setCopiedId(id);
+    toast.success("تم نسخ الباركود");
+    setTimeout(() => setCopiedId(null), 1500);
+  };
 
   const fmt = (v: number) =>
     Number(v || 0).toLocaleString("en-US", { minimumFractionDigits: 2 });
@@ -138,10 +148,14 @@ export function ProductCard({
           {product.barcode && (
             <>
               <button
-                onClick={() => navigator.clipboard.writeText(product.barcode)}
+                onClick={() => handleCopy(product.barcode, `main-${product.id}`)}
                 className="p-0.5 rounded hover:bg-muted transition-colors"
               >
-                <Copy className="h-3 w-3" />
+                {copiedId === `main-${product.id}` ? (
+                  <Check className="h-3 w-3 text-green-600" />
+                ) : (
+                  <Copy className="h-3 w-3" />
+                )}
               </button>
               <button
                 onClick={() => onPrintBarcode?.(product)}
@@ -220,10 +234,14 @@ export function ProductCard({
                   <div className="flex items-center justify-center gap-0.5 text-[9px] text-muted-foreground font-mono">
                     <span>{pkg.barcode}</span>
                     <button
-                      onClick={() => navigator.clipboard.writeText(pkg.barcode)}
+                      onClick={() => handleCopy(pkg.barcode, `var1-${pkg.id}`)}
                       className="p-0.5 rounded hover:bg-muted transition-colors"
                     >
-                      <Copy className="h-2.5 w-2.5" />
+                      {copiedId === `var1-${pkg.id}` ? (
+                        <Check className="h-2.5 w-2.5 text-green-600" />
+                      ) : (
+                        <Copy className="h-2.5 w-2.5" />
+                      )}
                     </button>
                     <button
                       onClick={() =>
@@ -275,12 +293,14 @@ export function ProductCard({
                     <div className="flex items-center justify-center gap-0.5 text-[9px] text-muted-foreground font-mono">
                       <span>{pkg.barcode}</span>
                       <button
-                        onClick={() =>
-                          navigator.clipboard.writeText(pkg.barcode)
-                        }
+                        onClick={() => handleCopy(pkg.barcode, `var2-${pkg.id}`)}
                         className="p-0.5 rounded hover:bg-muted transition-colors"
                       >
-                        <Copy className="h-2.5 w-2.5" />
+                        {copiedId === `var2-${pkg.id}` ? (
+                          <Check className="h-2.5 w-2.5 text-green-600" />
+                        ) : (
+                          <Copy className="h-2.5 w-2.5" />
+                        )}
                       </button>
                       <button
                         onClick={() =>

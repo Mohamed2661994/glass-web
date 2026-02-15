@@ -832,9 +832,17 @@ export default function CreateWholesaleInvoicePage() {
               <span />
             </div>
 
-            <Button onClick={saveInvoice} className="w-full" size="lg" disabled={saving}>
+            <Button
+              onClick={saveInvoice}
+              className="w-full"
+              size="lg"
+              disabled={saving}
+            >
               {saving ? (
-                <><Loader2 className="h-4 w-4 ml-2 animate-spin" /> جارٍ الحفظ...</>
+                <>
+                  <Loader2 className="h-4 w-4 ml-2 animate-spin" /> جارٍ
+                  الحفظ...
+                </>
               ) : (
                 "حفظ الفاتورة"
               )}

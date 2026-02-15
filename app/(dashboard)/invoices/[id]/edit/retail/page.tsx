@@ -903,9 +903,17 @@ export default function EditRetailInvoicePage() {
               <span />
             </div>
 
-            <Button onClick={updateInvoice} className="w-full" size="lg" disabled={saving}>
+            <Button
+              onClick={updateInvoice}
+              className="w-full"
+              size="lg"
+              disabled={saving}
+            >
               {saving ? (
-                <><Loader2 className="h-4 w-4 ml-2 animate-spin" /> جارٍ التحديث...</>
+                <>
+                  <Loader2 className="h-4 w-4 ml-2 animate-spin" /> جارٍ
+                  التحديث...
+                </>
               ) : (
                 "تحديث الفاتورة"
               )}
