@@ -83,7 +83,7 @@ export default function CashInPage() {
         تسجيل حركة وارد على الخزنة
       </p>
 
-      <Card>
+      <Card className="overflow-hidden">
         <CardContent className="p-6 space-y-5">
           {/* الاسم */}
           <div>

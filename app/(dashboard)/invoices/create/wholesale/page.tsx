@@ -498,7 +498,7 @@ export default function CreateWholesaleInvoicePage() {
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-center">إنشاء فاتورة جملة</h1>
 
-        <Card className="p-6 space-y-6">
+        <Card className="p-6 space-y-6 overflow-hidden">
           <div className="space-y-6">
             <div>
               <label className="text-sm mb-2 block">نوع الحركة</label>
