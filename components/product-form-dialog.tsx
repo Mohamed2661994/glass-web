@@ -450,83 +450,89 @@ export function ProductFormDialog({
           </div>
 
           {/* Wholesale Package */}
-          <div className="grid grid-cols-3 gap-3 items-center">
-            <Input value="كرتونة" disabled />
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">عبوة الجملة</label>
+            <div className="grid grid-cols-2 gap-3 items-center">
+              <Input
+                placeholder="عدد"
+                type="number"
+                value={form.wholesale_package_qty}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    wholesale_package_qty: e.target.value,
+                  })
+                }
+              />
 
-            <Input
-              placeholder="عدد"
-              type="number"
-              value={form.wholesale_package_qty}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  wholesale_package_qty: e.target.value,
-                })
-              }
-            />
-
-            <Select
-              value={form.wholesale_package_type}
-              onValueChange={(val) =>
-                setForm({
-                  ...form,
-                  wholesale_package_type: val,
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="اختر" />
-              </SelectTrigger>
-              <SelectContent>
-                {wholesaleTypes.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    {p}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <Select
+                value={form.wholesale_package_type}
+                onValueChange={(val) =>
+                  setForm({
+                    ...form,
+                    wholesale_package_type: val,
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر" />
+                </SelectTrigger>
+                <SelectContent>
+                  {wholesaleTypes.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {p}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Retail Package */}
-          <div className="grid grid-cols-2 gap-3 items-center">
-            <Select
-              value={form.retail_package_type}
-              onValueChange={(val) =>
-                setForm({
-                  ...form,
-                  retail_package_type: val,
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="اختر" />
-              </SelectTrigger>
-              <SelectContent>
-                {retailTypes.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    {p}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">عبوة القطاعي</label>
+            <div className="grid grid-cols-2 gap-3 items-center">
+              <Input
+                placeholder="عدد"
+                type="number"
+                value={form.retail_package_qty}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    retail_package_qty: e.target.value,
+                  })
+                }
+              />
 
-            <Input
-              placeholder="عدد"
-              type="number"
-              value={form.retail_package_qty}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  retail_package_qty: e.target.value,
-                })
-              }
-            />
+              <Select
+                value={form.retail_package_type}
+                onValueChange={(val) =>
+                  setForm({
+                    ...form,
+                    retail_package_type: val,
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر" />
+                </SelectTrigger>
+                <SelectContent>
+                  {retailTypes.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {p}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Prices */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">سعر الشراء جملة</label>
+              <label className="text-xs text-muted-foreground">
+                سعر الشراء جملة
+              </label>
               <Input
                 type="number"
                 placeholder="0.00"
@@ -538,7 +544,9 @@ export function ProductFormDialog({
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">سعر البيع جملة</label>
+              <label className="text-xs text-muted-foreground">
+                سعر البيع جملة
+              </label>
               <Input
                 type="number"
                 placeholder="0.00"
@@ -550,7 +558,9 @@ export function ProductFormDialog({
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">سعر الشراء قطاعي</label>
+              <label className="text-xs text-muted-foreground">
+                سعر الشراء قطاعي
+              </label>
               <Input
                 type="number"
                 placeholder="0.00"
@@ -565,12 +575,16 @@ export function ProductFormDialog({
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">سعر البيع قطاعي</label>
+              <label className="text-xs text-muted-foreground">
+                سعر البيع قطاعي
+              </label>
               <Input
                 type="number"
                 placeholder="0.00"
                 value={form.retail_price}
-                onChange={(e) => setForm({ ...form, retail_price: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, retail_price: e.target.value })
+                }
               />
             </div>
           </div>
@@ -621,80 +635,87 @@ export function ProductFormDialog({
                     />
 
                     {/* Wholesale Package */}
-                    <div className="grid grid-cols-3 gap-3 items-center">
-                      <Input value="كرتونة" disabled />
-                      <Input
-                        placeholder="عدد"
-                        type="number"
-                        value={vf.wholesale_package_qty}
-                        onChange={(e) =>
-                          updateVariantForm(
-                            vf._key,
-                            "wholesale_package_qty",
-                            e.target.value,
-                          )
-                        }
-                      />
-                      <Select
-                        value={vf.wholesale_package_type}
-                        onValueChange={(val) =>
-                          updateVariantForm(
-                            vf._key,
-                            "wholesale_package_type",
-                            val,
-                          )
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="اختر" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {wholesaleTypes.map((p) => (
-                            <SelectItem key={p} value={p}>
-                              {p}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">عبوة الجملة</label>
+                      <div className="grid grid-cols-2 gap-3 items-center">
+                        <Input
+                          placeholder="عدد"
+                          type="number"
+                          value={vf.wholesale_package_qty}
+                          onChange={(e) =>
+                            updateVariantForm(
+                              vf._key,
+                              "wholesale_package_qty",
+                              e.target.value,
+                            )
+                          }
+                        />
+                        <Select
+                          value={vf.wholesale_package_type}
+                          onValueChange={(val) =>
+                            updateVariantForm(
+                              vf._key,
+                              "wholesale_package_type",
+                              val,
+                            )
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="اختر" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {wholesaleTypes.map((p) => (
+                              <SelectItem key={p} value={p}>
+                                {p}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
 
                     {/* Retail Package */}
-                    <div className="grid grid-cols-2 gap-3 items-center">
-                      <Select
-                        value={vf.retail_package_type}
-                        onValueChange={(val) =>
-                          updateVariantForm(vf._key, "retail_package_type", val)
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="اختر" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {retailTypes.map((p) => (
-                            <SelectItem key={p} value={p}>
-                              {p}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        placeholder="عدد"
-                        type="number"
-                        value={vf.retail_package_qty}
-                        onChange={(e) =>
-                          updateVariantForm(
-                            vf._key,
-                            "retail_package_qty",
-                            e.target.value,
-                          )
-                        }
-                      />
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">عبوة القطاعي</label>
+                      <div className="grid grid-cols-2 gap-3 items-center">
+                        <Input
+                          placeholder="عدد"
+                          type="number"
+                          value={vf.retail_package_qty}
+                          onChange={(e) =>
+                            updateVariantForm(
+                              vf._key,
+                              "retail_package_qty",
+                              e.target.value,
+                            )
+                          }
+                        />
+                        <Select
+                          value={vf.retail_package_type}
+                          onValueChange={(val) =>
+                            updateVariantForm(vf._key, "retail_package_type", val)
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="اختر" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {retailTypes.map((p) => (
+                              <SelectItem key={p} value={p}>
+                                {p}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
 
                     {/* Prices */}
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">سعر الشراء جملة</label>
+                        <label className="text-xs text-muted-foreground">
+                          سعر الشراء جملة
+                        </label>
                         <Input
                           type="number"
                           placeholder="0.00"
@@ -709,7 +730,9 @@ export function ProductFormDialog({
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">سعر البيع جملة</label>
+                        <label className="text-xs text-muted-foreground">
+                          سعر البيع جملة
+                        </label>
                         <Input
                           type="number"
                           placeholder="0.00"
@@ -724,7 +747,9 @@ export function ProductFormDialog({
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">سعر الشراء قطاعي</label>
+                        <label className="text-xs text-muted-foreground">
+                          سعر الشراء قطاعي
+                        </label>
                         <Input
                           type="number"
                           placeholder="0.00"
@@ -739,7 +764,9 @@ export function ProductFormDialog({
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">سعر البيع قطاعي</label>
+                        <label className="text-xs text-muted-foreground">
+                          سعر البيع قطاعي
+                        </label>
                         <Input
                           type="number"
                           placeholder="0.00"
@@ -755,7 +782,9 @@ export function ProductFormDialog({
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">خصم ثابت</label>
+                      <label className="text-xs text-muted-foreground">
+                        خصم ثابت
+                      </label>
                       <Input
                         type="number"
                         placeholder="0"
