@@ -27,6 +27,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 /* =========================================================
    Main Component
@@ -76,6 +86,11 @@ export default function CreateWholesaleInvoicePage() {
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [pendingDuplicate, setPendingDuplicate] = useState<{
+    product: any;
+    pkg: string;
+    price: number;
+  } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -276,12 +291,12 @@ export default function CreateWholesaleInvoicePage() {
 
   const finalizeAddItem = useCallback(
     (product: any, pkg: string, price: number) => {
+      let duplicate = false;
       setItems((prev) => {
-        // نعمل unique key من المنتج + العبوة
         const key = `${product.id}_${pkg}`;
         const exists = prev.find((i) => `${i.product_id}_${i.package}` === key);
         if (exists) {
-          toast.warning("الصنف بهذه العبوة مضاف بالفعل");
+          duplicate = true;
           return prev;
         }
 
@@ -289,7 +304,7 @@ export default function CreateWholesaleInvoicePage() {
         return [
           ...prev,
           {
-            uid: `${product.id}_${vid}`,
+            uid: `${product.id}_${vid}_${Date.now()}`,
             product_id: product.id,
             product_name: product.name,
             manufacturer: product.manufacturer || "-",
@@ -302,12 +317,39 @@ export default function CreateWholesaleInvoicePage() {
         ];
       });
 
-      setLastAddedId(`${product.id}_${product.variant_id || 0}`);
+      if (duplicate) {
+        setPendingDuplicate({ product, pkg, price });
+      } else {
+        setLastAddedId(`${product.id}_${product.variant_id || 0}`);
+      }
       setShowProductModal(false);
       setPackagePickerProduct(null);
     },
     [],
   );
+
+  const confirmDuplicateAdd = useCallback(() => {
+    if (!pendingDuplicate) return;
+    const { product, pkg, price } = pendingDuplicate;
+    const vid = product.variant_id || 0;
+    const uid = `${product.id}_${vid}_${Date.now()}`;
+    setItems((prev) => [
+      ...prev,
+      {
+        uid,
+        product_id: product.id,
+        product_name: product.name,
+        manufacturer: product.manufacturer || "-",
+        package: pkg,
+        price: price,
+        quantity: 1,
+        discount: 0,
+        variant_id: vid,
+      },
+    ]);
+    setLastAddedId(uid);
+    setPendingDuplicate(null);
+  }, [pendingDuplicate]);
 
   /* Focus quantity input of last added item */
   useEffect(() => {
@@ -1075,6 +1117,28 @@ export default function CreateWholesaleInvoicePage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Duplicate product confirmation */}
+        <AlertDialog
+          open={!!pendingDuplicate}
+          onOpenChange={(open) => !open && setPendingDuplicate(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>الصنف موجود مسبقاً</AlertDialogTitle>
+              <AlertDialogDescription>
+                الصنف &quot;{pendingDuplicate?.product?.name}&quot; موجود بالفعل
+                في الفاتورة. هل تريد إضافته كسطر جديد؟
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="gap-2 sm:gap-0">
+              <AlertDialogCancel>لا</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDuplicateAdd}>
+                نعم
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

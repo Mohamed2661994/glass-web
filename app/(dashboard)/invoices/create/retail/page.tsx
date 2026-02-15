@@ -26,6 +26,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 /* =========================================================
    Main Component
@@ -71,6 +81,11 @@ export default function CreateRetailInvoicePage() {
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [pendingDuplicate, setPendingDuplicate] = useState<{
+    product: any;
+    pkg: string;
+    source: "barcode" | "manual";
+  } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -425,19 +440,13 @@ export default function CreateRetailInvoicePage() {
     chosenPackage: string,
     source: "barcode" | "manual",
   ) => {
+    let duplicate = false;
     setItems((prev) => {
       const exists = prev.find(
         (i) => i.product_id === product.id && i.package === chosenPackage,
       );
       if (exists) {
-        if (source === "barcode") {
-          return prev.map((i) =>
-            i.product_id === product.id && i.package === chosenPackage
-              ? { ...i, quantity: (Number(i.quantity) || 0) + 1 }
-              : i,
-          );
-        }
-        toast.warning("الصنف مضاف بالفعل");
+        duplicate = true;
         return prev;
       }
 
@@ -445,7 +454,7 @@ export default function CreateRetailInvoicePage() {
       return [
         ...prev,
         {
-          uid: `${product.id}_${vid}`,
+          uid: `${product.id}_${vid}_${Date.now()}`,
           product_id: product.id,
           product_name: product.name,
           manufacturer: product.manufacturer || "-",
@@ -458,6 +467,12 @@ export default function CreateRetailInvoicePage() {
       ];
     });
 
+    if (duplicate) {
+      setPendingDuplicate({ product, pkg: chosenPackage, source });
+      setShowProductModal(false);
+      return;
+    }
+
     if (source === "barcode") {
       toast.success(`تم إضافة: ${product.name}`);
       new Audio("/sounds/beep-7.mp3").play().catch(() => {});
@@ -467,6 +482,36 @@ export default function CreateRetailInvoicePage() {
       setShowProductModal(false);
     }
   };
+
+  const confirmDuplicateAdd = useCallback(() => {
+    if (!pendingDuplicate) return;
+    const { product, pkg, source } = pendingDuplicate;
+    const vid = product.variant_id || 0;
+    const uid = `${product.id}_${vid}_${Date.now()}`;
+    setItems((prev) => [
+      ...prev,
+      {
+        uid,
+        product_id: product.id,
+        product_name: product.name,
+        manufacturer: product.manufacturer || "-",
+        package: pkg,
+        price: product.price,
+        quantity: 1,
+        discount: product.discount_amount || 0,
+        variant_id: vid,
+      },
+    ]);
+
+    if (source === "barcode") {
+      toast.success(`تم إضافة: ${product.name}`);
+      new Audio("/sounds/beep-7.mp3").play().catch(() => {});
+      setTimeout(() => barcodeRef.current?.focus(), 100);
+    } else {
+      setLastAddedId(uid);
+    }
+    setPendingDuplicate(null);
+  }, [pendingDuplicate]);
 
   const addItem = useCallback(
     (product: any) => {
@@ -1334,6 +1379,28 @@ export default function CreateRetailInvoicePage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Duplicate product confirmation */}
+        <AlertDialog
+          open={!!pendingDuplicate}
+          onOpenChange={(open) => !open && setPendingDuplicate(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>الصنف موجود مسبقاً</AlertDialogTitle>
+              <AlertDialogDescription>
+                الصنف &quot;{pendingDuplicate?.product?.name}&quot; موجود بالفعل
+                في الفاتورة. هل تريد إضافته كسطر جديد؟
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="gap-2 sm:gap-0">
+              <AlertDialogCancel>لا</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDuplicateAdd}>
+                نعم
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

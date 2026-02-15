@@ -26,6 +26,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 /* =========================================================
    Main Component
@@ -69,8 +79,12 @@ export default function EditRetailInvoicePage() {
   const [search, setSearch] = useState("");
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
-  const [lastAddedId, setLastAddedId] = useState<number | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [lastAddedId, setLastAddedId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [pendingDuplicate, setPendingDuplicate] = useState<{
+    product: any;
+    source: "barcode" | "manual";
+  } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -120,7 +134,8 @@ export default function EditRetailInvoicePage() {
         setApplyItemsDiscount(inv.apply_items_discount ?? true);
 
         setItems(
-          (inv.items || []).map((item: any) => ({
+          (inv.items || []).map((item: any, idx: number) => ({
+            uid: `${item.product_id}_${idx}_${Date.now()}`,
             product_id: item.product_id,
             product_name: item.product_name,
             manufacturer: item.manufacturer || "-",
@@ -187,19 +202,19 @@ export default function EditRetailInvoicePage() {
 
       const product = res.data;
 
+      let duplicate = false;
+      const uid = `${product.id}_${Date.now()}`;
       setItems((prev) => {
         const exists = prev.find((i) => i.product_id === product.id);
         if (exists) {
-          return prev.map((i) =>
-            i.product_id === product.id
-              ? { ...i, quantity: (Number(i.quantity) || 0) + 1 }
-              : i,
-          );
+          duplicate = true;
+          return prev;
         }
 
         return [
           ...prev,
           {
+            uid,
             product_id: product.id,
             product_name: product.name,
             manufacturer: product.manufacturer || "-",
@@ -211,12 +226,13 @@ export default function EditRetailInvoicePage() {
         ];
       });
 
-      toast.success(`تم إضافة: ${product.name}`);
-      new Audio("/sounds/beep-7.mp3").play().catch(() => {});
-
-      setTimeout(() => {
-        barcodeRef.current?.focus();
-      }, 100);
+      if (duplicate) {
+        setPendingDuplicate({ product, source: "barcode" });
+      } else {
+        toast.success(`تم إضافة: ${product.name}`);
+        new Audio("/sounds/beep-7.mp3").play().catch(() => {});
+        setTimeout(() => barcodeRef.current?.focus(), 100);
+      }
     } catch {
       toast.error("الصنف غير موجود");
     } finally {
@@ -338,16 +354,19 @@ export default function EditRetailInvoicePage() {
      ========================================================= */
 
   const addItem = useCallback((product: any) => {
+    let duplicate = false;
+    const uid = `${product.id}_${Date.now()}`;
     setItems((prev) => {
       const exists = prev.find((i) => i.product_id === product.id);
       if (exists) {
-        toast.warning("الصنف مضاف بالفعل");
+        duplicate = true;
         return prev;
       }
 
       return [
         ...prev,
         {
+          uid,
           product_id: product.id,
           product_name: product.name,
           manufacturer: product.manufacturer || "-",
@@ -359,9 +378,41 @@ export default function EditRetailInvoicePage() {
       ];
     });
 
-    setLastAddedId(product.id);
+    if (duplicate) {
+      setPendingDuplicate({ product, source: "manual" });
+    } else {
+      setLastAddedId(uid);
+    }
     setShowProductModal(false);
   }, []);
+
+  const confirmDuplicateAdd = useCallback(() => {
+    if (!pendingDuplicate) return;
+    const { product, source } = pendingDuplicate;
+    const uid = `${product.id}_${Date.now()}`;
+    setItems((prev) => [
+      ...prev,
+      {
+        uid,
+        product_id: product.id,
+        product_name: product.name,
+        manufacturer: product.manufacturer || "-",
+        package: product.retail_package || "-",
+        price: product.price,
+        quantity: 1,
+        discount: product.discount_amount || 0,
+      },
+    ]);
+
+    if (source === "barcode") {
+      toast.success(`تم إضافة: ${product.name}`);
+      new Audio("/sounds/beep-7.mp3").play().catch(() => {});
+      setTimeout(() => barcodeRef.current?.focus(), 100);
+    } else {
+      setLastAddedId(uid);
+    }
+    setPendingDuplicate(null);
+  }, [pendingDuplicate]);
 
   /* Focus quantity input of last added item */
   useEffect(() => {
@@ -383,8 +434,8 @@ export default function EditRetailInvoicePage() {
      1️⃣1️⃣ Remove Item
      ========================================================= */
 
-  const removeItem = (pid: number) => {
-    setItems(items.filter((i) => i.product_id !== pid));
+  const removeItem = (uid: string) => {
+    setItems(items.filter((i) => i.uid !== uid));
   };
 
   /* =========================================================
@@ -674,7 +725,7 @@ export default function EditRetailInvoicePage() {
                   } else if (items.length > 0) {
                     const lastItem = items[items.length - 1];
                     const el = document.querySelector(
-                      `[data-quantity-id="${lastItem.product_id}"]`,
+                      `[data-quantity-id="${lastItem.uid}"]`,
                     ) as HTMLInputElement;
                     if (el) {
                       el.focus();
@@ -709,7 +760,7 @@ export default function EditRetailInvoicePage() {
                 </thead>
                 <tbody>
                   {items.map((item) => (
-                    <tr key={item.product_id} className="border-b">
+                    <tr key={item.uid} className="border-b">
                       <td className="p-3">
                         <div>
                           {item.product_name} - {item.manufacturer}
@@ -722,7 +773,7 @@ export default function EditRetailInvoicePage() {
                       <td className="p-3 text-center">
                         <Input
                           type="number"
-                          data-quantity-id={item.product_id}
+                          data-quantity-id={item.uid}
                           className="w-20 mx-auto text-center"
                           value={item.quantity}
                           onKeyDown={(e) => {
@@ -735,7 +786,7 @@ export default function EditRetailInvoicePage() {
                           onChange={(e) =>
                             setItems((prev) =>
                               prev.map((i) =>
-                                i.product_id === item.product_id
+                                i.uid === item.uid
                                   ? {
                                       ...i,
                                       quantity:
@@ -771,7 +822,7 @@ export default function EditRetailInvoicePage() {
                           onCheckedChange={(checked) =>
                             setItems((prev) =>
                               prev.map((i) =>
-                                i.product_id === item.product_id
+                                i.uid === item.uid
                                   ? { ...i, is_return: !!checked }
                                   : i,
                               ),
@@ -780,12 +831,12 @@ export default function EditRetailInvoicePage() {
                         />
                       </td>
                       <td className="p-3 text-center">
-                        {confirmDeleteId === item.product_id ? (
+                        {confirmDeleteId === item.uid ? (
                           <Button
                             variant="destructive"
                             size="icon-xs"
                             onClick={() => {
-                              removeItem(item.product_id);
+                              removeItem(item.uid);
                               setConfirmDeleteId(null);
                             }}
                           >
@@ -796,11 +847,11 @@ export default function EditRetailInvoicePage() {
                             variant="ghost"
                             size="icon-xs"
                             onClick={() => {
-                              setConfirmDeleteId(item.product_id);
+                              setConfirmDeleteId(item.uid);
                               setTimeout(
                                 () =>
                                   setConfirmDeleteId((prev) =>
-                                    prev === item.product_id ? null : prev,
+                                    prev === item.uid ? null : prev,
                                   ),
                                 2000,
                               );
@@ -1014,6 +1065,28 @@ export default function EditRetailInvoicePage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Duplicate product confirmation */}
+        <AlertDialog
+          open={!!pendingDuplicate}
+          onOpenChange={(open) => !open && setPendingDuplicate(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>الصنف موجود مسبقاً</AlertDialogTitle>
+              <AlertDialogDescription>
+                الصنف &quot;{pendingDuplicate?.product?.name}&quot; موجود بالفعل
+                في الفاتورة. هل تريد إضافته كسطر جديد؟
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="gap-2 sm:gap-0">
+              <AlertDialogCancel>لا</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDuplicateAdd}>
+                نعم
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
