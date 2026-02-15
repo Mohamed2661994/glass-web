@@ -38,6 +38,7 @@ interface Product {
   barcode: string;
   discount_amount: number;
   is_active: boolean;
+  description?: string;
 }
 
 export default function ProductsPage() {
@@ -112,7 +113,8 @@ export default function ProductsPage() {
     const q = search.toLowerCase();
     const matchesSearch =
       product.name.toLowerCase().includes(q) ||
-      (product.barcode && product.barcode.toLowerCase().includes(q));
+      (product.barcode && product.barcode.toLowerCase().includes(q)) ||
+      (product.description && product.description.toLowerCase().includes(q));
     const matchesManufacturer =
       selectedManufacturer === "الكل" ||
       product.manufacturer === selectedManufacturer;

@@ -65,6 +65,7 @@ export function ProductFormDialog({
   const emptyForm = {
     barcode: "",
     name: "",
+    description: "",
     manufacturer: "",
     wholesale_package_type: "",
     wholesale_package_qty: "",
@@ -269,6 +270,7 @@ export function ProductFormDialog({
         retail_price: Number(form.retail_price || 0),
         discount_amount: Number(form.discount_amount || 0),
         barcode: form.barcode || undefined,
+        description: form.description || "",
       };
 
       let productId = product?.id;
@@ -404,6 +406,13 @@ export function ProductFormDialog({
             placeholder="اسم الصنف"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
+          />
+
+          {/* Description / Keywords */}
+          <Input
+            placeholder="وصف / كلمات مفتاحية (اختياري)"
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
           />
 
           {/* Manufacturer */}
