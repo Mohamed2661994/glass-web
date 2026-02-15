@@ -82,44 +82,91 @@ export default function ImportProductsPage() {
       if (!file) return;
 
       setFileName(file.name);
+      const isCSV = file.name.toLowerCase().endsWith(".csv");
 
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: "array" });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        
-        // Read as array of arrays (no headers assumption)
-        const aoa = XLSX.utils.sheet_to_json<string[]>(sheet, {
-          header: 1,
-          defval: "",
-        });
+      if (isCSV) {
+        // CSV: read as text with proper encoding detection
+        const textReader = new FileReader();
+        textReader.onload = (evt) => {
+          let text = evt.target?.result as string;
+          if (!text || text.trim().length === 0) {
+            toast.error("الملف فارغ");
+            return;
+          }
 
-        if (aoa.length < 2) {
-          toast.error("الملف فارغ أو لا يحتوي على بيانات كافية");
-          return;
-        }
+          // Detect delimiter (comma, semicolon, or tab)
+          const firstLine = text.split("\n")[0];
+          let delimiter = ",";
+          if (firstLine.split("\t").length > firstLine.split(",").length) {
+            delimiter = "\t";
+          } else if (
+            firstLine.split(";").length > firstLine.split(",").length
+          ) {
+            delimiter = ";";
+          }
 
-        setRawRows(aoa.map((row) => row.map((cell) => String(cell ?? ""))));
-        
-        // Auto-detect header row: first row that has at least 3 non-empty cells
-        const autoIdx = aoa.findIndex(
-          (row) => row.filter((c) => String(c ?? "").trim() !== "").length >= 3
-        );
-        setHeaderRowIdx(autoIdx >= 0 ? autoIdx : 0);
+          const lines = text
+            .split(/\r?\n/)
+            .filter((line) => line.trim() !== "");
+          const rows = lines.map((line) =>
+            line
+              .split(delimiter)
+              .map((cell) => cell.trim().replace(/^"|"$/g, "")),
+          );
 
-        setStep("pickHeader");
-      };
-      reader.readAsArrayBuffer(file);
+          if (rows.length < 2) {
+            toast.error("الملف فارغ أو لا يحتوي على بيانات كافية");
+            return;
+          }
+
+          setRawRows(rows);
+
+          const autoIdx = rows.findIndex(
+            (row) => row.filter((c) => c.trim() !== "").length >= 3,
+          );
+          setHeaderRowIdx(autoIdx >= 0 ? autoIdx : 0);
+          setStep("pickHeader");
+        };
+        // Try UTF-8 first, fallback handled by browser
+        textReader.readAsText(file, "UTF-8");
+      } else {
+        // Excel: read as binary
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: "array" });
+          const sheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+
+          const aoa = XLSX.utils.sheet_to_json<string[]>(sheet, {
+            header: 1,
+            defval: "",
+          });
+
+          if (aoa.length < 2) {
+            toast.error("الملف فارغ أو لا يحتوي على بيانات كافية");
+            return;
+          }
+
+          setRawRows(aoa.map((row) => row.map((cell) => String(cell ?? ""))));
+
+          const autoIdx = aoa.findIndex(
+            (row) =>
+              row.filter((c) => String(c ?? "").trim() !== "").length >= 3,
+          );
+          setHeaderRowIdx(autoIdx >= 0 ? autoIdx : 0);
+          setStep("pickHeader");
+        };
+        reader.readAsArrayBuffer(file);
+      }
     },
     [],
   );
 
   /* ========== STEP 1.5: Confirm header row ========== */
   const confirmHeaderRow = () => {
-    const headers = rawRows[headerRowIdx].map((h, i) =>
-      h.trim() || `عمود_${i + 1}`
+    const headers = rawRows[headerRowIdx].map(
+      (h, i) => h.trim() || `عمود_${i + 1}`,
     );
     setExcelHeaders(headers);
 
@@ -133,7 +180,7 @@ export default function ImportProductsPage() {
     });
     // Filter out completely empty rows
     const filtered = dataRows.filter((row) =>
-      Object.values(row).some((v) => String(v).trim() !== "")
+      Object.values(row).some((v) => String(v).trim() !== ""),
     );
     setExcelData(filtered);
 
@@ -144,7 +191,7 @@ export default function ImportProductsPage() {
         (h) =>
           h === col.label ||
           h === col.key ||
-          h.toLowerCase().includes(col.key.toLowerCase())
+          h.toLowerCase().includes(col.key.toLowerCase()),
       );
       if (match) {
         autoMap[col.key] = match;
@@ -314,7 +361,8 @@ export default function ImportProductsPage() {
               اختر صف العناوين
             </CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              اضغط على الصف اللي فيه أسماء الأعمدة (مثلاً: اسم الصنف، الباركود، السعر...)
+              اضغط على الصف اللي فيه أسماء الأعمدة (مثلاً: اسم الصنف، الباركود،
+              السعر...)
             </p>
           </CardHeader>
           <CardContent>
@@ -335,7 +383,10 @@ export default function ImportProductsPage() {
                         {i + 1}
                       </TableCell>
                       {row.slice(0, 10).map((cell, j) => (
-                        <TableCell key={j} className="text-center text-sm whitespace-nowrap">
+                        <TableCell
+                          key={j}
+                          className="text-center text-sm whitespace-nowrap"
+                        >
                           {String(cell).trim() || (
                             <span className="text-muted-foreground">—</span>
                           )}
