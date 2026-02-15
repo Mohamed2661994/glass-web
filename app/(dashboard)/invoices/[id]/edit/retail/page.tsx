@@ -202,13 +202,16 @@ export default function EditRetailInvoicePage() {
 
       const product = res.data;
 
-      let duplicate = false;
+      // باركود → لو موجود نزود الكمية مباشرة
       const uid = `${product.id}_${Date.now()}`;
       setItems((prev) => {
         const exists = prev.find((i) => i.product_id === product.id);
         if (exists) {
-          duplicate = true;
-          return prev;
+          return prev.map((i) =>
+            i.product_id === product.id
+              ? { ...i, quantity: (Number(i.quantity) || 0) + 1 }
+              : i,
+          );
         }
 
         return [
@@ -226,13 +229,9 @@ export default function EditRetailInvoicePage() {
         ];
       });
 
-      if (duplicate) {
-        setPendingDuplicate({ product, source: "barcode" });
-      } else {
-        toast.success(`تم إضافة: ${product.name}`);
-        new Audio("/sounds/beep-7.mp3").play().catch(() => {});
-        setTimeout(() => barcodeRef.current?.focus(), 100);
-      }
+      toast.success(`تم إضافة: ${product.name}`);
+      new Audio("/sounds/beep-7.mp3").play().catch(() => {});
+      setTimeout(() => barcodeRef.current?.focus(), 100);
     } catch {
       toast.error("الصنف غير موجود");
     } finally {

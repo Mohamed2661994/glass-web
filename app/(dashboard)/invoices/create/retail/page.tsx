@@ -440,6 +440,43 @@ export default function CreateRetailInvoicePage() {
     chosenPackage: string,
     source: "barcode" | "manual",
   ) => {
+    // باركود → لو موجود نزود الكمية مباشرة
+    if (source === "barcode") {
+      setItems((prev) => {
+        const exists = prev.find(
+          (i) => i.product_id === product.id && i.package === chosenPackage,
+        );
+        if (exists) {
+          return prev.map((i) =>
+            i.product_id === product.id && i.package === chosenPackage
+              ? { ...i, quantity: (Number(i.quantity) || 0) + 1 }
+              : i,
+          );
+        }
+
+        const vid = product.variant_id || 0;
+        return [
+          ...prev,
+          {
+            uid: `${product.id}_${vid}_${Date.now()}`,
+            product_id: product.id,
+            product_name: product.name,
+            manufacturer: product.manufacturer || "-",
+            package: chosenPackage,
+            price: product.price,
+            quantity: 1,
+            discount: product.discount_amount || 0,
+            variant_id: vid,
+          },
+        ];
+      });
+      toast.success(`تم إضافة: ${product.name}`);
+      new Audio("/sounds/beep-7.mp3").play().catch(() => {});
+      setTimeout(() => barcodeRef.current?.focus(), 100);
+      return;
+    }
+
+    // إضافة يدوية → لو مكرر نسأل
     let duplicate = false;
     setItems((prev) => {
       const exists = prev.find(
@@ -473,14 +510,8 @@ export default function CreateRetailInvoicePage() {
       return;
     }
 
-    if (source === "barcode") {
-      toast.success(`تم إضافة: ${product.name}`);
-      new Audio("/sounds/beep-7.mp3").play().catch(() => {});
-      setTimeout(() => barcodeRef.current?.focus(), 100);
-    } else {
-      setLastAddedId(`${product.id}_${product.variant_id || 0}`);
-      setShowProductModal(false);
-    }
+    setLastAddedId(`${product.id}_${product.variant_id || 0}`);
+    setShowProductModal(false);
   };
 
   const confirmDuplicateAdd = useCallback(() => {
