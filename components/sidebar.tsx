@@ -355,6 +355,22 @@ export function Sidebar({
         </button>
 
         <Link
+          href="/users"
+          onClick={onNavigate}
+          className={cn(
+            "flex items-center gap-3 rounded-xl px-2 py-2 text-sm transition-colors",
+            pathname === "/users" || pathname.startsWith("/users/")
+              ? "bg-muted text-foreground"
+              : "text-muted-foreground hover:bg-muted",
+          )}
+        >
+          <div className="w-8 flex justify-center">
+            <Users className="h-5 w-5" />
+          </div>
+          {open && <span className="mr-2 whitespace-nowrap">المستخدمين</span>}
+        </Link>
+
+        <Link
           href="/settings"
           onClick={onNavigate}
           className={cn(

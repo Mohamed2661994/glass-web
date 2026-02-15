@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
@@ -20,7 +19,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  KeyRound,
   Users,
   Download,
   Upload,
@@ -30,24 +28,13 @@ import {
   RotateCcw,
   Trash2,
   Shield,
-  Eye,
-  EyeOff,
-  CheckCircle2,
   AlertTriangle,
-  Loader2,
-  UserPlus,
-  Pencil,
-  Trash,
   ChevronDown,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 
-/* ========== Types ========== */
-type ManagedUser = {
-  id: number;
-  username: string;
-  branch_id: number;
-};
+import Link from "next/link";
 
 /* ========== Section Card (collapsible) ========== */
 function SectionCard({
@@ -106,23 +93,6 @@ function SectionCard({
 export default function SettingsPage() {
   const { user, logout } = useAuth();
 
-  /* ---- Change password state ---- */
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showCurrent, setShowCurrent] = useState(false);
-  const [showNew, setShowNew] = useState(false);
-  const [changingPassword, setChangingPassword] = useState(false);
-
-  /* ---- User management state ---- */
-  const [users, setUsers] = useState<ManagedUser[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
-  const [showAddUser, setShowAddUser] = useState(false);
-  const [newUsername, setNewUsername] = useState("");
-  const [newUserPassword, setNewUserPassword] = useState("");
-  const [newUserBranch, setNewUserBranch] = useState(1);
-  const [addingUser, setAddingUser] = useState(false);
-
   /* ---- Print settings state ---- */
   const [autoPrint, setAutoPrint] = useState(true);
   const [showCompanyHeader, setShowCompanyHeader] = useState(true);
@@ -165,103 +135,7 @@ export default function SettingsPage() {
     localStorage.setItem("appSettings", JSON.stringify(updated));
   }, []);
 
-  /* ---- Fetch users ---- */
-  const fetchUsers = useCallback(async () => {
-    setLoadingUsers(true);
-    try {
-      const res = await api.get("/users");
-      setUsers(Array.isArray(res.data) ? res.data : []);
-    } catch {
-      /* ignore */
-    } finally {
-      setLoadingUsers(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
-
   /* ========== Handlers ========== */
-
-  const handleChangePassword = async () => {
-    if (!currentPassword || !newPassword) {
-      toast.error("أدخل كلمة المرور الحالية والجديدة");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      toast.error("كلمة المرور الجديدة غير متطابقة");
-      return;
-    }
-    if (newPassword.length < 4) {
-      toast.error("كلمة المرور يجب أن تكون 4 أحرف على الأقل");
-      return;
-    }
-    setChangingPassword(true);
-    try {
-      await api.put(`/users/${user?.id}/password`, {
-        current_password: currentPassword,
-        new_password: newPassword,
-      });
-      toast.success("تم تغيير كلمة المرور بنجاح");
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-    } catch {
-      toast.error("فشل تغيير كلمة المرور - تأكد من كلمة المرور الحالية");
-    } finally {
-      setChangingPassword(false);
-    }
-  };
-
-  const handleAddUser = async () => {
-    if (!newUsername || !newUserPassword) {
-      toast.error("أدخل اسم المستخدم وكلمة المرور");
-      return;
-    }
-    setAddingUser(true);
-    try {
-      await api.post("/users", {
-        username: newUsername,
-        password: newUserPassword,
-        branch_id: newUserBranch,
-      });
-      toast.success("تم إضافة المستخدم بنجاح");
-      setNewUsername("");
-      setNewUserPassword("");
-      setShowAddUser(false);
-      fetchUsers();
-    } catch {
-      toast.error("فشل إضافة المستخدم");
-    } finally {
-      setAddingUser(false);
-    }
-  };
-
-  const handleDeleteUser = async (id: number, username: string) => {
-    if (id === user?.id) {
-      toast.error("لا يمكنك حذف حسابك الحالي");
-      return;
-    }
-    if (!confirm(`هل أنت متأكد من حذف المستخدم "${username}"؟`)) return;
-    try {
-      await api.delete(`/users/${id}`);
-      toast.success("تم حذف المستخدم");
-      fetchUsers();
-    } catch (err: any) {
-      console.error(
-        "Delete user error:",
-        err.response?.status,
-        err.response?.data,
-        err.message,
-      );
-      const msg =
-        err.response?.data?.error ||
-        err.response?.data?.message ||
-        "فشل حذف المستخدم";
-      toast.error(msg);
-    }
-  };
 
   const handleExportData = async () => {
     try {
@@ -378,215 +252,23 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        {/* ═══════════════ 1. Change Password ═══════════════ */}
-        <SectionCard
-          icon={KeyRound}
-          title="تغيير كلمة المرور"
-          description="تغيير كلمة مرور حسابك الحالي"
-          isOpen={openSections["password"] ?? false}
-          onToggle={() => toggleSection("password")}
-        >
-          <div className="space-y-3 max-w-md">
-            <div className="space-y-1">
-              <Label className="text-xs">كلمة المرور الحالية</Label>
-              <div className="relative">
-                <Input
-                  type={showCurrent ? "text" : "password"}
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowCurrent(!showCurrent)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                >
-                  {showCurrent ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
+        {/* ═══════════════ 1. User Management Link ═══════════════ */}
+        <Link href="/users">
+          <Card className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
+            <div className="w-full px-5 py-4 flex items-center gap-3 bg-muted/30">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-primary/10">
+                <Users className="h-5 w-5 text-primary" />
               </div>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">كلمة المرور الجديدة</Label>
-              <div className="relative">
-                <Input
-                  type={showNew ? "text" : "password"}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNew(!showNew)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                >
-                  {showNew ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">تأكيد كلمة المرور الجديدة</Label>
-              <Input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="••••••"
-              />
-              {confirmPassword && newPassword !== confirmPassword && (
-                <p className="text-xs text-destructive">
-                  كلمة المرور غير متطابقة
+              <div className="text-right flex-1">
+                <h2 className="font-bold text-sm">إدارة المستخدمين</h2>
+                <p className="text-xs text-muted-foreground">
+                  إضافة وحذف المستخدمين وتغيير كلمات المرور
                 </p>
-              )}
+              </div>
+              <ExternalLink className="h-5 w-5 text-muted-foreground shrink-0" />
             </div>
-            <Button
-              onClick={handleChangePassword}
-              disabled={changingPassword}
-              className="gap-2"
-            >
-              {changingPassword ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <CheckCircle2 className="h-4 w-4" />
-              )}
-              حفظ كلمة المرور
-            </Button>
-          </div>
-        </SectionCard>
-
-        {/* ═══════════════ 2. User Management ═══════════════ */}
-        <SectionCard
-          icon={Users}
-          title="إدارة المستخدمين"
-          description="إضافة وحذف المستخدمين وإدارة الصلاحيات"
-          isOpen={openSections["users"] ?? false}
-          onToggle={() => toggleSection("users")}
-        >
-          <div className="space-y-4">
-            {/* Users List */}
-            {loadingUsers ? (
-              <div className="flex justify-center py-6">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {users.map((u) => (
-                  <div
-                    key={u.id}
-                    className="flex items-center justify-between rounded-lg border px-4 py-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Shield className="h-4 w-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">{u.username}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {branchLabel(u.branch_id)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant={u.id === user?.id ? "default" : "secondary"}
-                        className="text-xs"
-                      >
-                        {u.id === user?.id ? "أنت" : "مستخدم"}
-                      </Badge>
-                      {u.id !== user?.id && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => handleDeleteUser(u.id, u.username)}
-                        >
-                          <Trash className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Add User */}
-            {!showAddUser ? (
-              <Button
-                variant="outline"
-                className="gap-2"
-                onClick={() => setShowAddUser(true)}
-              >
-                <UserPlus className="h-4 w-4" />
-                إضافة مستخدم جديد
-              </Button>
-            ) : (
-              <div className="rounded-lg border p-4 space-y-3 bg-muted/20">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs">اسم المستخدم</Label>
-                    <Input
-                      value={newUsername}
-                      onChange={(e) => setNewUsername(e.target.value)}
-                      placeholder="username"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">كلمة المرور</Label>
-                    <Input
-                      type="password"
-                      value={newUserPassword}
-                      onChange={(e) => setNewUserPassword(e.target.value)}
-                      placeholder="••••••"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">الفرع</Label>
-                    <select
-                      className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-                      value={newUserBranch}
-                      onChange={(e) => setNewUserBranch(Number(e.target.value))}
-                    >
-                      <option value={1}>المعرض (قطاعي)</option>
-                      <option value={2}>المخزن (جملة)</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleAddUser}
-                    disabled={addingUser}
-                    size="sm"
-                    className="gap-1"
-                  >
-                    {addingUser ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <UserPlus className="h-3 w-3" />
-                    )}
-                    إضافة
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setShowAddUser(false);
-                      setNewUsername("");
-                      setNewUserPassword("");
-                    }}
-                  >
-                    إلغاء
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </SectionCard>
+          </Card>
+        </Link>
 
         {/* ═══════════════ 3. Backup & Restore ═══════════════ */}
         <SectionCard

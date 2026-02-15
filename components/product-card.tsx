@@ -236,7 +236,9 @@ export function ProductCard({
                   <div className="flex items-center justify-center gap-0.5 text-[9px] text-muted-foreground font-mono">
                     <span>{pkg.barcode}</span>
                     <button
-                      onClick={() => handleCopy(pkg.barcode, `var1-${product.id}-${i}`)}
+                      onClick={() =>
+                        handleCopy(pkg.barcode, `var1-${product.id}-${i}`)
+                      }
                       className="p-0.5 rounded hover:bg-muted transition-colors"
                     >
                       {copiedId === `var1-${product.id}-${i}` ? (
