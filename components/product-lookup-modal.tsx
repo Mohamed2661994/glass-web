@@ -10,7 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search } from "lucide-react";
-import api from "@/services/api";
+import { useCachedProducts } from "@/hooks/use-cached-products";
 
 interface Props {
   open: boolean;
@@ -19,9 +19,7 @@ interface Props {
 }
 
 export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
-  const [products, setProducts] = useState<any[]>([]);
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -29,33 +27,20 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
   const invoiceType = branchId === 1 ? "retail" : "wholesale";
 
   /* =========================================================
-     Fetch products when modal opens
+     Fetch products (Cached — localStorage + auto-refresh)
      ========================================================= */
+  const { products, loading } = useCachedProducts({
+    endpoint: "/products",
+    params: { branch_id: branchId, invoice_type: invoiceType, movement_type: "sale" },
+    cacheKey: `lookup_${invoiceType}`,
+  });
+
+  // Reset search when modal opens
   useEffect(() => {
     if (!open) return;
     setSearch("");
     setFocusedIndex(-1);
-
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        const res = await api.get("/products", {
-          params: {
-            branch_id: branchId,
-            invoice_type: invoiceType,
-            movement_type: "sale",
-          },
-        });
-        setProducts(res.data || []);
-      } catch {
-        setProducts([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, [open, branchId, invoiceType]);
+  }, [open]);
 
   /* =========================================================
      Filtered products

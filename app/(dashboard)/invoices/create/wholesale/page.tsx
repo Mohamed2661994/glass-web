@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "@/services/api";
 import { Trash2, Loader2, Pencil } from "lucide-react";
 import { ProductFormDialog } from "@/components/product-form-dialog";
+import { useCachedProducts } from "@/hooks/use-cached-products";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -82,7 +83,6 @@ export default function CreateWholesaleInvoicePage() {
   const [items, setItems] = useState<any[]>([]);
   const [showProductModal, setShowProductModal] = useState(false);
   const [search, setSearch] = useState("");
-  const [loadingProducts, setLoadingProducts] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -96,8 +96,7 @@ export default function CreateWholesaleInvoicePage() {
   const listRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Variant package picker
-  const [variantsMap, setVariantsMap] = useState<Record<number, any[]>>({});
+  // Variant package picker — from cache
   const [packagePickerProduct, setPackagePickerProduct] = useState<any>(null);
   const [packagePickerStock, setPackagePickerStock] = useState<Record<
     number,
@@ -124,51 +123,20 @@ export default function CreateWholesaleInvoicePage() {
   const [paidAmount, setPaidAmount] = useState("0");
 
   /* =========================================================
-     5️⃣ Fetch Products From Backend
+     5️⃣ Fetch Products (Cached — localStorage + auto-refresh)
      ========================================================= */
 
-  const fetchProducts = async () => {
-    try {
-      setLoadingProducts(true);
-
-      const res = await api.get("/products", {
-        params: {
-          branch_id: 2,
-          invoice_type: "wholesale",
-          movement_type: movementType,
-        },
-      });
-
-      const prods = res.data || [];
-      setProducts(prods);
-
-      // جلب الأكواد الفرعية لكل الأصناف
-      if (prods.length > 0) {
-        try {
-          const ids = prods.map((p: any) => p.id).join(",");
-          const vRes = await api.get("/products/variants", {
-            params: { product_ids: ids },
-          });
-          const map: Record<number, any[]> = {};
-          for (const v of vRes.data || []) {
-            if (!map[v.product_id]) map[v.product_id] = [];
-            map[v.product_id].push(v);
-          }
-          setVariantsMap(map);
-        } catch {
-          /* silent */
-        }
-      }
-    } catch {
-      toast.error("فشل تحميل الأصناف");
-    } finally {
-      setLoadingProducts(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchProducts();
-  }, [movementType]);
+  const {
+    products,
+    variantsMap,
+    loading: loadingProducts,
+    refresh: refreshProducts,
+  } = useCachedProducts({
+    endpoint: "/products",
+    params: { branch_id: 2, invoice_type: "wholesale", movement_type: movementType },
+    fetchVariants: true,
+    cacheKey: `wholesale_${movementType}`,
+  });
 
   // Cleanup customer search timer on unmount
   useEffect(() => {
@@ -1134,7 +1102,7 @@ export default function CreateWholesaleInvoicePage() {
           onOpenChange={(open) => !open && setEditProduct(null)}
           product={editProduct || undefined}
           onSuccess={() => {
-            fetchProducts();
+            refreshProducts();
             setEditProduct(null);
           }}
         />

@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "@/services/api";
 import { Trash2, Camera, X, Loader2, Pencil } from "lucide-react";
 import { ProductFormDialog } from "@/components/product-form-dialog";
+import { useCachedProducts } from "@/hooks/use-cached-products";
 import { BarcodeDetector } from "barcode-detector";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -74,11 +75,9 @@ export default function CreateRetailInvoicePage() {
      3️⃣ Products & Items States
      ========================================================= */
 
-  const [products, setProducts] = useState<any[]>([]);
   const [items, setItems] = useState<any[]>([]);
   const [showProductModal, setShowProductModal] = useState(false);
   const [search, setSearch] = useState("");
-  const [loadingProducts, setLoadingProducts] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -101,8 +100,7 @@ export default function CreateRetailInvoicePage() {
     number
   > | null>(null);
 
-  // Variant package picker
-  const [variantsMap, setVariantsMap] = useState<Record<number, any[]>>({});
+  // Variant package picker — from cache
 
   /* =========================================================
      3.5 Barcode State
@@ -212,51 +210,20 @@ export default function CreateRetailInvoicePage() {
   const [applyItemsDiscount, setApplyItemsDiscount] = useState(true);
 
   /* =========================================================
-     5️⃣ Fetch Products From Backend
+     5️⃣ Fetch Products (Cached — localStorage + auto-refresh)
      ========================================================= */
 
-  const fetchProducts = async () => {
-    try {
-      setLoadingProducts(true);
-
-      const res = await api.get("/products", {
-        params: {
-          branch_id: 1,
-          invoice_type: "retail",
-          movement_type: movementType,
-        },
-      });
-
-      const prods = res.data || [];
-      setProducts(prods);
-
-      // جلب الأكواد الفرعية لكل الأصناف
-      if (prods.length > 0) {
-        try {
-          const ids = prods.map((p: any) => p.id).join(",");
-          const vRes = await api.get("/products/variants", {
-            params: { product_ids: ids },
-          });
-          const map: Record<number, any[]> = {};
-          for (const v of vRes.data || []) {
-            if (!map[v.product_id]) map[v.product_id] = [];
-            map[v.product_id].push(v);
-          }
-          setVariantsMap(map);
-        } catch {
-          /* silent */
-        }
-      }
-    } catch {
-      toast.error("فشل تحميل الأصناف");
-    } finally {
-      setLoadingProducts(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchProducts();
-  }, [movementType]);
+  const {
+    products,
+    variantsMap,
+    loading: loadingProducts,
+    refresh: refreshProducts,
+  } = useCachedProducts({
+    endpoint: "/products",
+    params: { branch_id: 1, invoice_type: "retail", movement_type: movementType },
+    fetchVariants: true,
+    cacheKey: `retail_${movementType}`,
+  });
 
   // Cleanup customer search timer on unmount
   useEffect(() => {
@@ -1431,7 +1398,7 @@ export default function CreateRetailInvoicePage() {
           onOpenChange={(open) => !open && setEditProduct(null)}
           product={editProduct || undefined}
           onSuccess={() => {
-            fetchProducts();
+            refreshProducts();
             setEditProduct(null);
           }}
         />

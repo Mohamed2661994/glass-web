@@ -9,6 +9,7 @@ import { useParams, useRouter } from "next/navigation";
 import api from "@/services/api";
 import { Trash2, Loader2, Pencil } from "lucide-react";
 import { ProductFormDialog } from "@/components/product-form-dialog";
+import { useCachedProducts } from "@/hooks/use-cached-products";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -72,11 +73,9 @@ export default function EditWholesaleInvoicePage() {
      3️⃣ Products & Items States
      ========================================================= */
 
-  const [products, setProducts] = useState<any[]>([]);
   const [items, setItems] = useState<any[]>([]);
   const [showProductModal, setShowProductModal] = useState(false);
   const [search, setSearch] = useState("");
-  const [loadingProducts, setLoadingProducts] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -153,29 +152,15 @@ export default function EditWholesaleInvoicePage() {
      6️⃣ Fetch Products From Backend
      ========================================================= */
 
-  const fetchProducts = async () => {
-    try {
-      setLoadingProducts(true);
-
-      const res = await api.get("/products", {
-        params: {
-          branch_id: 2,
-          invoice_type: "wholesale",
-          movement_type: movementType,
-        },
-      });
-
-      setProducts(res.data || []);
-    } catch {
-      toast.error("فشل تحميل الأصناف");
-    } finally {
-      setLoadingProducts(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchProducts();
-  }, [movementType]);
+  const {
+    products,
+    loading: loadingProducts,
+    refresh: refreshProducts,
+  } = useCachedProducts({
+    endpoint: "/products",
+    params: { branch_id: 2, invoice_type: "wholesale", movement_type: movementType },
+    cacheKey: `wholesale_${movementType}`,
+  });
 
   /* =========================================================
      7️⃣ Customer Search By Name
@@ -959,7 +944,7 @@ export default function EditWholesaleInvoicePage() {
           onOpenChange={(open) => !open && setEditProduct(null)}
           product={editProduct || undefined}
           onSuccess={() => {
-            fetchProducts();
+            refreshProducts();
             setEditProduct(null);
           }}
         />
