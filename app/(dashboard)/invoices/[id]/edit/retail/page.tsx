@@ -994,33 +994,47 @@ export default function EditRetailInvoicePage() {
                   جاري التحميل...
                 </div>
               ) : (
-                filteredProducts.map((product, index) => (
-                  <div
-                    key={product.id}
-                    data-product-index={index}
-                    tabIndex={0}
-                    onClick={() => addItem(product)}
-                    onKeyDown={(e) => handleListKeyDown(e, index)}
-                    className={`p-3 rounded-lg border cursor-pointer hover:bg-muted transition outline-none ${
-                      focusedIndex === index
-                        ? "ring-2 ring-primary bg-muted"
-                        : ""
-                    }`}
-                  >
-                    <div className="font-medium">{product.name}</div>
-                    <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3">
-                      <span>المصنع: {product.manufacturer || "-"}</span>
-                      <span>العبوة: {product.retail_package || "-"}</span>
-                      <span>السعر: {product.price}</span>
-                      {product.discount_amount > 0 && (
-                        <span className="text-destructive">
-                          خصم: {product.discount_amount}
-                        </span>
-                      )}
-                      <span>الرصيد: {product.available_quantity}</span>
+                filteredProducts.map((product, index) => {
+                  const outOfStock =
+                    movementType === "sale" &&
+                    Number(product.available_quantity) <= 0;
+                  return (
+                    <div
+                      key={product.id}
+                      data-product-index={index}
+                      tabIndex={outOfStock ? -1 : 0}
+                      onClick={() => !outOfStock && addItem(product)}
+                      onKeyDown={(e) =>
+                        !outOfStock && handleListKeyDown(e, index)
+                      }
+                      className={`p-3 rounded-lg border transition outline-none ${
+                        outOfStock
+                          ? "opacity-50 cursor-not-allowed bg-muted/30"
+                          : `cursor-pointer hover:bg-muted ${focusedIndex === index ? "ring-2 ring-primary bg-muted" : ""}`
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium">{product.name}</div>
+                        {outOfStock && (
+                          <span className="text-[10px] bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full font-medium">
+                            نفذ
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3">
+                        <span>المصنع: {product.manufacturer || "-"}</span>
+                        <span>العبوة: {product.retail_package || "-"}</span>
+                        <span>السعر: {product.price}</span>
+                        {product.discount_amount > 0 && (
+                          <span className="text-destructive">
+                            خصم: {product.discount_amount}
+                          </span>
+                        )}
+                        <span>الرصيد: {product.available_quantity}</span>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </DialogContent>

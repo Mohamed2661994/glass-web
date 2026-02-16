@@ -169,56 +169,68 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
               لا توجد نتائج
             </div>
           ) : (
-            filteredProducts.map((product, index) => (
-              <div
-                key={product.id}
-                data-product-index={index}
-                tabIndex={0}
-                onKeyDown={(e) => handleListKeyDown(e, index)}
-                className={`p-3 rounded-lg border transition outline-none ${
-                  focusedIndex === index
-                    ? "ring-2 ring-primary bg-muted"
-                    : "hover:bg-muted/50"
-                }`}
-              >
-                {/* Row 1: Name + Barcode */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="font-medium">{product.name}</div>
-                  {product.barcode && (
-                    <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded">
-                      {product.barcode}
-                    </span>
-                  )}
-                </div>
-
-                {/* Row 2: Details */}
-                <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-4 gap-y-1">
-                  <span>المصنع: {product.manufacturer || "-"}</span>
-                  <span>
-                    العبوة:{" "}
-                    {invoiceType === "retail"
-                      ? product.retail_package || "-"
-                      : product.wholesale_package || "-"}
-                  </span>
-                  <span className="font-semibold text-foreground">
-                    السعر: {product.price}
-                  </span>
-                  {product.discount_amount > 0 && (
-                    <span className="text-destructive">
-                      خصم: {product.discount_amount}
-                    </span>
-                  )}
-                  <span>الرصيد: {product.available_quantity}</span>
-                </div>
-
-                {/* Row 3: Description if exists */}
-                {product.description && (
-                  <div className="text-xs text-muted-foreground mt-1 opacity-70">
-                    {product.description}
+            filteredProducts.map((product, index) => {
+              const outOfStock = Number(product.available_quantity) <= 0;
+              return (
+                <div
+                  key={product.id}
+                  data-product-index={index}
+                  tabIndex={outOfStock ? -1 : 0}
+                  onKeyDown={(e) => !outOfStock && handleListKeyDown(e, index)}
+                  className={`p-3 rounded-lg border transition outline-none ${
+                    outOfStock
+                      ? "opacity-50 cursor-not-allowed bg-muted/30"
+                      : focusedIndex === index
+                        ? "ring-2 ring-primary bg-muted"
+                        : "hover:bg-muted/50"
+                  }`}
+                >
+                  {/* Row 1: Name + Barcode */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-medium">{product.name}</div>
+                    <div className="flex items-center gap-1.5">
+                      {outOfStock && (
+                        <span className="text-[10px] bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full font-medium">
+                          نفذ
+                        </span>
+                      )}
+                      {product.barcode && (
+                        <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded">
+                          {product.barcode}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
-            ))
+
+                  {/* Row 2: Details */}
+                  <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                    <span>المصنع: {product.manufacturer || "-"}</span>
+                    <span>
+                      العبوة:{" "}
+                      {invoiceType === "retail"
+                        ? product.retail_package || "-"
+                        : product.wholesale_package || "-"}
+                    </span>
+                    <span className="font-semibold text-foreground">
+                      السعر: {product.price}
+                    </span>
+                    {product.discount_amount > 0 && (
+                      <span className="text-destructive">
+                        خصم: {product.discount_amount}
+                      </span>
+                    )}
+                    <span>الرصيد: {product.available_quantity}</span>
+                  </div>
+
+                  {/* Row 3: Description if exists */}
+                  {product.description && (
+                    <div className="text-xs text-muted-foreground mt-1 opacity-70">
+                      {product.description}
+                    </div>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
       </DialogContent>
