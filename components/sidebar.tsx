@@ -64,6 +64,7 @@ export function Sidebar({
 
   const [pinned, setPinned] = useState(false);
   const [branchId, setBranchId] = useState<number | null>(null);
+  const [userId, setUserId] = useState<number | null>(null);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const sidebarRef = useRef<HTMLElement>(null);
 
@@ -96,7 +97,9 @@ export function Sidebar({
     const user = localStorage.getItem("user");
     if (user) {
       try {
-        setBranchId(JSON.parse(user).branch_id);
+        const parsed = JSON.parse(user);
+        setBranchId(parsed.branch_id);
+        setUserId(parsed.id);
       } catch {
         // ignore corrupt localStorage
       }
@@ -174,11 +177,15 @@ export function Sidebar({
             icon: Truck,
             href: "/stock-transfer",
           },
-          {
-            label: "رصيد أول المدة",
-            icon: PackagePlus,
-            href: "/opening-stock",
-          },
+          ...(userId === 7
+            ? [
+                {
+                  label: "رصيد أول المدة",
+                  icon: PackagePlus,
+                  href: "/opening-stock",
+                },
+              ]
+            : []),
           cashGroup,
           reportsGroup,
         ]

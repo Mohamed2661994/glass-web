@@ -62,7 +62,12 @@ function getFromCache<T>(
 
 function setCache<T>(prefix: string, key: string, data: T, params: string) {
   try {
-    const entry: CacheEntry<T> = { data, timestamp: Date.now(), params, version: CACHE_VERSION };
+    const entry: CacheEntry<T> = {
+      data,
+      timestamp: Date.now(),
+      params,
+      version: CACHE_VERSION,
+    };
     localStorage.setItem(getCacheKey(prefix, key), JSON.stringify(entry));
   } catch {
     // localStorage might be full — silently fail
