@@ -437,6 +437,8 @@ export default function CreateRetailInvoicePage() {
 
     // إضافة يدوية → لو مكرر نسأل
     let duplicate = false;
+    const vid = product.variant_id || 0;
+    const uid = `${product.id}_${vid}_${Date.now()}`;
     setItems((prev) => {
       const exists = prev.find(
         (i) => i.product_id === product.id && i.package === chosenPackage,
@@ -446,11 +448,10 @@ export default function CreateRetailInvoicePage() {
         return prev;
       }
 
-      const vid = product.variant_id || 0;
       return [
         ...prev,
         {
-          uid: `${product.id}_${vid}_${Date.now()}`,
+          uid,
           product_id: product.id,
           product_name: product.name,
           manufacturer: product.manufacturer || "-",
@@ -469,7 +470,7 @@ export default function CreateRetailInvoicePage() {
       return;
     }
 
-    setLastAddedId(`${product.id}_${product.variant_id || 0}`);
+    setLastAddedId(uid);
     setShowProductModal(false);
   };
 

@@ -251,6 +251,8 @@ export default function CreateWholesaleInvoicePage() {
   const finalizeAddItem = useCallback(
     (product: any, pkg: string, price: number) => {
       let duplicate = false;
+      const vid = product.variant_id || 0;
+      const uid = `${product.id}_${vid}_${Date.now()}`;
       setItems((prev) => {
         const key = `${product.id}_${pkg}`;
         const exists = prev.find((i) => `${i.product_id}_${i.package}` === key);
@@ -259,11 +261,10 @@ export default function CreateWholesaleInvoicePage() {
           return prev;
         }
 
-        const vid = product.variant_id || 0;
         return [
           ...prev,
           {
-            uid: `${product.id}_${vid}_${Date.now()}`,
+            uid,
             product_id: product.id,
             product_name: product.name,
             manufacturer: product.manufacturer || "-",
@@ -279,7 +280,7 @@ export default function CreateWholesaleInvoicePage() {
       if (duplicate) {
         setPendingDuplicate({ product, pkg, price });
       } else {
-        setLastAddedId(`${product.id}_${product.variant_id || 0}`);
+        setLastAddedId(uid);
       }
       setShowProductModal(false);
       setPackagePickerProduct(null);
