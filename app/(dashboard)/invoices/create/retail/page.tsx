@@ -64,10 +64,7 @@ export default function CreateRetailInvoicePage() {
 
   const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
   const [showNameDropdown, setShowNameDropdown] = useState(false);
-  const [phoneSuggestions, setPhoneSuggestions] = useState<any[]>([]);
-  const [showPhoneDropdown, setShowPhoneDropdown] = useState(false);
   const nameDropdownRef = useRef<HTMLDivElement>(null);
-  const phoneDropdownRef = useRef<HTMLDivElement>(null);
 
   /* =========================================================
      3️⃣ Products & Items States
@@ -326,10 +323,9 @@ export default function CreateRetailInvoicePage() {
      ========================================================= */
 
   const nameTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const phoneTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const searchCustomersByName = async (name: string) => {
-    if (name.length < 2) {
+  const searchCustomers = async (query: string) => {
+    if (query.length < 2) {
       setCustomerSuggestions([]);
       setShowNameDropdown(false);
       return;
@@ -337,7 +333,7 @@ export default function CreateRetailInvoicePage() {
 
     try {
       const res = await api.get("/customers/search", {
-        params: { name },
+        params: { name: query },
       });
 
       setCustomerSuggestions(res.data || []);
@@ -345,45 +341,12 @@ export default function CreateRetailInvoicePage() {
     } catch {}
   };
 
-  /* =========================================================
-     7️⃣ Customer Search By Phone
-     ========================================================= */
-
-  const searchCustomerByPhone = async (phone: string) => {
-    if (phone.length < 3) {
-      setPhoneSuggestions([]);
-      setShowPhoneDropdown(false);
-      return;
-    }
-
-    try {
-      const res = await api.get("/customers/by-phone", {
-        params: { phone },
-      });
-
-      const data = res.data || [];
-
-      if (Array.isArray(data) && data.length > 0) {
-        setPhoneSuggestions(data);
-        setShowPhoneDropdown(true);
-      } else {
-        setPhoneSuggestions([]);
-        setShowPhoneDropdown(false);
-      }
-    } catch {
-      setPhoneSuggestions([]);
-      setShowPhoneDropdown(false);
-    }
-  };
-
   const selectCustomer = (customer: any) => {
     setCustomerName(customer.name);
     setCustomerId(customer.id);
     setCustomerPhone(customer.phone || customer.phones?.[0] || "");
     setShowNameDropdown(false);
-    setShowPhoneDropdown(false);
     setCustomerSuggestions([]);
-    setPhoneSuggestions([]);
     fetchCustomerBalance(customer.id);
 
     // Set discount preference from customer record
@@ -403,12 +366,6 @@ export default function CreateRetailInvoicePage() {
         !nameDropdownRef.current.contains(e.target as Node)
       ) {
         setShowNameDropdown(false);
-      }
-      if (
-        phoneDropdownRef.current &&
-        !phoneDropdownRef.current.contains(e.target as Node)
-      ) {
-        setShowPhoneDropdown(false);
       }
     };
     document.addEventListener("mousedown", handleClick);
@@ -804,14 +761,14 @@ export default function CreateRetailInvoicePage() {
               <label className="text-sm mb-2 block">اسم العميل</label>
               <Input
                 value={customerName}
-                placeholder="نقدي"
+                placeholder="اكتب الاسم أو رقم التليفون..."
                 onChange={(e) => {
                   const v = e.target.value;
                   setCustomerName(v);
                   setCustomerId(null);
                   if (nameTimerRef.current) clearTimeout(nameTimerRef.current);
                   nameTimerRef.current = setTimeout(
-                    () => searchCustomersByName(v),
+                    () => searchCustomers(v),
                     300,
                   );
                 }}
@@ -839,42 +796,12 @@ export default function CreateRetailInvoicePage() {
               )}
             </div>
 
-            <div className="relative" ref={phoneDropdownRef}>
+            <div>
               <label className="text-sm mb-2 block">رقم الهاتف</label>
               <Input
                 value={customerPhone}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setCustomerPhone(v);
-                  if (phoneTimerRef.current)
-                    clearTimeout(phoneTimerRef.current);
-                  phoneTimerRef.current = setTimeout(
-                    () => searchCustomerByPhone(v),
-                    300,
-                  );
-                }}
-                onFocus={() => {
-                  if (phoneSuggestions.length > 0) setShowPhoneDropdown(true);
-                }}
+                onChange={(e) => setCustomerPhone(e.target.value)}
               />
-              {showPhoneDropdown && phoneSuggestions.length > 0 && (
-                <div className="absolute z-50 top-full mt-1 w-full bg-popover border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                  {phoneSuggestions.map((c: any) => (
-                    <div
-                      key={c.id}
-                      className="px-3 py-2 hover:bg-muted cursor-pointer text-sm"
-                      onClick={() => selectCustomer(c)}
-                    >
-                      <span className="font-medium">{c.name}</span>
-                      {c.phone && (
-                        <span className="text-muted-foreground mr-2">
-                          ({c.phone})
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
         </Card>
