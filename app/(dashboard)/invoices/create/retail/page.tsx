@@ -64,6 +64,7 @@ export default function CreateRetailInvoicePage() {
 
   const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
   const [showNameDropdown, setShowNameDropdown] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const nameDropdownRef = useRef<HTMLDivElement>(null);
 
   /* =========================================================
@@ -338,6 +339,7 @@ export default function CreateRetailInvoicePage() {
 
       setCustomerSuggestions(res.data || []);
       setShowNameDropdown((res.data || []).length > 0);
+      setHighlightedIndex(-1);
     } catch {}
   };
 
@@ -775,13 +777,35 @@ export default function CreateRetailInvoicePage() {
                 onFocus={() => {
                   if (customerSuggestions.length > 0) setShowNameDropdown(true);
                 }}
+                onKeyDown={(e) => {
+                  if (!showNameDropdown || customerSuggestions.length === 0)
+                    return;
+                  if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setHighlightedIndex((prev) =>
+                      prev < customerSuggestions.length - 1 ? prev + 1 : 0,
+                    );
+                  } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setHighlightedIndex((prev) =>
+                      prev > 0 ? prev - 1 : customerSuggestions.length - 1,
+                    );
+                  } else if (e.key === "Enter" && highlightedIndex >= 0) {
+                    e.preventDefault();
+                    selectCustomer(customerSuggestions[highlightedIndex]);
+                    setHighlightedIndex(-1);
+                  } else if (e.key === "Escape") {
+                    setShowNameDropdown(false);
+                    setHighlightedIndex(-1);
+                  }
+                }}
               />
               {showNameDropdown && customerSuggestions.length > 0 && (
                 <div className="absolute z-50 top-full mt-1 w-full bg-popover border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                  {customerSuggestions.map((c: any) => (
+                  {customerSuggestions.map((c: any, idx: number) => (
                     <div
                       key={c.id}
-                      className="px-3 py-2 hover:bg-muted cursor-pointer text-sm"
+                      className={`px-3 py-2 cursor-pointer text-sm ${idx === highlightedIndex ? "bg-muted" : "hover:bg-muted"}`}
                       onClick={() => selectCustomer(c)}
                     >
                       <span className="font-medium">{c.name}</span>
