@@ -12,11 +12,13 @@ import api from "@/services/api";
 const CACHE_KEY_PREFIX = "products_cache_";
 const VARIANTS_CACHE_KEY_PREFIX = "variants_cache_";
 const CACHE_DURATION = 60 * 60 * 1000; // ساعة واحدة
+const CACHE_VERSION = 2; // زيادة الرقم تمسح الكاش القديم تلقائي
 
 interface CacheEntry<T> {
   data: T;
   timestamp: number;
   params: string; // JSON string of fetch params for comparison
+  version?: number;
 }
 
 interface UseCachedProductsOptions {
@@ -50,7 +52,8 @@ function getFromCache<T>(
     const entry: CacheEntry<T> = JSON.parse(raw);
     const isExpired = Date.now() - entry.timestamp > duration;
     const paramsMatch = entry.params === params;
-    if (!isExpired && paramsMatch) return entry.data;
+    const versionMatch = entry.version === CACHE_VERSION;
+    if (!isExpired && paramsMatch && versionMatch) return entry.data;
     return null;
   } catch {
     return null;
@@ -59,7 +62,7 @@ function getFromCache<T>(
 
 function setCache<T>(prefix: string, key: string, data: T, params: string) {
   try {
-    const entry: CacheEntry<T> = { data, timestamp: Date.now(), params };
+    const entry: CacheEntry<T> = { data, timestamp: Date.now(), params, version: CACHE_VERSION };
     localStorage.setItem(getCacheKey(prefix, key), JSON.stringify(entry));
   } catch {
     // localStorage might be full — silently fail
