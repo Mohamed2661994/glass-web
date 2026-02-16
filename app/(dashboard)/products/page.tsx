@@ -59,6 +59,15 @@ export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [selectedManufacturer, setSelectedManufacturer] =
     useState<string>("الكل");
+  const [userId, setUserId] = useState<number | null>(null);
+
+  // Read user id from localStorage
+  useEffect(() => {
+    try {
+      const user = localStorage.getItem("user");
+      if (user) setUserId(JSON.parse(user).id);
+    } catch {}
+  }, []);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -250,21 +259,25 @@ export default function ProductsPage() {
         <h2 className="text-2xl font-bold">إدارة المنتجات</h2>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant="destructive"
-            onClick={() => setShowDeleteAllConfirm(true)}
-            disabled={allProducts.length === 0}
-          >
-            <Trash2 className="h-4 w-4 ml-1" />
-            مسح الكل
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => router.push("/products/import")}
-          >
-            <FileSpreadsheet className="h-4 w-4 ml-1" />
-            استيراد Excel
-          </Button>
+          {userId === 7 && (
+            <>
+              <Button
+                variant="destructive"
+                onClick={() => setShowDeleteAllConfirm(true)}
+                disabled={allProducts.length === 0}
+              >
+                <Trash2 className="h-4 w-4 ml-1" />
+                مسح الكل
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => router.push("/products/import")}
+              >
+                <FileSpreadsheet className="h-4 w-4 ml-1" />
+                استيراد Excel
+              </Button>
+            </>
+          )}
           <Button
             onClick={() => {
               setSelectedProduct(null);
