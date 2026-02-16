@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Loader2, Printer } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -120,6 +121,26 @@ export default function TransfersByDatePage() {
           />
         </div>
       </div>
+
+      {/* ===== Loading ===== */}
+      {loading && (
+        <div className="space-y-4">
+          <Card>
+            <CardContent className="p-4">
+              <Skeleton className="h-6 w-full" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-0">
+              <div className="p-4 space-y-3">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-10 w-full" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* ===== Summary ===== */}
       {!loading && (

@@ -14,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Eye, Pencil, Trash2, Printer } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import axios from "@/services/api";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/auth-context";
@@ -169,11 +170,15 @@ export default function InvoicesPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={9} className="p-6 text-center">
-                    جاري التحميل...
-                  </td>
-                </tr>
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="border-b">
+                    {Array.from({ length: 9 }).map((_, j) => (
+                      <td key={j} className="p-3">
+                        <Skeleton className="h-4 w-full" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
               ) : data.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="p-6 text-center">

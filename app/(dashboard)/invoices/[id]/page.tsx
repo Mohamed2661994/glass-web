@@ -6,6 +6,7 @@ import axios from "@/services/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 export default function InvoiceDetailsPage() {
@@ -29,7 +30,24 @@ export default function InvoiceDetailsPage() {
     if (id) fetchInvoice();
   }, [id]);
 
-  if (loading) return <div className="p-6">جاري التحميل...</div>;
+  if (loading)
+    return (
+      <div className="p-6 space-y-6" dir="rtl">
+        <Skeleton className="h-8 w-48" />
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            <Skeleton className="h-5 w-64" />
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-5 w-40" />
+          </CardContent>
+        </Card>
+        <div className="flex gap-3">
+          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-10 w-24" />
+        </div>
+      </div>
+    );
   if (!invoice) return <div className="p-6">الفاتورة غير موجودة</div>;
 
   return (

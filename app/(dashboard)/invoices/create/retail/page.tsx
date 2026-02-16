@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -1336,8 +1337,13 @@ export default function CreateRetailInvoicePage() {
               className="flex-1 overflow-y-auto scrollbar-hide p-4 space-y-2"
             >
               {loadingProducts ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  جاري التحميل...
+                <div className="p-4 space-y-3">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="p-3 rounded-lg border space-y-2">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-3 w-1/2" />
+                    </div>
+                  ))}
                 </div>
               ) : (
                 filteredProducts.map((product, index) => (
