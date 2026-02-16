@@ -61,6 +61,7 @@ export default function CreateWholesaleInvoicePage() {
   const [previousBalance, setPreviousBalance] = useState("0");
   const [savedInvoiceId, setSavedInvoiceId] = useState<number | null>(null);
   const [showSavedModal, setShowSavedModal] = useState(false);
+  const [journalPosted, setJournalPosted] = useState(false);
 
   /* =========================================================
      2️⃣ Customer Search States
@@ -388,6 +389,7 @@ export default function CreateWholesaleInvoicePage() {
 
       const newId = res.data?.id || res.data?.invoice_id;
       setSavedInvoiceId(newId);
+      setJournalPosted(res.data?.journal_posted || false);
       setShowSavedModal(true);
 
       setItems([]);
@@ -888,8 +890,10 @@ export default function CreateWholesaleInvoicePage() {
                   </span>
                 </p>
                 {movementType === "sale" && (
-                  <p className="text-sm text-muted-foreground -mt-2 mb-2">
-                    تم ترحيل المبالغ إلى اليومية
+                  <p className={`text-sm -mt-2 mb-2 ${journalPosted ? "text-muted-foreground" : "text-orange-500"}`}>
+                    {journalPosted
+                      ? "تم ترحيل المبالغ إلى اليومية"
+                      : "⚠️ لم يتم الترحيل لليومية (المدفوع = 0)"}
                   </p>
                 )}
               </>
