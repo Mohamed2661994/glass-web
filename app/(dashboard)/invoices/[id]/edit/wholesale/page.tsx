@@ -7,7 +7,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/services/api";
-import { Trash2, Loader2 } from "lucide-react";
+import { Trash2, Loader2, Pencil } from "lucide-react";
+import { ProductFormDialog } from "@/components/product-form-dialog";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -79,6 +80,7 @@ export default function EditWholesaleInvoicePage() {
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [editProduct, setEditProduct] = useState<any>(null);
   const [pendingDuplicate, setPendingDuplicate] = useState<{
     product: any;
   } | null>(null);
@@ -411,7 +413,8 @@ export default function EditWholesaleInvoicePage() {
         const s = search.toLowerCase();
         return (
           p.name.toLowerCase().includes(s) ||
-          (p.description && p.description.toLowerCase().includes(s))
+          (p.description && p.description.toLowerCase().includes(s)) ||
+          (p.barcode && p.barcode.toLowerCase().includes(s))
         );
       }),
     [products, search],
@@ -598,7 +601,7 @@ export default function EditWholesaleInvoicePage() {
                     <th className="p-3 text-center">الخصم</th>
                     <th className="p-3 text-center">الإجمالي</th>
                     <th className="p-3 text-center">مرتجع</th>
-                    <th className="p-3 text-center">حذف</th>
+                    <th className="p-3 text-center">إجراءات</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -698,35 +701,51 @@ export default function EditWholesaleInvoicePage() {
                         />
                       </td>
                       <td className="p-3 text-center">
-                        {confirmDeleteId === item.uid ? (
-                          <Button
-                            variant="destructive"
-                            size="icon-xs"
-                            onClick={() => {
-                              removeItem(item.uid);
-                              setConfirmDeleteId(null);
-                            }}
-                          >
-                            متأكد؟
-                          </Button>
-                        ) : (
+                        <div className="flex items-center justify-center gap-1">
                           <Button
                             variant="ghost"
                             size="icon-xs"
                             onClick={() => {
-                              setConfirmDeleteId(item.uid);
-                              setTimeout(
-                                () =>
-                                  setConfirmDeleteId((prev) =>
-                                    prev === item.uid ? null : prev,
-                                  ),
-                                2000,
+                              const prod = products.find(
+                                (p) => p.id === item.product_id,
                               );
+                              if (prod) {
+                                setEditProduct(prod);
+                              }
                             }}
                           >
-                            <Trash2 className="size-4 text-destructive" />
+                            <Pencil className="size-4 text-blue-600" />
                           </Button>
-                        )}
+                          {confirmDeleteId === item.uid ? (
+                            <Button
+                              variant="destructive"
+                              size="icon-xs"
+                              onClick={() => {
+                                removeItem(item.uid);
+                                setConfirmDeleteId(null);
+                              }}
+                            >
+                              متأكد؟
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              onClick={() => {
+                                setConfirmDeleteId(item.uid);
+                                setTimeout(
+                                  () =>
+                                    setConfirmDeleteId((prev) =>
+                                      prev === item.uid ? null : prev,
+                                    ),
+                                  2000,
+                                );
+                              }}
+                            >
+                              <Trash2 className="size-4 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -934,6 +953,16 @@ export default function EditWholesaleInvoicePage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        {/* ================= Edit Product Dialog ================= */}
+        <ProductFormDialog
+          open={!!editProduct}
+          onOpenChange={(open) => !open && setEditProduct(null)}
+          product={editProduct || undefined}
+          onSuccess={() => {
+            fetchProducts();
+            setEditProduct(null);
+          }}
+        />
       </div>
     </div>
   );

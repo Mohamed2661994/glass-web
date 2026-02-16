@@ -23,7 +23,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useRouter } from "next/navigation";
-import { FileSpreadsheet } from "lucide-react";
+import { FileSpreadsheet, Trash2, Loader2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 interface Product {
   id: number;
@@ -60,6 +71,10 @@ export default function ProductsPage() {
 
   // Variants
   const [variantsMap, setVariantsMap] = useState<Record<number, any[]>>({});
+
+  // Delete all
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -148,6 +163,23 @@ export default function ProductsPage() {
     }
   };
 
+  // Delete All Products
+  const handleDeleteAll = async () => {
+    try {
+      setDeletingAll(true);
+      await api.delete("/admin/products/all");
+      setAllProducts([]);
+      setVariantsMap({});
+      setPage(1);
+      toast.success("تم مسح جميع الأصناف بنجاح");
+    } catch (err) {
+      toast.error("فشل مسح الأصناف");
+    } finally {
+      setDeletingAll(false);
+      setShowDeleteAllConfirm(false);
+    }
+  };
+
   // أزرار أرقام الصفحات (محدودة)
   const renderPaginationNumbers = () => {
     const pages: React.ReactNode[] = [];
@@ -218,6 +250,14 @@ export default function ProductsPage() {
         <h2 className="text-2xl font-bold">إدارة المنتجات</h2>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant="destructive"
+            onClick={() => setShowDeleteAllConfirm(true)}
+            disabled={allProducts.length === 0}
+          >
+            <Trash2 className="h-4 w-4 ml-1" />
+            مسح الكل
+          </Button>
           <Button
             variant="outline"
             onClick={() => router.push("/products/import")}
@@ -388,6 +428,39 @@ export default function ProductsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete All Confirmation */}
+      <AlertDialog
+        open={showDeleteAllConfirm}
+        onOpenChange={setShowDeleteAllConfirm}
+      >
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>مسح جميع الأصناف</AlertDialogTitle>
+            <AlertDialogDescription>
+              هل أنت متأكد من مسح جميع الأصناف؟ هذا الإجراء لا يمكن التراجع عنه
+              وسيتم حذف {allProducts.length} صنف نهائياً.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row justify-center gap-3 sm:justify-center">
+            <AlertDialogAction
+              onClick={handleDeleteAll}
+              disabled={deletingAll}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingAll ? (
+                <>
+                  <Loader2 className="h-4 w-4 ml-1 animate-spin" />
+                  جاري المسح...
+                </>
+              ) : (
+                "نعم، امسح الكل"
+              )}
+            </AlertDialogAction>
+            <AlertDialogCancel disabled={deletingAll}>إلغاء</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

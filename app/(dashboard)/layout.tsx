@@ -10,6 +10,7 @@ import { useAuth } from "@/app/context/auth-context";
 import { NotificationBell } from "@/components/notification-bell";
 import { CashCounterModal } from "@/components/cash-counter-modal";
 import { ProductFormDialog } from "@/components/product-form-dialog";
+import { ProductLookupModal } from "@/components/product-lookup-modal";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -18,15 +19,20 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [productDialogOpen, setProductDialogOpen] = useState(false);
+  const [lookupOpen, setLookupOpen] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
-  // F4 → open add product dialog
+  // F4 → open add product dialog, F1 → open product lookup
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "F4") {
         e.preventDefault();
         setProductDialogOpen(true);
+      }
+      if (e.key === "F1") {
+        e.preventDefault();
+        setLookupOpen(true);
       }
     };
     window.addEventListener("keydown", handler);
@@ -113,6 +119,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         open={productDialogOpen}
         onOpenChange={setProductDialogOpen}
         onSuccess={() => setProductDialogOpen(false)}
+      />
+
+      {/* F1 Product Lookup Modal */}
+      <ProductLookupModal
+        open={lookupOpen}
+        onOpenChange={setLookupOpen}
+        branchId={user?.branch_id || 1}
       />
     </div>
   );
