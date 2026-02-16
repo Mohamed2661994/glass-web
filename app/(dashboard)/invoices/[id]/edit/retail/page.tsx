@@ -412,8 +412,7 @@ export default function EditRetailInvoicePage() {
   }, [items, applyItemsDiscount]);
 
   const finalTotal = useMemo(() => {
-    const total = totalBeforeDiscount - (Number(extraDiscount) || 0);
-    return total < 0 ? 0 : total;
+    return totalBeforeDiscount - (Number(extraDiscount) || 0);
   }, [totalBeforeDiscount, extraDiscount]);
 
   const totalWithPrevious = finalTotal + Number(previousBalance || 0);
