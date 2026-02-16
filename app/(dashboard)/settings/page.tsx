@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,8 @@ import {
   AlertTriangle,
   ChevronDown,
   ExternalLink,
+  Database,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -104,6 +107,9 @@ export default function SettingsPage() {
   /* ---- Danger zone dialogs ---- */
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [showClearDialog, setShowClearDialog] = useState(false);
+  const [showSelectiveDeleteDialog, setShowSelectiveDeleteDialog] = useState(false);
+  const [selectedTableGroups, setSelectedTableGroups] = useState<string[]>([]);
+  const [selectiveDeleting, setSelectiveDeleting] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [dangerUnlocked, setDangerUnlocked] = useState(false);
   const [dangerPassword, setDangerPassword] = useState("");
@@ -183,6 +189,46 @@ export default function SettingsPage() {
     "cash_out",
   ];
 
+  // مجموعات الجداول المرتبطة
+  const tableGroups = [
+    {
+      key: "invoices",
+      label: "الفواتير",
+      description: "جميع فواتير البيع والشراء وعناصرها",
+      tables: ["invoice_items", "invoices"],
+    },
+    {
+      key: "transfers",
+      label: "التحويلات",
+      description: "فواتير التحويل بين المخازن وعناصرها",
+      tables: ["stock_transfer_items", "stock_transfers"],
+    },
+    {
+      key: "stock",
+      label: "المخزون",
+      description: "حركات المخزون وأرصدة الأصناف (تصفير)",
+      tables: ["stock_movements", "stock"],
+    },
+    {
+      key: "cash_in",
+      label: "وارد الخزنة",
+      description: "جميع سجلات الوارد",
+      tables: ["cash_in"],
+    },
+    {
+      key: "cash_out",
+      label: "منصرف الخزنة",
+      description: "جميع سجلات المنصرف",
+      tables: ["cash_out"],
+    },
+    {
+      key: "products",
+      label: "الأصناف",
+      description: "جميع الأصناف والأكواد الفرعية",
+      tables: ["product_variants", "products"],
+    },
+  ] as const;
+
   const handleFactoryReset = async () => {
     if (confirmText !== "إعادة ضبط") {
       toast.error('اكتب "إعادة ضبط" للتأكيد');
@@ -230,6 +276,46 @@ export default function SettingsPage() {
     }
     setShowClearDialog(false);
     setConfirmText("");
+  };
+
+  const toggleTableGroup = (key: string) => {
+    setSelectedTableGroups((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
+    );
+  };
+
+  const handleSelectiveDelete = async () => {
+    if (selectedTableGroups.length === 0) {
+      toast.error("اختر جدول واحد على الأقل");
+      return;
+    }
+
+    setSelectiveDeleting(true);
+    try {
+      // تجميع كل الجداول المرتبطة بالمجموعات المختارة
+      const tablesToDelete = tableGroups
+        .filter((g) => selectedTableGroups.includes(g.key))
+        .flatMap((g) => g.tables);
+
+      await api.post(
+        "/system/factory-reset",
+        { tables: tablesToDelete },
+        { timeout: 120000 },
+      );
+
+      const labels = tableGroups
+        .filter((g) => selectedTableGroups.includes(g.key))
+        .map((g) => g.label)
+        .join("، ");
+
+      toast.success(`تم مسح: ${labels}`);
+      setShowSelectiveDeleteDialog(false);
+      setSelectedTableGroups([]);
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "فشل مسح البيانات");
+    } finally {
+      setSelectiveDeleting(false);
+    }
   };
 
   const branchLabel = (id: number) =>
@@ -528,6 +614,27 @@ export default function SettingsPage() {
                 </Button>
               </div>
 
+              <div className="flex items-center justify-between rounded-lg border border-orange-300 dark:border-orange-700 p-4">
+                <div>
+                  <p className="text-sm font-medium">مسح جدول محدد</p>
+                  <p className="text-xs text-muted-foreground">
+                    اختر الجداول المراد مسحها بشكل منفرد
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-orange-500 text-orange-600 hover:bg-orange-500 hover:text-white gap-2"
+                  onClick={() => {
+                    setSelectedTableGroups([]);
+                    setShowSelectiveDeleteDialog(true);
+                  }}
+                >
+                  <Database className="h-4 w-4" />
+                  اختيار جداول
+                </Button>
+              </div>
+
               <Button
                 variant="ghost"
                 size="sm"
@@ -611,6 +718,59 @@ export default function SettingsPage() {
               disabled={confirmText !== "مسح البيانات"}
             >
               تأكيد المسح
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Selective Delete Dialog */}
+      <Dialog open={showSelectiveDeleteDialog} onOpenChange={setShowSelectiveDeleteDialog}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Database className="h-5 w-5" />
+              مسح جداول محددة
+            </DialogTitle>
+            <DialogDescription>
+              اختر الجداول التي تريد مسحها. الجداول المرتبطة يتم مسحها معاً.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            {tableGroups.map((group) => (
+              <label
+                key={group.key}
+                className="flex items-center gap-3 rounded-lg border p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+              >
+                <Checkbox
+                  checked={selectedTableGroups.includes(group.key)}
+                  onCheckedChange={() => toggleTableGroup(group.key)}
+                />
+                <div className="flex flex-col">
+                  <span className="font-medium text-sm">{group.label}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {group.description}
+                  </span>
+                </div>
+              </label>
+            ))}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setShowSelectiveDeleteDialog(false)}>
+              إلغاء
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleSelectiveDelete}
+              disabled={selectedTableGroups.length === 0 || selectiveDeleting}
+            >
+              {selectiveDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                  جاري المسح...
+                </>
+              ) : (
+                `مسح (${selectedTableGroups.length})`
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
