@@ -219,10 +219,6 @@ export default function EditWholesaleInvoicePage() {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
 
   /* =========================================================
      9️⃣ Fetch Customer Balance
