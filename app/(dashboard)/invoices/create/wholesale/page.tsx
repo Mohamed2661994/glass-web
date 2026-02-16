@@ -79,7 +79,6 @@ export default function CreateWholesaleInvoicePage() {
      3️⃣ Products & Items States
      ========================================================= */
 
-  const [products, setProducts] = useState<any[]>([]);
   const [items, setItems] = useState<any[]>([]);
   const [showProductModal, setShowProductModal] = useState(false);
   const [search, setSearch] = useState("");
