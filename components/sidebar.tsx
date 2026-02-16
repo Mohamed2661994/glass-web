@@ -93,7 +93,13 @@ export function Sidebar({
 
   useEffect(() => {
     const user = localStorage.getItem("user");
-    if (user) setBranchId(JSON.parse(user).branch_id);
+    if (user) {
+      try {
+        setBranchId(JSON.parse(user).branch_id);
+      } catch {
+        // ignore corrupt localStorage
+      }
+    }
   }, []);
 
   // Auto-open groups if current path is inside them

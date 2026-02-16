@@ -255,6 +255,13 @@ export default function CreateRetailInvoicePage() {
     fetchProducts();
   }, [movementType]);
 
+  // Cleanup customer search timer on unmount
+  useEffect(() => {
+    return () => {
+      if (nameTimerRef.current) clearTimeout(nameTimerRef.current);
+    };
+  }, []);
+
   // Fetch stock when package picker opens
   useEffect(() => {
     if (!packagePickerProduct) return;
@@ -550,7 +557,7 @@ export default function CreateRetailInvoicePage() {
      ========================================================= */
 
   const removeItem = (uid: string) => {
-    setItems(items.filter((i) => i.uid !== uid));
+    setItems((prev) => prev.filter((i) => i.uid !== uid));
   };
 
   /* =========================================================
@@ -1167,11 +1174,12 @@ export default function CreateRetailInvoicePage() {
               <span className="font-bold text-primary">{savedInvoiceId}</span>
             </p>
             {movementType === "sale" && (
-              <p className={`text-sm -mt-2 mb-2 ${journalPosted ? "text-muted-foreground" : "text-orange-500"}`}>
+              <p
+                className={`text-sm -mt-2 mb-2 ${journalPosted ? "text-muted-foreground" : "text-orange-500"}`}
+              >
                 {journalPosted
                   ? "تم ترحيل المبالغ إلى اليومية"
-                  : "⚠️ لم يتم الترحيل لليومية (المدفوع = 0)"
-                }
+                  : "⚠️ لم يتم الترحيل لليومية (المدفوع = 0)"}
               </p>
             )}
             <div className="flex gap-3">

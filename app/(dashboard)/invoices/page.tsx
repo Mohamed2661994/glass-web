@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -48,9 +48,23 @@ export default function InvoicesPage() {
         : null;
   const [movementType, setMovementType] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [deleting, setDeleting] = useState<number | null>(null);
 
   const [page, setPage] = useState(1);
   const limit = 10;
+
+  // Debounce search input
+  useEffect(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 400);
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, [search]);
 
   const fetchInvoices = async () => {
     if (!invoiceType) return;
@@ -64,7 +78,7 @@ export default function InvoicesPage() {
       };
 
       if (movementType !== "all") params.movement_type = movementType;
-      if (search) params.customer_name = search;
+      if (debouncedSearch) params.customer_name = debouncedSearch;
 
       const res = await axios.get("/invoices", { params });
 
@@ -78,7 +92,7 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     fetchInvoices();
-  }, [page, invoiceType, movementType, search]);
+  }, [page, invoiceType, movementType, debouncedSearch]);
 
   const getStatusBadge = (status: string) => {
     if (status === "paid")
@@ -90,13 +104,17 @@ export default function InvoicesPage() {
 
   const handleDelete = async (id: number) => {
     if (!confirm("هل أنت متأكد من حذف الفاتورة؟")) return;
+    if (deleting) return;
 
     try {
+      setDeleting(id);
       await axios.delete(`/invoices/${id}`);
       toast.success("تم حذف الفاتورة");
       fetchInvoices();
     } catch {
       toast.error("فشل حذف الفاتورة");
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -216,6 +234,7 @@ export default function InvoicesPage() {
                       <Button
                         size="icon"
                         variant="outline"
+                        disabled={deleting === invoice.id}
                         onClick={() => handleDelete(invoice.id)}
                       >
                         <Trash2 size={16} />
