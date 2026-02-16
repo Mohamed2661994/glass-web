@@ -220,7 +220,11 @@ export default function CreateRetailInvoicePage() {
     refresh: refreshProducts,
   } = useCachedProducts({
     endpoint: "/products",
-    params: { branch_id: 1, invoice_type: "retail", movement_type: movementType },
+    params: {
+      branch_id: 1,
+      invoice_type: "retail",
+      movement_type: movementType,
+    },
     fetchVariants: true,
     cacheKey: `retail_${movementType}`,
   });

@@ -38,7 +38,12 @@ function getCacheKey(prefix: string, key: string) {
   return `${prefix}${key}`;
 }
 
-function getFromCache<T>(prefix: string, key: string, duration: number, params: string): T | null {
+function getFromCache<T>(
+  prefix: string,
+  key: string,
+  duration: number,
+  params: string,
+): T | null {
   try {
     const raw = localStorage.getItem(getCacheKey(prefix, key));
     if (!raw) return null;
@@ -87,7 +92,7 @@ export function useCachedProducts({
           CACHE_KEY_PREFIX,
           resolvedCacheKey,
           cacheDuration,
-          paramsString
+          paramsString,
         );
         if (cached) {
           setProducts(cached);
@@ -97,14 +102,14 @@ export function useCachedProducts({
               VARIANTS_CACHE_KEY_PREFIX,
               resolvedCacheKey,
               cacheDuration,
-              paramsString
+              paramsString,
             );
             if (cachedVariants) setVariantsMap(cachedVariants);
           }
           // Get timestamp from cache
           try {
             const raw = localStorage.getItem(
-              getCacheKey(CACHE_KEY_PREFIX, resolvedCacheKey)
+              getCacheKey(CACHE_KEY_PREFIX, resolvedCacheKey),
             );
             if (raw) {
               const entry = JSON.parse(raw);
@@ -141,7 +146,12 @@ export function useCachedProducts({
               map[v.product_id].push(v);
             }
             setVariantsMap(map);
-            setCache(VARIANTS_CACHE_KEY_PREFIX, resolvedCacheKey, map, paramsString);
+            setCache(
+              VARIANTS_CACHE_KEY_PREFIX,
+              resolvedCacheKey,
+              map,
+              paramsString,
+            );
           } catch {
             /* silent */
           }
@@ -152,7 +162,7 @@ export function useCachedProducts({
         // If fetch fails, try stale cache as fallback
         try {
           const raw = localStorage.getItem(
-            getCacheKey(CACHE_KEY_PREFIX, resolvedCacheKey)
+            getCacheKey(CACHE_KEY_PREFIX, resolvedCacheKey),
           );
           if (raw) {
             const entry: CacheEntry<any[]> = JSON.parse(raw);
@@ -166,7 +176,7 @@ export function useCachedProducts({
         setLoading(false);
       }
     },
-    [endpoint, paramsString, resolvedCacheKey, fetchVariants, cacheDuration]
+    [endpoint, paramsString, resolvedCacheKey, fetchVariants, cacheDuration],
   );
 
   // Force refresh (bypasses cache)
@@ -195,7 +205,7 @@ export function useCachedProducts({
     try {
       localStorage.removeItem(getCacheKey(CACHE_KEY_PREFIX, resolvedCacheKey));
       localStorage.removeItem(
-        getCacheKey(VARIANTS_CACHE_KEY_PREFIX, resolvedCacheKey)
+        getCacheKey(VARIANTS_CACHE_KEY_PREFIX, resolvedCacheKey),
       );
     } catch {}
   }, [resolvedCacheKey]);

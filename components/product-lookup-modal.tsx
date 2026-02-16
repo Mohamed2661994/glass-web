@@ -31,7 +31,11 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
      ========================================================= */
   const { products, loading } = useCachedProducts({
     endpoint: "/products",
-    params: { branch_id: branchId, invoice_type: invoiceType, movement_type: "sale" },
+    params: {
+      branch_id: branchId,
+      invoice_type: invoiceType,
+      movement_type: "sale",
+    },
     cacheKey: `lookup_${invoiceType}`,
   });
 

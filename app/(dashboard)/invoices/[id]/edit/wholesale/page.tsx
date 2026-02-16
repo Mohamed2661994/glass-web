@@ -158,7 +158,11 @@ export default function EditWholesaleInvoicePage() {
     refresh: refreshProducts,
   } = useCachedProducts({
     endpoint: "/products",
-    params: { branch_id: 2, invoice_type: "wholesale", movement_type: movementType },
+    params: {
+      branch_id: 2,
+      invoice_type: "wholesale",
+      movement_type: movementType,
+    },
     cacheKey: `wholesale_${movementType}`,
   });
 

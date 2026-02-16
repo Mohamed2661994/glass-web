@@ -65,9 +65,9 @@ export default function InventoryValuePage() {
   useEffect(() => {
     if (!user) return;
     if (user.branch_id === 1)
-      setWarehouseFilter("2"); // مخزن المعرض
+      setWarehouseFilter("1"); // مخزن المعرض
     else if (user.branch_id === 2)
-      setWarehouseFilter("1"); // المخزن الرئيسي
+      setWarehouseFilter("2"); // المخزن الرئيسي
     else setWarehouseFilter(null);
   }, [user]);
 

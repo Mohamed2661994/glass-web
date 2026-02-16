@@ -166,7 +166,11 @@ export default function EditRetailInvoicePage() {
     refresh: refreshProducts,
   } = useCachedProducts({
     endpoint: "/products",
-    params: { branch_id: 1, invoice_type: "retail", movement_type: movementType },
+    params: {
+      branch_id: 1,
+      invoice_type: "retail",
+      movement_type: movementType,
+    },
     cacheKey: `retail_${movementType}`,
   });
 
