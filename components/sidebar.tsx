@@ -211,6 +211,15 @@ export function Sidebar({
               icon: CalendarDays,
               href: "/transfers/by-date",
             },
+            ...(userId === 7
+              ? [
+                  {
+                    label: "رصيد أول المدة",
+                    icon: PackagePlus,
+                    href: "/opening-stock",
+                  },
+                ]
+              : []),
             cashGroup,
             reportsGroup,
           ]
