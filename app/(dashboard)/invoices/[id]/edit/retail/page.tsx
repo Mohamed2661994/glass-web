@@ -476,6 +476,7 @@ export default function EditRetailInvoicePage() {
       products.filter((p) => {
         const s = search.toLowerCase();
         return (
+          String(p.id).includes(s) ||
           p.name.toLowerCase().includes(s) ||
           (p.description && p.description.toLowerCase().includes(s)) ||
           (p.barcode && p.barcode.toLowerCase().includes(s))
@@ -972,7 +973,7 @@ export default function EditRetailInvoicePage() {
               <Input
                 ref={searchInputRef}
                 autoFocus
-                placeholder="ابحث عن صنف... (Enter للتنقل)"
+                placeholder="ابحث بالكود أو الاسم أو الوصف أو الباركود... (Enter للتنقل)"
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);

@@ -49,7 +49,13 @@ const CSV_COLUMNS = [
 type CSVColumnKey = (typeof CSV_COLUMNS)[number]["key"];
 type ColumnMapping = Record<CSVColumnKey, string>;
 
-type Step = "upload" | "pickHeader" | "mapping" | "preview" | "importing" | "result";
+type Step =
+  | "upload"
+  | "pickHeader"
+  | "mapping"
+  | "preview"
+  | "importing"
+  | "result";
 
 type InvoiceResult = {
   invoice_id: number;
@@ -183,7 +189,14 @@ export default function OpeningStockPage() {
     // Auto-map by matching column names
     const autoMap: Partial<ColumnMapping> = {};
     const aliases: Record<CSVColumnKey, string[]> = {
-      product_code: ["product_code", "barcode", "الباركود", "كود", "code", "الكود"],
+      product_code: [
+        "product_code",
+        "barcode",
+        "الباركود",
+        "كود",
+        "code",
+        "الكود",
+      ],
       product_name: ["product_name", "name", "الاسم", "اسم الصنف", "اسم"],
       quantity: ["quantity", "الكمية", "كمية", "qty"],
       price: ["price", "السعر", "سعر"],
@@ -270,8 +283,7 @@ export default function OpeningStockPage() {
           );
           allResults.push(data);
         } catch (err: unknown) {
-          const msg =
-            err instanceof Error ? err.message : "خطأ غير معروف";
+          const msg = err instanceof Error ? err.message : "خطأ غير معروف";
           allErrors.push(`دفعة ${i + 1}: ${msg}`);
           // Retry once
           try {
@@ -288,9 +300,7 @@ export default function OpeningStockPage() {
             allErrors.pop(); // remove the error if retry succeeded
           } catch (retryErr: unknown) {
             const retryMsg =
-              retryErr instanceof Error
-                ? retryErr.message
-                : "خطأ غير معروف";
+              retryErr instanceof Error ? retryErr.message : "خطأ غير معروف";
             allErrors.push(`دفعة ${i + 1} (إعادة محاولة): ${retryMsg}`);
           }
         }
@@ -349,7 +359,9 @@ export default function OpeningStockPage() {
             "preview",
             "result",
           ];
-          const currentIdx = stepOrder.indexOf(step === "importing" ? "preview" : step);
+          const currentIdx = stepOrder.indexOf(
+            step === "importing" ? "preview" : step,
+          );
           const thisIdx = stepOrder.indexOf(s.key as Step);
           const isActive = thisIdx === currentIdx;
           const isDone = thisIdx < currentIdx;
@@ -769,9 +781,15 @@ export default function OpeningStockPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-center">رقم الفاتورة</TableHead>
-                        <TableHead className="text-center">أصناف متطابقة</TableHead>
-                        <TableHead className="text-center">غير متطابقة</TableHead>
+                        <TableHead className="text-center">
+                          رقم الفاتورة
+                        </TableHead>
+                        <TableHead className="text-center">
+                          أصناف متطابقة
+                        </TableHead>
+                        <TableHead className="text-center">
+                          غير متطابقة
+                        </TableHead>
                         <TableHead className="text-center">الإجمالي</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -808,7 +826,8 @@ export default function OpeningStockPage() {
                   أصناف لم يتم مطابقتها ({allUnmatched.length})
                 </CardTitle>
                 <p className="text-xs text-muted-foreground">
-                  هذه الأصناف غير موجودة في قاعدة البيانات — تأكد من إضافتها أولاً
+                  هذه الأصناف غير موجودة في قاعدة البيانات — تأكد من إضافتها
+                  أولاً
                 </p>
               </CardHeader>
               <CardContent>
@@ -818,7 +837,10 @@ export default function OpeningStockPage() {
                       key={i}
                       className="flex items-center gap-3 text-sm p-2 bg-red-50 dark:bg-red-950/20 rounded"
                     >
-                      <Badge variant="destructive" className="shrink-0 font-mono">
+                      <Badge
+                        variant="destructive"
+                        className="shrink-0 font-mono"
+                      >
                         {item.product_code}
                       </Badge>
                       <span className="text-red-700 dark:text-red-400">
