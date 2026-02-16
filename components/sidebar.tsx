@@ -24,6 +24,7 @@ import {
   LogOut,
   ClipboardList,
   FilePlus2,
+  PackagePlus,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -172,6 +173,11 @@ export function Sidebar({
             label: "فاتورة تحويل",
             icon: Truck,
             href: "/stock-transfer",
+          },
+          {
+            label: "رصيد أول المدة",
+            icon: PackagePlus,
+            href: "/opening-stock",
           },
           cashGroup,
           reportsGroup,
