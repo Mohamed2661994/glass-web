@@ -79,7 +79,9 @@ export default function CashOutListPage() {
     return data.filter((item) => {
       if (
         searchName.trim() &&
-        !noSpaces(item.name).toLowerCase().includes(noSpaces(searchName).toLowerCase())
+        !noSpaces(item.name)
+          .toLowerCase()
+          .includes(noSpaces(searchName).toLowerCase())
       )
         return false;
       return true;

@@ -110,8 +110,7 @@ export default function ReplacePage() {
       (p) =>
         String(p.id).includes(s) ||
         noSpaces(p.name).toLowerCase().includes(s) ||
-        (p.manufacturer &&
-          noSpaces(p.manufacturer).toLowerCase().includes(s)),
+        (p.manufacturer && noSpaces(p.manufacturer).toLowerCase().includes(s)),
     );
   };
 

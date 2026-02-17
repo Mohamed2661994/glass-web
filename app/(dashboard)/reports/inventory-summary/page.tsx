@@ -96,7 +96,9 @@ export default function InventorySummaryPage() {
       result = result.filter(
         (item) =>
           noSpaces(item.product_name).toLowerCase().includes(q) ||
-          noSpaces(item.manufacturer_name || "").toLowerCase().includes(q),
+          noSpaces(item.manufacturer_name || "")
+            .toLowerCase()
+            .includes(q),
       );
     }
 

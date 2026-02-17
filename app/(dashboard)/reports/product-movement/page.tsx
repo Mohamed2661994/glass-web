@@ -152,7 +152,9 @@ export default function ProductMovementPage() {
       (p) =>
         String(p.id).includes(q) ||
         noSpaces(p.name).toLowerCase().includes(q) ||
-        noSpaces(p.manufacturer || p.manufacturer_name || "").toLowerCase().includes(q),
+        noSpaces(p.manufacturer || p.manufacturer_name || "")
+          .toLowerCase()
+          .includes(q),
     );
   }, [products, productSearch]);
 

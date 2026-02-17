@@ -147,8 +147,10 @@ export default function ProductsPage() {
     const q = noSpaces(search).toLowerCase();
     const matchesSearch =
       noSpaces(product.name).toLowerCase().includes(q) ||
-      (product.barcode && noSpaces(product.barcode).toLowerCase().includes(q)) ||
-      (product.description && noSpaces(product.description).toLowerCase().includes(q));
+      (product.barcode &&
+        noSpaces(product.barcode).toLowerCase().includes(q)) ||
+      (product.description &&
+        noSpaces(product.description).toLowerCase().includes(q));
     const matchesManufacturer =
       selectedManufacturer === "الكل" ||
       product.manufacturer === selectedManufacturer;

@@ -113,15 +113,15 @@ export default function StockTransferPage() {
   }, []);
 
   /* ========== Filter ========== */
-  const filtered = products.filter(
-    (p) => {
-      const s = noSpaces(search).toLowerCase();
-      return p.available_quantity > 0 &&
+  const filtered = products.filter((p) => {
+    const s = noSpaces(search).toLowerCase();
+    return (
+      p.available_quantity > 0 &&
       (String(p.id).includes(s) ||
         noSpaces(p.name).toLowerCase().includes(s) ||
-        (p.manufacturer && noSpaces(p.manufacturer).toLowerCase().includes(s)));
-    },
-  );
+        (p.manufacturer && noSpaces(p.manufacturer).toLowerCase().includes(s)))
+    );
+  });
 
   /* ========== Add Product ========== */
   const addProduct = (product: Product) => {

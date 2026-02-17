@@ -85,7 +85,9 @@ export default function CashInListPage() {
     return data.filter((item) => {
       if (
         searchName.trim() &&
-        !noSpaces(item.customer_name || "").toLowerCase().includes(noSpaces(searchName).toLowerCase())
+        !noSpaces(item.customer_name || "")
+          .toLowerCase()
+          .includes(noSpaces(searchName).toLowerCase())
       )
         return false;
       if (filterType !== "all" && item.source_type !== filterType) return false;
