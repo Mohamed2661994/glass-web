@@ -1089,7 +1089,9 @@ export default function CreateRetailInvoicePage() {
                               )
                             }
                           >
-                            <Pencil className={`size-4 ${editingItemUid === item.uid ? "text-green-600" : "text-blue-600"}`} />
+                            <Pencil
+                              className={`size-4 ${editingItemUid === item.uid ? "text-green-600" : "text-blue-600"}`}
+                            />
                           </Button>
                           {confirmDeleteId === item.uid ? (
                             <Button
@@ -1541,7 +1543,6 @@ export default function CreateRetailInvoicePage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-
       </div>
     </div>
   );

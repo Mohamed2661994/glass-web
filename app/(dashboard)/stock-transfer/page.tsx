@@ -35,6 +35,7 @@ interface TransferItem {
   manufacturer: string;
   quantity: number;
   percent: number;
+  price_addition: number;
   wholesale_package: string;
   retail_package: string;
   wholesale_price: number;
@@ -141,6 +142,7 @@ export default function StockTransferPage() {
         manufacturer: product.manufacturer,
         quantity: 1,
         percent: 0,
+        price_addition: 0,
         wholesale_package: pkg,
         retail_package: retailPkg || product.retail_package,
         wholesale_price: price,
@@ -154,7 +156,7 @@ export default function StockTransferPage() {
   /* ========== Update Item ========== */
   const updateItem = (
     uid: string,
-    field: "quantity" | "percent",
+    field: "quantity" | "percent" | "price_addition",
     value: number,
   ) => {
     setItems((prev) =>
@@ -169,7 +171,8 @@ export default function StockTransferPage() {
 
   /* ========== Total ========== */
   const totalAmount = items.reduce((sum, i) => {
-    const base = i.quantity * i.wholesale_price;
+    const unitPrice = i.wholesale_price + (i.price_addition || 0);
+    const base = i.quantity * unitPrice;
     const discount = base * (i.percent / 100);
     return sum + (base - discount);
   }, 0);
@@ -186,7 +189,8 @@ export default function StockTransferPage() {
       to_branch_id: TO_BRANCH_ID,
       total_amount: totalAmount,
       items: items.map((i) => {
-        const base = i.quantity * i.wholesale_price;
+        const unitPrice = i.wholesale_price + (i.price_addition || 0);
+        const base = i.quantity * unitPrice;
         const discount = base * (i.percent / 100);
         return {
           product_id: i.product_id,
@@ -229,7 +233,8 @@ export default function StockTransferPage() {
       )}
 
       {items.map((item) => {
-        const base = item.quantity * item.wholesale_price;
+        const unitPrice = item.wholesale_price + (item.price_addition || 0);
+        const base = item.quantity * unitPrice;
         const discount = base * (item.percent / 100);
         const final = base - discount;
 
@@ -258,6 +263,17 @@ export default function StockTransferPage() {
                   }
                 />
 
+                {/* إضافة للسعر */}
+                <Input
+                  type="number"
+                  placeholder="+سعر"
+                  className="w-16 text-center"
+                  value={item.price_addition || ""}
+                  onChange={(e) =>
+                    updateItem(item.uid, "price_addition", Number(e.target.value) || 0)
+                  }
+                />
+
                 {/* الكمية */}
                 <Input
                   type="number"
@@ -275,11 +291,11 @@ export default function StockTransferPage() {
                 {/* التفاصيل */}
                 <div className="flex-1 text-right min-w-0">
                   <div className="font-bold text-sm truncate">
-                    {item.product_name}
+                    {item.product_name} – {item.manufacturer}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
                     {item.wholesale_package} ×{" "}
-                    {item.wholesale_price.toLocaleString()}
+                    {unitPrice.toLocaleString()}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     = {Math.round(final).toLocaleString()} ج
