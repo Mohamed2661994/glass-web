@@ -156,80 +156,80 @@ export default function InvoicesPage() {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-5xl mx-auto" dir="rtl">
-      <h1 className="text-2xl font-bold">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6 max-w-5xl mx-auto" dir="rtl">
+      <h1 className="text-xl md:text-2xl font-bold">
         فواتير {invoiceType === "retail" ? "القطاعي" : "الجملة"}
       </h1>
 
       {/* Filters */}
       <Card>
-        <CardContent className="p-4 flex flex-wrap gap-4 items-center">
-          <Input
-            placeholder="بحث باسم العميل..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="w-52"
-          />
-
-          <Input
-            placeholder="رقم الفاتورة"
-            type="number"
-            value={invoiceIdSearch}
-            onChange={(e) => {
-              setInvoiceIdSearch(e.target.value);
-              setPage(1);
-            }}
-            className="w-36"
-          />
-
-          <Select
-            value={movementType}
-            onValueChange={(v) => {
-              setMovementType(v);
-              setPage(1);
-            }}
-          >
-            <SelectTrigger className="w-36">
-              <SelectValue placeholder="حركة" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">الكل</SelectItem>
-              <SelectItem value="sale">بيع</SelectItem>
-              <SelectItem value="purchase">شراء</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground whitespace-nowrap">
-              من
-            </span>
+        <CardContent className="p-3 md:p-4 space-y-3">
+          <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:gap-3">
             <Input
-              type="date"
-              value={dateFrom}
+              placeholder="بحث باسم العميل..."
+              value={search}
               onChange={(e) => {
-                setDateFrom(e.target.value);
+                setSearch(e.target.value);
                 setPage(1);
               }}
-              className="w-40"
+              className="col-span-2 md:w-52"
             />
-          </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground whitespace-nowrap">
-              إلى
-            </span>
             <Input
-              type="date"
-              value={dateTo}
+              placeholder="رقم الفاتورة"
+              type="number"
+              value={invoiceIdSearch}
               onChange={(e) => {
-                setDateTo(e.target.value);
+                setInvoiceIdSearch(e.target.value);
                 setPage(1);
               }}
-              className="w-40"
+              className="md:w-36"
             />
+
+            <Select
+              value={movementType}
+              onValueChange={(v) => {
+                setMovementType(v);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="md:w-36">
+                <SelectValue placeholder="حركة" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">الكل</SelectItem>
+                <SelectItem value="sale">بيع</SelectItem>
+                <SelectItem value="purchase">شراء</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">
+                من
+              </span>
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => {
+                  setDateFrom(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">
+                إلى
+              </span>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => {
+                  setDateTo(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
           </div>
 
           {(dateFrom ||
@@ -240,6 +240,7 @@ export default function InvoicesPage() {
             <Button
               variant="ghost"
               size="sm"
+              className="w-full md:w-auto"
               onClick={() => {
                 setSearch("");
                 setInvoiceIdSearch("");
@@ -255,8 +256,8 @@ export default function InvoicesPage() {
         </CardContent>
       </Card>
 
-      {/* Table */}
-      <Card>
+      {/* Desktop Table */}
+      <Card className="hidden md:block">
         <CardContent className="p-0">
           <table className="w-full text-sm">
             <thead className="bg-muted">
@@ -286,7 +287,7 @@ export default function InvoicesPage() {
                 ))
               ) : data.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="p-6 text-center">
+                  <td colSpan={10} className="p-6 text-center text-muted-foreground">
                     لا توجد فواتير
                   </td>
                 </tr>
@@ -370,6 +371,162 @@ export default function InvoicesPage() {
           </table>
         </CardContent>
       </Card>
+
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-3">
+        {loading ? (
+          Array.from({ length: 5 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-3 space-y-2">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-8 w-full" />
+              </CardContent>
+            </Card>
+          ))
+        ) : data.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center text-muted-foreground">
+              لا توجد فواتير
+            </CardContent>
+          </Card>
+        ) : (
+          data.map((invoice) => (
+            <Card
+              key={invoice.id}
+              className="overflow-hidden"
+              onClick={() => router.push(`/invoices/${invoice.id}`)}
+            >
+              <CardContent className="p-0">
+                {/* Top row: ID + status + movement */}
+                <div className="flex items-center justify-between p-3 pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base font-bold">#{invoice.id}</span>
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] px-1.5 py-0"
+                    >
+                      {invoice.movement_type === "sale" ? "بيع" : "شراء"}
+                    </Badge>
+                    {invoice.is_return && (
+                      <Badge className="bg-orange-500 text-[10px] px-1.5 py-0">
+                        مرتجع
+                      </Badge>
+                    )}
+                  </div>
+                  {getStatusBadge(invoice.payment_status)}
+                </div>
+
+                {/* Customer name */}
+                <div className="px-3 pb-2">
+                  <p className="text-sm font-medium">
+                    {invoice.customer_name || "نقدي"}
+                  </p>
+                  {invoice.created_by_name && (
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      بواسطة: {invoice.created_by_name}
+                    </p>
+                  )}
+                </div>
+
+                {/* Financial grid */}
+                <div className="grid grid-cols-4 text-center border-t border-border/50">
+                  <div className="p-2 border-l border-border/50">
+                    <p className="text-[9px] text-muted-foreground">الإجمالي</p>
+                    <p className="text-xs font-bold">
+                      {Number(invoice.subtotal).toFixed(0)}
+                    </p>
+                  </div>
+                  <div className="p-2 border-l border-border/50">
+                    <p className="text-[9px] text-muted-foreground">سابق</p>
+                    <p className="text-xs font-medium">
+                      {Number(invoice.previous_balance || 0).toFixed(0)}
+                    </p>
+                  </div>
+                  <div className="p-2 border-l border-border/50">
+                    <p className="text-[9px] text-muted-foreground">مدفوع</p>
+                    <p className="text-xs font-medium text-green-600 dark:text-green-400">
+                      {Number(invoice.paid_amount).toFixed(0)}
+                    </p>
+                  </div>
+                  <div className="p-2">
+                    <p className="text-[9px] text-muted-foreground">باقي</p>
+                    <p
+                      className={`text-xs font-bold ${
+                        Number(invoice.remaining_amount) > 0
+                          ? "text-red-500"
+                          : ""
+                      }`}
+                    >
+                      {Number(invoice.remaining_amount).toFixed(0)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Actions row */}
+                <div
+                  className="flex items-center justify-between border-t border-border/50 px-2 py-1.5 bg-muted/30"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <p className="text-[10px] text-muted-foreground">
+                    {new Date(invoice.created_at).toLocaleDateString("ar-EG", {
+                      day: "numeric",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      onClick={() => router.push(`/invoices/${invoice.id}`)}
+                    >
+                      <Eye size={14} />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      onClick={() =>
+                        router.push(
+                          `/invoices/${invoice.id}/edit/${invoice.invoice_type}`,
+                        )
+                      }
+                    >
+                      <Pencil size={14} />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      disabled={deleting === invoice.id}
+                      onClick={() => confirmDelete(invoice.id)}
+                    >
+                      <Trash2 size={14} />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      onClick={() =>
+                        window.open(
+                          `/invoices/${invoice.id}/print`,
+                          "_blank",
+                        )
+                      }
+                    >
+                      <Printer size={14} />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
 
       {/* Pagination */}
       <div className="flex justify-between items-center">
