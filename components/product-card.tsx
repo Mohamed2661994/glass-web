@@ -120,7 +120,8 @@ export function ProductCard({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             <h3 className="text-lg font-bold truncate leading-tight">
-              {product.name}{product.manufacturer ? ` - ${product.manufacturer}` : ""}
+              {product.name}
+              {product.manufacturer ? ` - ${product.manufacturer}` : ""}
             </h3>
           </div>
           <div className="flex items-center shrink-0">

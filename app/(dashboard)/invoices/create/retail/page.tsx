@@ -6,7 +6,15 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "@/services/api";
-import { Trash2, Camera, X, Loader2, Pencil, RefreshCw, FilePlus2 } from "lucide-react";
+import {
+  Trash2,
+  Camera,
+  X,
+  Loader2,
+  Pencil,
+  RefreshCw,
+  FilePlus2,
+} from "lucide-react";
 import { useCachedProducts } from "@/hooks/use-cached-products";
 import { highlightText } from "@/lib/highlight-text";
 import { noSpaces } from "@/lib/utils";
@@ -237,7 +245,8 @@ export default function CreateRetailInvoicePage() {
       if (draft.previousBalance) setPreviousBalance(draft.previousBalance);
       if (draft.extraDiscount) setExtraDiscount(draft.extraDiscount);
       if (draft.paidAmount) setPaidAmount(draft.paidAmount);
-      if (draft.applyItemsDiscount !== undefined) setApplyItemsDiscount(draft.applyItemsDiscount);
+      if (draft.applyItemsDiscount !== undefined)
+        setApplyItemsDiscount(draft.applyItemsDiscount);
       if (draft.items?.length) setItems(draft.items);
       draftRestoredRef.current = true;
       toast.info("تم استعادة بيانات الفاتورة السابقة");
@@ -262,7 +271,18 @@ export default function CreateRetailInvoicePage() {
       items,
     };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-  }, [movementType, invoiceDate, customerName, customerPhone, customerId, previousBalance, extraDiscount, paidAmount, applyItemsDiscount, items]);
+  }, [
+    movementType,
+    invoiceDate,
+    customerName,
+    customerPhone,
+    customerId,
+    previousBalance,
+    extraDiscount,
+    paidAmount,
+    applyItemsDiscount,
+    items,
+  ]);
 
   const clearDraft = () => {
     localStorage.removeItem(DRAFT_KEY);

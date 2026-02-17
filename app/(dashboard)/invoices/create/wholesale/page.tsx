@@ -171,7 +171,17 @@ export default function CreateWholesaleInvoicePage() {
       items,
     };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-  }, [movementType, invoiceDate, customerName, customerPhone, customerId, previousBalance, extraDiscount, paidAmount, items]);
+  }, [
+    movementType,
+    invoiceDate,
+    customerName,
+    customerPhone,
+    customerId,
+    previousBalance,
+    extraDiscount,
+    paidAmount,
+    items,
+  ]);
 
   const clearDraft = () => {
     localStorage.removeItem(DRAFT_KEY);

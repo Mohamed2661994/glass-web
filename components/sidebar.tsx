@@ -147,7 +147,7 @@ export function Sidebar({
   };
 
   const routes: SidebarEntry[] = [
-    { label: "Dashboard", icon: LayoutDashboard, href: "/" },
+    { label: "لوحة التحكم", icon: LayoutDashboard, href: "/" },
     { label: "الاصناف", icon: Package, href: "/products" },
     { label: "المصانع", icon: Factory, href: "/manufacturers" },
     { label: "قائمة الفواتير", icon: ClipboardList, href: "/invoices" },
@@ -243,7 +243,7 @@ export function Sidebar({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
+      <nav className="flex-1 p-2 space-y-1 overflow-y-auto scrollbar-hide">
         {routes.map((entry) => {
           if (isGroup(entry)) {
             const groupOpen = openGroups[entry.label] ?? false;
