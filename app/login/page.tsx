@@ -31,16 +31,12 @@ export default function LoginPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ✅ لو مسجل دخول قبل كده → يدخل تلقائي بعد لحظة
+  // ✅ لو مسجل دخول قبل كده → يدخل تلقائي فوراً
   useEffect(() => {
     const token = localStorage.getItem("token");
     const storedUser = localStorage.getItem("user");
     if (token && storedUser) {
-      // تأخير بسيط عشان يشوف صفحة الدخول الأول
-      const timer = setTimeout(() => {
-        router.push("/");
-      }, 800);
-      return () => clearTimeout(timer);
+      router.replace("/");
     }
   }, [router]);
 
@@ -70,7 +66,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/40 px-4">
-      <Card className="w-[500] max-w-[420px] mx-auto p-10 shadow-2xl rounded-2xl">
+      <Card className="w-full max-w-[420px] mx-auto p-10 shadow-2xl rounded-2xl">
         {/* 🔥 اللوجو */}
         <div className="flex justify-center mb-6">
           <img

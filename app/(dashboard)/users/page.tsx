@@ -34,8 +34,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-/* ========== Constants ========== */
-const ADMIN_USER_ID = 7;
+/* ========== Admin check uses backend role ========== */
 
 /* ========== Types ========== */
 type ManagedUser = {
@@ -101,7 +100,7 @@ function SectionCard({
 /* ========== Component ========== */
 export default function UsersPage() {
   const { user, setUser } = useAuth();
-  const isAdmin = user?.id === ADMIN_USER_ID;
+  const isAdmin = (user as any)?.role === "admin" || user?.id === (user as any)?.admin_id;
 
   /* ---- Edit username state ---- */
   const [editingName, setEditingName] = useState(false);

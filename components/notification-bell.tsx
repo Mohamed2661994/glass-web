@@ -46,13 +46,7 @@ export function NotificationBell({ userId, branchId }: NotificationBellProps) {
 
     // Warm up audio on first user interaction (browser autoplay policy)
     const unlock = () => {
-      audio
-        .play()
-        .then(() => {
-          audio.pause();
-          audio.currentTime = 0;
-        })
-        .catch(() => {});
+      audio.load();
       document.removeEventListener("click", unlock);
     };
     document.addEventListener("click", unlock, { once: true });

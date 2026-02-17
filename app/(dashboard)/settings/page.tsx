@@ -115,7 +115,7 @@ export default function SettingsPage() {
   const [dangerUnlocked, setDangerUnlocked] = useState(false);
   const [dangerPassword, setDangerPassword] = useState("");
   const [dangerPasswordError, setDangerPasswordError] = useState(false);
-  const DANGER_ZONE_PASSWORD = "01112657552";
+  const [dangerChecking, setDangerChecking] = useState(false);
 
   /* ---- Load settings from localStorage ---- */
   useEffect(() => {
@@ -267,12 +267,6 @@ export default function SettingsPage() {
       toast.success("تم مسح البيانات بنجاح");
       setTimeout(() => window.location.reload(), 1500);
     } catch (err: any) {
-      console.error(
-        "Clear data error:",
-        err.response?.status,
-        err.response?.data,
-        err.message,
-      );
       toast.error(err.response?.data?.error || "فشل مسح البيانات");
     }
     setShowClearDialog(false);
@@ -532,15 +526,19 @@ export default function SettingsPage() {
                       setDangerPassword(e.target.value);
                       setDangerPasswordError(false);
                     }}
-                    onKeyDown={(e) => {
+                    onKeyDown={async (e) => {
                       if (e.key === "Enter") {
-                        if (dangerPassword === DANGER_ZONE_PASSWORD) {
+                        setDangerChecking(true);
+                        try {
+                          await api.post("/admin/verify-danger-password", { password: dangerPassword });
                           setDangerUnlocked(true);
                           setDangerPassword("");
                           toast.success("تم فتح منطقة الخطر");
-                        } else {
+                        } catch {
                           setDangerPasswordError(true);
                           toast.error("كلمة السر غير صحيحة");
+                        } finally {
+                          setDangerChecking(false);
                         }
                       }
                     }}
@@ -550,18 +548,23 @@ export default function SettingsPage() {
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={() => {
-                      if (dangerPassword === DANGER_ZONE_PASSWORD) {
+                    disabled={dangerChecking}
+                    onClick={async () => {
+                      setDangerChecking(true);
+                      try {
+                        await api.post("/admin/verify-danger-password", { password: dangerPassword });
                         setDangerUnlocked(true);
                         setDangerPassword("");
                         toast.success("تم فتح منطقة الخطر");
-                      } else {
+                      } catch {
                         setDangerPasswordError(true);
                         toast.error("كلمة السر غير صحيحة");
+                      } finally {
+                        setDangerChecking(false);
                       }
                     }}
                   >
-                    فتح
+                    {dangerChecking ? "جاري التحقق..." : "فتح"}
                   </Button>
                 </div>
                 {dangerPasswordError && (

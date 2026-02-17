@@ -181,15 +181,15 @@ export function ProductFormDialog({
         );
         setBarcodeExists(res.data.exists);
         setBarcodeValid(!res.data.exists);
-      } catch (err) {
-        console.error(err);
+      } catch {
+        // barcode check failed silently
       } finally {
         setCheckingBarcode(false);
       }
     }, 500);
 
     return () => clearTimeout(timeout);
-  }, [form.barcode]);
+  }, [form.barcode, isEdit, product?.id]);
 
   const fetchManufacturers = async () => {
     try {

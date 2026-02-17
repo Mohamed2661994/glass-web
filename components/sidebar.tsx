@@ -60,11 +60,11 @@ export function Sidebar({
   onNavigate,
 }: SidebarProps) {
   const pathname = usePathname();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
 
   const [pinned, setPinned] = useState(false);
-  const [branchId, setBranchId] = useState<number | null>(null);
-  const [userId, setUserId] = useState<number | null>(null);
+  const branchId = user?.branch_id ?? null;
+  const isAdmin = (user as any)?.role === "admin";
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const sidebarRef = useRef<HTMLElement>(null);
 
@@ -93,18 +93,7 @@ export function Sidebar({
     onExpandChange?.(open);
   }, [open, onExpandChange]);
 
-  useEffect(() => {
-    const user = localStorage.getItem("user");
-    if (user) {
-      try {
-        const parsed = JSON.parse(user);
-        setBranchId(parsed.branch_id);
-        setUserId(parsed.id);
-      } catch {
-        // ignore corrupt localStorage
-      }
-    }
-  }, []);
+  // User data now comes from useAuth() context — no localStorage read needed
 
   // Auto-open groups if current path is inside them
   useEffect(() => {
@@ -177,7 +166,7 @@ export function Sidebar({
             icon: Truck,
             href: "/stock-transfer",
           },
-          ...(userId === 7
+          ...(isAdmin
             ? [
                 {
                   label: "رصيد أول المدة",
@@ -211,7 +200,7 @@ export function Sidebar({
               icon: CalendarDays,
               href: "/transfers/by-date",
             },
-            ...(userId === 7
+            ...(isAdmin
               ? [
                   {
                     label: "رصيد أول المدة",

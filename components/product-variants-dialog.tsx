@@ -168,7 +168,7 @@ function VariantFormDialog({
       }
     }, 500);
     return () => clearTimeout(timeout);
-  }, [form.barcode]);
+  }, [form.barcode, isEdit, variant?.id]);
 
   const handleSubmit = async () => {
     if (barcodeExists) {

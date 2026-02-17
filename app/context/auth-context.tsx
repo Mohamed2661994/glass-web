@@ -10,6 +10,7 @@ interface User {
   branch_id: number;
   theme?: string;
   full_name?: string;
+  role?: string;
 }
 
 interface AuthContextType {

@@ -171,7 +171,8 @@ function CashOutPage() {
           <div>
             <Label>المبلغ</Label>
             <Input
-              type="number"
+              type="text"
+              inputMode="decimal"
               value={amount}
               onChange={(e) =>
                 setAmount(e.target.value.replace(/[^0-9.]/g, ""))
