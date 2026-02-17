@@ -686,6 +686,12 @@ export default function CreateRetailInvoicePage() {
     });
   }, [products, search]);
 
+  const MODAL_DISPLAY_LIMIT = 50;
+  const displayedProducts = useMemo(
+    () => filteredProducts.slice(0, MODAL_DISPLAY_LIMIT),
+    [filteredProducts],
+  );
+
   /* =========================================================
      Handle search keydown (Enter & arrows)
      ========================================================= */
@@ -1356,13 +1362,19 @@ export default function CreateRetailInvoicePage() {
                   size="icon"
                   onClick={async () => {
                     setRefreshingProducts(true);
-                    try { await refreshProducts(); } finally { setRefreshingProducts(false); }
+                    try {
+                      await refreshProducts();
+                    } finally {
+                      setRefreshingProducts(false);
+                    }
                   }}
                   disabled={refreshingProducts}
                   title="تحديث الأصناف"
                   className="shrink-0"
                 >
-                  <RefreshCw className={`h-4 w-4 ${refreshingProducts ? "animate-spin" : ""}`} />
+                  <RefreshCw
+                    className={`h-4 w-4 ${refreshingProducts ? "animate-spin" : ""}`}
+                  />
                 </Button>
               </div>
             </div>
@@ -1382,7 +1394,8 @@ export default function CreateRetailInvoicePage() {
                   ))}
                 </div>
               ) : (
-                filteredProducts.map((product, index) => {
+                <>
+                {displayedProducts.map((product, index) => {
                   const outOfStock =
                     movementType === "sale" &&
                     Number(product.available_quantity) <= 0;
@@ -1428,6 +1441,13 @@ export default function CreateRetailInvoicePage() {
                     </div>
                   );
                 })
+                }
+                {filteredProducts.length > MODAL_DISPLAY_LIMIT && (
+                  <div className="text-center text-xs text-muted-foreground py-3">
+                    يتم عرض {MODAL_DISPLAY_LIMIT} من {filteredProducts.length} صنف — ابحث لتضييق النتائج
+                  </div>
+                )}
+                </>
               )}
             </div>
           </DialogContent>

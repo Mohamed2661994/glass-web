@@ -170,7 +170,9 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
               title="تحديث الأصناف"
               className="shrink-0"
             >
-              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+              <RefreshCw
+                className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+              />
             </Button>
           </div>
           {!loading && (
