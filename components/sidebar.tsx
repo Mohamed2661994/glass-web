@@ -25,6 +25,7 @@ import {
   ClipboardList,
   FilePlus2,
   PackagePlus,
+  Factory,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -148,6 +149,7 @@ export function Sidebar({
   const routes: SidebarEntry[] = [
     { label: "Dashboard", icon: LayoutDashboard, href: "/" },
     { label: "الاصناف", icon: Package, href: "/products" },
+    { label: "المصانع", icon: Factory, href: "/manufacturers" },
     { label: "قائمة الفواتير", icon: ClipboardList, href: "/invoices" },
     ...(branchId === 1
       ? [

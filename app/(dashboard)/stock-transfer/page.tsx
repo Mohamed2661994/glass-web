@@ -233,7 +233,8 @@ export default function StockTransferPage() {
       )}
 
       {items.map((item) => {
-        const unitPrice = Number(item.wholesale_price) + (item.price_addition || 0);
+        const unitPrice =
+          Number(item.wholesale_price) + (item.price_addition || 0);
         const base = item.quantity * unitPrice;
         const discount = base * (item.percent / 100);
         const final = base - discount;
@@ -254,35 +255,49 @@ export default function StockTransferPage() {
 
                 {/* النسبة */}
                 <div className="flex flex-col items-center gap-1">
-                  <span className="text-[10px] text-muted-foreground">نسبة%</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    نسبة%
+                  </span>
                   <Input
                     type="number"
                     placeholder="%"
                     className="w-16 text-center"
                     value={item.percent || ""}
                     onChange={(e) =>
-                      updateItem(item.uid, "percent", Number(e.target.value) || 0)
+                      updateItem(
+                        item.uid,
+                        "percent",
+                        Number(e.target.value) || 0,
+                      )
                     }
                   />
                 </div>
 
                 {/* إضافة للسعر */}
                 <div className="flex flex-col items-center gap-1">
-                  <span className="text-[10px] text-muted-foreground">+سعر</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    +سعر
+                  </span>
                   <Input
                     type="number"
                     placeholder="+سعر"
                     className="w-16 text-center"
                     value={item.price_addition || ""}
                     onChange={(e) =>
-                      updateItem(item.uid, "price_addition", Number(e.target.value) || 0)
+                      updateItem(
+                        item.uid,
+                        "price_addition",
+                        Number(e.target.value) || 0,
+                      )
                     }
                   />
                 </div>
 
                 {/* الكمية */}
                 <div className="flex flex-col items-center gap-1">
-                  <span className="text-[10px] text-muted-foreground">الكمية</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    الكمية
+                  </span>
                   <Input
                     type="number"
                     className="w-20 text-center"
@@ -303,10 +318,12 @@ export default function StockTransferPage() {
                     {item.product_name} – {item.manufacturer}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    {item.wholesale_package} × {item.wholesale_price.toLocaleString()}
+                    {item.wholesale_package} ×{" "}
+                    {item.wholesale_price.toLocaleString()}
                     {(item.price_addition || 0) > 0 && (
                       <span className="text-green-600 font-medium">
-                        {" "}+ {item.price_addition} = {unitPrice.toLocaleString()}
+                        {" "}
+                        + {item.price_addition} = {unitPrice.toLocaleString()}
                       </span>
                     )}
                   </div>
