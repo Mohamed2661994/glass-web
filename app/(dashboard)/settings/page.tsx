@@ -107,7 +107,8 @@ export default function SettingsPage() {
   /* ---- Danger zone dialogs ---- */
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [showClearDialog, setShowClearDialog] = useState(false);
-  const [showSelectiveDeleteDialog, setShowSelectiveDeleteDialog] = useState(false);
+  const [showSelectiveDeleteDialog, setShowSelectiveDeleteDialog] =
+    useState(false);
   const [selectedTableGroups, setSelectedTableGroups] = useState<string[]>([]);
   const [selectiveDeleting, setSelectiveDeleting] = useState(false);
   const [confirmText, setConfirmText] = useState("");
@@ -724,7 +725,10 @@ export default function SettingsPage() {
       </Dialog>
 
       {/* Selective Delete Dialog */}
-      <Dialog open={showSelectiveDeleteDialog} onOpenChange={setShowSelectiveDeleteDialog}>
+      <Dialog
+        open={showSelectiveDeleteDialog}
+        onOpenChange={setShowSelectiveDeleteDialog}
+      >
         <DialogContent dir="rtl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
@@ -755,7 +759,10 @@ export default function SettingsPage() {
             ))}
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="ghost" onClick={() => setShowSelectiveDeleteDialog(false)}>
+            <Button
+              variant="ghost"
+              onClick={() => setShowSelectiveDeleteDialog(false)}
+            >
               إلغاء
             </Button>
             <Button

@@ -11,11 +11,26 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  if (typeof window === "undefined") return config;
 
+  const token = localStorage.getItem("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  // إرسال بيانات اليوزر مع كل طلب عشان نعرف مين عمل العملية
+  const storedUser = localStorage.getItem("user");
+  if (storedUser) {
+    try {
+      const user = JSON.parse(storedUser);
+      config.headers["X-User-Id"] = user.id;
+      config.headers["X-User-Name"] = encodeURIComponent(
+        user.full_name || user.username,
+      );
+      config.headers["X-Branch-Id"] = user.branch_id;
+    } catch {
+      // تجاهل لو فيه مشكلة في الـ parse
+    }
   }
 
   return config;
