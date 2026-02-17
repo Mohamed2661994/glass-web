@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import api from "@/services/api";
+import { noSpaces } from "@/lib/utils";
 import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -65,7 +66,7 @@ export default function ManufacturersPage() {
   }, [fetchManufacturers]);
 
   const filtered = manufacturers.filter((m) =>
-    m.name.toLowerCase().includes(search.toLowerCase()),
+    noSpaces(m.name).toLowerCase().includes(noSpaces(search).toLowerCase()),
   );
 
   const openAdd = () => {

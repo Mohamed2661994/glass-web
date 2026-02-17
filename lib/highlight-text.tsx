@@ -4,6 +4,7 @@ import React from "react";
  * Highlights occurrences of `query` within `text`.
  * Returns a React node with <mark> tags around matched parts.
  * If query is empty, returns the text as-is.
+ * Ignores spaces in both query and text when matching.
  */
 export function highlightText(
   text: string | number | null | undefined,
@@ -13,15 +14,20 @@ export function highlightText(
   const str = String(text);
   if (!query || !query.trim()) return str;
 
-  const q = query.trim().toLowerCase();
-  const lowerStr = str.toLowerCase();
-  const idx = lowerStr.indexOf(q);
+  const q = query.replace(/\s/g, "").toLowerCase();
+  if (!q) return str;
 
-  if (idx === -1) return str;
+  // Build a regex that matches the query chars with optional \s* between them
+  const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = escaped.split("").join("\\s*");
+  const re = new RegExp(pattern, "i");
+  const m = re.exec(str);
 
-  const before = str.slice(0, idx);
-  const match = str.slice(idx, idx + q.length);
-  const after = str.slice(idx + q.length);
+  if (!m) return str;
+
+  const before = str.slice(0, m.index);
+  const match = str.slice(m.index, m.index + m[0].length);
+  const after = str.slice(m.index + m[0].length);
 
   return (
     <>

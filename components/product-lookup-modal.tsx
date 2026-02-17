@@ -13,6 +13,7 @@ import { Search, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCachedProducts } from "@/hooks/use-cached-products";
 import { highlightText } from "@/lib/highlight-text";
+import { noSpaces } from "@/lib/utils";
 
 interface Props {
   open: boolean;
@@ -64,13 +65,13 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
      ========================================================= */
   const filteredProducts = useMemo(() => {
     const filtered = products.filter((p) => {
-      const s = search.toLowerCase();
+      const s = noSpaces(search).toLowerCase();
       return (
         String(p.id).includes(s) ||
-        p.name.toLowerCase().includes(s) ||
-        (p.description && p.description.toLowerCase().includes(s)) ||
-        (p.barcode && p.barcode.toLowerCase().includes(s)) ||
-        (p.manufacturer && p.manufacturer.toLowerCase().includes(s))
+        noSpaces(p.name).toLowerCase().includes(s) ||
+        (p.description && noSpaces(p.description).toLowerCase().includes(s)) ||
+        (p.barcode && noSpaces(p.barcode).toLowerCase().includes(s)) ||
+        (p.manufacturer && noSpaces(p.manufacturer).toLowerCase().includes(s))
       );
     });
 

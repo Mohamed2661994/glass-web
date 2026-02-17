@@ -92,7 +92,9 @@ export default function OpeningStockPage() {
   const [validating, setValidating] = useState(false);
   const [validated, setValidated] = useState(false);
   const [matchedCodes, setMatchedCodes] = useState<Set<string>>(new Set());
-  const [unmatchedCodes, setUnmatchedCodes] = useState<{code: string; product_name: string}[]>([]);
+  const [unmatchedCodes, setUnmatchedCodes] = useState<
+    { code: string; product_name: string }[]
+  >([]);
 
   /* ========== STEP 1: Upload ========== */
   const handleFileUpload = useCallback(
@@ -276,7 +278,8 @@ export default function OpeningStockPage() {
       // Build unmatched list with product names from the Excel file
       const codeToName: Record<string, string> = {};
       items.forEach((item) => {
-        if (item.product_code) codeToName[item.product_code.trim()] = item.product_name || "";
+        if (item.product_code)
+          codeToName[item.product_code.trim()] = item.product_name || "";
       });
       const unmatchedWithNames = (data.unmatched || []).map((code: string) => ({
         code,
@@ -787,7 +790,9 @@ export default function OpeningStockPage() {
                         >
                           {item.code}
                           {item.product_name && (
-                            <span className="font-sans mr-1">({item.product_name})</span>
+                            <span className="font-sans mr-1">
+                              ({item.product_name})
+                            </span>
                           )}
                         </Badge>
                       ))}

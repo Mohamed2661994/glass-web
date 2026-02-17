@@ -10,6 +10,7 @@ import { Trash2, Loader2, Pencil, RefreshCw } from "lucide-react";
 import { ProductFormDialog } from "@/components/product-form-dialog";
 import { useCachedProducts } from "@/hooks/use-cached-products";
 import { highlightText } from "@/lib/highlight-text";
+import { noSpaces } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -454,13 +455,13 @@ export default function CreateWholesaleInvoicePage() {
 
   const filteredProducts = useMemo(() => {
     const filtered = products.filter((p) => {
-      const s = search.toLowerCase();
+      const s = noSpaces(search).toLowerCase();
       return (
         String(p.id).includes(s) ||
-        p.name.toLowerCase().includes(s) ||
-        (p.description && p.description.toLowerCase().includes(s)) ||
-        (p.barcode && p.barcode.toLowerCase().includes(s)) ||
-        (p.manufacturer && p.manufacturer.toLowerCase().includes(s))
+        noSpaces(p.name).toLowerCase().includes(s) ||
+        (p.description && noSpaces(p.description).toLowerCase().includes(s)) ||
+        (p.barcode && noSpaces(p.barcode).toLowerCase().includes(s)) ||
+        (p.manufacturer && noSpaces(p.manufacturer).toLowerCase().includes(s))
       );
     });
 

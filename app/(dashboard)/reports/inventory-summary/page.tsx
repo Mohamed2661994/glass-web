@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "@/services/api";
+import { noSpaces } from "@/lib/utils";
 import { useAuth } from "@/app/context/auth-context";
 import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent } from "@/components/ui/card";
@@ -91,11 +92,11 @@ export default function InventorySummaryPage() {
 
     // بحث
     if (searchText.trim()) {
-      const q = searchText.toLowerCase();
+      const q = noSpaces(searchText).toLowerCase();
       result = result.filter(
         (item) =>
-          item.product_name.toLowerCase().includes(q) ||
-          (item.manufacturer_name || "").toLowerCase().includes(q),
+          noSpaces(item.product_name).toLowerCase().includes(q) ||
+          noSpaces(item.manufacturer_name || "").toLowerCase().includes(q),
       );
     }
 

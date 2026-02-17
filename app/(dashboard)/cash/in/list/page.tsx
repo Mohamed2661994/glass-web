@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { noSpaces } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -84,7 +85,7 @@ export default function CashInListPage() {
     return data.filter((item) => {
       if (
         searchName.trim() &&
-        !item.customer_name?.toLowerCase().includes(searchName.toLowerCase())
+        !noSpaces(item.customer_name || "").toLowerCase().includes(noSpaces(searchName).toLowerCase())
       )
         return false;
       if (filterType !== "all" && item.source_type !== filterType) return false;

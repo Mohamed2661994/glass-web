@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import api from "@/services/api";
+import { noSpaces } from "@/lib/utils";
 import { ProductCard } from "@/components/product-card";
 import { ProductCardSkeleton } from "@/components/product-card-skeleton";
 import { ProductFormDialog } from "@/components/product-form-dialog";
@@ -143,11 +144,11 @@ export default function ProductsPage() {
 
   // فلترة
   const filteredProducts = allProducts.filter((product) => {
-    const q = search.toLowerCase();
+    const q = noSpaces(search).toLowerCase();
     const matchesSearch =
-      product.name.toLowerCase().includes(q) ||
-      (product.barcode && product.barcode.toLowerCase().includes(q)) ||
-      (product.description && product.description.toLowerCase().includes(q));
+      noSpaces(product.name).toLowerCase().includes(q) ||
+      (product.barcode && noSpaces(product.barcode).toLowerCase().includes(q)) ||
+      (product.description && noSpaces(product.description).toLowerCase().includes(q));
     const matchesManufacturer =
       selectedManufacturer === "الكل" ||
       product.manufacturer === selectedManufacturer;

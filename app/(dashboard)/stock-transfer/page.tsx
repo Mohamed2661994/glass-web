@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import api from "@/services/api";
 import { highlightText } from "@/lib/highlight-text";
+import { noSpaces } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -113,11 +114,13 @@ export default function StockTransferPage() {
 
   /* ========== Filter ========== */
   const filtered = products.filter(
-    (p) =>
-      p.available_quantity > 0 &&
-      (String(p.id).includes(search.toLowerCase()) ||
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.manufacturer?.toLowerCase().includes(search.toLowerCase())),
+    (p) => {
+      const s = noSpaces(search).toLowerCase();
+      return p.available_quantity > 0 &&
+      (String(p.id).includes(s) ||
+        noSpaces(p.name).toLowerCase().includes(s) ||
+        (p.manufacturer && noSpaces(p.manufacturer).toLowerCase().includes(s)));
+    },
   );
 
   /* ========== Add Product ========== */
