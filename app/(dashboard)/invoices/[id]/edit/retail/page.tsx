@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/services/api";
-import { Trash2, Loader2, Pencil } from "lucide-react";
+import { Trash2, Loader2, Pencil, RefreshCw } from "lucide-react";
 import { ProductFormDialog } from "@/components/product-form-dialog";
 import { useCachedProducts } from "@/hooks/use-cached-products";
 import { Card } from "@/components/ui/card";
@@ -79,6 +79,7 @@ export default function EditRetailInvoicePage() {
   const [showProductModal, setShowProductModal] = useState(false);
   const [search, setSearch] = useState("");
   const [focusedIndex, setFocusedIndex] = useState(-1);
+  const [refreshingProducts, setRefreshingProducts] = useState(false);
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [editProduct, setEditProduct] = useState<any>(null);
@@ -981,18 +982,34 @@ export default function EditRetailInvoicePage() {
 
             {/* ===== Search ===== */}
             <div className="p-4 border-b shrink-0">
-              <Input
-                ref={searchInputRef}
-                autoFocus
-                placeholder="ابحث بالكود أو الاسم أو الوصف أو الباركود... (Enter للتنقل)"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setFocusedIndex(-1);
-                }}
-                onKeyDown={handleSearchKeyDown}
-                onFocus={(e) => e.target.select()}
-              />
+              <div className="flex items-center gap-2">
+                <Input
+                  ref={searchInputRef}
+                  autoFocus
+                  placeholder="ابحث بالكود أو الاسم أو الوصف أو الباركود... (Enter للتنقل)"
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setFocusedIndex(-1);
+                  }}
+                  onKeyDown={handleSearchKeyDown}
+                  onFocus={(e) => e.target.select()}
+                  className="flex-1"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={async () => {
+                    setRefreshingProducts(true);
+                    try { await refreshProducts(); } finally { setRefreshingProducts(false); }
+                  }}
+                  disabled={refreshingProducts}
+                  title="تحديث الأصناف"
+                  className="shrink-0"
+                >
+                  <RefreshCw className={`h-4 w-4 ${refreshingProducts ? "animate-spin" : ""}`} />
+                </Button>
+              </div>
             </div>
 
             {/* ===== Products List ===== */}
