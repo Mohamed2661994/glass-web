@@ -92,7 +92,7 @@ export default function OpeningStockPage() {
   const [validating, setValidating] = useState(false);
   const [validated, setValidated] = useState(false);
   const [matchedCodes, setMatchedCodes] = useState<Set<string>>(new Set());
-  const [unmatchedCodes, setUnmatchedCodes] = useState<string[]>([]);
+  const [unmatchedCodes, setUnmatchedCodes] = useState<{code: string; product_name: string}[]>([]);
 
   /* ========== STEP 1: Upload ========== */
   const handleFileUpload = useCallback(
@@ -268,13 +268,27 @@ export default function OpeningStockPage() {
         codes: uniqueCodes,
       });
 
-      const mSet = new Set<string>(data.matched.map((m: { code: string }) => m.code));
+      const mSet = new Set<string>(
+        data.matched.map((m: { code: string }) => m.code),
+      );
       setMatchedCodes(mSet);
-      setUnmatchedCodes(data.unmatched || []);
+
+      // Build unmatched list with product names from the Excel file
+      const codeToName: Record<string, string> = {};
+      items.forEach((item) => {
+        if (item.product_code) codeToName[item.product_code.trim()] = item.product_name || "";
+      });
+      const unmatchedWithNames = (data.unmatched || []).map((code: string) => ({
+        code,
+        product_name: codeToName[code] || "",
+      }));
+      setUnmatchedCodes(unmatchedWithNames);
       setValidated(true);
 
       if (data.unmatched?.length > 0) {
-        toast.warning(`${data.unmatched.length} كود غير موجود في قاعدة البيانات`);
+        toast.warning(
+          `${data.unmatched.length} كود غير موجود في قاعدة البيانات`,
+        );
       } else {
         toast.success(`تم التحقق — كل الأكواد (${mSet.size}) موجودة ✅`);
       }
@@ -710,10 +724,19 @@ export default function OpeningStockPage() {
                       {getMappedItems()
                         .slice(0, 50)
                         .map((item, i) => {
-                          const isMatched = matchedCodes.has(item.product_code?.trim());
+                          const isMatched = matchedCodes.has(
+                            item.product_code?.trim(),
+                          );
                           return (
-                            <TableRow key={i} className={isMatched ? "" : "bg-red-50 dark:bg-red-950/20"}>
-                              <TableCell className="text-center">{i + 1}</TableCell>
+                            <TableRow
+                              key={i}
+                              className={
+                                isMatched ? "" : "bg-red-50 dark:bg-red-950/20"
+                              }
+                            >
+                              <TableCell className="text-center">
+                                {i + 1}
+                              </TableCell>
                               <TableCell className="text-center font-mono text-xs">
                                 {item.product_code || "—"}
                               </TableCell>
@@ -751,13 +774,21 @@ export default function OpeningStockPage() {
                     <div className="flex items-center gap-2 mb-2">
                       <XCircle className="h-5 w-5 text-red-500" />
                       <span className="font-semibold text-red-700 dark:text-red-400">
-                        {unmatchedCodes.length} كود غير موجود في قاعدة البيانات — لازم تضيفهم الأول
+                        {unmatchedCodes.length} كود غير موجود في قاعدة البيانات
+                        — لازم تضيفهم الأول
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-2 max-h-[150px] overflow-auto">
-                      {unmatchedCodes.map((code, i) => (
-                        <Badge key={i} variant="destructive" className="font-mono">
-                          {code}
+                      {unmatchedCodes.map((item, i) => (
+                        <Badge
+                          key={i}
+                          variant="destructive"
+                          className="font-mono text-sm py-1 px-2"
+                        >
+                          {item.code}
+                          {item.product_name && (
+                            <span className="font-sans mr-1">({item.product_name})</span>
+                          )}
                         </Badge>
                       ))}
                     </div>
@@ -769,7 +800,8 @@ export default function OpeningStockPage() {
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="h-5 w-5 text-green-600" />
                       <span className="font-semibold text-green-700 dark:text-green-400">
-                        كل الأكواد ({matchedCodes.size}) موجودة في قاعدة البيانات ✅
+                        كل الأكواد ({matchedCodes.size}) موجودة في قاعدة
+                        البيانات ✅
                       </span>
                     </div>
                   </div>
