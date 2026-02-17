@@ -506,9 +506,7 @@ export default function ProductsPage() {
                   <thead>
                     <tr className="border-b bg-muted/50">
                       <th className="p-3 text-right font-semibold">الاسم</th>
-                      <th className="p-3 text-right font-semibold">
-                        الباركود
-                      </th>
+                      <th className="p-3 text-right font-semibold">الباركود</th>
                       <th className="p-3 text-center font-semibold">
                         <span className="text-sky-600 dark:text-sky-400">
                           عبوة جملة
@@ -556,9 +554,7 @@ export default function ProductsPage() {
                           setDialogOpen(true);
                         }}
                         onDelete={
-                          isAdmin
-                            ? () => setDeleteTarget(product)
-                            : undefined
+                          isAdmin ? () => setDeleteTarget(product) : undefined
                         }
                         onPrintBarcode={(p) => {
                           setBarcodePrintProduct(p);

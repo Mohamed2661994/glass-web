@@ -191,9 +191,7 @@ export function ProductTableRow({
             !active ? "opacity-50 grayscale" : ""
           }`}
         >
-          <td className="p-2 pr-8 text-muted-foreground">
-            ↳ كود فرعي {i + 1}
-          </td>
+          <td className="p-2 pr-8 text-muted-foreground">↳ كود فرعي {i + 1}</td>
           <td className="p-2">
             <div className="flex items-center gap-1 font-mono">
               <span>{v.barcode || "—"}</span>

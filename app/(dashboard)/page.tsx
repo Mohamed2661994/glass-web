@@ -26,6 +26,17 @@ import {
   ShoppingCart,
   Settings2,
   GripVertical,
+  Wallet,
+  TrendingUp,
+  TrendingDown,
+  Plus,
+  ArrowLeftRight,
+  Package,
+  Users,
+  BarChart3,
+  Bell,
+  Link2,
+  CircleDot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -61,8 +72,32 @@ interface DashboardStats {
   low_stock_count: number;
 }
 
+interface CashInItem {
+  id: number;
+  amount: number;
+  paid_amount: number;
+}
+
+interface CashOutItem {
+  id: number;
+  amount: number;
+}
+
+interface Notification {
+  id: number;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+}
+
 /* ---------- widget config ---------- */
-type WidgetId = "kpi_cards" | "recent_invoices" | "recent_transfers";
+type WidgetId =
+  | "kpi_cards"
+  | "recent_invoices"
+  | "recent_transfers"
+  | "cash_summary"
+  | "quick_links"
+  | "notifications";
 
 interface WidgetConfig {
   id: WidgetId;
@@ -73,8 +108,11 @@ interface WidgetConfig {
 
 const DEFAULT_WIDGETS: WidgetConfig[] = [
   { id: "kpi_cards", label: "بطاقات الإحصائيات", visible: true, order: 0 },
-  { id: "recent_invoices", label: "آخر الفواتير", visible: true, order: 1 },
-  { id: "recent_transfers", label: "آخر التحويلات", visible: true, order: 2 },
+  { id: "cash_summary", label: "ملخص الخزنة", visible: true, order: 1 },
+  { id: "quick_links", label: "روابط سريعة", visible: true, order: 2 },
+  { id: "recent_invoices", label: "آخر الفواتير", visible: true, order: 3 },
+  { id: "recent_transfers", label: "آخر التحويلات", visible: true, order: 4 },
+  { id: "notifications", label: "آخر الإشعارات", visible: true, order: 5 },
 ];
 
 function getDashboardConfig(userId: number): WidgetConfig[] {
@@ -134,6 +172,15 @@ export default function DashboardPage() {
   const [loadingTr, setLoadingTr] = useState(true);
   const [loadingStats, setLoadingStats] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  /* cash summary */
+  const [cashInTotal, setCashInTotal] = useState(0);
+  const [cashOutTotal, setCashOutTotal] = useState(0);
+  const [loadingCash, setLoadingCash] = useState(true);
+
+  /* notifications */
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loadingNotifs, setLoadingNotifs] = useState(true);
 
   /* ---------- widget customization ---------- */
   const [widgets, setWidgets] = useState<WidgetConfig[]>(DEFAULT_WIDGETS);
@@ -253,6 +300,50 @@ export default function DashboardPage() {
       }
     })();
   }, [branchId, refreshKey]);
+
+  /* fetch cash summary */
+  useEffect(() => {
+    if (!branchId) return;
+    setLoadingCash(true);
+    (async () => {
+      try {
+        const today = new Date().toISOString().split("T")[0];
+        const [inRes, outRes] = await Promise.all([
+          api.get("/cash-in", { params: { branch_id: branchId } }),
+          api.get("/cash/out", {
+            params: { branch_id: branchId, from_date: today, to_date: today },
+          }),
+        ]);
+        const inItems: CashInItem[] = inRes.data?.data ?? [];
+        const outItems: CashOutItem[] = outRes.data?.data ?? [];
+        setCashInTotal(
+          inItems.reduce((s, i) => s + Number(i.paid_amount || i.amount || 0), 0),
+        );
+        setCashOutTotal(
+          outItems.reduce((s, i) => s + Number(i.amount || 0), 0),
+        );
+      } catch {
+        /* silent */
+      } finally {
+        setLoadingCash(false);
+      }
+    })();
+  }, [branchId, refreshKey]);
+
+  /* fetch notifications */
+  useEffect(() => {
+    setLoadingNotifs(true);
+    (async () => {
+      try {
+        const { data } = await api.get("/notifications");
+        setNotifications(Array.isArray(data) ? data.slice(0, 8) : []);
+      } catch {
+        /* silent */
+      } finally {
+        setLoadingNotifs(false);
+      }
+    })();
+  }, [refreshKey]);
 
   /* ---------- skeleton rows ---------- */
   const skelRows = (cols: number) =>
@@ -479,6 +570,228 @@ export default function DashboardPage() {
                   )}
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+        );
+
+      /* ===== Cash Summary Widget ===== */
+      case "cash_summary": {
+        const netCash = cashInTotal - cashOutTotal;
+        return (
+          <Card key={id}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Wallet className="h-5 w-5" />
+                ملخص الخزنة (اليوم)
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setRefreshKey((k) => k + 1)}
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              {loadingCash ? (
+                <div className="grid grid-cols-3 gap-4">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-20 rounded-xl" />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-4">
+                  {/* وارد */}
+                  <div className="rounded-xl bg-green-500/10 dark:bg-green-500/15 p-4 text-center">
+                    <TrendingUp className="h-5 w-5 text-green-600 dark:text-green-400 mx-auto mb-1" />
+                    <p className="text-[11px] text-muted-foreground mb-1">
+                      الوارد
+                    </p>
+                    <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                      {Math.round(cashInTotal).toLocaleString()}
+                    </p>
+                  </div>
+                  {/* منصرف */}
+                  <div className="rounded-xl bg-red-500/10 dark:bg-red-500/15 p-4 text-center">
+                    <TrendingDown className="h-5 w-5 text-red-500 dark:text-red-400 mx-auto mb-1" />
+                    <p className="text-[11px] text-muted-foreground mb-1">
+                      المنصرف
+                    </p>
+                    <p className="text-lg font-bold text-red-500 dark:text-red-400">
+                      {Math.round(cashOutTotal).toLocaleString()}
+                    </p>
+                  </div>
+                  {/* صافي */}
+                  <div
+                    className={`rounded-xl p-4 text-center ${
+                      netCash >= 0
+                        ? "bg-blue-500/10 dark:bg-blue-500/15"
+                        : "bg-orange-500/10 dark:bg-orange-500/15"
+                    }`}
+                  >
+                    <Banknote
+                      className={`h-5 w-5 mx-auto mb-1 ${
+                        netCash >= 0
+                          ? "text-blue-600 dark:text-blue-400"
+                          : "text-orange-600 dark:text-orange-400"
+                      }`}
+                    />
+                    <p className="text-[11px] text-muted-foreground mb-1">
+                      الصافي
+                    </p>
+                    <p
+                      className={`text-lg font-bold ${
+                        netCash >= 0
+                          ? "text-blue-600 dark:text-blue-400"
+                          : "text-orange-600 dark:text-orange-400"
+                      }`}
+                    >
+                      {Math.round(netCash).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      }
+
+      /* ===== Quick Links Widget ===== */
+      case "quick_links": {
+        const links = [
+          {
+            label: "فاتورة جديدة",
+            href:
+              branchId === 1
+                ? "/invoices/create/retail"
+                : "/invoices/create/wholesale",
+            icon: Plus,
+            color: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+          },
+          {
+            label: "الفواتير",
+            href: "/invoices",
+            icon: FileText,
+            color: "bg-green-500/10 text-green-600 dark:text-green-400",
+          },
+          {
+            label: "الأصناف",
+            href: "/products",
+            icon: Package,
+            color: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
+          },
+          {
+            label: "تحويل مخزون",
+            href: "/stock-transfer",
+            icon: ArrowLeftRight,
+            color: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
+          },
+          {
+            label: "وارد الخزنة",
+            href: "/cash/in",
+            icon: TrendingUp,
+            color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+          },
+          {
+            label: "أرصدة العملاء",
+            href: "/reports/customer-balances",
+            icon: Users,
+            color: "bg-sky-500/10 text-sky-600 dark:text-sky-400",
+          },
+          {
+            label: "جرد المخزون",
+            href: "/reports/inventory-summary",
+            icon: BarChart3,
+            color: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+          },
+          {
+            label: "ملخص الخزنة",
+            href: "/cash/summary",
+            icon: Wallet,
+            color: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
+          },
+        ];
+        return (
+          <Card key={id}>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Link2 className="h-5 w-5" />
+                روابط سريعة
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {links.map((link) => (
+                  <button
+                    key={link.href}
+                    onClick={() => router.push(link.href)}
+                    className={`flex flex-col items-center gap-2 rounded-xl p-3 transition-all hover:scale-105 hover:shadow-md ${link.color}`}
+                  >
+                    <link.icon className="h-5 w-5" />
+                    <span className="text-xs font-medium">{link.label}</span>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      }
+
+      /* ===== Notifications Widget ===== */
+      case "notifications":
+        return (
+          <Card key={id}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Bell className="h-5 w-5" />
+                آخر الإشعارات
+              </CardTitle>
+              <Badge variant="outline">
+                {notifications.filter((n) => !n.is_read).length} جديد
+              </Badge>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              {loadingNotifs ? (
+                <div className="space-y-3">
+                  {[1, 2, 3, 4].map((i) => (
+                    <Skeleton key={i} className="h-10 w-full rounded-lg" />
+                  ))}
+                </div>
+              ) : notifications.length === 0 ? (
+                <p className="text-center py-6 text-muted-foreground text-sm">
+                  لا توجد إشعارات
+                </p>
+              ) : (
+                <div className="space-y-2 max-h-72 overflow-y-auto">
+                  {notifications.map((notif) => (
+                    <div
+                      key={notif.id}
+                      className={`flex items-start gap-3 rounded-lg p-2.5 transition-colors ${
+                        notif.is_read
+                          ? "bg-muted/30"
+                          : "bg-blue-500/5 border border-blue-500/20"
+                      }`}
+                    >
+                      <CircleDot
+                        className={`h-3 w-3 mt-1.5 shrink-0 ${
+                          notif.is_read
+                            ? "text-muted-foreground"
+                            : "text-blue-500"
+                        }`}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm leading-relaxed">
+                          {notif.message}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          {formatDate(notif.created_at)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         );
