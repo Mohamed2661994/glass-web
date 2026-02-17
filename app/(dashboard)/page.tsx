@@ -37,7 +37,20 @@ import {
   Bell,
   Link2,
   CircleDot,
+  Maximize2,
+  Minimize2,
+  Pencil,
+  Trash2,
+  X,
+  Factory,
+  ClipboardList,
+  List,
+  BookOpen,
+  RotateCcw,
+  Download,
+  LayoutDashboard,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -99,21 +112,118 @@ type WidgetId =
   | "quick_links"
   | "notifications";
 
+type WidgetSize = "full" | "half";
+
 interface WidgetConfig {
   id: WidgetId;
   label: string;
   visible: boolean;
   order: number;
+  size: WidgetSize;
 }
 
 const DEFAULT_WIDGETS: WidgetConfig[] = [
-  { id: "kpi_cards", label: "بطاقات الإحصائيات", visible: true, order: 0 },
-  { id: "cash_summary", label: "ملخص الخزنة", visible: true, order: 1 },
-  { id: "quick_links", label: "روابط سريعة", visible: true, order: 2 },
-  { id: "recent_invoices", label: "آخر الفواتير", visible: true, order: 3 },
-  { id: "recent_transfers", label: "آخر التحويلات", visible: true, order: 4 },
-  { id: "notifications", label: "آخر الإشعارات", visible: true, order: 5 },
+  { id: "kpi_cards", label: "بطاقات الإحصائيات", visible: true, order: 0, size: "full" },
+  { id: "cash_summary", label: "ملخص الخزنة", visible: true, order: 1, size: "half" },
+  { id: "quick_links", label: "روابط سريعة", visible: true, order: 2, size: "half" },
+  { id: "recent_invoices", label: "آخر الفواتير", visible: true, order: 3, size: "full" },
+  { id: "recent_transfers", label: "آخر التحويلات", visible: true, order: 4, size: "full" },
+  { id: "notifications", label: "آخر الإشعارات", visible: true, order: 5, size: "half" },
 ];
+
+/* ---------- quick links config ---------- */
+interface QuickLink {
+  id: string;
+  label: string;
+  href: string;
+  icon: string;
+  color: string;
+}
+
+const ICON_MAP: Record<string, any> = {
+  Plus,
+  FileText,
+  Package,
+  ArrowLeftRight,
+  TrendingUp,
+  TrendingDown,
+  Users,
+  BarChart3,
+  Wallet,
+  ShoppingCart,
+  Truck,
+  Factory,
+  ClipboardList,
+  List,
+  BookOpen,
+  Bell,
+  AlertTriangle,
+  Banknote,
+  RotateCcw,
+  Download,
+  LayoutDashboard,
+};
+
+const ICON_OPTIONS = Object.keys(ICON_MAP);
+
+const COLOR_OPTIONS = [
+  { value: "bg-blue-500/10 text-blue-600 dark:text-blue-400", label: "أزرق" },
+  { value: "bg-green-500/10 text-green-600 dark:text-green-400", label: "أخضر" },
+  { value: "bg-purple-500/10 text-purple-600 dark:text-purple-400", label: "بنفسجي" },
+  { value: "bg-orange-500/10 text-orange-600 dark:text-orange-400", label: "برتقالي" },
+  { value: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", label: "زمردي" },
+  { value: "bg-sky-500/10 text-sky-600 dark:text-sky-400", label: "سماوي" },
+  { value: "bg-amber-500/10 text-amber-600 dark:text-amber-400", label: "عنبري" },
+  { value: "bg-rose-500/10 text-rose-600 dark:text-rose-400", label: "وردي" },
+  { value: "bg-red-500/10 text-red-600 dark:text-red-400", label: "أحمر" },
+  { value: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400", label: "سيان" },
+];
+
+const ALL_PAGES: { label: string; href: string }[] = [
+  { label: "فاتورة قطاعي", href: "/invoices/create/retail" },
+  { label: "فاتورة جملة", href: "/invoices/create/wholesale" },
+  { label: "الفواتير", href: "/invoices" },
+  { label: "الأصناف", href: "/products" },
+  { label: "المصانع", href: "/manufacturers" },
+  { label: "تحويل مخزون", href: "/stock-transfer" },
+  { label: "وارد الخزنة", href: "/cash/in" },
+  { label: "عرض الوارد", href: "/cash/in/list" },
+  { label: "صرف نقدي", href: "/cash/out" },
+  { label: "عرض المنصرف", href: "/cash/out/list" },
+  { label: "اليومية", href: "/cash/summary" },
+  { label: "أرصدة العملاء", href: "/reports/customer-balances" },
+  { label: "جرد المخزون", href: "/reports/inventory-summary" },
+  { label: "قيمة المخزون", href: "/reports/inventory-value" },
+  { label: "نقص المخزون", href: "/reports/low-stock" },
+  { label: "حركة صنف", href: "/reports/product-movement" },
+  { label: "استبدال", href: "/replace" },
+  { label: "رصيد افتتاحي", href: "/opening-stock" },
+  { label: "الإعدادات", href: "/settings" },
+  { label: "المستخدمين", href: "/users" },
+];
+
+const DEFAULT_QUICK_LINKS: QuickLink[] = [
+  { id: "1", label: "فاتورة جديدة", href: "/invoices/create/retail", icon: "Plus", color: "bg-blue-500/10 text-blue-600 dark:text-blue-400" },
+  { id: "2", label: "الفواتير", href: "/invoices", icon: "FileText", color: "bg-green-500/10 text-green-600 dark:text-green-400" },
+  { id: "3", label: "الأصناف", href: "/products", icon: "Package", color: "bg-purple-500/10 text-purple-600 dark:text-purple-400" },
+  { id: "4", label: "تحويل مخزون", href: "/stock-transfer", icon: "ArrowLeftRight", color: "bg-orange-500/10 text-orange-600 dark:text-orange-400" },
+  { id: "5", label: "وارد الخزنة", href: "/cash/in", icon: "TrendingUp", color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
+  { id: "6", label: "أرصدة العملاء", href: "/reports/customer-balances", icon: "Users", color: "bg-sky-500/10 text-sky-600 dark:text-sky-400" },
+  { id: "7", label: "جرد المخزون", href: "/reports/inventory-summary", icon: "BarChart3", color: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
+  { id: "8", label: "ملخص الخزنة", href: "/cash/summary", icon: "Wallet", color: "bg-rose-500/10 text-rose-600 dark:text-rose-400" },
+];
+
+function getQuickLinks(userId: number): QuickLink[] {
+  try {
+    const raw = localStorage.getItem(`quick_links_${userId}`);
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore */ }
+  return DEFAULT_QUICK_LINKS;
+}
+
+function saveQuickLinks(userId: number, links: QuickLink[]) {
+  localStorage.setItem(`quick_links_${userId}`, JSON.stringify(links));
+}
 
 function getDashboardConfig(userId: number): WidgetConfig[] {
   try {
@@ -121,9 +231,10 @@ function getDashboardConfig(userId: number): WidgetConfig[] {
     if (raw) {
       const parsed = JSON.parse(raw) as WidgetConfig[];
       const map = new Map(parsed.map((w) => [w.id, w]));
-      return DEFAULT_WIDGETS.map((dw) => map.get(dw.id) ?? dw).sort(
-        (a, b) => a.order - b.order,
-      );
+      return DEFAULT_WIDGETS.map((dw) => {
+        const saved = map.get(dw.id);
+        return saved ? { ...dw, ...saved, label: dw.label } : dw;
+      }).sort((a, b) => a.order - b.order);
     }
   } catch {
     /* ignore */
@@ -187,8 +298,17 @@ export default function DashboardPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
 
+  /* ---------- quick links ---------- */
+  const [quickLinks, setQuickLinks] = useState<QuickLink[]>(DEFAULT_QUICK_LINKS);
+  const [linksEditorOpen, setLinksEditorOpen] = useState(false);
+  const [editingLink, setEditingLink] = useState<QuickLink | null>(null);
+  const [linkForm, setLinkForm] = useState({ label: "", href: "", icon: "Plus", color: COLOR_OPTIONS[0].value });
+
   useEffect(() => {
-    if (user?.id) setWidgets(getDashboardConfig(user.id));
+    if (user?.id) {
+      setWidgets(getDashboardConfig(user.id));
+      setQuickLinks(getQuickLinks(user.id));
+    }
   }, [user?.id]);
 
   const isVisible = useCallback(
@@ -208,6 +328,61 @@ export default function DashboardPage() {
     },
     [user?.id],
   );
+
+  const toggleSize = useCallback(
+    (id: WidgetId) => {
+      setWidgets((prev) => {
+        const next = prev.map((w) =>
+          w.id === id
+            ? { ...w, size: (w.size === "full" ? "half" : "full") as WidgetSize }
+            : w,
+        );
+        if (user?.id) saveDashboardConfig(user.id, next);
+        return next;
+      });
+    },
+    [user?.id],
+  );
+
+  const addQuickLink = () => {
+    if (!linkForm.label || !linkForm.href) return;
+    const newLink: QuickLink = {
+      id: Date.now().toString(),
+      ...linkForm,
+    };
+    setQuickLinks((prev) => {
+      const next = [...prev, newLink];
+      if (user?.id) saveQuickLinks(user.id, next);
+      return next;
+    });
+    setLinkForm({ label: "", href: "", icon: "Plus", color: COLOR_OPTIONS[0].value });
+  };
+
+  const updateQuickLink = () => {
+    if (!editingLink || !linkForm.label || !linkForm.href) return;
+    setQuickLinks((prev) => {
+      const next = prev.map((l) =>
+        l.id === editingLink.id ? { ...l, ...linkForm } : l,
+      );
+      if (user?.id) saveQuickLinks(user.id, next);
+      return next;
+    });
+    setEditingLink(null);
+    setLinkForm({ label: "", href: "", icon: "Plus", color: COLOR_OPTIONS[0].value });
+  };
+
+  const deleteQuickLink = (id: string) => {
+    setQuickLinks((prev) => {
+      const next = prev.filter((l) => l.id !== id);
+      if (user?.id) saveQuickLinks(user.id, next);
+      return next;
+    });
+  };
+
+  const resetQuickLinks = () => {
+    setQuickLinks(DEFAULT_QUICK_LINKS);
+    if (user?.id) saveQuickLinks(user.id, DEFAULT_QUICK_LINKS);
+  };
 
   const handleDragStart = (idx: number) => setDragIdx(idx);
   const handleDragOver = (e: React.DragEvent, idx: number) => {
@@ -317,7 +492,10 @@ export default function DashboardPage() {
         const inItems: CashInItem[] = inRes.data?.data ?? [];
         const outItems: CashOutItem[] = outRes.data?.data ?? [];
         setCashInTotal(
-          inItems.reduce((s, i) => s + Number(i.paid_amount || i.amount || 0), 0),
+          inItems.reduce(
+            (s, i) => s + Number(i.paid_amount || i.amount || 0),
+            0,
+          ),
         );
         setCashOutTotal(
           outItems.reduce((s, i) => s + Number(i.amount || 0), 0),
@@ -659,79 +837,42 @@ export default function DashboardPage() {
 
       /* ===== Quick Links Widget ===== */
       case "quick_links": {
-        const links = [
-          {
-            label: "فاتورة جديدة",
-            href:
-              branchId === 1
-                ? "/invoices/create/retail"
-                : "/invoices/create/wholesale",
-            icon: Plus,
-            color: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-          },
-          {
-            label: "الفواتير",
-            href: "/invoices",
-            icon: FileText,
-            color: "bg-green-500/10 text-green-600 dark:text-green-400",
-          },
-          {
-            label: "الأصناف",
-            href: "/products",
-            icon: Package,
-            color: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
-          },
-          {
-            label: "تحويل مخزون",
-            href: "/stock-transfer",
-            icon: ArrowLeftRight,
-            color: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
-          },
-          {
-            label: "وارد الخزنة",
-            href: "/cash/in",
-            icon: TrendingUp,
-            color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-          },
-          {
-            label: "أرصدة العملاء",
-            href: "/reports/customer-balances",
-            icon: Users,
-            color: "bg-sky-500/10 text-sky-600 dark:text-sky-400",
-          },
-          {
-            label: "جرد المخزون",
-            href: "/reports/inventory-summary",
-            icon: BarChart3,
-            color: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-          },
-          {
-            label: "ملخص الخزنة",
-            href: "/cash/summary",
-            icon: Wallet,
-            color: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
-          },
-        ];
         return (
           <Card key={id}>
-            <CardHeader className="pb-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Link2 className="h-5 w-5" />
                 روابط سريعة
               </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 gap-1 text-xs"
+                onClick={() => {
+                  setEditingLink(null);
+                  setLinkForm({ label: "", href: "", icon: "Plus", color: COLOR_OPTIONS[0].value });
+                  setLinksEditorOpen(true);
+                }}
+              >
+                <Pencil className="h-3 w-3" />
+                تعديل
+              </Button>
             </CardHeader>
             <CardContent className="p-4 pt-0">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {links.map((link) => (
-                  <button
-                    key={link.href}
-                    onClick={() => router.push(link.href)}
-                    className={`flex flex-col items-center gap-2 rounded-xl p-3 transition-all hover:scale-105 hover:shadow-md ${link.color}`}
-                  >
-                    <link.icon className="h-5 w-5" />
-                    <span className="text-xs font-medium">{link.label}</span>
-                  </button>
-                ))}
+                {quickLinks.map((link) => {
+                  const IconComp = ICON_MAP[link.icon] || Plus;
+                  return (
+                    <button
+                      key={link.id}
+                      onClick={() => router.push(link.href)}
+                      className={`flex flex-col items-center gap-2 rounded-xl p-3 transition-all hover:scale-105 hover:shadow-md ${link.color}`}
+                    >
+                      <IconComp className="h-5 w-5" />
+                      <span className="text-xs font-medium">{link.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -817,12 +958,26 @@ export default function DashboardPage() {
         </Button>
       </div>
 
-      {/* ====== Render widgets in order ====== */}
-      {sortedWidgets.map((w) => (w.visible ? renderWidget(w.id) : null))}
+      {/* ====== Render widgets in grid layout ====== */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {sortedWidgets.map((w) => {
+          if (!w.visible) return null;
+          const content = renderWidget(w.id);
+          if (!content) return null;
+          return (
+            <div
+              key={w.id}
+              className={w.size === "full" ? "md:col-span-2" : "md:col-span-1"}
+            >
+              {content}
+            </div>
+          );
+        })}
+      </div>
 
       {/* ====== Settings Dialog ====== */}
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className="max-w-sm" dir="rtl">
+        <DialogContent className="max-w-md" dir="rtl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Settings2 className="h-5 w-5" />
@@ -830,7 +985,7 @@ export default function DashboardPage() {
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground mb-4">
-            اختر الأقسام اللي عايز تظهر، واسحب لترتيبها.
+            إظهار/إخفاء الأقسام، تغيير العرض، وسحب لترتيبها.
           </p>
           <div className="space-y-1">
             {sortedWidgets.map((w, idx) => (
@@ -850,18 +1005,238 @@ export default function DashboardPage() {
                   <GripVertical className="h-4 w-4 text-muted-foreground" />
                   <Label
                     htmlFor={`widget-${w.id}`}
-                    className="cursor-pointer font-medium"
+                    className="cursor-pointer font-medium text-sm"
                   >
                     {w.label}
                   </Label>
                 </div>
-                <Switch
-                  id={`widget-${w.id}`}
-                  checked={w.visible}
-                  onCheckedChange={() => toggleWidget(w.id)}
-                />
+                <div className="flex items-center gap-2">
+                  {/* Size toggle */}
+                  <button
+                    onClick={() => toggleSize(w.id)}
+                    className={`p-1 rounded transition-colors ${
+                      w.size === "full"
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    title={w.size === "full" ? "عرض كامل" : "نص عرض"}
+                  >
+                    {w.size === "full" ? (
+                      <Maximize2 className="h-3.5 w-3.5" />
+                    ) : (
+                      <Minimize2 className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                  <Switch
+                    id={`widget-${w.id}`}
+                    checked={w.visible}
+                    onCheckedChange={() => toggleWidget(w.id)}
+                  />
+                </div>
               </div>
             ))}
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-2">
+            <Maximize2 className="h-3 w-3 inline ml-1" />= عرض كامل &nbsp;
+            <Minimize2 className="h-3 w-3 inline ml-1" />= نص عرض
+          </p>
+        </DialogContent>
+      </Dialog>
+
+      {/* ====== Quick Links Editor Dialog ====== */}
+      <Dialog open={linksEditorOpen} onOpenChange={setLinksEditorOpen}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Link2 className="h-5 w-5" />
+              تعديل الروابط السريعة
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Current links list */}
+          <div className="space-y-2 mb-4">
+            {quickLinks.length === 0 && (
+              <p className="text-center py-4 text-muted-foreground text-sm">
+                لا توجد روابط
+              </p>
+            )}
+            {quickLinks.map((link) => {
+              const IconComp = ICON_MAP[link.icon] || Plus;
+              return (
+                <div
+                  key={link.id}
+                  className="flex items-center justify-between p-2.5 rounded-lg border border-border hover:bg-muted/50"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className={`p-1.5 rounded-lg ${link.color}`}>
+                      <IconComp className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{link.label}</p>
+                      <p className="text-[10px] text-muted-foreground font-mono">
+                        {link.href}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0"
+                      onClick={() => {
+                        setEditingLink(link);
+                        setLinkForm({
+                          label: link.label,
+                          href: link.href,
+                          icon: link.icon,
+                          color: link.color,
+                        });
+                      }}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 text-red-500 hover:text-red-600"
+                      onClick={() => deleteQuickLink(link.id)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Add / Edit form */}
+          <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
+            <p className="text-sm font-semibold">
+              {editingLink ? "تعديل الرابط" : "إضافة رابط جديد"}
+            </p>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">الاسم</Label>
+                <Input
+                  value={linkForm.label}
+                  onChange={(e) =>
+                    setLinkForm((f) => ({ ...f, label: e.target.value }))
+                  }
+                  placeholder="مثلاً: فاتورة"
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">الصفحة</Label>
+                <select
+                  value={linkForm.href}
+                  onChange={(e) =>
+                    setLinkForm((f) => ({ ...f, href: e.target.value }))
+                  }
+                  className="w-full h-8 rounded-md border bg-background px-2 text-sm"
+                >
+                  <option value="">اختر صفحة</option>
+                  {ALL_PAGES.map((p) => (
+                    <option key={p.href} value={p.href}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">الأيقونة</Label>
+                <div className="flex flex-wrap gap-1 p-1.5 border rounded-md bg-background max-h-20 overflow-y-auto">
+                  {ICON_OPTIONS.map((iconName) => {
+                    const Ic = ICON_MAP[iconName];
+                    return (
+                      <button
+                        key={iconName}
+                        onClick={() =>
+                          setLinkForm((f) => ({ ...f, icon: iconName }))
+                        }
+                        className={`p-1 rounded transition-colors ${
+                          linkForm.icon === iconName
+                            ? "bg-primary text-primary-foreground"
+                            : "hover:bg-muted"
+                        }`}
+                        title={iconName}
+                      >
+                        <Ic className="h-3.5 w-3.5" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">اللون</Label>
+                <div className="flex flex-wrap gap-1 p-1.5 border rounded-md bg-background">
+                  {COLOR_OPTIONS.map((c) => (
+                    <button
+                      key={c.value}
+                      onClick={() =>
+                        setLinkForm((f) => ({ ...f, color: c.value }))
+                      }
+                      className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all ${c.value} ${
+                        linkForm.color === c.value
+                          ? "ring-2 ring-primary ring-offset-1"
+                          : ""
+                      }`}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {editingLink ? (
+                <>
+                  <Button size="sm" className="flex-1" onClick={updateQuickLink}>
+                    حفظ التعديل
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setEditingLink(null);
+                      setLinkForm({
+                        label: "",
+                        href: "",
+                        icon: "Plus",
+                        color: COLOR_OPTIONS[0].value,
+                      });
+                    }}
+                  >
+                    إلغاء
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  size="sm"
+                  className="flex-1"
+                  onClick={addQuickLink}
+                  disabled={!linkForm.label || !linkForm.href}
+                >
+                  <Plus className="h-3.5 w-3.5 ml-1" />
+                  إضافة
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-xs text-muted-foreground"
+                onClick={resetQuickLinks}
+                title="استعادة الافتراضي"
+              >
+                <RotateCcw className="h-3 w-3 ml-1" />
+                افتراضي
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
