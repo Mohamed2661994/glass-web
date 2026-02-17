@@ -106,7 +106,11 @@ export default function InvoicePrintPage() {
   const calcItemTotal = (it: InvoiceItem) =>
     calcUnitPrice(it) * Number(it.quantity || 0);
 
-  const itemsSubtotal = items.reduce((sum, it) => sum + calcItemTotal(it), 0);
+  const itemsSubtotal = items.reduce(
+    (sum, it) =>
+      it.is_return ? sum - Math.abs(calcItemTotal(it)) : sum + calcItemTotal(it),
+    0,
+  );
 
   const extraDiscount = Number(
     invoice.manual_discount ?? invoice.extra_discount ?? 0,
@@ -119,7 +123,11 @@ export default function InvoicePrintPage() {
   const netTotal = totalWithPrevious - extraDiscount;
   const remaining = netTotal - paidAmount;
 
-  const totalQty = items.reduce((sum, it) => sum + Number(it.quantity || 0), 0);
+  const totalQty = items.reduce(
+    (sum, it) =>
+      it.is_return ? sum - Math.abs(Number(it.quantity || 0)) : sum + Number(it.quantity || 0),
+    0,
+  );
 
   const formatPackage = (it: InvoiceItem) => {
     const raw = it.package ?? "";
@@ -344,7 +352,13 @@ th, td { padding: 6px; text-align: center; }
                           {it.product_name}
                           {it.manufacturer ? ` - ${it.manufacturer}` : ""}
                           {it.is_return && (
-                            <span style={{ color: "red", fontSize: 10, marginRight: 4 }}>
+                            <span
+                              style={{
+                                color: "red",
+                                fontSize: 10,
+                                marginRight: 4,
+                              }}
+                            >
                               (مرتجع)
                             </span>
                           )}
