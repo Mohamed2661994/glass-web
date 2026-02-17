@@ -165,19 +165,25 @@ export default function ProductsPage() {
   ];
 
   // فلترة
-  const filteredProducts = allProducts.filter((product) => {
-    const q = noSpaces(search).toLowerCase();
-    const matchesSearch =
-      noSpaces(product.name).toLowerCase().includes(q) ||
-      (product.barcode &&
-        noSpaces(product.barcode).toLowerCase().includes(q)) ||
-      (product.description &&
-        noSpaces(product.description).toLowerCase().includes(q));
-    const matchesManufacturer =
-      selectedManufacturer === "الكل" ||
-      product.manufacturer === selectedManufacturer;
-    return matchesSearch && matchesManufacturer;
-  });
+  const filteredProducts = allProducts
+    .filter((product) => {
+      const q = noSpaces(search).toLowerCase();
+      const matchesSearch =
+        noSpaces(product.name).toLowerCase().includes(q) ||
+        (product.barcode &&
+          noSpaces(product.barcode).toLowerCase().includes(q)) ||
+        (product.description &&
+          noSpaces(product.description).toLowerCase().includes(q));
+      const matchesManufacturer =
+        selectedManufacturer === "الكل" ||
+        product.manufacturer === selectedManufacturer;
+      return matchesSearch && matchesManufacturer;
+    })
+    .sort((a, b) => {
+      // الأصناف الغير مفعلة في الآخر
+      if (a.is_active !== b.is_active) return a.is_active ? -1 : 1;
+      return 0;
+    });
 
   // حساب الصفحات
   const totalPages = Math.ceil(filteredProducts.length / limit);
