@@ -322,8 +322,7 @@ export default function StockTransferPage() {
                       )
                     }
                   />
-                  {Number(item.quantity) >
-                    Number(item.available_quantity) && (
+                  {Number(item.quantity) > Number(item.available_quantity) && (
                     <div className="text-[11px] text-red-500 mt-1">
                       الرصيد المتاح: {item.available_quantity}
                     </div>

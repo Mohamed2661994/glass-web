@@ -85,6 +85,10 @@ export default function ProductsPage() {
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
 
+  // Delete single product
+  const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
+  const [deletingSingle, setDeletingSingle] = useState(false);
+
   // Pagination
   const [page, setPage] = useState(1);
   const limit = 30;
@@ -186,6 +190,27 @@ export default function ProductsPage() {
     } finally {
       setDeletingAll(false);
       setShowDeleteAllConfirm(false);
+    }
+  };
+
+  // Delete Single Product
+  const handleDeleteSingle = async () => {
+    if (!deleteTarget) return;
+    try {
+      setDeletingSingle(true);
+      await api.delete(`/admin/products/${deleteTarget.id}`);
+      setAllProducts((prev) => prev.filter((p) => p.id !== deleteTarget!.id));
+      setVariantsMap((prev) => {
+        const copy = { ...prev };
+        delete copy[deleteTarget!.id];
+        return copy;
+      });
+      toast.success(`تم حذف الصنف: ${deleteTarget.name}`);
+    } catch {
+      toast.error("فشل حذف الصنف");
+    } finally {
+      setDeletingSingle(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -351,6 +376,7 @@ export default function ProductsPage() {
                   setSelectedProduct(product);
                   setDialogOpen(true);
                 }}
+                onDelete={() => setDeleteTarget(product)}
                 onPrintBarcode={(p) => {
                   setBarcodePrintProduct(p);
                   setBarcodePrintCount("1");
@@ -471,6 +497,41 @@ export default function ProductsPage() {
               )}
             </AlertDialogAction>
             <AlertDialogCancel disabled={deletingAll}>إلغاء</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Single Product Confirmation */}
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف الصنف</AlertDialogTitle>
+            <AlertDialogDescription>
+              هل أنت متأكد من حذف &quot;{deleteTarget?.name}&quot;؟ هذا الإجراء
+              لا يمكن التراجع عنه.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row justify-center gap-3 sm:justify-center">
+            <AlertDialogAction
+              onClick={handleDeleteSingle}
+              disabled={deletingSingle}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingSingle ? (
+                <>
+                  <Loader2 className="h-4 w-4 ml-1 animate-spin" />
+                  جاري الحذف...
+                </>
+              ) : (
+                "نعم، احذف"
+              )}
+            </AlertDialogAction>
+            <AlertDialogCancel disabled={deletingSingle}>
+              إلغاء
+            </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -2,7 +2,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Copy, Pencil, Printer, Check } from "lucide-react";
+import { Copy, Pencil, Printer, Check, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -25,6 +25,7 @@ interface ProductCardProps {
   product: any;
   variants?: Variant[];
   onEdit?: () => void;
+  onDelete?: () => void;
   onToggle?: (value: boolean) => Promise<void>;
   onPrintBarcode?: (product: any) => void;
 }
@@ -33,6 +34,7 @@ export function ProductCard({
   product,
   variants = [],
   onEdit,
+  onDelete,
   onToggle,
   onPrintBarcode,
 }: ProductCardProps) {
@@ -431,7 +433,18 @@ export function ProductCard({
       )}
 
       {/* ===== FOOTER ===== */}
-      <div className="flex justify-end items-center p-3 pt-2 pb-3">
+      <div className="flex justify-end items-center gap-2 p-3 pt-2 pb-3">
+        {onDelete && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+            onClick={onDelete}
+          >
+            <Trash2 className="h-3 w-3 ml-1" />
+            حذف
+          </Button>
+        )}
         <Button
           variant="outline"
           size="sm"
