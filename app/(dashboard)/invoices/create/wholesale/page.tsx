@@ -374,6 +374,9 @@ export default function CreateWholesaleInvoicePage() {
       setJournalPosted(res.data?.journal_posted || false);
       setShowSavedModal(true);
 
+      // تحديث كاش الأصناف بعد الحفظ
+      refreshProductsSilently();
+
       setItems([]);
       setCustomerName("");
       setCustomerPhone("");
@@ -387,16 +390,6 @@ export default function CreateWholesaleInvoicePage() {
       setSaving(false);
     }
   };
-
-  /* =========================================================
-     Refresh products when modal opens (fresh stock)
-     ========================================================= */
-
-  useEffect(() => {
-    if (showProductModal) {
-      refreshProductsSilently();
-    }
-  }, [showProductModal, refreshProductsSilently]);
 
   /* =========================================================
      Spacebar shortcut to open product dialog

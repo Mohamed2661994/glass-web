@@ -164,6 +164,7 @@ export default function EditRetailInvoicePage() {
     products,
     loading: loadingProducts,
     refresh: refreshProducts,
+    invalidateCache,
   } = useCachedProducts({
     endpoint: "/products",
     params: {
@@ -437,6 +438,7 @@ export default function EditRetailInvoicePage() {
       });
 
       toast.success("تم تعديل الفاتورة بنجاح");
+      invalidateCache(); // مسح الكاش علشان يجيب بيانات جديدة لما يفتح تاني
       router.push("/invoices");
     } catch (err: any) {
       toast.error(err.response?.data?.error || "فشل التعديل");
@@ -471,19 +473,24 @@ export default function EditRetailInvoicePage() {
      Filtered products memo
      ========================================================= */
 
-  const filteredProducts = useMemo(
-    () =>
-      products.filter((p) => {
-        const s = search.toLowerCase();
-        return (
-          String(p.id).includes(s) ||
-          p.name.toLowerCase().includes(s) ||
-          (p.description && p.description.toLowerCase().includes(s)) ||
-          (p.barcode && p.barcode.toLowerCase().includes(s))
-        );
-      }),
-    [products, search],
-  );
+  const filteredProducts = useMemo(() => {
+    const filtered = products.filter((p) => {
+      const s = search.toLowerCase();
+      return (
+        String(p.id).includes(s) ||
+        p.name.toLowerCase().includes(s) ||
+        (p.description && p.description.toLowerCase().includes(s)) ||
+        (p.barcode && p.barcode.toLowerCase().includes(s))
+      );
+    });
+
+    return filtered.sort((a, b) => {
+      const aInStock = Number(a.available_quantity) > 0 ? 1 : 0;
+      const bInStock = Number(b.available_quantity) > 0 ? 1 : 0;
+      if (aInStock !== bInStock) return bInStock - aInStock;
+      return String(a.name || "").localeCompare(String(b.name || ""), "ar");
+    });
+  }, [products, search]);
 
   /* =========================================================
      Handle search keydown (Enter & arrows)
