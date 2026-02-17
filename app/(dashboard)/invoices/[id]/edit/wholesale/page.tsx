@@ -78,6 +78,7 @@ export default function EditWholesaleInvoicePage() {
      ========================================================= */
 
   const [items, setItems] = useState<any[]>([]);
+  const [originalItems, setOriginalItems] = useState<any[]>([]);
   const [showProductModal, setShowProductModal] = useState(false);
   const [search, setSearch] = useState("");
   const [focusedIndex, setFocusedIndex] = useState(-1);
@@ -129,8 +130,7 @@ export default function EditWholesaleInvoicePage() {
         setPaidAmount(String(inv.paid_amount || 0));
         setApplyItemsDiscount(inv.apply_items_discount ?? false);
 
-        setItems(
-          (inv.items || []).map((item: any, idx: number) => ({
+        const loadedItems = (inv.items || []).map((item: any, idx: number) => ({
             uid: `${item.product_id}_${idx}_${Date.now()}`,
             product_name: item.product_name,
             product_id: item.product_id,
@@ -140,8 +140,10 @@ export default function EditWholesaleInvoicePage() {
             quantity: item.quantity,
             discount: item.discount || 0,
             is_return: item.is_return || false,
-          })),
-        );
+          }));
+
+        setItems(loadedItems);
+        setOriginalItems(loadedItems);
       } catch {
         toast.error("فشل تحميل بيانات الفاتورة");
         router.push("/invoices");
@@ -355,17 +357,25 @@ export default function EditWholesaleInvoicePage() {
       return;
     }
 
-    // التحقق من الرصيد المتاح (للبيع فقط)
+    // التحقق من الرصيد المتاح (للبيع فقط) - مع مراعاة الكميات الأصلية في الفاتورة
     if (movementType === "sale") {
       const overStock = items.filter((item) => {
         const prod = products.find((p: any) => p.id === item.product_id);
-        return prod && Number(item.quantity) > Number(prod.available_quantity);
+        if (!prod) return false;
+        // الكمية الأصلية للصنف في الفاتورة (متخصمة أصلاً من الرصيد)
+        const origItem = originalItems.find((o) => o.product_id === item.product_id && o.package === item.package);
+        const origQty = origItem ? Number(origItem.quantity) : 0;
+        const effectiveAvailable = Number(prod.available_quantity) + origQty;
+        return Number(item.quantity) > effectiveAvailable;
       });
       if (overStock.length > 0) {
         overStock.forEach((item) => {
           const prod = products.find((p: any) => p.id === item.product_id);
+          const origItem = originalItems.find((o) => o.product_id === item.product_id && o.package === item.package);
+          const origQty = origItem ? Number(origItem.quantity) : 0;
+          const effectiveAvailable = Number(prod?.available_quantity ?? 0) + origQty;
           toast.error(
-            `الصنف "${item.product_name}" الكمية (${item.quantity}) أكبر من الرصيد المتاح (${prod?.available_quantity ?? 0})`,
+            `الصنف "${item.product_name}" الكمية (${item.quantity}) أكبر من الرصيد المتاح (${effectiveAvailable})`,
           );
         });
         return;
