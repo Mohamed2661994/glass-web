@@ -202,6 +202,19 @@ export default function StockTransferPage() {
       return;
     }
 
+    // التحقق من الرصيد المتاح
+    const overStock = items.filter(
+      (item) => Number(item.quantity) > Number(item.available_quantity),
+    );
+    if (overStock.length > 0) {
+      overStock.forEach((item) => {
+        toast.error(
+          `الصنف "${item.product_name}" الكمية (${item.quantity}) أكبر من الرصيد المتاح (${item.available_quantity})`,
+        );
+      });
+      return;
+    }
+
     const payload = {
       from_branch_id: FROM_BRANCH_ID,
       to_branch_id: TO_BRANCH_ID,

@@ -574,6 +574,23 @@ export default function CreateRetailInvoicePage() {
       return;
     }
 
+    // التحقق من الرصيد المتاح (للبيع فقط)
+    if (movementType === "sale") {
+      const overStock = items.filter((item) => {
+        const prod = products.find((p: any) => p.id === item.product_id);
+        return prod && Number(item.quantity) > Number(prod.available_quantity);
+      });
+      if (overStock.length > 0) {
+        overStock.forEach((item) => {
+          const prod = products.find((p: any) => p.id === item.product_id);
+          toast.error(
+            `الصنف "${item.product_name}" الكمية (${item.quantity}) أكبر من الرصيد المتاح (${prod?.available_quantity ?? 0})`,
+          );
+        });
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const itemsDiscount = applyItemsDiscount
