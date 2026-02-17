@@ -253,40 +253,49 @@ export default function StockTransferPage() {
                 </Button>
 
                 {/* النسبة */}
-                <Input
-                  type="number"
-                  placeholder="%"
-                  className="w-16 text-center"
-                  value={item.percent || ""}
-                  onChange={(e) =>
-                    updateItem(item.uid, "percent", Number(e.target.value) || 0)
-                  }
-                />
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-[10px] text-muted-foreground">نسبة%</span>
+                  <Input
+                    type="number"
+                    placeholder="%"
+                    className="w-16 text-center"
+                    value={item.percent || ""}
+                    onChange={(e) =>
+                      updateItem(item.uid, "percent", Number(e.target.value) || 0)
+                    }
+                  />
+                </div>
 
                 {/* إضافة للسعر */}
-                <Input
-                  type="number"
-                  placeholder="+سعر"
-                  className="w-16 text-center"
-                  value={item.price_addition || ""}
-                  onChange={(e) =>
-                    updateItem(item.uid, "price_addition", Number(e.target.value) || 0)
-                  }
-                />
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-[10px] text-muted-foreground">+سعر</span>
+                  <Input
+                    type="number"
+                    placeholder="+سعر"
+                    className="w-16 text-center"
+                    value={item.price_addition || ""}
+                    onChange={(e) =>
+                      updateItem(item.uid, "price_addition", Number(e.target.value) || 0)
+                    }
+                  />
+                </div>
 
                 {/* الكمية */}
-                <Input
-                  type="number"
-                  className="w-20 text-center"
-                  value={item.quantity || ""}
-                  onChange={(e) =>
-                    updateItem(
-                      item.uid,
-                      "quantity",
-                      Number(e.target.value) || 1,
-                    )
-                  }
-                />
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-[10px] text-muted-foreground">الكمية</span>
+                  <Input
+                    type="number"
+                    className="w-20 text-center"
+                    value={item.quantity || ""}
+                    onChange={(e) =>
+                      updateItem(
+                        item.uid,
+                        "quantity",
+                        Number(e.target.value) || 1,
+                      )
+                    }
+                  />
+                </div>
 
                 {/* التفاصيل */}
                 <div className="flex-1 text-right min-w-0">
@@ -294,8 +303,12 @@ export default function StockTransferPage() {
                     {item.product_name} – {item.manufacturer}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    {item.wholesale_package} ×{" "}
-                    {unitPrice.toLocaleString()}
+                    {item.wholesale_package} × {item.wholesale_price.toLocaleString()}
+                    {(item.price_addition || 0) > 0 && (
+                      <span className="text-green-600 font-medium">
+                        {" "}+ {item.price_addition} = {unitPrice.toLocaleString()}
+                      </span>
+                    )}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     = {Math.round(final).toLocaleString()} ج
