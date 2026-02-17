@@ -7,6 +7,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import api from "@/services/api";
 import { noSpaces } from "@/lib/utils";
 import { ProductCard } from "@/components/product-card";
+import { ProductCompactCard } from "@/components/product-compact-card";
+import { ProductTableRow } from "@/components/product-table-row";
 import { ProductCardSkeleton } from "@/components/product-card-skeleton";
 import { ProductFormDialog } from "@/components/product-form-dialog";
 import {
@@ -24,7 +26,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useRouter } from "next/navigation";
-import { FileSpreadsheet, Trash2, Loader2 } from "lucide-react";
+import {
+  FileSpreadsheet,
+  Trash2,
+  Loader2,
+  LayoutGrid,
+  Table2,
+  Grid3X3,
+} from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,6 +69,19 @@ export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [selectedManufacturer, setSelectedManufacturer] =
     useState<string>("الكل");
+  const [viewMode, setViewMode] = useState<"cards" | "compact" | "table">(
+    () => {
+      if (typeof window !== "undefined") {
+        return (
+          (localStorage.getItem("products_view") as
+            | "cards"
+            | "compact"
+            | "table") || "cards"
+        );
+      }
+      return "cards";
+    },
+  );
   const [userId, setUserId] = useState<number | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -322,7 +344,7 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* Search + Manufacturer Filter */}
+      {/* Search + Manufacturer Filter + View Toggle */}
       <Card>
         <CardContent className="p-4 space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -355,6 +377,57 @@ export default function ProductsPage() {
               </Select>
             )}
           </div>
+
+          {/* View Mode Toggle */}
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">
+              {filteredProducts.length} صنف
+            </span>
+            <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+              <button
+                onClick={() => {
+                  setViewMode("cards");
+                  localStorage.setItem("products_view", "cards");
+                }}
+                className={`p-1.5 rounded-md transition-all ${
+                  viewMode === "cards"
+                    ? "bg-background shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title="كروت"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => {
+                  setViewMode("compact");
+                  localStorage.setItem("products_view", "compact");
+                }}
+                className={`p-1.5 rounded-md transition-all ${
+                  viewMode === "compact"
+                    ? "bg-background shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title="كروت مصغرة"
+              >
+                <Grid3X3 className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => {
+                  setViewMode("table");
+                  localStorage.setItem("products_view", "table");
+                }}
+                className={`p-1.5 rounded-md transition-all ${
+                  viewMode === "table"
+                    ? "bg-background shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title="جدول"
+              >
+                <Table2 className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -373,26 +446,132 @@ export default function ProductsPage() {
         </Card>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 max-w-6xl mx-auto">
-            {currentProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                variants={variantsMap[product.id] || []}
-                onToggle={(value) => handleToggle(product.id, value)}
-                onEdit={() => {
-                  setSelectedProduct(product);
-                  setDialogOpen(true);
-                }}
-                onDelete={isAdmin ? () => setDeleteTarget(product) : undefined}
-                onPrintBarcode={(p) => {
-                  setBarcodePrintProduct(p);
-                  setBarcodePrintCount("1");
-                  setShowBarcodePrintModal(true);
-                }}
-              />
-            ))}
-          </div>
+          {/* === Cards View === */}
+          {viewMode === "cards" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 max-w-6xl mx-auto">
+              {currentProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  variants={variantsMap[product.id] || []}
+                  onToggle={(value) => handleToggle(product.id, value)}
+                  onEdit={() => {
+                    setSelectedProduct(product);
+                    setDialogOpen(true);
+                  }}
+                  onDelete={
+                    isAdmin ? () => setDeleteTarget(product) : undefined
+                  }
+                  onPrintBarcode={(p) => {
+                    setBarcodePrintProduct(p);
+                    setBarcodePrintCount("1");
+                    setShowBarcodePrintModal(true);
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* === Compact Cards View === */}
+          {viewMode === "compact" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 max-w-7xl mx-auto">
+              {currentProducts.map((product) => (
+                <ProductCompactCard
+                  key={product.id}
+                  product={product}
+                  variants={variantsMap[product.id] || []}
+                  onToggle={(value) => handleToggle(product.id, value)}
+                  onEdit={() => {
+                    setSelectedProduct(product);
+                    setDialogOpen(true);
+                  }}
+                  onDelete={
+                    isAdmin ? () => setDeleteTarget(product) : undefined
+                  }
+                  onPrintBarcode={(p) => {
+                    setBarcodePrintProduct(p);
+                    setBarcodePrintCount("1");
+                    setShowBarcodePrintModal(true);
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* === Table View === */}
+          {viewMode === "table" && (
+            <Card className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="p-3 text-right font-semibold">الاسم</th>
+                      <th className="p-3 text-right font-semibold">
+                        الباركود
+                      </th>
+                      <th className="p-3 text-center font-semibold">
+                        <span className="text-sky-600 dark:text-sky-400">
+                          عبوة جملة
+                        </span>
+                      </th>
+                      <th className="p-3 text-center font-semibold">
+                        <span className="text-sky-600 dark:text-sky-400">
+                          شراء جملة
+                        </span>
+                      </th>
+                      <th className="p-3 text-center font-semibold">
+                        <span className="text-sky-600 dark:text-sky-400">
+                          بيع جملة
+                        </span>
+                      </th>
+                      <th className="p-3 text-center font-semibold">
+                        <span className="text-amber-600 dark:text-amber-400">
+                          عبوة قطاعي
+                        </span>
+                      </th>
+                      <th className="p-3 text-center font-semibold">
+                        <span className="text-amber-600 dark:text-amber-400">
+                          شراء قطاعي
+                        </span>
+                      </th>
+                      <th className="p-3 text-center font-semibold">
+                        <span className="text-amber-600 dark:text-amber-400">
+                          بيع قطاعي
+                        </span>
+                      </th>
+                      <th className="p-3 text-center font-semibold">خصم</th>
+                      <th className="p-3 text-center font-semibold">حالة</th>
+                      <th className="p-3 text-center font-semibold">إجراء</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentProducts.map((product) => (
+                      <ProductTableRow
+                        key={product.id}
+                        product={product}
+                        variants={variantsMap[product.id] || []}
+                        onToggle={(value) => handleToggle(product.id, value)}
+                        onEdit={() => {
+                          setSelectedProduct(product);
+                          setDialogOpen(true);
+                        }}
+                        onDelete={
+                          isAdmin
+                            ? () => setDeleteTarget(product)
+                            : undefined
+                        }
+                        onPrintBarcode={(p) => {
+                          setBarcodePrintProduct(p);
+                          setBarcodePrintCount("1");
+                          setShowBarcodePrintModal(true);
+                        }}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
 
           {/* Pagination */}
           {totalPages > 1 && (

@@ -437,9 +437,7 @@ export default function DashboardPage() {
                   <TableRow>
                     <TableHead className="text-right">رقم التحويل</TableHead>
                     <TableHead className="text-right">عدد الأصناف</TableHead>
-                    <TableHead className="text-right">
-                      إجمالي الكمية
-                    </TableHead>
+                    <TableHead className="text-right">إجمالي الكمية</TableHead>
                     <TableHead className="text-right">الحالة</TableHead>
                     <TableHead className="text-right">التاريخ</TableHead>
                   </TableRow>
