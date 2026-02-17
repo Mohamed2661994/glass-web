@@ -10,6 +10,7 @@ import api from "@/services/api";
 import { Trash2, Loader2, Pencil } from "lucide-react";
 import { ProductFormDialog } from "@/components/product-form-dialog";
 import { useCachedProducts } from "@/hooks/use-cached-products";
+import { useAuth } from "@/app/context/auth-context";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,7 @@ import {
 export default function EditWholesaleInvoicePage() {
   const { id } = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const [loadingInvoice, setLoadingInvoice] = useState(true);
 
   /* =========================================================
@@ -75,6 +77,7 @@ export default function EditWholesaleInvoicePage() {
 
   const [items, setItems] = useState<any[]>([]);
   const [showProductModal, setShowProductModal] = useState(false);
+  const [isOpeningProductModal, setIsOpeningProductModal] = useState(false);
   const [search, setSearch] = useState("");
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
@@ -156,6 +159,7 @@ export default function EditWholesaleInvoicePage() {
     products,
     loading: loadingProducts,
     refresh: refreshProducts,
+    refreshSilently: refreshProductsSilently,
   } = useCachedProducts({
     endpoint: "/products",
     params: {
@@ -332,6 +336,12 @@ export default function EditWholesaleInvoicePage() {
 
   const remaining = totalWithPrevious - (Number(paidAmount) || 0);
 
+  const openProductModal = useCallback(() => {
+    setIsOpeningProductModal(true);
+    setShowProductModal(true);
+    setTimeout(() => setIsOpeningProductModal(false), 350);
+  }, []);
+
   /* =========================================================
      1️⃣3️⃣ Update Invoice
      ========================================================= */
@@ -351,7 +361,7 @@ export default function EditWholesaleInvoicePage() {
 
     setSaving(true);
     try {
-      await api.put(`/invoices/${id}`, {
+      const basePayload = {
         customer_name: customerName,
         customer_phone: customerPhone || null,
         manual_discount: Number(extraDiscount) || 0,
@@ -359,7 +369,28 @@ export default function EditWholesaleInvoicePage() {
         paid_amount: Number(paidAmount) || 0,
         previous_balance: Number(previousBalance) || 0,
         apply_items_discount: applyItemsDiscount,
-      });
+      };
+
+      const payloadWithAudit = {
+        ...basePayload,
+        updated_by_user_id: user?.id ?? null,
+        updated_by_username: user?.full_name || user?.username || null,
+        updated_by_branch_id: user?.branch_id ?? null,
+      };
+
+      try {
+        await api.put(`/invoices/${id}`, payloadWithAudit);
+      } catch (auditErr: any) {
+        const msg = String(auditErr?.response?.data?.error || "");
+        const auditNotSupported =
+          auditErr?.response?.status === 400 &&
+          /(updated_by|unknown|not allowed|additional|invalid)/i.test(msg);
+
+        if (!auditNotSupported) throw auditErr;
+
+        await api.put(`/invoices/${id}`, basePayload);
+        toast.warning("تم التعديل لكن السيرفر لا يدعم تتبع المستخدم حالياً");
+      }
 
       toast.success("تم تعديل الفاتورة بنجاح");
       router.push("/invoices");
@@ -375,6 +406,16 @@ export default function EditWholesaleInvoicePage() {
      ========================================================= */
 
   useEffect(() => {
+    if (showProductModal) {
+      refreshProductsSilently();
+    }
+  }, [showProductModal, refreshProductsSilently]);
+
+  /* =========================================================
+     Spacebar shortcut to open product dialog
+     ========================================================= */
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
         e.code === "Space" &&
@@ -384,21 +425,20 @@ export default function EditWholesaleInvoicePage() {
         !(e.target instanceof HTMLSelectElement)
       ) {
         e.preventDefault();
-        setShowProductModal(true);
+        openProductModal();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showProductModal]);
+  }, [showProductModal, openProductModal]);
 
   /* =========================================================
      Filtered products memo
      ========================================================= */
 
-  const filteredProducts = useMemo(
-    () =>
-      products.filter((p) => {
+  const filteredProducts = useMemo(() => {
+    const filtered = products.filter((p) => {
         const s = search.toLowerCase();
         return (
           String(p.id).includes(s) ||
@@ -406,9 +446,15 @@ export default function EditWholesaleInvoicePage() {
           (p.description && p.description.toLowerCase().includes(s)) ||
           (p.barcode && p.barcode.toLowerCase().includes(s))
         );
-      }),
-    [products, search],
-  );
+      });
+
+    return filtered.sort((a, b) => {
+      const aInStock = Number(a.available_quantity) > 0 ? 1 : 0;
+      const bInStock = Number(b.available_quantity) > 0 ? 1 : 0;
+      if (aInStock !== bInStock) return bInStock - aInStock;
+      return String(a.name || "").localeCompare(String(b.name || ""), "ar");
+    });
+  }, [products, search]);
 
   /* =========================================================
      Handle search keydown (Enter & arrows)
@@ -575,7 +621,7 @@ export default function EditWholesaleInvoicePage() {
           </div>
         </Card>
 
-        <Button onClick={() => setShowProductModal(true)} className="w-full">
+        <Button onClick={openProductModal} className="w-full">
           + إضافة صنف
         </Button>
 
@@ -648,7 +694,7 @@ export default function EditWholesaleInvoicePage() {
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
-                              setShowProductModal(true);
+                              openProductModal();
                             }
                           }}
                           onChange={(e) =>
@@ -858,7 +904,13 @@ export default function EditWholesaleInvoicePage() {
         )}
 
         {/* ================= Product Modal ================= */}
-        <Dialog open={showProductModal} onOpenChange={setShowProductModal}>
+        <Dialog
+          open={showProductModal}
+          onOpenChange={(open) => {
+            setShowProductModal(open);
+            if (!open) setIsOpeningProductModal(false);
+          }}
+        >
           <DialogContent
             dir="rtl"
             className="max-w-xl p-0 flex flex-col"
@@ -869,70 +921,79 @@ export default function EditWholesaleInvoicePage() {
               <DialogTitle>اختيار صنف</DialogTitle>
             </DialogHeader>
 
-            {/* ===== Search ===== */}
-            <div className="p-4 border-b shrink-0">
-              <Input
-                ref={searchInputRef}
-                autoFocus
-                placeholder="ابحث بالكود أو الاسم أو الوصف أو الباركود... (Enter للتنقل)"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setFocusedIndex(-1);
-                }}
-                onKeyDown={handleSearchKeyDown}
-                onFocus={(e) => e.target.select()}
-              />
-            </div>
-
-            {/* ===== Products List ===== */}
-            <div
-              ref={listRef}
-              className="flex-1 overflow-y-auto scrollbar-hide p-4 space-y-2"
-            >
-              {loadingProducts ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  جاري التحميل...
+            {isOpeningProductModal ? (
+              <div className="flex-1 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <p className="text-sm">جاري فتح قائمة الأصناف...</p>
+              </div>
+            ) : (
+              <>
+                {/* ===== Search ===== */}
+                <div className="p-4 border-b shrink-0">
+                  <Input
+                    ref={searchInputRef}
+                    autoFocus
+                    placeholder="ابحث بالكود أو الاسم أو الوصف أو الباركود... (Enter للتنقل)"
+                    value={search}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setFocusedIndex(-1);
+                    }}
+                    onKeyDown={handleSearchKeyDown}
+                    onFocus={(e) => e.target.select()}
+                  />
                 </div>
-              ) : (
-                filteredProducts.map((product, index) => {
-                  const outOfStock =
-                    movementType === "sale" &&
-                    Number(product.available_quantity) <= 0;
-                  return (
-                    <div
-                      key={product.id}
-                      data-product-index={index}
-                      tabIndex={outOfStock ? -1 : 0}
-                      onClick={() => !outOfStock && addItem(product)}
-                      onKeyDown={(e) =>
-                        !outOfStock && handleListKeyDown(e, index)
-                      }
-                      className={`p-3 rounded-lg border transition outline-none ${
-                        outOfStock
-                          ? "opacity-50 cursor-not-allowed bg-muted/30"
-                          : `cursor-pointer hover:bg-muted ${focusedIndex === index ? "ring-2 ring-primary bg-muted" : ""}`
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium">{product.name}</div>
-                        {outOfStock && (
-                          <span className="text-[10px] bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full font-medium">
-                            نفذ
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3">
-                        <span>المصنع: {product.manufacturer || "-"}</span>
-                        <span>العبوة: {product.wholesale_package || "-"}</span>
-                        <span>السعر: {product.price}</span>
-                        <span>الرصيد: {product.available_quantity}</span>
-                      </div>
+
+                {/* ===== Products List ===== */}
+                <div
+                  ref={listRef}
+                  className="flex-1 overflow-y-auto scrollbar-hide p-4 space-y-2"
+                >
+                  {loadingProducts ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      جاري التحميل...
                     </div>
-                  );
-                })
-              )}
-            </div>
+                  ) : (
+                    filteredProducts.map((product, index) => {
+                      const outOfStock =
+                        movementType === "sale" &&
+                        Number(product.available_quantity) <= 0;
+                      return (
+                        <div
+                          key={product.id}
+                          data-product-index={index}
+                          tabIndex={outOfStock ? -1 : 0}
+                          onClick={() => !outOfStock && addItem(product)}
+                          onKeyDown={(e) =>
+                            !outOfStock && handleListKeyDown(e, index)
+                          }
+                          className={`p-3 rounded-lg border transition outline-none ${
+                            outOfStock
+                              ? "opacity-50 cursor-not-allowed bg-muted/30"
+                              : `cursor-pointer hover:bg-muted ${focusedIndex === index ? "ring-2 ring-primary bg-muted" : ""}`
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="font-medium">{product.name}</div>
+                            {outOfStock && (
+                              <span className="text-[10px] bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full font-medium">
+                                نفذ
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3">
+                            <span>المصنع: {product.manufacturer || "-"}</span>
+                            <span>العبوة: {product.wholesale_package || "-"}</span>
+                            <span>السعر: {product.price}</span>
+                            <span>الرصيد: {product.available_quantity}</span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            )}
           </DialogContent>
         </Dialog>
 

@@ -50,27 +50,24 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
   /* =========================================================
      Filtered products
      ========================================================= */
-  const filteredProducts = useMemo(
-    () => {
-      const filtered = products.filter((p) => {
-        const s = search.toLowerCase();
-        return (
-          String(p.id).includes(s) ||
-          p.name.toLowerCase().includes(s) ||
-          (p.description && p.description.toLowerCase().includes(s)) ||
-          (p.barcode && p.barcode.toLowerCase().includes(s))
-        );
-      });
+  const filteredProducts = useMemo(() => {
+    const filtered = products.filter((p) => {
+      const s = search.toLowerCase();
+      return (
+        String(p.id).includes(s) ||
+        p.name.toLowerCase().includes(s) ||
+        (p.description && p.description.toLowerCase().includes(s)) ||
+        (p.barcode && p.barcode.toLowerCase().includes(s))
+      );
+    });
 
-      return filtered.sort((a, b) => {
-        const aInStock = Number(a.available_quantity) > 0 ? 1 : 0;
-        const bInStock = Number(b.available_quantity) > 0 ? 1 : 0;
-        if (aInStock !== bInStock) return bInStock - aInStock;
-        return String(a.name || "").localeCompare(String(b.name || ""), "ar");
-      });
-    },
-    [products, search],
-  );
+    return filtered.sort((a, b) => {
+      const aInStock = Number(a.available_quantity) > 0 ? 1 : 0;
+      const bInStock = Number(b.available_quantity) > 0 ? 1 : 0;
+      if (aInStock !== bInStock) return bInStock - aInStock;
+      return String(a.name || "").localeCompare(String(b.name || ""), "ar");
+    });
+  }, [products, search]);
 
   /* =========================================================
      Keyboard navigation
