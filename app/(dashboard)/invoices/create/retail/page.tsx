@@ -1316,7 +1316,7 @@ export default function CreateRetailInvoicePage() {
                 className="flex-1"
                 onClick={() => {
                   window.open(`/invoices/${savedInvoiceId}/print`, "_blank");
-                  setShowSavedModal(false);
+                  window.location.reload();
                 }}
               >
                 طباعة
@@ -1324,7 +1324,7 @@ export default function CreateRetailInvoicePage() {
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={() => setShowSavedModal(false)}
+                onClick={() => window.location.reload()}
               >
                 إلغاء
               </Button>

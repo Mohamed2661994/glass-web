@@ -460,8 +460,8 @@ export default function EditRetailInvoicePage() {
       });
 
       toast.success("تم تعديل الفاتورة بنجاح");
-      invalidateCache(); // مسح الكاش علشان يجيب بيانات جديدة لما يفتح تاني
-      router.push("/invoices");
+      invalidateCache();
+      window.location.reload();
     } catch (err: any) {
       toast.error(err.response?.data?.error || "فشل التعديل");
     } finally {

@@ -970,7 +970,7 @@ export default function CreateWholesaleInvoicePage() {
                   className="flex-1"
                   onClick={() => {
                     window.open(`/invoices/${savedInvoiceId}/print`, "_blank");
-                    setShowSavedModal(false);
+                    window.location.reload();
                   }}
                 >
                   طباعة
@@ -979,7 +979,7 @@ export default function CreateWholesaleInvoicePage() {
               <Button
                 variant={isRetailUser ? "default" : "outline"}
                 className="flex-1"
-                onClick={() => setShowSavedModal(false)}
+                onClick={() => window.location.reload()}
               >
                 {isRetailUser ? "تم" : "إلغاء"}
               </Button>

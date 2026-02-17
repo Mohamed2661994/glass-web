@@ -217,7 +217,6 @@ export default function StockTransferPreviewPage() {
             <Button
               className="flex-1"
               onClick={() => {
-                setShowSuccess(false);
                 // Store print data
                 sessionStorage.setItem(
                   "transfer_print",
@@ -227,7 +226,8 @@ export default function StockTransferPreviewPage() {
                     total_amount: totalAmount,
                   }),
                 );
-                router.push("/stock-transfer/print");
+                window.open("/stock-transfer/print", "_blank");
+                window.location.href = "/stock-transfer";
               }}
             >
               طباعة
@@ -236,8 +236,7 @@ export default function StockTransferPreviewPage() {
               variant="outline"
               className="flex-1"
               onClick={() => {
-                setShowSuccess(false);
-                router.push("/stock-transfer");
+                window.location.href = "/stock-transfer";
               }}
             >
               إلغاء
