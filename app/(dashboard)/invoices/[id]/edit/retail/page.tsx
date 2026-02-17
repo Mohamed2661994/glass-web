@@ -9,6 +9,7 @@ import { useParams, useRouter } from "next/navigation";
 import api from "@/services/api";
 import { Trash2, Loader2, Pencil, RefreshCw } from "lucide-react";
 import { useCachedProducts } from "@/hooks/use-cached-products";
+import { highlightText } from "@/lib/highlight-text";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -484,7 +485,8 @@ export default function EditRetailInvoicePage() {
         String(p.id).includes(s) ||
         p.name.toLowerCase().includes(s) ||
         (p.description && p.description.toLowerCase().includes(s)) ||
-        (p.barcode && p.barcode.toLowerCase().includes(s))
+        (p.barcode && p.barcode.toLowerCase().includes(s)) ||
+        (p.manufacturer && p.manufacturer.toLowerCase().includes(s))
       );
     });
 
@@ -1120,7 +1122,7 @@ export default function EditRetailInvoicePage() {
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <div className="font-medium">{product.name}</div>
+                          <div className="font-medium">{highlightText(product.name, search)}</div>
                           {outOfStock && (
                             <span className="text-[10px] bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full font-medium">
                               نفذ
@@ -1128,7 +1130,7 @@ export default function EditRetailInvoicePage() {
                           )}
                         </div>
                         <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3">
-                          <span>المصنع: {product.manufacturer || "-"}</span>
+                          <span>المصنع: {highlightText(product.manufacturer || "-", search)}</span>
                           <span>العبوة: {product.retail_package || "-"}</span>
                           <span>السعر: {product.price}</span>
                           {product.discount_amount > 0 && (

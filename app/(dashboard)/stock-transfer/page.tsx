@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import api from "@/services/api";
+import { highlightText } from "@/lib/highlight-text";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -57,7 +58,9 @@ export default function StockTransferPage() {
     useState<Product | null>(null);
 
   // Manufacturers percentage map
-  const [mfgPercentMap, setMfgPercentMap] = useState<Record<string, number>>({});
+  const [mfgPercentMap, setMfgPercentMap] = useState<Record<string, number>>(
+    {},
+  );
 
   const FROM_BRANCH_ID = 2;
   const TO_BRANCH_ID = 1;
@@ -112,7 +115,8 @@ export default function StockTransferPage() {
   const filtered = products.filter(
     (p) =>
       p.available_quantity > 0 &&
-      (p.name.toLowerCase().includes(search.toLowerCase()) ||
+      (String(p.id).includes(search.toLowerCase()) ||
+        p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.manufacturer?.toLowerCase().includes(search.toLowerCase())),
   );
 
@@ -409,7 +413,7 @@ export default function StockTransferPage() {
                 >
                   <div className="flex items-center gap-2">
                     <div className="font-semibold text-sm">
-                      {p.name} – {p.manufacturer}
+                      {highlightText(p.name, search)} – {highlightText(p.manufacturer, search)}
                     </div>
                     {variantsMap[p.id]?.length > 0 && (
                       <span className="text-[10px] bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded-full">

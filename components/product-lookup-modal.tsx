@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Search, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCachedProducts } from "@/hooks/use-cached-products";
+import { highlightText } from "@/lib/highlight-text";
 
 interface Props {
   open: boolean;
@@ -68,7 +69,8 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
         String(p.id).includes(s) ||
         p.name.toLowerCase().includes(s) ||
         (p.description && p.description.toLowerCase().includes(s)) ||
-        (p.barcode && p.barcode.toLowerCase().includes(s))
+        (p.barcode && p.barcode.toLowerCase().includes(s)) ||
+        (p.manufacturer && p.manufacturer.toLowerCase().includes(s))
       );
     });
 
@@ -219,7 +221,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                 >
                   {/* Row 1: Name + Barcode */}
                   <div className="flex items-center justify-between gap-2">
-                    <div className="font-medium">{product.name}</div>
+                    <div className="font-medium">{highlightText(product.name, search)}</div>
                     <div className="flex items-center gap-1.5">
                       {outOfStock && (
                         <span className="text-[10px] bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full font-medium">
@@ -228,7 +230,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                       )}
                       {product.barcode && (
                         <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded">
-                          {product.barcode}
+                          {highlightText(product.barcode, search)}
                         </span>
                       )}
                     </div>
@@ -236,7 +238,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
                   {/* Row 2: Details */}
                   <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-4 gap-y-1">
-                    <span>المصنع: {product.manufacturer || "-"}</span>
+                    <span>المصنع: {highlightText(product.manufacturer || "-", search)}</span>
                     <span>
                       العبوة:{" "}
                       {invoiceType === "retail"
@@ -257,7 +259,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                   {/* Row 3: Description if exists */}
                   {product.description && (
                     <div className="text-xs text-muted-foreground mt-1 opacity-70">
-                      {product.description}
+                      {highlightText(product.description, search)}
                     </div>
                   )}
                 </div>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "@/services/api";
+import { highlightText } from "@/lib/highlight-text";
 import { useAuth } from "@/app/context/auth-context";
 import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent } from "@/components/ui/card";
@@ -148,6 +149,7 @@ export default function ProductMovementPage() {
     const q = productSearch.toLowerCase();
     return products.filter(
       (p) =>
+        String(p.id).includes(q) ||
         p.name.toLowerCase().includes(q) ||
         (p.manufacturer || p.manufacturer_name || "").toLowerCase().includes(q),
     );
@@ -395,10 +397,10 @@ export default function ProductMovementPage() {
                   selectedProduct?.id === p.id ? "bg-muted" : ""
                 }`}
               >
-                <div className="font-medium text-sm">{p.name}</div>
+                <div className="font-medium text-sm">{highlightText(p.name, productSearch)}</div>
                 {(p.manufacturer || p.manufacturer_name) && (
                   <div className="text-xs text-muted-foreground">
-                    {p.manufacturer || p.manufacturer_name}
+                    {highlightText(p.manufacturer || p.manufacturer_name, productSearch)}
                   </div>
                 )}
               </button>

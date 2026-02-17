@@ -204,9 +204,7 @@ export function ProductFormDialog({
       ]);
       const fromProducts = productsRes.data.map((p: any) => p.manufacturer);
       const fromTable = (mfgRes.data || []).map((m: any) => m.name);
-      const unique = [
-        ...new Set([...fromProducts, ...fromTable]),
-      ];
+      const unique = [...new Set([...fromProducts, ...fromTable])];
       setManufacturers(unique.filter((m): m is string => Boolean(m)));
     } catch (err) {}
   };
@@ -518,10 +516,7 @@ export function ProductFormDialog({
                 />
               </div>
               <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowAddMfg(false)}
-                >
+                <Button variant="outline" onClick={() => setShowAddMfg(false)}>
                   إلغاء
                 </Button>
                 <Button

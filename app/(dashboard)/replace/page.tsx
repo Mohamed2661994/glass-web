@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import api from "@/services/api";
+import { highlightText } from "@/lib/highlight-text";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -105,6 +106,7 @@ export default function ReplacePage() {
   const filterProducts = (search: string) =>
     products.filter(
       (p) =>
+        String(p.id).includes(search.toLowerCase()) ||
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         (p.manufacturer &&
           p.manufacturer.toLowerCase().includes(search.toLowerCase())),
@@ -231,10 +233,10 @@ export default function ReplacePage() {
                   className="w-full text-right px-3 py-2 hover:bg-muted transition-colors border-b last:border-b-0"
                   onClick={() => onSelect(p)}
                 >
-                  <div className="font-medium text-sm">{p.name}</div>
+                  <div className="font-medium text-sm">{highlightText(p.name, search)}</div>
                   {(p.manufacturer || p.wholesale_package) && (
                     <div className="text-xs text-muted-foreground mt-0.5">
-                      {p.manufacturer}
+                      {highlightText(p.manufacturer, search)}
                       {p.manufacturer && p.wholesale_package ? " | " : ""}
                       {p.wholesale_package}
                     </div>
