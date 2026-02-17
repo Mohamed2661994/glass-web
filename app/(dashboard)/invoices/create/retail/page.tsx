@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "@/services/api";
-import { Trash2, Camera, X, Loader2, Pencil, RefreshCw } from "lucide-react";
+import { Trash2, Camera, X, Loader2, Pencil, RefreshCw, FilePlus2 } from "lucide-react";
 import { useCachedProducts } from "@/hooks/use-cached-products";
 import { highlightText } from "@/lib/highlight-text";
 import { noSpaces } from "@/lib/utils";
@@ -48,6 +48,8 @@ import {
 
 export default function CreateRetailInvoicePage() {
   const { user } = useAuth();
+
+  const DRAFT_KEY = "invoice_draft_retail";
 
   /* =========================================================
      1️⃣ Invoice Header States
@@ -213,6 +215,75 @@ export default function CreateRetailInvoicePage() {
   const [extraDiscount, setExtraDiscount] = useState("0");
   const [paidAmount, setPaidAmount] = useState("0");
   const [applyItemsDiscount, setApplyItemsDiscount] = useState(true);
+
+  /* =========================================================
+     4.5 Draft Auto-Save & Restore
+     ========================================================= */
+
+  const draftRestoredRef = useRef(false);
+
+  // Restore draft on mount
+  useEffect(() => {
+    if (draftRestoredRef.current) return;
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (draft.movementType) setMovementType(draft.movementType);
+      if (draft.invoiceDate) setInvoiceDate(draft.invoiceDate);
+      if (draft.customerName) setCustomerName(draft.customerName);
+      if (draft.customerPhone) setCustomerPhone(draft.customerPhone);
+      if (draft.customerId) setCustomerId(draft.customerId);
+      if (draft.previousBalance) setPreviousBalance(draft.previousBalance);
+      if (draft.extraDiscount) setExtraDiscount(draft.extraDiscount);
+      if (draft.paidAmount) setPaidAmount(draft.paidAmount);
+      if (draft.applyItemsDiscount !== undefined) setApplyItemsDiscount(draft.applyItemsDiscount);
+      if (draft.items?.length) setItems(draft.items);
+      draftRestoredRef.current = true;
+      toast.info("تم استعادة بيانات الفاتورة السابقة");
+    } catch {
+      localStorage.removeItem(DRAFT_KEY);
+    }
+  }, []);
+
+  // Auto-save draft on changes
+  useEffect(() => {
+    if (!items.length && !customerName && !customerPhone) return;
+    const draft = {
+      movementType,
+      invoiceDate,
+      customerName,
+      customerPhone,
+      customerId,
+      previousBalance,
+      extraDiscount,
+      paidAmount,
+      applyItemsDiscount,
+      items,
+    };
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  }, [movementType, invoiceDate, customerName, customerPhone, customerId, previousBalance, extraDiscount, paidAmount, applyItemsDiscount, items]);
+
+  const clearDraft = () => {
+    localStorage.removeItem(DRAFT_KEY);
+  };
+
+  const clearInvoice = () => {
+    setItems([]);
+    setCustomerName("");
+    setCustomerPhone("");
+    setCustomerId(null);
+    setPreviousBalance("0");
+    setExtraDiscount("0");
+    setPaidAmount("0");
+    setApplyItemsDiscount(true);
+    setMovementType("sale");
+    setInvoiceDate(new Date().toISOString().substring(0, 10));
+    clearDraft();
+    toast.success("تم مسح الفاتورة — ابدأ فاتورة جديدة");
+  };
+
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   /* =========================================================
      5️⃣ Fetch Products (Cached — localStorage + auto-refresh)
@@ -630,6 +701,9 @@ export default function CreateRetailInvoicePage() {
       // تحديث كاش الأصناف بعد الحفظ
       refreshProductsSilently();
 
+      // مسح المسودة بعد الحفظ
+      clearDraft();
+
       setItems([]);
       setCustomerName("");
       setCustomerPhone("");
@@ -769,7 +843,24 @@ export default function CreateRetailInvoicePage() {
   return (
     <div className="mx-auto px-4" style={{ maxWidth: 950, width: "100%" }}>
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-center">إنشاء فاتورة قطاعي</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">إنشاء فاتورة قطاعي</h1>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-destructive hover:text-destructive"
+            onClick={() => {
+              if (items.length > 0 || customerName) {
+                setShowClearConfirm(true);
+              } else {
+                clearInvoice();
+              }
+            }}
+          >
+            <FilePlus2 className="h-4 w-4" />
+            فاتورة جديدة
+          </Button>
+        </div>
 
         <Card className="p-6 space-y-6 overflow-hidden">
           <div className="space-y-6">
@@ -1577,6 +1668,29 @@ export default function CreateRetailInvoicePage() {
             <AlertDialogFooter className="flex-row justify-center gap-3 sm:justify-center">
               <AlertDialogAction onClick={confirmDuplicateAdd}>
                 نعم، أضف سطر جديد
+              </AlertDialogAction>
+              <AlertDialogCancel>لا</AlertDialogCancel>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* ================= Clear Invoice Confirm ================= */}
+        <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>مسح الفاتورة الحالية؟</AlertDialogTitle>
+              <AlertDialogDescription>
+                هيتم مسح جميع البيانات المدخلة والبدء في فاتورة جديدة
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction
+                onClick={() => {
+                  clearInvoice();
+                  setShowClearConfirm(false);
+                }}
+              >
+                نعم، امسح وابدأ جديد
               </AlertDialogAction>
               <AlertDialogCancel>لا</AlertDialogCancel>
             </AlertDialogFooter>
