@@ -165,6 +165,7 @@ export default function InvoicesPage() {
                 <th className="p-3 text-right">المدفوع</th>
                 <th className="p-3 text-right">الباقي</th>
                 <th className="p-3 text-right">الحالة</th>
+                <th className="p-3 text-right">بواسطة</th>
                 <th className="p-3 text-center">إجراءات</th>
               </tr>
             </thead>
@@ -172,7 +173,7 @@ export default function InvoicesPage() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="border-b">
-                    {Array.from({ length: 9 }).map((_, j) => (
+                    {Array.from({ length: 10 }).map((_, j) => (
                       <td key={j} className="p-3">
                         <Skeleton className="h-4 w-full" />
                       </td>
@@ -181,7 +182,7 @@ export default function InvoicesPage() {
                 ))
               ) : data.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="p-6 text-center">
+                  <td colSpan={10} className="p-6 text-center">
                     لا توجد فواتير
                   </td>
                 </tr>
@@ -214,6 +215,9 @@ export default function InvoicesPage() {
                     </td>
                     <td className="p-3">
                       {getStatusBadge(invoice.payment_status)}
+                    </td>
+                    <td className="p-3 text-xs text-muted-foreground">
+                      {invoice.created_by_name || "—"}
                     </td>
                     <td className="p-3 flex gap-2 justify-center">
                       <Button

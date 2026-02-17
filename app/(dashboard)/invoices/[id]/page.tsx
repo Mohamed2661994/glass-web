@@ -73,6 +73,16 @@ export default function InvoiceDetailsPage() {
           <p>
             <strong>المتبقي:</strong> {invoice.remaining_amount}
           </p>
+          {invoice.created_by_name && (
+            <p>
+              <strong>أنشأها:</strong> {invoice.created_by_name}
+            </p>
+          )}
+          {invoice.updated_by_name && (
+            <p>
+              <strong>آخر تعديل:</strong> {invoice.updated_by_name}
+            </p>
+          )}
         </CardContent>
       </Card>
 
