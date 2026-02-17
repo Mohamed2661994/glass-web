@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,6 +54,7 @@ type Step =
   | "upload"
   | "pickHeader"
   | "mapping"
+  | "validation"
   | "preview"
   | "importing"
   | "result";
@@ -256,7 +257,7 @@ export default function OpeningStockPage() {
   }, [excelData, mapping]);
 
   /* ========== STEP 3.5: Validate product codes ========== */
-  const handleValidate = async () => {
+  const handleValidate = useCallback(async () => {
     setValidating(true);
     try {
       const items = getMappedItems();
@@ -282,7 +283,14 @@ export default function OpeningStockPage() {
     } finally {
       setValidating(false);
     }
-  };
+  }, [getMappedItems]);
+
+  // Auto-validate when entering validation step
+  useEffect(() => {
+    if (step === "validation" && !validated && !validating) {
+      handleValidate();
+    }
+  }, [step, validated, validating, handleValidate]);
 
   /* ========== STEP 4: Import (batched) ========== */
   const handleImport = async () => {
@@ -385,6 +393,7 @@ export default function OpeningStockPage() {
           { key: "upload", label: "رفع الملف", icon: Upload },
           { key: "pickHeader", label: "صف العناوين", icon: FileSpreadsheet },
           { key: "mapping", label: "ربط الأعمدة", icon: FileSpreadsheet },
+          { key: "validation", label: "التحقق", icon: Search },
           { key: "preview", label: "معاينة", icon: AlertTriangle },
           { key: "result", label: "النتيجة", icon: CheckCircle2 },
         ].map((s, i) => {
@@ -392,6 +401,7 @@ export default function OpeningStockPage() {
             "upload",
             "pickHeader",
             "mapping",
+            "validation",
             "preview",
             "result",
           ];
@@ -653,12 +663,150 @@ export default function OpeningStockPage() {
                   setValidated(false);
                   setMatchedCodes(new Set());
                   setUnmatchedCodes([]);
-                  setStep("preview");
+                  setStep("validation");
                 }}
               >
                 معاينة البيانات
                 <ArrowLeft className="h-4 w-4 mr-1" />
               </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ===== STEP: Validation ===== */}
+      {step === "validation" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Search className="h-5 w-5 text-blue-500" />
+              التحقق من أكواد الأصناف ({excelData.length} صنف)
+            </CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              جاري التحقق من وجود أكواد الأصناف في قاعدة البيانات...
+            </p>
+          </CardHeader>
+          <CardContent>
+            {validating && (
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <p className="text-lg font-medium">جاري التحقق من الأكواد...</p>
+              </div>
+            )}
+
+            {validated && (
+              <>
+                <div className="rounded-md border overflow-auto max-h-[400px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-center w-12">#</TableHead>
+                        <TableHead className="text-center">كود الصنف</TableHead>
+                        <TableHead className="text-center">اسم الصنف</TableHead>
+                        <TableHead className="text-center">الحالة</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {getMappedItems()
+                        .slice(0, 50)
+                        .map((item, i) => {
+                          const isMatched = matchedCodes.has(item.product_code?.trim());
+                          return (
+                            <TableRow key={i} className={isMatched ? "" : "bg-red-50 dark:bg-red-950/20"}>
+                              <TableCell className="text-center">{i + 1}</TableCell>
+                              <TableCell className="text-center font-mono text-xs">
+                                {item.product_code || "—"}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {item.product_name || "—"}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {isMatched ? (
+                                  <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                                    <CheckCircle2 className="h-3 w-3 ml-1" />
+                                    موجود
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="destructive">
+                                    <XCircle className="h-3 w-3 ml-1" />
+                                    غير موجود
+                                  </Badge>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                    </TableBody>
+                  </Table>
+                </div>
+                {excelData.length > 50 && (
+                  <p className="text-sm text-muted-foreground mt-2 text-center">
+                    يعرض أول 50 صف من {excelData.length}
+                  </p>
+                )}
+
+                {/* Summary */}
+                {unmatchedCodes.length > 0 && (
+                  <div className="mt-4 p-4 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800">
+                    <div className="flex items-center gap-2 mb-2">
+                      <XCircle className="h-5 w-5 text-red-500" />
+                      <span className="font-semibold text-red-700 dark:text-red-400">
+                        {unmatchedCodes.length} كود غير موجود في قاعدة البيانات — لازم تضيفهم الأول
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 max-h-[150px] overflow-auto">
+                      {unmatchedCodes.map((code, i) => (
+                        <Badge key={i} variant="destructive" className="font-mono">
+                          {code}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {unmatchedCodes.length === 0 && (
+                  <div className="mt-4 p-4 rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      <span className="font-semibold text-green-700 dark:text-green-400">
+                        كل الأكواد ({matchedCodes.size}) موجودة في قاعدة البيانات ✅
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            <div className="flex items-center gap-3 mt-6 justify-between">
+              <Button
+                variant="outline"
+                onClick={() => setStep("mapping")}
+                disabled={validating}
+              >
+                <ArrowRight className="h-4 w-4 ml-1" />
+                رجوع
+              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setValidated(false);
+                    setMatchedCodes(new Set());
+                    setUnmatchedCodes([]);
+                  }}
+                  disabled={validating}
+                >
+                  <Search className="h-4 w-4 ml-1" />
+                  إعادة التحقق
+                </Button>
+                <Button
+                  onClick={() => setStep("preview")}
+                  disabled={!validated || unmatchedCodes.length > 0}
+                >
+                  متابعة الاستيراد
+                  <ArrowLeft className="h-4 w-4 mr-1" />
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -707,7 +855,6 @@ export default function OpeningStockPage() {
                     <TableHead className="text-center">السعر</TableHead>
                     <TableHead className="text-center">الوحدة</TableHead>
                     <TableHead className="text-center">الإجمالي</TableHead>
-                    {validated && <TableHead className="text-center">الحالة</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -734,15 +881,6 @@ export default function OpeningStockPage() {
                         <TableCell className="text-center font-medium">
                           {parseFloat(item.total).toLocaleString("ar-EG")}
                         </TableCell>
-                        {validated && (
-                          <TableCell className="text-center">
-                            {matchedCodes.has(item.product_code?.trim()) ? (
-                              <CheckCircle2 className="h-4 w-4 text-green-600 mx-auto" />
-                            ) : (
-                              <XCircle className="h-4 w-4 text-red-500 mx-auto" />
-                            )}
-                          </TableCell>
-                        )}
                       </TableRow>
                     ))}
                 </TableBody>
@@ -754,77 +892,28 @@ export default function OpeningStockPage() {
               </p>
             )}
 
-            {/* Validation Summary */}
-            {validated && unmatchedCodes.length > 0 && (
-              <div className="mt-4 p-4 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800">
-                <div className="flex items-center gap-2 mb-2">
-                  <XCircle className="h-5 w-5 text-red-500" />
-                  <span className="font-semibold text-red-700 dark:text-red-400">
-                    {unmatchedCodes.length} كود غير موجود في قاعدة البيانات
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-2 max-h-[150px] overflow-auto">
-                  {unmatchedCodes.map((code, i) => (
-                    <Badge key={i} variant="destructive" className="font-mono">
-                      {code}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {validated && unmatchedCodes.length === 0 && (
-              <div className="mt-4 p-4 rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  <span className="font-semibold text-green-700 dark:text-green-400">
-                    كل الأكواد ({matchedCodes.size}) موجودة في قاعدة البيانات ✅
-                  </span>
-                </div>
-              </div>
-            )}
-
             <div className="flex items-center gap-3 mt-6 justify-between">
               <Button
                 variant="outline"
-                onClick={() => setStep("mapping")}
-                disabled={importing || validating}
+                onClick={() => setStep("validation")}
+                disabled={importing}
               >
                 <ArrowRight className="h-4 w-4 ml-1" />
-                تعديل الربط
+                رجوع
               </Button>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  onClick={handleValidate}
-                  disabled={importing || validating}
-                >
-                  {validating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 ml-2 animate-spin" />
-                      جاري التحقق...
-                    </>
-                  ) : (
-                    <>
-                      <Search className="h-4 w-4 ml-1" />
-                      التحقق من الأكواد
-                    </>
-                  )}
-                </Button>
-                <Button onClick={handleImport} disabled={importing || !validated || unmatchedCodes.length > 0}>
-                  {importing ? (
-                    <>
-                      <Loader2 className="h-4 w-4 ml-2 animate-spin" />
-                      جاري الاستيراد... دفعة {progress} من {totalBatches}
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="h-4 w-4 ml-1" />
-                      استيراد {excelData.length} صنف كفواتير شراء
-                    </>
-                  )}
-                </Button>
-              </div>
+              <Button onClick={handleImport} disabled={importing}>
+                {importing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 ml-2 animate-spin" />
+                    جاري الاستيراد... دفعة {progress} من {totalBatches}
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 ml-1" />
+                    استيراد {excelData.length} صنف كفواتير شراء
+                  </>
+                )}
+              </Button>
             </div>
           </CardContent>
         </Card>
