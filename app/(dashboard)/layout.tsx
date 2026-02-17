@@ -82,7 +82,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <div className="flex items-center gap-3">
               <MobileSidebar />
               <div>
-                <h1 className="text-lg font-semibold">Dashboard</h1>
+                <h1 className="text-lg font-semibold">لوحة التحكم</h1>
                 <span className="text-xs text-muted-foreground">
                   {branchName}
                 </span>

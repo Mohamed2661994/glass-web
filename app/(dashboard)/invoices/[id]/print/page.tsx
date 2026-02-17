@@ -108,7 +108,9 @@ export default function InvoicePrintPage() {
 
   const itemsSubtotal = items.reduce(
     (sum, it) =>
-      it.is_return ? sum - Math.abs(calcItemTotal(it)) : sum + calcItemTotal(it),
+      it.is_return
+        ? sum - Math.abs(calcItemTotal(it))
+        : sum + calcItemTotal(it),
     0,
   );
 
@@ -124,8 +126,7 @@ export default function InvoicePrintPage() {
   const remaining = netTotal - paidAmount;
 
   const totalQty = items.reduce(
-    (sum, it) =>
-      it.is_return ? sum : sum + Number(it.quantity || 0),
+    (sum, it) => (it.is_return ? sum : sum + Number(it.quantity || 0)),
     0,
   );
 

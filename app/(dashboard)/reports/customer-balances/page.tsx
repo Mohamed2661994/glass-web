@@ -33,8 +33,6 @@ type CustomerBalanceItem = {
 /* ========== Component ========== */
 export default function CustomerBalancesPage() {
   const { user } = useAuth();
-  const isShowroomUser = user?.branch_id === 1;
-  const isWarehouseUser = user?.branch_id === 2;
 
   const [data, setData] = useState<CustomerBalanceItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -46,56 +44,23 @@ export default function CustomerBalancesPage() {
   );
   const router = useRouter();
 
-  /* invoice_type حسب الفرع */
-  const invoiceType = isShowroomUser
-    ? "retail"
-    : isWarehouseUser
-      ? "wholesale"
-      : undefined;
-
   /* ========== Fetch ========== */
   const fetchReport = useCallback(async () => {
     try {
       setLoading(true);
 
-      // 1) جلب تقرير المديونية
+      // جلب تقرير المديونية مع فلترة server-side حسب الفرع
       const balancesRes = await api.get("/reports/customer-balances", {
         params: {
           customer_name: customerSearch || undefined,
           from: fromDate || undefined,
           to: toDate || undefined,
+          warehouse_id: user?.branch_id || undefined,
         },
       });
       let balances: CustomerBalanceItem[] = Array.isArray(balancesRes.data)
         ? balancesRes.data
         : [];
-
-      // 2) فلتر حسب نوع الفاتورة (قطاعي/جملة) عن طريق جلب الفواتير
-      if (invoiceType) {
-        const invoicesRes = await api.get("/invoices", {
-          params: {
-            invoice_type: invoiceType,
-            limit: 9999,
-          },
-        });
-        const invoices: { customer_name: string }[] = Array.isArray(
-          invoicesRes.data,
-        )
-          ? invoicesRes.data
-          : [];
-
-        // جمع أسماء العملاء اللي ليهم فواتير من النوع ده
-        const validCustomers = new Set(
-          invoices
-            .map((inv) => (inv.customer_name || "").trim())
-            .filter(Boolean),
-        );
-
-        // فلتر المديونية لتشمل العملاء دول بس
-        balances = balances.filter((c) =>
-          validCustomers.has((c.customer_name || "").trim()),
-        );
-      }
 
       setData(balances);
     } catch {
@@ -103,7 +68,7 @@ export default function CustomerBalancesPage() {
     } finally {
       setLoading(false);
     }
-  }, [customerSearch, fromDate, toDate, invoiceType]);
+  }, [customerSearch, fromDate, toDate, user?.branch_id]);
 
   /* Auto-search */
   useEffect(() => {

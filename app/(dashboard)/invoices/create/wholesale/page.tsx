@@ -394,6 +394,20 @@ export default function CreateWholesaleInvoicePage() {
   };
 
   /* =========================================================
+     Warn before leaving with unsaved items
+     ========================================================= */
+
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (items.length > 0) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [items.length]);
+
+  /* =========================================================
      Spacebar shortcut to open product dialog
      ========================================================= */
 

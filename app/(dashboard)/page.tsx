@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/auth-context";
 import api from "@/services/api";
-import { FileText, Truck, RefreshCw } from "lucide-react";
+import { FileText, Truck, RefreshCw, DollarSign, Banknote, AlertTriangle, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /* ---------- types ---------- */
@@ -35,6 +35,13 @@ interface Transfer {
   total_from_quantity: number;
   status: string;
   created_at: string;
+}
+
+interface DashboardStats {
+  today_sales: number;
+  today_invoices_count: number;
+  today_cash: number;
+  low_stock_count: number;
 }
 
 /* ---------- helpers ---------- */
@@ -69,8 +76,10 @@ export default function DashboardPage() {
 
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loadingInv, setLoadingInv] = useState(true);
   const [loadingTr, setLoadingTr] = useState(true);
+  const [loadingStats, setLoadingStats] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
 
   /* re-fetch when page becomes visible (user navigates back) */
@@ -101,6 +110,24 @@ export default function DashboardPage() {
         /* silent */
       } finally {
         setLoadingInv(false);
+      }
+    })();
+  }, [branchId, invoiceType, refreshKey]);
+
+  /* fetch dashboard stats */
+  useEffect(() => {
+    if (!branchId) return;
+    setLoadingStats(true);
+    (async () => {
+      try {
+        const { data } = await api.get("/dashboard/stats", {
+          params: { invoice_type: invoiceType, _t: Date.now() },
+        });
+        setStats(data);
+      } catch {
+        /* silent */
+      } finally {
+        setLoadingStats(false);
       }
     })();
   }, [branchId, invoiceType, refreshKey]);
@@ -139,7 +166,82 @@ export default function DashboardPage() {
     ));
 
   return (
-    <div className="p-4 md:p-6" dir="rtl">
+    <div className="p-4 md:p-6 space-y-6" dir="rtl">
+      {/* ====== KPI Cards ====== */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="rounded-lg bg-blue-100 dark:bg-blue-900/30 p-2.5">
+              <ShoppingCart className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">مبيعات اليوم</p>
+              {loadingStats ? (
+                <Skeleton className="h-6 w-20 mt-1" />
+              ) : (
+                <p className="text-lg font-bold">
+                  {Math.round(stats?.today_sales ?? 0).toLocaleString()} ج
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="rounded-lg bg-green-100 dark:bg-green-900/30 p-2.5">
+              <FileText className="h-5 w-5 text-green-600 dark:text-green-400" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">فواتير اليوم</p>
+              {loadingStats ? (
+                <Skeleton className="h-6 w-12 mt-1" />
+              ) : (
+                <p className="text-lg font-bold">
+                  {stats?.today_invoices_count ?? 0}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="rounded-lg bg-emerald-100 dark:bg-emerald-900/30 p-2.5">
+              <Banknote className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">نقدية اليوم</p>
+              {loadingStats ? (
+                <Skeleton className="h-6 w-20 mt-1" />
+              ) : (
+                <p className="text-lg font-bold">
+                  {Math.round(stats?.today_cash ?? 0).toLocaleString()} ج
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="rounded-lg bg-orange-100 dark:bg-orange-900/30 p-2.5">
+              <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">أصناف منخفضة</p>
+              {loadingStats ? (
+                <Skeleton className="h-6 w-12 mt-1" />
+              ) : (
+                <p className="text-lg font-bold">
+                  {stats?.low_stock_count ?? 0}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <div
         className={`grid gap-6 ${branchId === 2 ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"}`}
       >

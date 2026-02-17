@@ -18,6 +18,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import axios from "@/services/api";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/auth-context";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Invoice {
   id: number;
@@ -53,9 +63,14 @@ export default function InvoicesPage() {
         : null;
   const [movementType, setMovementType] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [invoiceIdSearch, setInvoiceIdSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<number | null>(null);
 
   const [page, setPage] = useState(1);
   const limit = 10;
@@ -84,6 +99,9 @@ export default function InvoicesPage() {
 
       if (movementType !== "all") params.movement_type = movementType;
       if (debouncedSearch) params.customer_name = debouncedSearch;
+      if (invoiceIdSearch) params.invoice_id = invoiceIdSearch;
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo) params.date_to = dateTo;
 
       const res = await axios.get("/invoices", { params });
 
@@ -97,7 +115,7 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     fetchInvoices();
-  }, [page, invoiceType, movementType, debouncedSearch]);
+  }, [page, invoiceType, movementType, debouncedSearch, invoiceIdSearch, dateFrom, dateTo]);
 
   const getStatusBadge = (status: string) => {
     if (status === "paid")
@@ -107,19 +125,25 @@ export default function InvoicesPage() {
     return <Badge variant="destructive">غير مدفوعة</Badge>;
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("هل أنت متأكد من حذف الفاتورة؟")) return;
-    if (deleting) return;
+  const confirmDelete = (id: number) => {
+    setInvoiceToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!invoiceToDelete || deleting) return;
 
     try {
-      setDeleting(id);
-      await axios.delete(`/invoices/${id}`);
+      setDeleting(invoiceToDelete);
+      setDeleteDialogOpen(false);
+      await axios.delete(`/invoices/${invoiceToDelete}`);
       toast.success("تم حذف الفاتورة");
       fetchInvoices();
     } catch {
       toast.error("فشل حذف الفاتورة");
     } finally {
       setDeleting(null);
+      setInvoiceToDelete(null);
     }
   };
 
@@ -139,11 +163,22 @@ export default function InvoicesPage() {
               setSearch(e.target.value);
               setPage(1);
             }}
-            className="w-64"
+            className="w-52"
           />
 
-          <Select value={movementType} onValueChange={setMovementType}>
-            <SelectTrigger className="w-40">
+          <Input
+            placeholder="رقم الفاتورة"
+            type="number"
+            value={invoiceIdSearch}
+            onChange={(e) => {
+              setInvoiceIdSearch(e.target.value);
+              setPage(1);
+            }}
+            className="w-36"
+          />
+
+          <Select value={movementType} onValueChange={(v) => { setMovementType(v); setPage(1); }}>
+            <SelectTrigger className="w-36">
               <SelectValue placeholder="حركة" />
             </SelectTrigger>
             <SelectContent>
@@ -152,6 +187,43 @@ export default function InvoicesPage() {
               <SelectItem value="purchase">شراء</SelectItem>
             </SelectContent>
           </Select>
+
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground whitespace-nowrap">من</span>
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+              className="w-40"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground whitespace-nowrap">إلى</span>
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+              className="w-40"
+            />
+          </div>
+
+          {(dateFrom || dateTo || invoiceIdSearch || search || movementType !== "all") && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSearch("");
+                setInvoiceIdSearch("");
+                setDateFrom("");
+                setDateTo("");
+                setMovementType("all");
+                setPage(1);
+              }}
+            >
+              مسح الفلاتر
+            </Button>
+          )}
         </CardContent>
       </Card>
 
@@ -248,7 +320,7 @@ export default function InvoicesPage() {
                         size="icon"
                         variant="outline"
                         disabled={deleting === invoice.id}
-                        onClick={() => handleDelete(invoice.id)}
+                        onClick={() => confirmDelete(invoice.id)}
                       >
                         <Trash2 size={16} />
                       </Button>
@@ -291,6 +363,24 @@ export default function InvoicesPage() {
           التالي
         </Button>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>هل أنت متأكد من حذف الفاتورة؟</AlertDialogTitle>
+            <AlertDialogDescription>
+              سيتم حذف الفاتورة رقم {invoiceToDelete} نهائياً ولا يمكن التراجع عن هذا الإجراء.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              حذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
