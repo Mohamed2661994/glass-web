@@ -81,18 +81,19 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             {/* LEFT */}
             <div className="flex items-center gap-3">
               <MobileSidebar />
-              <div>
-                <h1 className="text-lg font-semibold">لوحة التحكم</h1>
-                <span className="text-xs text-muted-foreground">
-                  {branchName}
-                </span>
-              </div>
             </div>
 
-            {/* CENTER - Name */}
-            <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
+            {/* CENTER - Name + Branch */}
+            <div
+              className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center cursor-pointer select-none"
+              onClick={() => router.push("/")}
+              title="الرجوع للوحة التحكم"
+            >
               <span className="text-base font-bold">
                 {user?.full_name || user?.username}
+              </span>
+              <span className="text-xs text-muted-foreground leading-tight">
+                {branchName}
               </span>
             </div>
 

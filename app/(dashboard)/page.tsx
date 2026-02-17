@@ -513,24 +513,57 @@ const ICON_OPTIONS = Object.keys(ICON_MAP);
 
 const COLOR_OPTIONS = [
   { value: "bg-blue-500/10 text-blue-600 dark:text-blue-400", label: "أزرق" },
-  { value: "bg-green-500/10 text-green-600 dark:text-green-400", label: "أخضر" },
-  { value: "bg-purple-500/10 text-purple-600 dark:text-purple-400", label: "بنفسجي" },
-  { value: "bg-orange-500/10 text-orange-600 dark:text-orange-400", label: "برتقالي" },
-  { value: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", label: "زمردي" },
+  {
+    value: "bg-green-500/10 text-green-600 dark:text-green-400",
+    label: "أخضر",
+  },
+  {
+    value: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
+    label: "بنفسجي",
+  },
+  {
+    value: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
+    label: "برتقالي",
+  },
+  {
+    value: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    label: "زمردي",
+  },
   { value: "bg-sky-500/10 text-sky-600 dark:text-sky-400", label: "سماوي" },
-  { value: "bg-amber-500/10 text-amber-600 dark:text-amber-400", label: "عنبري" },
+  {
+    value: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+    label: "عنبري",
+  },
   { value: "bg-rose-500/10 text-rose-600 dark:text-rose-400", label: "وردي" },
   { value: "bg-red-500/10 text-red-600 dark:text-red-400", label: "أحمر" },
   { value: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400", label: "سيان" },
-  { value: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400", label: "نيلي" },
-  { value: "bg-violet-500/10 text-violet-600 dark:text-violet-400", label: "بنفسجي غامق" },
-  { value: "bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400", label: "فوشيا" },
+  {
+    value: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
+    label: "نيلي",
+  },
+  {
+    value: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+    label: "بنفسجي غامق",
+  },
+  {
+    value: "bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400",
+    label: "فوشيا",
+  },
   { value: "bg-pink-500/10 text-pink-600 dark:text-pink-400", label: "زهري" },
   { value: "bg-teal-500/10 text-teal-600 dark:text-teal-400", label: "تيل" },
   { value: "bg-lime-500/10 text-lime-600 dark:text-lime-400", label: "ليموني" },
-  { value: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400", label: "أصفر" },
-  { value: "bg-stone-500/10 text-stone-600 dark:text-stone-400", label: "حجري" },
-  { value: "bg-slate-500/10 text-slate-600 dark:text-slate-400", label: "رمادي" },
+  {
+    value: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
+    label: "أصفر",
+  },
+  {
+    value: "bg-stone-500/10 text-stone-600 dark:text-stone-400",
+    label: "حجري",
+  },
+  {
+    value: "bg-slate-500/10 text-slate-600 dark:text-slate-400",
+    label: "رمادي",
+  },
   { value: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400", label: "زنك" },
 ];
 

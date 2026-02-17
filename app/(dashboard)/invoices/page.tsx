@@ -156,7 +156,10 @@ export default function InvoicesPage() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-4 md:space-y-6 max-w-5xl mx-auto" dir="rtl">
+    <div
+      className="p-4 md:p-6 space-y-4 md:space-y-6 max-w-5xl mx-auto"
+      dir="rtl"
+    >
       <h1 className="text-xl md:text-2xl font-bold">
         فواتير {invoiceType === "retail" ? "القطاعي" : "الجملة"}
       </h1>
@@ -287,7 +290,10 @@ export default function InvoicesPage() {
                 ))
               ) : data.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="p-6 text-center text-muted-foreground">
+                  <td
+                    colSpan={10}
+                    className="p-6 text-center text-muted-foreground"
+                  >
                     لا توجد فواتير
                   </td>
                 </tr>
@@ -512,10 +518,7 @@ export default function InvoicesPage() {
                       variant="ghost"
                       className="h-7 w-7"
                       onClick={() =>
-                        window.open(
-                          `/invoices/${invoice.id}/print`,
-                          "_blank",
-                        )
+                        window.open(`/invoices/${invoice.id}/print`, "_blank")
                       }
                     >
                       <Printer size={14} />
