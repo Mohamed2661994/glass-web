@@ -1016,6 +1016,20 @@ export default function CreateRetailInvoicePage() {
                             )
                           }
                         />
+                        {(() => {
+                          const prod = products.find(
+                            (pr: any) => pr.id === item.product_id,
+                          );
+                          const avail = prod
+                            ? Number(prod.available_quantity)
+                            : null;
+                          return avail !== null &&
+                            Number(item.quantity) > avail ? (
+                            <div className="text-[11px] text-red-500 mt-1">
+                              الرصيد المتاح: {avail}
+                            </div>
+                          ) : null;
+                        })()}
                       </td>
                       <td className="p-3 text-center">
                         {editingItemUid === item.uid ? (
@@ -1486,7 +1500,9 @@ export default function CreateRetailInvoicePage() {
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <div className="font-medium">{highlightText(product.name, search)}</div>
+                          <div className="font-medium">
+                            {highlightText(product.name, search)}
+                          </div>
                           {outOfStock && (
                             <span className="text-[10px] bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full font-medium">
                               نفذ
@@ -1499,7 +1515,10 @@ export default function CreateRetailInvoicePage() {
                           )}
                         </div>
                         <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3">
-                          <span>المصنع: {highlightText(product.manufacturer || "-", search)}</span>
+                          <span>
+                            المصنع:{" "}
+                            {highlightText(product.manufacturer || "-", search)}
+                          </span>
                           <span>العبوة: {product.retail_package || "-"}</span>
                           <span>السعر: {product.price}</span>
                           {product.discount_amount > 0 && (

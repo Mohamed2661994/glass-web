@@ -322,6 +322,12 @@ export default function StockTransferPage() {
                       )
                     }
                   />
+                  {Number(item.quantity) >
+                    Number(item.available_quantity) && (
+                    <div className="text-[11px] text-red-500 mt-1">
+                      الرصيد المتاح: {item.available_quantity}
+                    </div>
+                  )}
                 </div>
 
                 {/* التفاصيل */}
@@ -413,7 +419,8 @@ export default function StockTransferPage() {
                 >
                   <div className="flex items-center gap-2">
                     <div className="font-semibold text-sm">
-                      {highlightText(p.name, search)} – {highlightText(p.manufacturer, search)}
+                      {highlightText(p.name, search)} –{" "}
+                      {highlightText(p.manufacturer, search)}
                     </div>
                     {variantsMap[p.id]?.length > 0 && (
                       <span className="text-[10px] bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded-full">

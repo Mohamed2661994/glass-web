@@ -233,7 +233,9 @@ export default function ReplacePage() {
                   className="w-full text-right px-3 py-2 hover:bg-muted transition-colors border-b last:border-b-0"
                   onClick={() => onSelect(p)}
                 >
-                  <div className="font-medium text-sm">{highlightText(p.name, search)}</div>
+                  <div className="font-medium text-sm">
+                    {highlightText(p.name, search)}
+                  </div>
                   {(p.manufacturer || p.wholesale_package) && (
                     <div className="text-xs text-muted-foreground mt-0.5">
                       {highlightText(p.manufacturer, search)}

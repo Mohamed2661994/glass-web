@@ -397,10 +397,15 @@ export default function ProductMovementPage() {
                   selectedProduct?.id === p.id ? "bg-muted" : ""
                 }`}
               >
-                <div className="font-medium text-sm">{highlightText(p.name, productSearch)}</div>
+                <div className="font-medium text-sm">
+                  {highlightText(p.name, productSearch)}
+                </div>
                 {(p.manufacturer || p.manufacturer_name) && (
                   <div className="text-xs text-muted-foreground">
-                    {highlightText(p.manufacturer || p.manufacturer_name, productSearch)}
+                    {highlightText(
+                      p.manufacturer || p.manufacturer_name,
+                      productSearch,
+                    )}
                   </div>
                 )}
               </button>

@@ -221,7 +221,9 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                 >
                   {/* Row 1: Name + Barcode */}
                   <div className="flex items-center justify-between gap-2">
-                    <div className="font-medium">{highlightText(product.name, search)}</div>
+                    <div className="font-medium">
+                      {highlightText(product.name, search)}
+                    </div>
                     <div className="flex items-center gap-1.5">
                       {outOfStock && (
                         <span className="text-[10px] bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full font-medium">
@@ -238,7 +240,10 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
                   {/* Row 2: Details */}
                   <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-4 gap-y-1">
-                    <span>المصنع: {highlightText(product.manufacturer || "-", search)}</span>
+                    <span>
+                      المصنع:{" "}
+                      {highlightText(product.manufacturer || "-", search)}
+                    </span>
                     <span>
                       العبوة:{" "}
                       {invoiceType === "retail"
