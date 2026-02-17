@@ -171,7 +171,7 @@ export default function StockTransferPage() {
 
   /* ========== Total ========== */
   const totalAmount = items.reduce((sum, i) => {
-    const unitPrice = i.wholesale_price + (i.price_addition || 0);
+    const unitPrice = Number(i.wholesale_price) + (i.price_addition || 0);
     const base = i.quantity * unitPrice;
     const discount = base * (i.percent / 100);
     return sum + (base - discount);
@@ -189,7 +189,7 @@ export default function StockTransferPage() {
       to_branch_id: TO_BRANCH_ID,
       total_amount: totalAmount,
       items: items.map((i) => {
-        const unitPrice = i.wholesale_price + (i.price_addition || 0);
+        const unitPrice = Number(i.wholesale_price) + (i.price_addition || 0);
         const base = i.quantity * unitPrice;
         const discount = base * (i.percent / 100);
         return {
@@ -233,7 +233,7 @@ export default function StockTransferPage() {
       )}
 
       {items.map((item) => {
-        const unitPrice = item.wholesale_price + (item.price_addition || 0);
+        const unitPrice = Number(item.wholesale_price) + (item.price_addition || 0);
         const base = item.quantity * unitPrice;
         const discount = base * (item.percent / 100);
         const final = base - discount;
