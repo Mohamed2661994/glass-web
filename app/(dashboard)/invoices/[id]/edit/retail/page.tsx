@@ -8,7 +8,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/services/api";
 import { Trash2, Loader2, Pencil, RefreshCw } from "lucide-react";
-import { ProductFormDialog } from "@/components/product-form-dialog";
 import { useCachedProducts } from "@/hooks/use-cached-products";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -82,7 +81,7 @@ export default function EditRetailInvoicePage() {
   const [refreshingProducts, setRefreshingProducts] = useState(false);
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [editProduct, setEditProduct] = useState<any>(null);
+  const [editingItemUid, setEditingItemUid] = useState<string | null>(null);
   const [pendingDuplicate, setPendingDuplicate] = useState<{
     product: any;
     source: "barcode" | "manual";
@@ -727,7 +726,45 @@ export default function EditRetailInvoicePage() {
                           {item.package}
                         </div>
                       </td>
-                      <td className="p-3 text-center">{item.price}</td>
+                      <td className="p-3 text-center">
+                        {editingItemUid === item.uid ? (
+                          <Input
+                            type="number"
+                            autoFocus
+                            data-price-id={item.uid}
+                            className="w-24 mx-auto text-center"
+                            value={item.price}
+                            onFocus={(e) => e.target.select()}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                const discountInput = document.querySelector(
+                                  `input[data-discount-id="${item.uid}"]`,
+                                ) as HTMLInputElement | null;
+                                discountInput?.focus();
+                                discountInput?.select();
+                              }
+                            }}
+                            onChange={(e) =>
+                              setItems((prev) =>
+                                prev.map((i) =>
+                                  i.uid === item.uid
+                                    ? {
+                                        ...i,
+                                        price:
+                                          e.target.value === ""
+                                            ? ""
+                                            : Number(e.target.value),
+                                      }
+                                    : i,
+                                ),
+                              )
+                            }
+                          />
+                        ) : (
+                          item.price
+                        )}
+                      </td>
                       <td className="p-3 text-center">
                         <Input
                           type="number"
@@ -759,9 +796,42 @@ export default function EditRetailInvoicePage() {
                         />
                       </td>
                       <td className="p-3 text-center">
-                        <span className="font-medium">
-                          {item.discount || 0}
-                        </span>
+                        {editingItemUid === item.uid ? (
+                          <Input
+                            type="number"
+                            data-discount-id={item.uid}
+                            className="w-20 mx-auto text-center"
+                            value={item.discount || 0}
+                            onFocus={(e) => e.target.select()}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                setEditingItemUid(null);
+                                barcodeRef.current?.focus();
+                                barcodeRef.current?.select();
+                              }
+                            }}
+                            onChange={(e) =>
+                              setItems((prev) =>
+                                prev.map((i) =>
+                                  i.uid === item.uid
+                                    ? {
+                                        ...i,
+                                        discount:
+                                          e.target.value === ""
+                                            ? 0
+                                            : Number(e.target.value),
+                                      }
+                                    : i,
+                                ),
+                              )
+                            }
+                          />
+                        ) : (
+                          <span className="font-medium">
+                            {item.discount || 0}
+                          </span>
+                        )}
                       </td>
                       <td className="p-3 text-center font-semibold">
                         {(() => {
@@ -793,16 +863,13 @@ export default function EditRetailInvoicePage() {
                           <Button
                             variant="ghost"
                             size="icon-xs"
-                            onClick={() => {
-                              const prod = products.find(
-                                (p) => p.id === item.product_id,
-                              );
-                              if (prod) {
-                                setEditProduct(prod);
-                              }
-                            }}
+                            onClick={() =>
+                              setEditingItemUid((prev) =>
+                                prev === item.uid ? null : item.uid,
+                              )
+                            }
                           >
-                            <Pencil className="size-4 text-blue-600" />
+                            <Pencil className={`size-4 ${editingItemUid === item.uid ? "text-green-600" : "text-blue-600"}`} />
                           </Button>
                           {confirmDeleteId === item.uid ? (
                             <Button
@@ -1031,53 +1098,53 @@ export default function EditRetailInvoicePage() {
                 </div>
               ) : (
                 <>
-                {displayedProducts.map((product, index) => {
-                  const outOfStock =
-                    movementType === "sale" &&
-                    Number(product.available_quantity) <= 0;
-                  return (
-                    <div
-                      key={product.id}
-                      data-product-index={index}
-                      tabIndex={outOfStock ? -1 : 0}
-                      onClick={() => !outOfStock && addItem(product)}
-                      onKeyDown={(e) =>
-                        !outOfStock && handleListKeyDown(e, index)
-                      }
-                      className={`p-3 rounded-lg border transition outline-none ${
-                        outOfStock
-                          ? "opacity-50 cursor-not-allowed bg-muted/30"
-                          : `cursor-pointer hover:bg-muted ${focusedIndex === index ? "ring-2 ring-primary bg-muted" : ""}`
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium">{product.name}</div>
-                        {outOfStock && (
-                          <span className="text-[10px] bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full font-medium">
-                            نفذ
-                          </span>
-                        )}
+                  {displayedProducts.map((product, index) => {
+                    const outOfStock =
+                      movementType === "sale" &&
+                      Number(product.available_quantity) <= 0;
+                    return (
+                      <div
+                        key={product.id}
+                        data-product-index={index}
+                        tabIndex={outOfStock ? -1 : 0}
+                        onClick={() => !outOfStock && addItem(product)}
+                        onKeyDown={(e) =>
+                          !outOfStock && handleListKeyDown(e, index)
+                        }
+                        className={`p-3 rounded-lg border transition outline-none ${
+                          outOfStock
+                            ? "opacity-50 cursor-not-allowed bg-muted/30"
+                            : `cursor-pointer hover:bg-muted ${focusedIndex === index ? "ring-2 ring-primary bg-muted" : ""}`
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="font-medium">{product.name}</div>
+                          {outOfStock && (
+                            <span className="text-[10px] bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full font-medium">
+                              نفذ
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3">
+                          <span>المصنع: {product.manufacturer || "-"}</span>
+                          <span>العبوة: {product.retail_package || "-"}</span>
+                          <span>السعر: {product.price}</span>
+                          {product.discount_amount > 0 && (
+                            <span className="text-destructive">
+                              خصم: {product.discount_amount}
+                            </span>
+                          )}
+                          <span>الرصيد: {product.available_quantity}</span>
+                        </div>
                       </div>
-                      <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3">
-                        <span>المصنع: {product.manufacturer || "-"}</span>
-                        <span>العبوة: {product.retail_package || "-"}</span>
-                        <span>السعر: {product.price}</span>
-                        {product.discount_amount > 0 && (
-                          <span className="text-destructive">
-                            خصم: {product.discount_amount}
-                          </span>
-                        )}
-                        <span>الرصيد: {product.available_quantity}</span>
-                      </div>
+                    );
+                  })}
+                  {filteredProducts.length > MODAL_DISPLAY_LIMIT && (
+                    <div className="text-center text-xs text-muted-foreground py-3">
+                      يتم عرض {MODAL_DISPLAY_LIMIT} من {filteredProducts.length}{" "}
+                      صنف — ابحث لتضييق النتائج
                     </div>
-                  );
-                })
-                }
-                {filteredProducts.length > MODAL_DISPLAY_LIMIT && (
-                  <div className="text-center text-xs text-muted-foreground py-3">
-                    يتم عرض {MODAL_DISPLAY_LIMIT} من {filteredProducts.length} صنف — ابحث لتضييق النتائج
-                  </div>
-                )}
+                  )}
                 </>
               )}
             </div>
@@ -1105,16 +1172,7 @@ export default function EditRetailInvoicePage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-        {/* ================= Edit Product Dialog ================= */}
-        <ProductFormDialog
-          open={!!editProduct}
-          onOpenChange={(open) => !open && setEditProduct(null)}
-          product={editProduct || undefined}
-          onSuccess={() => {
-            refreshProducts();
-            setEditProduct(null);
-          }}
-        />
+
       </div>
     </div>
   );
