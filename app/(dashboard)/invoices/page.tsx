@@ -32,6 +32,10 @@ interface Invoice {
   remaining_amount: number;
   payment_status: "paid" | "partial" | "unpaid";
   created_at: string;
+  created_by?: number;
+  created_by_name?: string;
+  updated_by?: number;
+  updated_by_name?: string;
 }
 
 export default function InvoicesPage() {
