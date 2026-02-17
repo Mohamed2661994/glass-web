@@ -217,7 +217,7 @@ export default function CreateRetailInvoicePage() {
     products,
     variantsMap,
     loading: loadingProducts,
-    refresh: refreshProducts,
+    softRefresh: refreshProducts,
   } = useCachedProducts({
     endpoint: "/products",
     params: {
@@ -655,15 +655,21 @@ export default function CreateRetailInvoicePage() {
 
   const filteredProducts = useMemo(
     () =>
-      products.filter((p) => {
-        const s = search.toLowerCase();
-        return (
-          String(p.id).includes(s) ||
-          p.name.toLowerCase().includes(s) ||
-          (p.description && p.description.toLowerCase().includes(s)) ||
-          (p.barcode && p.barcode.toLowerCase().includes(s))
-        );
-      }),
+      products
+        .filter((p) => {
+          const s = search.toLowerCase();
+          return (
+            String(p.id).includes(s) ||
+            p.name.toLowerCase().includes(s) ||
+            (p.description && p.description.toLowerCase().includes(s)) ||
+            (p.barcode && p.barcode.toLowerCase().includes(s))
+          );
+        })
+        .sort((a, b) => {
+          const aStock = Number(a.available_quantity) > 0 ? 0 : 1;
+          const bStock = Number(b.available_quantity) > 0 ? 0 : 1;
+          return aStock - bStock;
+        }),
     [products, search],
   );
 

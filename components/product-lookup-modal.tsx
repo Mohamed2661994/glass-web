@@ -29,7 +29,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
   /* =========================================================
      Fetch products (Cached — localStorage + auto-refresh)
      ========================================================= */
-  const { products, loading, refresh } = useCachedProducts({
+  const { products, loading, softRefresh } = useCachedProducts({
     endpoint: "/products",
     params: {
       branch_id: branchId,
@@ -44,23 +44,29 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     if (!open) return;
     setSearch("");
     setFocusedIndex(-1);
-    refresh();
-  }, [open, refresh]);
+    softRefresh();
+  }, [open, softRefresh]);
 
   /* =========================================================
      Filtered products
      ========================================================= */
   const filteredProducts = useMemo(
     () =>
-      products.filter((p) => {
-        const s = search.toLowerCase();
-        return (
-          String(p.id).includes(s) ||
-          p.name.toLowerCase().includes(s) ||
-          (p.description && p.description.toLowerCase().includes(s)) ||
-          (p.barcode && p.barcode.toLowerCase().includes(s))
-        );
-      }),
+      products
+        .filter((p) => {
+          const s = search.toLowerCase();
+          return (
+            String(p.id).includes(s) ||
+            p.name.toLowerCase().includes(s) ||
+            (p.description && p.description.toLowerCase().includes(s)) ||
+            (p.barcode && p.barcode.toLowerCase().includes(s))
+          );
+        })
+        .sort((a, b) => {
+          const aStock = Number(a.available_quantity) > 0 ? 0 : 1;
+          const bStock = Number(b.available_quantity) > 0 ? 0 : 1;
+          return aStock - bStock;
+        }),
     [products, search],
   );
 

@@ -187,8 +187,34 @@ export function useCachedProducts({
     [endpoint, paramsString, resolvedCacheKey, fetchVariants, cacheDuration],
   );
 
-  // Force refresh (bypasses cache)
+  // Force refresh (bypasses cache, shows loading)
   const refresh = useCallback(() => fetchProducts(true), [fetchProducts]);
+
+  // Soft refresh — show stale cache instantly, update silently in background
+  const softRefresh = useCallback(() => {
+    // 1. Load stale cache immediately (no loading spinner)
+    try {
+      const raw = localStorage.getItem(
+        getCacheKey(CACHE_KEY_PREFIX, resolvedCacheKey),
+      );
+      if (raw) {
+        const entry: CacheEntry<any[]> = JSON.parse(raw);
+        setProducts(entry.data);
+        setLastUpdated(new Date(entry.timestamp));
+        if (fetchVariants) {
+          const vRaw = localStorage.getItem(
+            getCacheKey(VARIANTS_CACHE_KEY_PREFIX, resolvedCacheKey),
+          );
+          if (vRaw) {
+            const vEntry: CacheEntry<Record<number, any[]>> = JSON.parse(vRaw);
+            setVariantsMap(vEntry.data);
+          }
+        }
+      }
+    } catch {}
+    // 2. Fetch fresh data in background (no loading state)
+    fetchProducts(true);
+  }, [fetchProducts, resolvedCacheKey, fetchVariants]);
 
   // Auto-fetch on mount
   useEffect(() => {
@@ -226,6 +252,7 @@ export function useCachedProducts({
     loading,
     lastUpdated,
     refresh,
+    softRefresh,
     invalidateCache,
     fetchProducts,
   };
