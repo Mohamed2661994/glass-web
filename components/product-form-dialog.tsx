@@ -107,24 +107,45 @@ export function ProductFormDialog({
     return { qty: qtyPart, qty2: "", type };
   };
 
+  const populateForm = (prod: any) => {
+    const wholesaleParsed = parseWholesale(prod.wholesale_package);
+    const retailParsed = parseRetail(prod.retail_package);
+
+    setForm({
+      ...prod,
+      purchase_price: prod.purchase_price ?? "",
+      wholesale_price: prod.wholesale_price ?? "",
+      retail_purchase_price: prod.retail_purchase_price ?? "",
+      retail_price: prod.retail_price ?? "",
+      discount_amount: prod.discount_amount ?? "",
+      wholesale_package_qty: wholesaleParsed.qty,
+      wholesale_package_type: wholesaleParsed.type,
+      retail_package_qty: retailParsed.qty,
+      retail_package_qty2: retailParsed.qty2 || "",
+      retail_package_type: retailParsed.type,
+    });
+
+    setShowDescription(!!prod.description);
+  };
+
   useEffect(() => {
     fetchManufacturers();
 
     if (product) {
-      const wholesaleParsed = parseWholesale(product.wholesale_package);
-      const retailParsed = parseRetail(product.retail_package);
-
-      setForm({
-        ...product,
-        wholesale_package_qty: wholesaleParsed.qty,
-        wholesale_package_type: wholesaleParsed.type,
-        retail_package_qty: retailParsed.qty,
-        retail_package_qty2: retailParsed.qty2 || "",
-        retail_package_type: retailParsed.type,
-      });
-
-      // لو فيه وصف → نفتح الحقل تلقائي
-      setShowDescription(!!product.description);
+      // لو الصنف ناقصه بيانات الأسعار (مثلاً جاي من صفحة الفاتورة) → نجيبه كامل من الباك
+      if (product.purchase_price === undefined) {
+        api
+          .get(`/admin/products/${product.id}`)
+          .then((res) => {
+            populateForm(res.data);
+          })
+          .catch(() => {
+            // fallback: نستخدم البيانات الموجودة
+            populateForm(product);
+          });
+      } else {
+        populateForm(product);
+      }
 
       // جلب العبوات الفرعية الموجودة
       fetchExistingVariants(product.id);
