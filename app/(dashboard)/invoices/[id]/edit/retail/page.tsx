@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { useAuth } from "@/app/context/auth-context";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -44,6 +45,7 @@ import {
    ========================================================= */
 
 export default function EditRetailInvoicePage() {
+  const { user } = useAuth();
   const { id } = useParams();
   const router = useRouter();
   const [loadingInvoice, setLoadingInvoice] = useState(true);
@@ -435,6 +437,8 @@ export default function EditRetailInvoicePage() {
         paid_amount: Number(paidAmount) || 0,
         previous_balance: Number(previousBalance) || 0,
         apply_items_discount: applyItemsDiscount,
+        updated_by: user?.id,
+        updated_by_name: user?.username,
       });
 
       toast.success("تم تعديل الفاتورة بنجاح");

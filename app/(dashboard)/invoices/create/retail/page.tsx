@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/app/context/auth-context";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -45,6 +46,8 @@ import {
    ========================================================= */
 
 export default function CreateRetailInvoicePage() {
+  const { user } = useAuth();
+
   /* =========================================================
      1️⃣ Invoice Header States
      ========================================================= */
@@ -596,6 +599,8 @@ export default function CreateRetailInvoicePage() {
         paid_amount: Number(paidAmount) || 0,
         previous_balance: Number(previousBalance) || 0,
         apply_items_discount: applyItemsDiscount,
+        created_by: user?.id,
+        created_by_name: user?.username,
       });
 
       const newId = res.data?.id || res.data?.invoice_id;

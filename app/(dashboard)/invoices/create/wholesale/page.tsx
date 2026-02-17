@@ -367,6 +367,8 @@ export default function CreateWholesaleInvoicePage() {
         items,
         paid_amount: Number(paidAmount) || 0,
         previous_balance: Number(previousBalance) || 0,
+        created_by: user?.id,
+        created_by_name: user?.username,
       });
 
       const newId = res.data?.id || res.data?.invoice_id;
