@@ -558,8 +558,8 @@ export default function InvoicesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>هل أنت متأكد من حذف الفاتورة؟</AlertDialogTitle>
             <AlertDialogDescription>
-              سيتم حذف الفاتورة رقم {invoiceToDelete} نهائياً ولا يمكن التراجع
-              عن هذا الإجراء.
+              سيتم حذف الفاتورة رقم {invoiceToDelete} نهائياً وسيتم مسح القيد
+              المرتبط بها من اليومية. لا يمكن التراجع عن هذا الإجراء.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row-reverse gap-2">

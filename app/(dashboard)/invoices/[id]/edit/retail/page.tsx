@@ -138,16 +138,16 @@ export default function EditRetailInvoicePage() {
         setApplyItemsDiscount(inv.apply_items_discount ?? true);
 
         const loadedItems = (inv.items || []).map((item: any, idx: number) => ({
-            uid: `${item.product_id}_${idx}_${Date.now()}`,
-            product_id: item.product_id,
-            product_name: item.product_name,
-            manufacturer: item.manufacturer || "-",
-            package: item.package || "-",
-            price: item.price,
-            quantity: item.quantity,
-            discount: item.discount || 0,
-            is_return: item.is_return || false,
-          }));
+          uid: `${item.product_id}_${idx}_${Date.now()}`,
+          product_id: item.product_id,
+          product_name: item.product_name,
+          manufacturer: item.manufacturer || "-",
+          package: item.package || "-",
+          price: item.price,
+          quantity: item.quantity,
+          discount: item.discount || 0,
+          is_return: item.is_return || false,
+        }));
 
         setItems(loadedItems);
         setOriginalItems(loadedItems);
@@ -434,7 +434,9 @@ export default function EditRetailInvoicePage() {
       const overStock = items.filter((item) => {
         const prod = products.find((p: any) => p.id === item.product_id);
         if (!prod) return false;
-        const origItem = originalItems.find((o) => o.product_id === item.product_id && o.package === item.package);
+        const origItem = originalItems.find(
+          (o) => o.product_id === item.product_id && o.package === item.package,
+        );
         const origQty = origItem ? Number(origItem.quantity) : 0;
         const effectiveAvailable = Number(prod.available_quantity) + origQty;
         return Number(item.quantity) > effectiveAvailable;
@@ -442,9 +444,13 @@ export default function EditRetailInvoicePage() {
       if (overStock.length > 0) {
         overStock.forEach((item) => {
           const prod = products.find((p: any) => p.id === item.product_id);
-          const origItem = originalItems.find((o) => o.product_id === item.product_id && o.package === item.package);
+          const origItem = originalItems.find(
+            (o) =>
+              o.product_id === item.product_id && o.package === item.package,
+          );
           const origQty = origItem ? Number(origItem.quantity) : 0;
-          const effectiveAvailable = Number(prod?.available_quantity ?? 0) + origQty;
+          const effectiveAvailable =
+            Number(prod?.available_quantity ?? 0) + origQty;
           toast.error(
             `الصنف "${item.product_name}" الكمية (${item.quantity}) أكبر من الرصيد المتاح (${effectiveAvailable})`,
           );
