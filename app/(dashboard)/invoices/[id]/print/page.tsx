@@ -125,7 +125,7 @@ export default function InvoicePrintPage() {
 
   const totalQty = items.reduce(
     (sum, it) =>
-      it.is_return ? sum - Math.abs(Number(it.quantity || 0)) : sum + Number(it.quantity || 0),
+      it.is_return ? sum : sum + Number(it.quantity || 0),
     0,
   );
 
