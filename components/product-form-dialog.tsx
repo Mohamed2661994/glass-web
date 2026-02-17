@@ -60,6 +60,11 @@ export function ProductFormDialog({
   const [manufacturers, setManufacturers] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [barcodeExists, setBarcodeExists] = useState(false);
+
+  // Add manufacturer dialog
+  const [showAddMfg, setShowAddMfg] = useState(false);
+  const [newMfgName, setNewMfgName] = useState("");
+  const [savingMfg, setSavingMfg] = useState(false);
   const [checkingBarcode, setCheckingBarcode] = useState(false);
   const [barcodeValid, setBarcodeValid] = useState(false);
   const emptyForm = {
@@ -193,8 +198,15 @@ export function ProductFormDialog({
 
   const fetchManufacturers = async () => {
     try {
-      const res = await api.get("/admin/products");
-      const unique = [...new Set(res.data.map((p: any) => p.manufacturer))];
+      const [productsRes, mfgRes] = await Promise.all([
+        api.get("/admin/products"),
+        api.get("/admin/manufacturers").catch(() => ({ data: [] })),
+      ]);
+      const fromProducts = productsRes.data.map((p: any) => p.manufacturer);
+      const fromTable = (mfgRes.data || []).map((m: any) => m.name);
+      const unique = [
+        ...new Set([...fromProducts, ...fromTable]),
+      ];
       setManufacturers(unique.filter((m): m is string => Boolean(m)));
     } catch (err) {}
   };
@@ -461,16 +473,82 @@ export function ProductFormDialog({
               variant="outline"
               size="icon"
               onClick={() => {
-                const newM = prompt("اسم المصنع الجديد");
-                if (newM) {
-                  setManufacturers((prev) => [...prev, newM]);
-                  setForm({ ...form, manufacturer: newM });
-                }
+                setNewMfgName("");
+                setShowAddMfg(true);
               }}
             >
               <Plus className="h-4 w-4" />
             </Button>
           </div>
+
+          {/* Add Manufacturer Dialog */}
+          <Dialog open={showAddMfg} onOpenChange={setShowAddMfg}>
+            <DialogContent dir="rtl" className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle>إضافة مصنع جديد</DialogTitle>
+              </DialogHeader>
+              <div className="py-3">
+                <Input
+                  value={newMfgName}
+                  onChange={(e) => setNewMfgName(e.target.value)}
+                  placeholder="اسم المصنع"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newMfgName.trim()) {
+                      e.preventDefault();
+                      (async () => {
+                        setSavingMfg(true);
+                        try {
+                          await api.post("/admin/manufacturers", {
+                            name: newMfgName.trim(),
+                            percentage: 0,
+                          });
+                        } catch {}
+                        setManufacturers((prev) =>
+                          prev.includes(newMfgName.trim())
+                            ? prev
+                            : [...prev, newMfgName.trim()],
+                        );
+                        setForm({ ...form, manufacturer: newMfgName.trim() });
+                        setShowAddMfg(false);
+                        setSavingMfg(false);
+                      })();
+                    }
+                  }}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowAddMfg(false)}
+                >
+                  إلغاء
+                </Button>
+                <Button
+                  disabled={!newMfgName.trim() || savingMfg}
+                  onClick={async () => {
+                    setSavingMfg(true);
+                    try {
+                      await api.post("/admin/manufacturers", {
+                        name: newMfgName.trim(),
+                        percentage: 0,
+                      });
+                    } catch {}
+                    setManufacturers((prev) =>
+                      prev.includes(newMfgName.trim())
+                        ? prev
+                        : [...prev, newMfgName.trim()],
+                    );
+                    setForm({ ...form, manufacturer: newMfgName.trim() });
+                    setShowAddMfg(false);
+                    setSavingMfg(false);
+                  }}
+                >
+                  {savingMfg ? "جاري الحفظ..." : "إضافة"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {/* Wholesale Package */}
           <div className="space-y-1">

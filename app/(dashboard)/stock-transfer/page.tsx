@@ -56,6 +56,9 @@ export default function StockTransferPage() {
   const [packagePickerProduct, setPackagePickerProduct] =
     useState<Product | null>(null);
 
+  // Manufacturers percentage map
+  const [mfgPercentMap, setMfgPercentMap] = useState<Record<string, number>>({});
+
   const FROM_BRANCH_ID = 2;
   const TO_BRANCH_ID = 1;
 
@@ -63,11 +66,22 @@ export default function StockTransferPage() {
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await api.get("/products/for-replace", {
-          params: { branch_id: FROM_BRANCH_ID },
-        });
-        const prods = Array.isArray(data) ? data : [];
+        const [productsRes, mfgRes] = await Promise.all([
+          api.get("/products/for-replace", {
+            params: { branch_id: FROM_BRANCH_ID },
+          }),
+          api.get("/admin/manufacturers").catch(() => ({ data: [] })),
+        ]);
+
+        const prods = Array.isArray(productsRes.data) ? productsRes.data : [];
         setProducts(prods);
+
+        // بناء خريطة نسب المصانع
+        const pMap: Record<string, number> = {};
+        for (const m of mfgRes.data || []) {
+          pMap[m.name] = Number(m.percentage) || 0;
+        }
+        setMfgPercentMap(pMap);
 
         // جلب الأكواد الفرعية
         if (prods.length > 0) {
@@ -141,7 +155,7 @@ export default function StockTransferPage() {
         product_name: product.name,
         manufacturer: product.manufacturer,
         quantity: 1,
-        percent: 0,
+        percent: mfgPercentMap[product.manufacturer] || 0,
         price_addition: 0,
         wholesale_package: pkg,
         retail_package: retailPkg || product.retail_package,
@@ -261,15 +275,9 @@ export default function StockTransferPage() {
                   <Input
                     type="number"
                     placeholder="%"
-                    className="w-16 text-center"
+                    className="w-16 text-center bg-muted"
                     value={item.percent || ""}
-                    onChange={(e) =>
-                      updateItem(
-                        item.uid,
-                        "percent",
-                        Number(e.target.value) || 0,
-                      )
-                    }
+                    readOnly
                   />
                 </div>
 
