@@ -49,6 +49,161 @@ import {
   RotateCcw,
   Download,
   LayoutDashboard,
+  Home,
+  Star,
+  Heart,
+  Search,
+  Eye,
+  Clock,
+  Calendar,
+  MapPin,
+  Phone,
+  Mail,
+  Send,
+  Upload,
+  Printer,
+  Save,
+  Copy,
+  Check,
+  CheckCircle,
+  XCircle,
+  Info,
+  HelpCircle,
+  Lock,
+  Unlock,
+  Shield,
+  Zap,
+  Flame,
+  Sun,
+  Moon,
+  Cloud,
+  Droplets,
+  Gift,
+  Tag,
+  Tags,
+  Bookmark,
+  Flag,
+  Award,
+  Target,
+  Percent,
+  DollarSign,
+  CreditCard,
+  Receipt,
+  HandCoins,
+  PiggyBank,
+  Landmark,
+  Building2,
+  Store,
+  Warehouse,
+  Box,
+  Boxes,
+  PackageCheck,
+  PackageX,
+  Scan,
+  QrCode,
+  Barcode,
+  Globe,
+  Wifi,
+  Database,
+  HardDrive,
+  Server,
+  Monitor,
+  Smartphone,
+  Layers,
+  Grid3X3,
+  LayoutGrid,
+  PanelLeft,
+  SlidersHorizontal,
+  Filter,
+  ArrowUp,
+  ArrowDown,
+  ArrowRight,
+  ArrowLeft,
+  ChevronRight,
+  ChevronLeft,
+  ChevronsUp,
+  ChevronsDown,
+  Repeat,
+  Shuffle,
+  CirclePlus,
+  CircleMinus,
+  UserPlus,
+  UserCheck,
+  UsersRound,
+  Contact,
+  BadgeCheck,
+  BadgeDollarSign,
+  Calculator,
+  FileSpreadsheet,
+  FolderOpen,
+  Archive,
+  Inbox,
+  MessageSquare,
+  MessagesSquare,
+  Megaphone,
+  Activity,
+  PieChart,
+  LineChart,
+  Gauge,
+  Timer,
+  Hourglass,
+  CalendarDays,
+  CalendarCheck,
+  Wrench,
+  Hammer,
+  Cog,
+  Power,
+  RefreshCcw,
+  ExternalLink,
+  Share2,
+  Paperclip,
+  Scissors,
+  Lightbulb,
+  Sparkles,
+  Crown,
+  Gem,
+  Rocket,
+  Plane,
+  Car,
+  Bike,
+  Ship,
+  TreePine,
+  Leaf,
+  Apple,
+  Coffee,
+  UtensilsCrossed,
+  Stethoscope,
+  Pill,
+  Glasses,
+  Camera,
+  Image,
+  Music,
+  Video,
+  Mic,
+  Headphones,
+  Gamepad2,
+  Palette,
+  Brush,
+  PenTool,
+  Type,
+  Binary,
+  Code,
+  Terminal as TerminalIcon,
+  FileCode,
+  Bug,
+  TestTube,
+  Atom,
+  Dna,
+  Fingerprint,
+  ScanFace,
+  Brain,
+  GraduationCap,
+  School,
+  Library,
+  Newspaper,
+  Radio,
+  Tv,
+  Wifi as WifiIcon,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -123,12 +278,48 @@ interface WidgetConfig {
 }
 
 const DEFAULT_WIDGETS: WidgetConfig[] = [
-  { id: "kpi_cards", label: "بطاقات الإحصائيات", visible: true, order: 0, size: "full" },
-  { id: "cash_summary", label: "ملخص الخزنة", visible: true, order: 1, size: "half" },
-  { id: "quick_links", label: "روابط سريعة", visible: true, order: 2, size: "half" },
-  { id: "recent_invoices", label: "آخر الفواتير", visible: true, order: 3, size: "full" },
-  { id: "recent_transfers", label: "آخر التحويلات", visible: true, order: 4, size: "full" },
-  { id: "notifications", label: "آخر الإشعارات", visible: true, order: 5, size: "half" },
+  {
+    id: "kpi_cards",
+    label: "بطاقات الإحصائيات",
+    visible: true,
+    order: 0,
+    size: "full",
+  },
+  {
+    id: "cash_summary",
+    label: "ملخص الخزنة",
+    visible: true,
+    order: 1,
+    size: "half",
+  },
+  {
+    id: "quick_links",
+    label: "روابط سريعة",
+    visible: true,
+    order: 2,
+    size: "half",
+  },
+  {
+    id: "recent_invoices",
+    label: "آخر الفواتير",
+    visible: true,
+    order: 3,
+    size: "full",
+  },
+  {
+    id: "recent_transfers",
+    label: "آخر التحويلات",
+    visible: true,
+    order: 4,
+    size: "full",
+  },
+  {
+    id: "notifications",
+    label: "آخر الإشعارات",
+    visible: true,
+    order: 5,
+    size: "half",
+  },
 ];
 
 /* ---------- quick links config ---------- */
@@ -162,6 +353,160 @@ const ICON_MAP: Record<string, any> = {
   RotateCcw,
   Download,
   LayoutDashboard,
+  Home,
+  Star,
+  Heart,
+  Search,
+  Eye,
+  Clock,
+  Calendar,
+  MapPin,
+  Phone,
+  Mail,
+  Send,
+  Upload,
+  Printer,
+  Save,
+  Copy,
+  Check,
+  CheckCircle,
+  XCircle,
+  Info,
+  HelpCircle,
+  Lock,
+  Unlock,
+  Shield,
+  Zap,
+  Flame,
+  Sun,
+  Moon,
+  Cloud,
+  Droplets,
+  Gift,
+  Tag,
+  Tags,
+  Bookmark,
+  Flag,
+  Award,
+  Target,
+  Percent,
+  DollarSign,
+  CreditCard,
+  Receipt,
+  HandCoins,
+  PiggyBank,
+  Landmark,
+  Building2,
+  Store,
+  Warehouse,
+  Box,
+  Boxes,
+  PackageCheck,
+  PackageX,
+  Scan,
+  QrCode,
+  Barcode,
+  Globe,
+  Wifi,
+  Database,
+  HardDrive,
+  Server,
+  Monitor,
+  Smartphone,
+  Layers,
+  Grid3X3,
+  LayoutGrid,
+  PanelLeft,
+  SlidersHorizontal,
+  Filter,
+  ArrowUp,
+  ArrowDown,
+  ArrowRight,
+  ArrowLeft,
+  ChevronRight,
+  ChevronLeft,
+  ChevronsUp,
+  ChevronsDown,
+  Repeat,
+  Shuffle,
+  CirclePlus,
+  CircleMinus,
+  UserPlus,
+  UserCheck,
+  UsersRound,
+  Contact,
+  BadgeCheck,
+  BadgeDollarSign,
+  Calculator,
+  FileSpreadsheet,
+  FolderOpen,
+  Archive,
+  Inbox,
+  MessageSquare,
+  MessagesSquare,
+  Megaphone,
+  Activity,
+  PieChart,
+  LineChart,
+  Gauge,
+  Timer,
+  Hourglass,
+  CalendarDays,
+  CalendarCheck,
+  Wrench,
+  Hammer,
+  Cog,
+  Power,
+  RefreshCcw,
+  ExternalLink,
+  Share2,
+  Paperclip,
+  Scissors,
+  Lightbulb,
+  Sparkles,
+  Crown,
+  Gem,
+  Rocket,
+  Plane,
+  Car,
+  Bike,
+  Ship,
+  TreePine,
+  Leaf,
+  Apple,
+  Coffee,
+  UtensilsCrossed,
+  Stethoscope,
+  Pill,
+  Glasses,
+  Camera,
+  Image,
+  Music,
+  Video,
+  Mic,
+  Headphones,
+  Gamepad2,
+  Palette,
+  Brush,
+  PenTool,
+  Type,
+  Binary,
+  Code,
+  TerminalIcon,
+  FileCode,
+  Bug,
+  TestTube,
+  Atom,
+  Dna,
+  Fingerprint,
+  ScanFace,
+  Brain,
+  GraduationCap,
+  School,
+  Library,
+  Newspaper,
+  Radio,
+  Tv,
 };
 
 const ICON_OPTIONS = Object.keys(ICON_MAP);
@@ -177,6 +522,16 @@ const COLOR_OPTIONS = [
   { value: "bg-rose-500/10 text-rose-600 dark:text-rose-400", label: "وردي" },
   { value: "bg-red-500/10 text-red-600 dark:text-red-400", label: "أحمر" },
   { value: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400", label: "سيان" },
+  { value: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400", label: "نيلي" },
+  { value: "bg-violet-500/10 text-violet-600 dark:text-violet-400", label: "بنفسجي غامق" },
+  { value: "bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400", label: "فوشيا" },
+  { value: "bg-pink-500/10 text-pink-600 dark:text-pink-400", label: "زهري" },
+  { value: "bg-teal-500/10 text-teal-600 dark:text-teal-400", label: "تيل" },
+  { value: "bg-lime-500/10 text-lime-600 dark:text-lime-400", label: "ليموني" },
+  { value: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400", label: "أصفر" },
+  { value: "bg-stone-500/10 text-stone-600 dark:text-stone-400", label: "حجري" },
+  { value: "bg-slate-500/10 text-slate-600 dark:text-slate-400", label: "رمادي" },
+  { value: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400", label: "زنك" },
 ];
 
 const ALL_PAGES: { label: string; href: string }[] = [
@@ -203,21 +558,71 @@ const ALL_PAGES: { label: string; href: string }[] = [
 ];
 
 const DEFAULT_QUICK_LINKS: QuickLink[] = [
-  { id: "1", label: "فاتورة جديدة", href: "/invoices/create/retail", icon: "Plus", color: "bg-blue-500/10 text-blue-600 dark:text-blue-400" },
-  { id: "2", label: "الفواتير", href: "/invoices", icon: "FileText", color: "bg-green-500/10 text-green-600 dark:text-green-400" },
-  { id: "3", label: "الأصناف", href: "/products", icon: "Package", color: "bg-purple-500/10 text-purple-600 dark:text-purple-400" },
-  { id: "4", label: "تحويل مخزون", href: "/stock-transfer", icon: "ArrowLeftRight", color: "bg-orange-500/10 text-orange-600 dark:text-orange-400" },
-  { id: "5", label: "وارد الخزنة", href: "/cash/in", icon: "TrendingUp", color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
-  { id: "6", label: "أرصدة العملاء", href: "/reports/customer-balances", icon: "Users", color: "bg-sky-500/10 text-sky-600 dark:text-sky-400" },
-  { id: "7", label: "جرد المخزون", href: "/reports/inventory-summary", icon: "BarChart3", color: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
-  { id: "8", label: "ملخص الخزنة", href: "/cash/summary", icon: "Wallet", color: "bg-rose-500/10 text-rose-600 dark:text-rose-400" },
+  {
+    id: "1",
+    label: "فاتورة جديدة",
+    href: "/invoices/create/retail",
+    icon: "Plus",
+    color: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+  },
+  {
+    id: "2",
+    label: "الفواتير",
+    href: "/invoices",
+    icon: "FileText",
+    color: "bg-green-500/10 text-green-600 dark:text-green-400",
+  },
+  {
+    id: "3",
+    label: "الأصناف",
+    href: "/products",
+    icon: "Package",
+    color: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
+  },
+  {
+    id: "4",
+    label: "تحويل مخزون",
+    href: "/stock-transfer",
+    icon: "ArrowLeftRight",
+    color: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
+  },
+  {
+    id: "5",
+    label: "وارد الخزنة",
+    href: "/cash/in",
+    icon: "TrendingUp",
+    color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  },
+  {
+    id: "6",
+    label: "أرصدة العملاء",
+    href: "/reports/customer-balances",
+    icon: "Users",
+    color: "bg-sky-500/10 text-sky-600 dark:text-sky-400",
+  },
+  {
+    id: "7",
+    label: "جرد المخزون",
+    href: "/reports/inventory-summary",
+    icon: "BarChart3",
+    color: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  },
+  {
+    id: "8",
+    label: "ملخص الخزنة",
+    href: "/cash/summary",
+    icon: "Wallet",
+    color: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
+  },
 ];
 
 function getQuickLinks(userId: number): QuickLink[] {
   try {
     const raw = localStorage.getItem(`quick_links_${userId}`);
     if (raw) return JSON.parse(raw);
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return DEFAULT_QUICK_LINKS;
 }
 
@@ -299,10 +704,16 @@ export default function DashboardPage() {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
 
   /* ---------- quick links ---------- */
-  const [quickLinks, setQuickLinks] = useState<QuickLink[]>(DEFAULT_QUICK_LINKS);
+  const [quickLinks, setQuickLinks] =
+    useState<QuickLink[]>(DEFAULT_QUICK_LINKS);
   const [linksEditorOpen, setLinksEditorOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<QuickLink | null>(null);
-  const [linkForm, setLinkForm] = useState({ label: "", href: "", icon: "Plus", color: COLOR_OPTIONS[0].value });
+  const [linkForm, setLinkForm] = useState({
+    label: "",
+    href: "",
+    icon: "Plus",
+    color: COLOR_OPTIONS[0].value,
+  });
 
   useEffect(() => {
     if (user?.id) {
@@ -334,7 +745,10 @@ export default function DashboardPage() {
       setWidgets((prev) => {
         const next = prev.map((w) =>
           w.id === id
-            ? { ...w, size: (w.size === "full" ? "half" : "full") as WidgetSize }
+            ? {
+                ...w,
+                size: (w.size === "full" ? "half" : "full") as WidgetSize,
+              }
             : w,
         );
         if (user?.id) saveDashboardConfig(user.id, next);
@@ -355,7 +769,12 @@ export default function DashboardPage() {
       if (user?.id) saveQuickLinks(user.id, next);
       return next;
     });
-    setLinkForm({ label: "", href: "", icon: "Plus", color: COLOR_OPTIONS[0].value });
+    setLinkForm({
+      label: "",
+      href: "",
+      icon: "Plus",
+      color: COLOR_OPTIONS[0].value,
+    });
   };
 
   const updateQuickLink = () => {
@@ -368,7 +787,12 @@ export default function DashboardPage() {
       return next;
     });
     setEditingLink(null);
-    setLinkForm({ label: "", href: "", icon: "Plus", color: COLOR_OPTIONS[0].value });
+    setLinkForm({
+      label: "",
+      href: "",
+      icon: "Plus",
+      color: COLOR_OPTIONS[0].value,
+    });
   };
 
   const deleteQuickLink = (id: string) => {
@@ -850,7 +1274,12 @@ export default function DashboardPage() {
                 className="h-7 gap-1 text-xs"
                 onClick={() => {
                   setEditingLink(null);
-                  setLinkForm({ label: "", href: "", icon: "Plus", color: COLOR_OPTIONS[0].value });
+                  setLinkForm({
+                    label: "",
+                    href: "",
+                    icon: "Plus",
+                    color: COLOR_OPTIONS[0].value,
+                  });
                   setLinksEditorOpen(true);
                 }}
               >
@@ -1045,7 +1474,10 @@ export default function DashboardPage() {
 
       {/* ====== Quick Links Editor Dialog ====== */}
       <Dialog open={linksEditorOpen} onOpenChange={setLinksEditorOpen}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto" dir="rtl">
+        <DialogContent
+          className="max-w-lg max-h-[85vh] overflow-y-auto"
+          dir="rtl"
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Link2 className="h-5 w-5" />
@@ -1196,7 +1628,11 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2">
               {editingLink ? (
                 <>
-                  <Button size="sm" className="flex-1" onClick={updateQuickLink}>
+                  <Button
+                    size="sm"
+                    className="flex-1"
+                    onClick={updateQuickLink}
+                  >
                     حفظ التعديل
                   </Button>
                   <Button
