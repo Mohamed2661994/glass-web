@@ -60,12 +60,17 @@ export default function ProductsPage() {
   const [selectedManufacturer, setSelectedManufacturer] =
     useState<string>("الكل");
   const [userId, setUserId] = useState<number | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Read user id from localStorage
   useEffect(() => {
     try {
       const user = localStorage.getItem("user");
-      if (user) setUserId(JSON.parse(user).id);
+      if (user) {
+        const parsed = JSON.parse(user);
+        setUserId(parsed.id);
+        setIsAdmin(parsed.role === "admin" || parsed.id === 7);
+      }
     } catch {}
   }, []);
 
@@ -376,7 +381,7 @@ export default function ProductsPage() {
                   setSelectedProduct(product);
                   setDialogOpen(true);
                 }}
-                onDelete={() => setDeleteTarget(product)}
+                onDelete={isAdmin ? () => setDeleteTarget(product) : undefined}
                 onPrintBarcode={(p) => {
                   setBarcodePrintProduct(p);
                   setBarcodePrintCount("1");
