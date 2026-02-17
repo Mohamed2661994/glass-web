@@ -23,6 +23,7 @@ interface InvoiceItem {
   discount: number;
   total: number;
   manufacturer: string;
+  is_return?: boolean;
 }
 
 interface InvoiceData {
@@ -321,19 +322,44 @@ th, td { padding: 6px; text-align: center; }
                   </tr>
                 </thead>
                 <tbody>
-                  {pageItems.map((it, i) => (
-                    <tr key={i}>
-                      <td>{pageIndex * ROWS_PER_PAGE + i + 1}</td>
-                      <td>
-                        {it.product_name}
-                        {it.manufacturer ? ` - ${it.manufacturer}` : ""}
-                      </td>
-                      <td>{formatPackage(it)}</td>
-                      <td>{it.quantity}</td>
-                      <td>{Math.round(calcUnitPrice(it))}</td>
-                      <td>{Math.round(calcItemTotal(it))}</td>
-                    </tr>
-                  ))}
+                  {pageItems.map((it, i) => {
+                    const displayQty = it.is_return
+                      ? -Math.abs(it.quantity)
+                      : it.quantity;
+                    const displayTotal = it.is_return
+                      ? -Math.abs(Math.round(calcItemTotal(it)))
+                      : Math.round(calcItemTotal(it));
+
+                    return (
+                      <tr
+                        key={i}
+                        style={
+                          it.is_return
+                            ? { color: "red !important", background: "#fff5f5" }
+                            : undefined
+                        }
+                      >
+                        <td>{pageIndex * ROWS_PER_PAGE + i + 1}</td>
+                        <td>
+                          {it.product_name}
+                          {it.manufacturer ? ` - ${it.manufacturer}` : ""}
+                          {it.is_return && (
+                            <span style={{ color: "red", fontSize: 10, marginRight: 4 }}>
+                              (مرتجع)
+                            </span>
+                          )}
+                        </td>
+                        <td>{formatPackage(it)}</td>
+                        <td style={it.is_return ? { color: "red" } : undefined}>
+                          {displayQty}
+                        </td>
+                        <td>{Math.round(calcUnitPrice(it))}</td>
+                        <td style={it.is_return ? { color: "red" } : undefined}>
+                          {displayTotal}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
 
                 {isLastPage && (
