@@ -29,7 +29,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
   /* =========================================================
      Fetch products (Cached — localStorage + auto-refresh)
      ========================================================= */
-  const { products, loading } = useCachedProducts({
+  const { products, loading, refresh } = useCachedProducts({
     endpoint: "/products",
     params: {
       branch_id: branchId,
@@ -39,12 +39,13 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     cacheKey: `lookup_${invoiceType}`,
   });
 
-  // Reset search when modal opens
+  // Reset search & refresh stock when modal opens
   useEffect(() => {
     if (!open) return;
     setSearch("");
     setFocusedIndex(-1);
-  }, [open]);
+    refresh();
+  }, [open, refresh]);
 
   /* =========================================================
      Filtered products

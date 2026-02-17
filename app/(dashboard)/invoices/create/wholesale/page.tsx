@@ -388,6 +388,16 @@ export default function CreateWholesaleInvoicePage() {
   };
 
   /* =========================================================
+     Refresh products when modal opens (fresh stock)
+     ========================================================= */
+
+  useEffect(() => {
+    if (showProductModal) {
+      refreshProducts();
+    }
+  }, [showProductModal, refreshProducts]);
+
+  /* =========================================================
      Spacebar shortcut to open product dialog
      ========================================================= */
 
