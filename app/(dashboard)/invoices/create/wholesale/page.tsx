@@ -81,7 +81,6 @@ export default function CreateWholesaleInvoicePage() {
 
   const [items, setItems] = useState<any[]>([]);
   const [showProductModal, setShowProductModal] = useState(false);
-  const [isOpeningProductModal, setIsOpeningProductModal] = useState(false);
   const [search, setSearch] = useState("");
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
@@ -340,12 +339,6 @@ export default function CreateWholesaleInvoicePage() {
 
   const remaining = totalWithPrevious - (Number(paidAmount) || 0);
 
-  const openProductModal = useCallback(() => {
-    setIsOpeningProductModal(true);
-    setShowProductModal(true);
-    setTimeout(() => setIsOpeningProductModal(false), 350);
-  }, []);
-
   /* =========================================================
      1️⃣2️⃣ Save Invoice
      ========================================================= */
@@ -363,7 +356,7 @@ export default function CreateWholesaleInvoicePage() {
 
     setSaving(true);
     try {
-      const basePayload = {
+      const res = await api.post("/invoices", {
         invoice_type: "wholesale",
         movement_type: movementType,
         invoice_date: invoiceDate,
@@ -374,29 +367,7 @@ export default function CreateWholesaleInvoicePage() {
         items,
         paid_amount: Number(paidAmount) || 0,
         previous_balance: Number(previousBalance) || 0,
-      };
-
-      const payloadWithAudit = {
-        ...basePayload,
-        created_by_user_id: user?.id ?? null,
-        created_by_username: user?.full_name || user?.username || null,
-        created_by_branch_id: user?.branch_id ?? null,
-      };
-
-      let res;
-      try {
-        res = await api.post("/invoices", payloadWithAudit);
-      } catch (auditErr: any) {
-        const msg = String(auditErr?.response?.data?.error || "");
-        const auditNotSupported =
-          auditErr?.response?.status === 400 &&
-          /(created_by|unknown|not allowed|additional|invalid)/i.test(msg);
-
-        if (!auditNotSupported) throw auditErr;
-
-        res = await api.post("/invoices", basePayload);
-        toast.warning("تم الحفظ لكن السيرفر لا يدعم تتبع المستخدم حالياً");
-      }
+      });
 
       const newId = res.data?.id || res.data?.invoice_id;
       setSavedInvoiceId(newId);
@@ -441,13 +412,13 @@ export default function CreateWholesaleInvoicePage() {
         !(e.target instanceof HTMLSelectElement)
       ) {
         e.preventDefault();
-        openProductModal();
+        setShowProductModal(true);
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showProductModal, openProductModal]);
+  }, [showProductModal]);
 
   /* =========================================================
      Filtered products memo
@@ -631,7 +602,7 @@ export default function CreateWholesaleInvoicePage() {
           </div>
         </Card>
 
-        <Button onClick={openProductModal} className="w-full">
+        <Button onClick={() => setShowProductModal(true)} className="w-full">
           + إضافة صنف
         </Button>
 
@@ -704,7 +675,7 @@ export default function CreateWholesaleInvoicePage() {
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
-                              openProductModal();
+                              setShowProductModal(true);
                             }
                           }}
                           onChange={(e) =>
@@ -968,13 +939,7 @@ export default function CreateWholesaleInvoicePage() {
         </Dialog>
 
         {/* ================= Product Modal ================= */}
-        <Dialog
-          open={showProductModal}
-          onOpenChange={(open) => {
-            setShowProductModal(open);
-            if (!open) setIsOpeningProductModal(false);
-          }}
-        >
+        <Dialog open={showProductModal} onOpenChange={setShowProductModal}>
           <DialogContent
             dir="rtl"
             className="max-w-xl p-0 flex flex-col"
@@ -985,89 +950,80 @@ export default function CreateWholesaleInvoicePage() {
               <DialogTitle>اختيار صنف</DialogTitle>
             </DialogHeader>
 
-            {isOpeningProductModal ? (
-              <div className="flex-1 flex flex-col items-center justify-center gap-3 text-muted-foreground">
-                <Loader2 className="h-5 w-5 animate-spin" />
-                <p className="text-sm">جاري فتح قائمة الأصناف...</p>
-              </div>
-            ) : (
-              <>
-                {/* ===== Search ===== */}
-                <div className="p-4 border-b shrink-0">
-                  <Input
-                    ref={searchInputRef}
-                    autoFocus
-                    placeholder="ابحث بالكود أو الاسم أو الوصف أو الباركود... (Enter للتنقل)"
-                    value={search}
-                    onChange={(e) => {
-                      setSearch(e.target.value);
-                      setFocusedIndex(-1);
-                    }}
-                    onKeyDown={handleSearchKeyDown}
-                    onFocus={(e) => e.target.select()}
-                  />
-                </div>
+            {/* ===== Search ===== */}
+            <div className="p-4 border-b shrink-0">
+              <Input
+                ref={searchInputRef}
+                autoFocus
+                placeholder="ابحث بالكود أو الاسم أو الوصف أو الباركود... (Enter للتنقل)"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setFocusedIndex(-1);
+                }}
+                onKeyDown={handleSearchKeyDown}
+                onFocus={(e) => e.target.select()}
+              />
+            </div>
 
-                {/* ===== Products List ===== */}
-                <div
-                  ref={listRef}
-                  className="flex-1 overflow-y-auto scrollbar-hide p-4 space-y-2"
-                >
-                  {loadingProducts ? (
-                    <div className="p-4 space-y-3">
-                      {Array.from({ length: 6 }).map((_, i) => (
-                        <div key={i} className="p-3 rounded-lg border space-y-2">
-                          <Skeleton className="h-4 w-3/4" />
-                          <Skeleton className="h-3 w-1/2" />
-                        </div>
-                      ))}
+            {/* ===== Products List ===== */}
+            <div
+              ref={listRef}
+              className="flex-1 overflow-y-auto scrollbar-hide p-4 space-y-2"
+            >
+              {loadingProducts ? (
+                <div className="p-4 space-y-3">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="p-3 rounded-lg border space-y-2">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-3 w-1/2" />
                     </div>
-                  ) : (
-                    filteredProducts.map((product, index) => {
-                      const outOfStock =
-                        movementType === "sale" &&
-                        Number(product.available_quantity) <= 0;
-                      return (
-                        <div
-                          key={product.id}
-                          data-product-index={index}
-                          tabIndex={outOfStock ? -1 : 0}
-                          onClick={() => !outOfStock && addItem(product)}
-                          onKeyDown={(e) =>
-                            !outOfStock && handleListKeyDown(e, index)
-                          }
-                          className={`p-3 rounded-lg border transition outline-none ${
-                            outOfStock
-                              ? "opacity-50 cursor-not-allowed bg-muted/30"
-                              : `cursor-pointer hover:bg-muted ${focusedIndex === index ? "ring-2 ring-primary bg-muted" : ""}`
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className="font-medium">{product.name}</div>
-                            {outOfStock && (
-                              <span className="text-[10px] bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full font-medium">
-                                نفذ
-                              </span>
-                            )}
-                            {variantsMap[product.id]?.length > 0 && (
-                              <span className="text-[10px] bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded-full">
-                                {variantsMap[product.id].length + 1} عبوات
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3">
-                            <span>المصنع: {product.manufacturer || "-"}</span>
-                            <span>العبوة: {product.wholesale_package || "-"}</span>
-                            <span>السعر: {product.price}</span>
-                            <span>الرصيد: {product.available_quantity}</span>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
+                  ))}
                 </div>
-              </>
-            )}
+              ) : (
+                filteredProducts.map((product, index) => {
+                  const outOfStock =
+                    movementType === "sale" &&
+                    Number(product.available_quantity) <= 0;
+                  return (
+                    <div
+                      key={product.id}
+                      data-product-index={index}
+                      tabIndex={outOfStock ? -1 : 0}
+                      onClick={() => !outOfStock && addItem(product)}
+                      onKeyDown={(e) =>
+                        !outOfStock && handleListKeyDown(e, index)
+                      }
+                      className={`p-3 rounded-lg border transition outline-none ${
+                        outOfStock
+                          ? "opacity-50 cursor-not-allowed bg-muted/30"
+                          : `cursor-pointer hover:bg-muted ${focusedIndex === index ? "ring-2 ring-primary bg-muted" : ""}`
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium">{product.name}</div>
+                        {outOfStock && (
+                          <span className="text-[10px] bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full font-medium">
+                            نفذ
+                          </span>
+                        )}
+                        {variantsMap[product.id]?.length > 0 && (
+                          <span className="text-[10px] bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded-full">
+                            {variantsMap[product.id].length + 1} عبوات
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3">
+                        <span>المصنع: {product.manufacturer || "-"}</span>
+                        <span>العبوة: {product.wholesale_package || "-"}</span>
+                        <span>السعر: {product.price}</span>
+                        <span>الرصيد: {product.available_quantity}</span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </DialogContent>
         </Dialog>
 
