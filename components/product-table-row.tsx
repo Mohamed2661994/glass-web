@@ -60,10 +60,7 @@ export function ProductTableRow({
       >
         {/* الاسم */}
         <td className="p-3">
-          <div className="font-semibold text-sm">{product.name}</div>
-          <div className="text-xs text-muted-foreground">
-            {product.manufacturer || "—"}
-          </div>
+          <div className="font-semibold text-sm">{product.name}{product.manufacturer ? ` - ${product.manufacturer}` : ""}</div>
         </td>
 
         {/* الباركود */}

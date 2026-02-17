@@ -62,11 +62,8 @@ export function ProductCompactCard({
       {/* Header row */}
       <div className="flex items-center justify-between p-2.5 gap-2">
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-bold truncate">{product.name}</h3>
+          <h3 className="text-sm font-bold truncate">{product.name}{product.manufacturer ? ` - ${product.manufacturer}` : ""}</h3>
           <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-[10px] text-muted-foreground">
-              {product.manufacturer || "—"}
-            </span>
             {product.barcode && (
               <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground font-mono">
                 <span>{product.barcode}</span>
