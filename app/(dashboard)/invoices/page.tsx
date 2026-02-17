@@ -115,7 +115,15 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     fetchInvoices();
-  }, [page, invoiceType, movementType, debouncedSearch, invoiceIdSearch, dateFrom, dateTo]);
+  }, [
+    page,
+    invoiceType,
+    movementType,
+    debouncedSearch,
+    invoiceIdSearch,
+    dateFrom,
+    dateTo,
+  ]);
 
   const getStatusBadge = (status: string) => {
     if (status === "paid")
@@ -177,7 +185,13 @@ export default function InvoicesPage() {
             className="w-36"
           />
 
-          <Select value={movementType} onValueChange={(v) => { setMovementType(v); setPage(1); }}>
+          <Select
+            value={movementType}
+            onValueChange={(v) => {
+              setMovementType(v);
+              setPage(1);
+            }}
+          >
             <SelectTrigger className="w-36">
               <SelectValue placeholder="حركة" />
             </SelectTrigger>
@@ -189,26 +203,40 @@ export default function InvoicesPage() {
           </Select>
 
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground whitespace-nowrap">من</span>
+            <span className="text-sm text-muted-foreground whitespace-nowrap">
+              من
+            </span>
             <Input
               type="date"
               value={dateFrom}
-              onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+              onChange={(e) => {
+                setDateFrom(e.target.value);
+                setPage(1);
+              }}
               className="w-40"
             />
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground whitespace-nowrap">إلى</span>
+            <span className="text-sm text-muted-foreground whitespace-nowrap">
+              إلى
+            </span>
             <Input
               type="date"
               value={dateTo}
-              onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+              onChange={(e) => {
+                setDateTo(e.target.value);
+                setPage(1);
+              }}
               className="w-40"
             />
           </div>
 
-          {(dateFrom || dateTo || invoiceIdSearch || search || movementType !== "all") && (
+          {(dateFrom ||
+            dateTo ||
+            invoiceIdSearch ||
+            search ||
+            movementType !== "all") && (
             <Button
               variant="ghost"
               size="sm"
@@ -370,12 +398,16 @@ export default function InvoicesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>هل أنت متأكد من حذف الفاتورة؟</AlertDialogTitle>
             <AlertDialogDescription>
-              سيتم حذف الفاتورة رقم {invoiceToDelete} نهائياً ولا يمكن التراجع عن هذا الإجراء.
+              سيتم حذف الفاتورة رقم {invoiceToDelete} نهائياً ولا يمكن التراجع
+              عن هذا الإجراء.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row-reverse gap-2">
             <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               حذف
             </AlertDialogAction>
           </AlertDialogFooter>

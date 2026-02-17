@@ -9,7 +9,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search } from "lucide-react";
+import { Search, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useCachedProducts } from "@/hooks/use-cached-products";
 
 interface Props {
@@ -29,7 +30,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
   /* =========================================================
      Fetch products (Cached — localStorage + auto-refresh)
      ========================================================= */
-  const { products, loading, refreshSilently } = useCachedProducts({
+  const { products, loading, refresh } = useCachedProducts({
     endpoint: "/products",
     params: {
       branch_id: branchId,
@@ -39,13 +40,23 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     cacheKey: `lookup_${invoiceType}`,
   });
 
-  // Reset search & refresh stock when modal opens
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Reset search when modal opens (data loads from cache instantly)
   useEffect(() => {
     if (!open) return;
     setSearch("");
     setFocusedIndex(-1);
-    refreshSilently();
-  }, [open, refreshSilently]);
+  }, [open]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refresh();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   /* =========================================================
      Filtered products
@@ -137,18 +148,31 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
         {/* ===== Search ===== */}
         <div className="p-4 border-b shrink-0">
-          <Input
-            ref={searchInputRef}
-            autoFocus
-            placeholder="ابحث بالكود أو الاسم أو الوصف أو الباركود... (Enter للتنقل)"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setFocusedIndex(-1);
-            }}
-            onKeyDown={handleSearchKeyDown}
-            onFocus={(e) => e.target.select()}
-          />
+          <div className="flex items-center gap-2">
+            <Input
+              ref={searchInputRef}
+              autoFocus
+              placeholder="ابحث بالكود أو الاسم أو الوصف أو الباركود... (Enter للتنقل)"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setFocusedIndex(-1);
+              }}
+              onKeyDown={handleSearchKeyDown}
+              onFocus={(e) => e.target.select()}
+              className="flex-1"
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              title="تحديث الأصناف"
+              className="shrink-0"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+            </Button>
+          </div>
           {!loading && (
             <div className="text-xs text-muted-foreground mt-2">
               عدد النتائج: {filteredProducts.length} صنف
