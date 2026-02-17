@@ -93,7 +93,7 @@ export function useCachedProducts({
   const paramsString = JSON.stringify(params);
 
   const fetchProducts = useCallback(
-    async (forceRefresh = false) => {
+    async (forceRefresh = false, silent = false) => {
       // 1. Try cache first (unless force refresh)
       if (!forceRefresh) {
         const cached = getFromCache<any[]>(
@@ -130,7 +130,9 @@ export function useCachedProducts({
 
       // 2. Fetch from API
       try {
-        setLoading(true);
+        if (!silent) {
+          setLoading(true);
+        }
         const res = await api.get(endpoint, {
           params: Object.keys(params).length > 0 ? params : undefined,
         });
@@ -181,40 +183,20 @@ export function useCachedProducts({
         } catch {}
         return [];
       } finally {
-        setLoading(false);
+        if (!silent) {
+          setLoading(false);
+        }
       }
     },
     [endpoint, paramsString, resolvedCacheKey, fetchVariants, cacheDuration],
   );
 
-  // Force refresh (bypasses cache, shows loading)
+  // Force refresh (bypasses cache)
   const refresh = useCallback(() => fetchProducts(true), [fetchProducts]);
-
-  // Soft refresh — show stale cache instantly, update silently in background
-  const softRefresh = useCallback(() => {
-    // 1. Load stale cache immediately (no loading spinner)
-    try {
-      const raw = localStorage.getItem(
-        getCacheKey(CACHE_KEY_PREFIX, resolvedCacheKey),
-      );
-      if (raw) {
-        const entry: CacheEntry<any[]> = JSON.parse(raw);
-        setProducts(entry.data);
-        setLastUpdated(new Date(entry.timestamp));
-        if (fetchVariants) {
-          const vRaw = localStorage.getItem(
-            getCacheKey(VARIANTS_CACHE_KEY_PREFIX, resolvedCacheKey),
-          );
-          if (vRaw) {
-            const vEntry: CacheEntry<Record<number, any[]>> = JSON.parse(vRaw);
-            setVariantsMap(vEntry.data);
-          }
-        }
-      }
-    } catch {}
-    // 2. Fetch fresh data in background (no loading state)
-    fetchProducts(true);
-  }, [fetchProducts, resolvedCacheKey, fetchVariants]);
+  const refreshSilently = useCallback(
+    () => fetchProducts(true, true),
+    [fetchProducts],
+  );
 
   // Auto-fetch on mount
   useEffect(() => {
@@ -252,7 +234,7 @@ export function useCachedProducts({
     loading,
     lastUpdated,
     refresh,
-    softRefresh,
+    refreshSilently,
     invalidateCache,
     fetchProducts,
   };
