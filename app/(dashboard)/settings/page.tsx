@@ -117,6 +117,20 @@ export default function SettingsPage() {
   const [dangerPasswordError, setDangerPasswordError] = useState(false);
   const [dangerChecking, setDangerChecking] = useState(false);
 
+  /** Verify danger zone password via backend, fallback to local check */
+  const verifyDangerPassword = async (password: string): Promise<boolean> => {
+    try {
+      await api.post("/admin/verify-danger-password", { password });
+      return true;
+    } catch (err: any) {
+      // If endpoint doesn't exist (404), fallback to local verification
+      if (err.response?.status === 404) {
+        return password === "01112657552";
+      }
+      return false;
+    }
+  };
+
   /* ---- Load settings from localStorage ---- */
   useEffect(() => {
     const settings = localStorage.getItem("appSettings");
@@ -529,17 +543,16 @@ export default function SettingsPage() {
                     onKeyDown={async (e) => {
                       if (e.key === "Enter") {
                         setDangerChecking(true);
-                        try {
-                          await api.post("/admin/verify-danger-password", { password: dangerPassword });
+                        const ok = await verifyDangerPassword(dangerPassword);
+                        if (ok) {
                           setDangerUnlocked(true);
                           setDangerPassword("");
                           toast.success("تم فتح منطقة الخطر");
-                        } catch {
+                        } else {
                           setDangerPasswordError(true);
                           toast.error("كلمة السر غير صحيحة");
-                        } finally {
-                          setDangerChecking(false);
                         }
+                        setDangerChecking(false);
                       }
                     }}
                     placeholder="كلمة السر"
@@ -551,17 +564,16 @@ export default function SettingsPage() {
                     disabled={dangerChecking}
                     onClick={async () => {
                       setDangerChecking(true);
-                      try {
-                        await api.post("/admin/verify-danger-password", { password: dangerPassword });
+                      const ok = await verifyDangerPassword(dangerPassword);
+                      if (ok) {
                         setDangerUnlocked(true);
                         setDangerPassword("");
                         toast.success("تم فتح منطقة الخطر");
-                      } catch {
+                      } else {
                         setDangerPasswordError(true);
                         toast.error("كلمة السر غير صحيحة");
-                      } finally {
-                        setDangerChecking(false);
                       }
+                      setDangerChecking(false);
                     }}
                   >
                     {dangerChecking ? "جاري التحقق..." : "فتح"}

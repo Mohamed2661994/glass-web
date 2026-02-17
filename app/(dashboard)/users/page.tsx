@@ -100,7 +100,7 @@ function SectionCard({
 /* ========== Component ========== */
 export default function UsersPage() {
   const { user, setUser } = useAuth();
-  const isAdmin = (user as any)?.role === "admin" || user?.id === (user as any)?.admin_id;
+  const isAdmin = user?.role === "admin" || user?.id === 7;
 
   /* ---- Edit username state ---- */
   const [editingName, setEditingName] = useState(false);

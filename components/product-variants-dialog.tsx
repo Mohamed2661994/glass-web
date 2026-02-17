@@ -157,7 +157,7 @@ function VariantFormDialog({
             params: {
               exclude_variant_id: isEdit ? variant?.id : undefined,
             },
-          }
+          },
         );
         setBarcodeExists(res.data.exists);
         setBarcodeValid(!res.data.exists);
@@ -360,9 +360,7 @@ function VariantFormDialog({
             type="number"
             placeholder="سعر البيع قطاعي"
             value={form.retail_price}
-            onChange={(e) =>
-              setForm({ ...form, retail_price: e.target.value })
-            }
+            onChange={(e) => setForm({ ...form, retail_price: e.target.value })}
           />
 
           <Button
@@ -370,11 +368,7 @@ function VariantFormDialog({
             onClick={handleSubmit}
             disabled={saving}
           >
-            {saving
-              ? "جاري الحفظ..."
-              : isEdit
-                ? "حفظ التعديل"
-                : "حفظ العبوة"}
+            {saving ? "جاري الحفظ..." : isEdit ? "حفظ التعديل" : "حفظ العبوة"}
           </Button>
         </div>
       </DialogContent>

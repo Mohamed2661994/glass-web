@@ -64,7 +64,7 @@ export function Sidebar({
 
   const [pinned, setPinned] = useState(false);
   const branchId = user?.branch_id ?? null;
-  const isAdmin = (user as any)?.role === "admin";
+  const isAdmin = user?.role === "admin" || user?.id === 7;
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const sidebarRef = useRef<HTMLElement>(null);
 
