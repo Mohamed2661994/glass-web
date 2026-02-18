@@ -991,16 +991,18 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                     <FileText className="h-4 w-4" />
                     <span>ارسال ملف</span>
                   </button>
-                  <button
-                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted transition-colors"
-                    onClick={() => {
-                      setAttachOpen(false);
-                      cameraInputRef.current?.click();
-                    }}
-                  >
-                    <Camera className="h-4 w-4" />
-                    <span>التقاط صورة</span>
-                  </button>
+                  {"ontouchstart" in globalThis && (
+                    <button
+                      className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted transition-colors"
+                      onClick={() => {
+                        setAttachOpen(false);
+                        cameraInputRef.current?.click();
+                      }}
+                    >
+                      <Camera className="h-4 w-4" />
+                      <span>التقاط صورة</span>
+                    </button>
+                  )}
                 </PopoverContent>
               </Popover>
             </div>
