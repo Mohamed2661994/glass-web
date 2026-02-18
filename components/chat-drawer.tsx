@@ -85,7 +85,9 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
     // Create AudioContext and fetch the sound file as a buffer
     const init = async () => {
       try {
-        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const ctx = new (
+          window.AudioContext || (window as any).webkitAudioContext
+        )();
         audioCtxRef.current = ctx;
 
         const response = await fetch("/sounds/beepmasage.wav");
@@ -468,7 +470,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
 
       <SheetContent
         side="left"
-        className="w-full sm:w-[400px] sm:max-w-[400px] p-0 flex flex-col [&>button]:hidden"
+        className="w-full sm:w-[400px] sm:max-w-[400px] p-0 flex flex-col gap-0 h-[100dvh] [&>button]:hidden"
       >
         {/* ====== HEADER ====== */}
         <div className="border-b px-4 py-3 flex items-center justify-between shrink-0 safe-area-top">
@@ -666,9 +668,9 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
 
         {/* ====== CHAT VIEW ====== */}
         {view === "chat" && (
-          <>
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             {/* Messages */}
-            <ScrollArea className="flex-1 p-4">
+            <ScrollArea className="flex-1 min-h-0 p-4">
               <div className="space-y-3">
                 {messages.map((msg) => {
                   const isMine = msg.sender_id === userId;
@@ -760,7 +762,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                 autoFocus
               />
             </div>
-          </>
+          </div>
         )}
       </SheetContent>
     </Sheet>
