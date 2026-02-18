@@ -25,11 +25,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import api, { API_URL } from "@/services/api";
 import { io, Socket } from "socket.io-client";
@@ -1016,7 +1012,8 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                   handleTyping();
                   // Auto-grow
                   e.target.style.height = "auto";
-                  e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
+                  e.target.style.height =
+                    Math.min(e.target.scrollHeight, 120) + "px";
                 }}
                 onPaste={(e) => {
                   const items = e.clipboardData?.items;
@@ -1095,14 +1092,14 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
 
       {/* Image preview modal */}
       <Dialog open={!!previewImg} onOpenChange={() => setPreviewImg(null)}>
-        <DialogContent className="max-w-[90vw] max-h-[90vh] p-2 flex items-center justify-center bg-black/90 border-none">
+        <DialogContent className="max-w-[95vw] max-h-[95vh] w-[95vw] h-[95vh] p-2 flex items-center justify-center bg-black/90 border-none">
           <DialogTitle className="sr-only">معاينة الصورة</DialogTitle>
           {previewImg && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={previewImg}
               alt="معاينة"
-              className="max-w-full max-h-[85vh] object-contain rounded-lg"
+              className="max-w-full max-h-[90vh] object-contain rounded-lg"
             />
           )}
         </DialogContent>
