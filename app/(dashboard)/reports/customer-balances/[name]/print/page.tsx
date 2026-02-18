@@ -60,20 +60,36 @@ function CustomerStatementPrintInner() {
   }, [loading]);
 
   /* ========== Totals ========== */
+  const totalAll = useMemo(
+    () =>
+      data
+        .filter((i) => i.record_type === "invoice")
+        .reduce((s, i) => s + Number(i.total), 0),
+    [data],
+  );
+
   const totalPaid = useMemo(
     () => data.reduce((s, i) => s + Number(i.paid_amount), 0),
     [data],
   );
 
-  const totalRemaining = useMemo(
-    () =>
-      data
-        .filter((i) => i.record_type === "invoice")
-        .reduce((s, i) => s + Number(i.remaining_amount), 0),
-    [data],
-  );
+  const netDebt = totalAll - totalPaid;
 
-  const netDebt = totalRemaining - totalPaid;
+  /* ========== Running Balance ========== */
+  const runningBalances = useMemo(() => {
+    const balances: number[] = [];
+    let balance = 0;
+    for (let i = 0; i < data.length; i++) {
+      balances.push(balance);
+      const row = data[i];
+      if (row.record_type === "invoice") {
+        balance += Number(row.total) - Number(row.paid_amount);
+      } else {
+        balance -= Number(row.paid_amount);
+      }
+    }
+    return balances;
+  }, [data]);
 
   const dateRange =
     from || to
@@ -144,6 +160,7 @@ function CustomerStatementPrintInner() {
                 <th style={thStyle}>النوع</th>
                 <th style={thStyle}>رقم</th>
                 <th style={thStyle}>التاريخ</th>
+                <th style={thStyle}>الحساب السابق</th>
                 <th style={thStyle}>الإجمالي</th>
                 <th style={thStyle}>المدفوع</th>
                 <th style={thStyle}>الباقي</th>
@@ -164,6 +181,11 @@ function CustomerStatementPrintInner() {
                   <td style={tdStyle}>{inv.invoice_id}</td>
                   <td style={tdStyle}>
                     {new Date(inv.invoice_date).toLocaleDateString("ar-EG")}
+                  </td>
+                  <td style={tdStyle}>
+                    {runningBalances[idx] === 0
+                      ? "—"
+                      : formatMoney(runningBalances[idx])}
                   </td>
                   <td style={tdStyle}>
                     {inv.record_type === "invoice"
@@ -192,14 +214,21 @@ function CustomerStatementPrintInner() {
         {data.length > 0 && (
           <div style={{ textAlign: "right", fontSize: 14 }}>
             <p style={{ marginBottom: 4 }}>
+              <span style={{ fontWeight: "bold" }}>إجمالي الفواتير:</span>{" "}
+              {formatMoney(totalAll)}
+            </p>
+            <p style={{ marginBottom: 4 }}>
               <span style={{ fontWeight: "bold" }}>إجمالي المدفوع:</span>{" "}
               {formatMoney(totalPaid)}
             </p>
-            <p style={{ marginBottom: 8 }}>
-              <span style={{ fontWeight: "bold" }}>إجمالي المتبقي:</span>{" "}
-              {formatMoney(totalRemaining)}
-            </p>
-            <p style={{ fontSize: 18, fontWeight: "bold" }}>
+            <p
+              style={{
+                fontSize: 18,
+                fontWeight: "bold",
+                marginTop: 8,
+                color: netDebt > 0 ? "#dc2626" : netDebt < 0 ? "#16a34a" : "#000",
+              }}
+            >
               صافي المديونية: {formatMoney(netDebt)}
             </p>
           </div>
