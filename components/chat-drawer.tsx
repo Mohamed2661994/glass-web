@@ -642,7 +642,9 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
               {popup.senderName.charAt(0)}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold truncate">{popup.senderName}</p>
+              <p className="text-sm font-semibold truncate">
+                {popup.senderName}
+              </p>
               <p
                 className="text-xs text-muted-foreground truncate mt-0.5"
                 dir="auto"

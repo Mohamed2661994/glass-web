@@ -86,28 +86,28 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <header className="h-16 border-b bg-background/80 relative print:hidden">
           <div className="absolute inset-0 backdrop-blur-md pointer-events-none" />
 
-          <div className="relative flex items-center justify-between px-6 h-full">
+          <div className="relative flex items-center justify-between px-2 sm:px-6 h-full">
             {/* LEFT */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 sm:gap-3 shrink-0">
               <MobileSidebar />
             </div>
 
             {/* CENTER - Name + Branch */}
             <div
-              className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center cursor-pointer select-none"
+              className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center cursor-pointer select-none max-w-[45%]"
               onClick={() => router.push("/")}
               title="الرجوع للوحة التحكم"
             >
-              <span className="text-base font-bold">
+              <span className="text-sm sm:text-base font-bold truncate max-w-full">
                 {user?.full_name || user?.username}
               </span>
-              <span className="text-xs text-muted-foreground leading-tight">
+              <span className="text-[10px] sm:text-xs text-muted-foreground leading-tight">
                 {branchName}
               </span>
             </div>
 
             {/* RIGHT */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1 sm:gap-4 shrink-0">
               {mounted && user?.id && (
                 <ChatDrawer userId={user.id} branchId={user.branch_id} />
               )}
