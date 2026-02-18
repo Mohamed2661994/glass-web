@@ -75,78 +75,149 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /* ---------- preload audio with Web Audio API ---------- */
+  /* ---------- Audio: dual strategy (Web Audio API + HTML Audio fallback) ---------- */
   const audioCtxRef = useRef<AudioContext | null>(null);
   const audioBufferRef = useRef<AudioBuffer | null>(null);
+  const audioUnlockedRef = useRef(false);
+  const fallbackAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    // Create AudioContext and fetch the sound file as a buffer
-    const init = async () => {
-      try {
-        const ctx = new (
-          window.AudioContext || (window as any).webkitAudioContext
-        )();
-        audioCtxRef.current = ctx;
-
-        const response = await fetch("/sounds/beepmasage.wav");
-        const arrayBuffer = await response.arrayBuffer();
-        const buffer = await ctx.decodeAudioData(arrayBuffer);
-        if (!cancelled) {
-          audioBufferRef.current = buffer;
-        }
-      } catch (e) {
-        console.error("Audio init error:", e);
+  // Helper: get or create AudioContext
+  const getAudioCtx = useCallback(() => {
+    if (!audioCtxRef.current) {
+      const Ctx =
+        window.AudioContext || (window as any).webkitAudioContext;
+      if (Ctx) {
+        audioCtxRef.current = new Ctx();
+        console.log("[sound] AudioContext created, state:", audioCtxRef.current.state);
       }
-    };
-
-    init();
-
-    // Unlock AudioContext on first user interaction
-    const unlock = () => {
-      const ctx = audioCtxRef.current;
-      if (ctx && ctx.state === "suspended") {
-        ctx.resume();
-      }
-      document.removeEventListener("click", unlock);
-      document.removeEventListener("touchstart", unlock);
-      document.removeEventListener("touchend", unlock);
-    };
-    document.addEventListener("click", unlock);
-    document.addEventListener("touchstart", unlock);
-    document.addEventListener("touchend", unlock);
-
-    return () => {
-      cancelled = true;
-      document.removeEventListener("click", unlock);
-      document.removeEventListener("touchstart", unlock);
-      document.removeEventListener("touchend", unlock);
-    };
+    }
+    return audioCtxRef.current;
   }, []);
 
+  // Load buffer (mp3 for max compat, fallback to wav)
+  const loadBuffer = useCallback(async (ctx: AudioContext) => {
+    if (audioBufferRef.current) return;
+    for (const src of ["/sounds/beep-7.mp3", "/sounds/beepmasage.wav"]) {
+      try {
+        const res = await fetch(src);
+        if (!res.ok) continue;
+        const ab = await res.arrayBuffer();
+        audioBufferRef.current = await ctx.decodeAudioData(ab);
+        console.log("[sound] Buffer loaded from", src);
+        return;
+      } catch (e) {
+        console.warn("[sound] Failed to load", src, e);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    // Pre-create fallback HTML Audio element
+    const fa = new Audio("/sounds/beep-7.mp3");
+    fa.volume = 0.5;
+    fa.preload = "auto";
+    fallbackAudioRef.current = fa;
+
+    // Unlock audio on user interaction
+    const unlock = async () => {
+      if (audioUnlockedRef.current) return;
+      audioUnlockedRef.current = true;
+      console.log("[sound] Unlocking audio...");
+
+      // Strategy 1: Web Audio API — resume + play silent oscillator
+      const ctx = getAudioCtx();
+      if (ctx) {
+        try {
+          if (ctx.state === "suspended") await ctx.resume();
+          // Play silent oscillator to fully unlock the pipeline
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          gain.gain.value = 0; // silent
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(0);
+          osc.stop(ctx.currentTime + 0.001);
+          console.log("[sound] AudioContext unlocked, state:", ctx.state);
+          // Load the actual sound buffer
+          loadBuffer(ctx);
+        } catch (e) {
+          console.warn("[sound] AudioContext unlock failed:", e);
+        }
+      }
+
+      // Strategy 2: HTML Audio — warm it up with silent play
+      try {
+        const a = fallbackAudioRef.current;
+        if (a) {
+          a.muted = true;
+          await a.play();
+          a.pause();
+          a.muted = false;
+          a.currentTime = 0;
+          console.log("[sound] HTML Audio unlocked");
+        }
+      } catch (e) {
+        console.warn("[sound] HTML Audio unlock failed:", e);
+      }
+    };
+
+    document.addEventListener("click", unlock, { capture: true });
+    document.addEventListener("touchstart", unlock, { capture: true });
+    document.addEventListener("touchend", unlock, { capture: true });
+
+    return () => {
+      document.removeEventListener("click", unlock, { capture: true });
+      document.removeEventListener("touchstart", unlock, { capture: true });
+      document.removeEventListener("touchend", unlock, { capture: true });
+    };
+  }, [getAudioCtx, loadBuffer]);
+
   const playSound = useCallback(() => {
+    console.log("[sound] playSound called, unlocked:", audioUnlockedRef.current);
+
+    // Strategy 1: Web Audio API (preferred — works from non-gesture contexts once unlocked)
     try {
       const ctx = audioCtxRef.current;
       const buffer = audioBufferRef.current;
-      if (!ctx || !buffer) return;
-
-      // Resume context if suspended
-      if (ctx.state === "suspended") {
-        ctx.resume();
+      if (ctx && buffer && ctx.state === "running") {
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        const gainNode = ctx.createGain();
+        gainNode.gain.value = 0.5;
+        source.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        source.start(0);
+        console.log("[sound] Played via Web Audio API");
+        return;
       }
-
-      const source = ctx.createBufferSource();
-      source.buffer = buffer;
-
-      const gainNode = ctx.createGain();
-      gainNode.gain.value = 0.5;
-
-      source.connect(gainNode);
-      gainNode.connect(ctx.destination);
-      source.start(0);
+      console.log("[sound] Web Audio not ready — ctx state:", ctx?.state, "buffer:", !!buffer);
     } catch (e) {
-      console.error("Play sound error:", e);
+      console.warn("[sound] Web Audio play error:", e);
+    }
+
+    // Strategy 2: HTML Audio fallback
+    try {
+      const a = fallbackAudioRef.current;
+      if (a) {
+        a.currentTime = 0;
+        const p = a.play();
+        if (p) p.catch((e: unknown) => console.warn("[sound] HTML Audio play error:", e));
+        console.log("[sound] Played via HTML Audio fallback");
+        return;
+      }
+    } catch (e) {
+      console.warn("[sound] HTML Audio fallback error:", e);
+    }
+
+    // Strategy 3: Last resort — create fresh Audio
+    try {
+      const fresh = new Audio("/sounds/beep-7.mp3");
+      fresh.volume = 0.5;
+      const p = fresh.play();
+      if (p) p.catch((e: unknown) => console.warn("[sound] Fresh Audio error:", e));
+      console.log("[sound] Played via fresh Audio");
+    } catch (e) {
+      console.warn("[sound] All strategies failed:", e);
     }
   }, []);
 
