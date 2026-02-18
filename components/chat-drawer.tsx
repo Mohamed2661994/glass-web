@@ -402,10 +402,10 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
 
       <SheetContent
         side="left"
-        className="w-full sm:w-[400px] p-0 flex flex-col [&>button]:hidden"
+        className="w-full sm:w-[400px] sm:max-w-[400px] p-0 flex flex-col [&>button]:hidden"
       >
         {/* ====== HEADER ====== */}
-        <div className="border-b p-4 flex items-center justify-between shrink-0">
+        <div className="border-b px-4 py-3 flex items-center justify-between shrink-0 safe-area-top">
           {view === "list" ? (
             <>
               <h2 className="text-lg font-bold">المحادثات</h2>
@@ -488,7 +488,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <span
                           className={cn(
                             "text-sm font-semibold truncate",
@@ -497,16 +497,16 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                         >
                           {displayName(conv.other_user)}
                         </span>
-                        <span className="text-[10px] text-muted-foreground shrink-0 mr-2">
+                        <span className="text-[10px] text-muted-foreground shrink-0">
                           {conv.last_message
                             ? timeAgo(conv.last_message.created_at)
                             : ""}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between mt-0.5">
+                      <div className="flex items-center justify-between mt-1 gap-2">
                         <p
                           className={cn(
-                            "text-xs truncate max-w-[220px]",
+                            "text-xs truncate flex-1",
                             conv.unread_count > 0
                               ? "text-foreground font-medium"
                               : "text-muted-foreground",
@@ -659,7 +659,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
             </ScrollArea>
 
             {/* Input */}
-            <div className="border-t p-3 flex items-center gap-2 shrink-0">
+            <div className="border-t p-3 flex items-center gap-2 shrink-0 safe-area-bottom">
               <Button
                 size="icon"
                 disabled={!newMsg.trim() || sending}
