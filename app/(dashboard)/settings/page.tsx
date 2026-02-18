@@ -709,7 +709,10 @@ export default function SettingsPage() {
                   <button
                     key={s.file}
                     onClick={() => {
-                      setChatPrefs({ notificationSound: s.file, customSoundName: undefined });
+                      setChatPrefs({
+                        notificationSound: s.file,
+                        customSoundName: undefined,
+                      });
                       if (s.file !== "none") {
                         if (previewAudioRef.current) {
                           previewAudioRef.current.pause();
@@ -765,11 +768,13 @@ export default function SettingsPage() {
                   {uploadingSound ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Upload className={`h-4 w-4 ${
-                      chatPrefs.notificationSound?.startsWith("/uploads/")
-                        ? "text-primary"
-                        : "text-muted-foreground"
-                    }`} />
+                    <Upload
+                      className={`h-4 w-4 ${
+                        chatPrefs.notificationSound?.startsWith("/uploads/")
+                          ? "text-primary"
+                          : "text-muted-foreground"
+                      }`}
+                    />
                   )}
                   <span className="flex-1 text-right">
                     {chatPrefs.notificationSound?.startsWith("/uploads/")

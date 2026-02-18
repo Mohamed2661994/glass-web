@@ -56,9 +56,14 @@ self.addEventListener("push", (event) => {
     const data = event.data.json();
     const title = data.title || "Glass System";
     const notifData = data.data || {};
-    const tag = notifData.type === "stock_transfer"
-      ? "transfer-" + (notifData.transfer_id || "default")
-      : "chat-" + (notifData.conversation_id || "default");
+    let tag = "notif-default";
+    if (notifData.type === "stock_transfer") {
+      tag = "transfer-" + (notifData.transfer_id || "default");
+    } else if (notifData.type === "invoice_wholesale") {
+      tag = "invoice-" + (notifData.invoice_id || "default");
+    } else if (notifData.conversation_id) {
+      tag = "chat-" + notifData.conversation_id;
+    }
     const options = {
       body: data.body || "",
       icon: "/icons/icon-192.png",
@@ -86,6 +91,8 @@ self.addEventListener("notificationclick", (event) => {
   let url = notifData.url || "/";
   if (notifData.type === "stock_transfer" && notifData.transfer_id) {
     url = "/transfers/" + notifData.transfer_id;
+  } else if (notifData.type === "invoice_wholesale" && notifData.invoice_id) {
+    url = "/invoices/" + notifData.invoice_id;
   }
   event.waitUntil(
     clients
