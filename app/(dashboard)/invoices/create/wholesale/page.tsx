@@ -79,6 +79,11 @@ export default function CreateWholesaleInvoicePage() {
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const nameDropdownRef = useRef<HTMLDivElement>(null);
 
+  const [phoneSuggestions, setPhoneSuggestions] = useState<any[]>([]);
+  const [showPhoneDropdown, setShowPhoneDropdown] = useState(false);
+  const [highlightedPhoneIndex, setHighlightedPhoneIndex] = useState(-1);
+  const phoneDropdownRef = useRef<HTMLDivElement>(null);
+
   /* =========================================================
      3️⃣ Products & Items States
      ========================================================= */
@@ -228,6 +233,7 @@ export default function CreateWholesaleInvoicePage() {
   useEffect(() => {
     return () => {
       if (nameTimerRef.current) clearTimeout(nameTimerRef.current);
+      if (phoneTimerRef.current) clearTimeout(phoneTimerRef.current);
     };
   }, []);
 
@@ -264,7 +270,38 @@ export default function CreateWholesaleInvoicePage() {
     fetchCustomerBalance(customer.id);
   };
 
-  /* Close dropdown on outside click */
+  /* =========================================================
+     7️⃣ Customer Search By Phone
+     ========================================================= */
+
+  const phoneTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const searchByPhone = async (query: string) => {
+    if (query.length < 3) {
+      setPhoneSuggestions([]);
+      setShowPhoneDropdown(false);
+      return;
+    }
+    try {
+      const res = await api.get("/customers/by-phone", {
+        params: { phone: query },
+      });
+      setPhoneSuggestions(res.data || []);
+      setShowPhoneDropdown((res.data || []).length > 0);
+      setHighlightedPhoneIndex(-1);
+    } catch {}
+  };
+
+  const selectFromPhone = (customer: any) => {
+    setCustomerName(customer.name);
+    setCustomerId(customer.id);
+    setCustomerPhone(customer.phone || "");
+    setShowPhoneDropdown(false);
+    setPhoneSuggestions([]);
+    fetchCustomerBalance(customer.id);
+  };
+
+  /* Close dropdowns on outside click */
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (
@@ -272,6 +309,12 @@ export default function CreateWholesaleInvoicePage() {
         !nameDropdownRef.current.contains(e.target as Node)
       ) {
         setShowNameDropdown(false);
+      }
+      if (
+        phoneDropdownRef.current &&
+        !phoneDropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowPhoneDropdown(false);
       }
     };
     document.addEventListener("mousedown", handleClick);
@@ -727,12 +770,69 @@ export default function CreateWholesaleInvoicePage() {
               )}
             </div>
 
-            <div>
+            <div className="relative" ref={phoneDropdownRef}>
               <label className="text-sm mb-2 block">رقم الهاتف</label>
               <Input
                 value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
+                placeholder="اكتب رقم التليفون..."
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setCustomerPhone(v);
+                  if (phoneTimerRef.current) clearTimeout(phoneTimerRef.current);
+                  phoneTimerRef.current = setTimeout(
+                    () => searchByPhone(v),
+                    300,
+                  );
+                }}
+                onFocus={() => {
+                  if (phoneSuggestions.length > 0) setShowPhoneDropdown(true);
+                }}
+                onKeyDown={(e) => {
+                  if (!showPhoneDropdown || phoneSuggestions.length === 0)
+                    return;
+                  if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setHighlightedPhoneIndex((prev) =>
+                      prev < phoneSuggestions.length - 1 ? prev + 1 : 0,
+                    );
+                  } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setHighlightedPhoneIndex((prev) =>
+                      prev > 0 ? prev - 1 : phoneSuggestions.length - 1,
+                    );
+                  } else if (
+                    e.key === "Enter" &&
+                    highlightedPhoneIndex >= 0
+                  ) {
+                    e.preventDefault();
+                    selectFromPhone(
+                      phoneSuggestions[highlightedPhoneIndex],
+                    );
+                    setHighlightedPhoneIndex(-1);
+                  } else if (e.key === "Escape") {
+                    setShowPhoneDropdown(false);
+                    setHighlightedPhoneIndex(-1);
+                  }
+                }}
               />
+              {showPhoneDropdown && phoneSuggestions.length > 0 && (
+                <div className="absolute z-50 top-full mt-1 w-full bg-popover border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {phoneSuggestions.map((c: any, idx: number) => (
+                    <div
+                      key={c.id}
+                      className={`px-3 py-2 cursor-pointer text-sm ${idx === highlightedPhoneIndex ? "bg-muted" : "hover:bg-muted"}`}
+                      onClick={() => selectFromPhone(c)}
+                    >
+                      <span className="font-medium">{c.name}</span>
+                      {c.phone && (
+                        <span className="text-muted-foreground mr-2">
+                          ({c.phone})
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </Card>
