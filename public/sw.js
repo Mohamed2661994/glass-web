@@ -55,6 +55,10 @@ self.addEventListener("push", (event) => {
   try {
     const data = event.data.json();
     const title = data.title || "Glass System";
+    const notifData = data.data || {};
+    const tag = notifData.type === "stock_transfer"
+      ? "transfer-" + (notifData.transfer_id || "default")
+      : "chat-" + (notifData.conversation_id || "default");
     const options = {
       body: data.body || "",
       icon: "/icons/icon-192.png",
@@ -62,9 +66,9 @@ self.addEventListener("push", (event) => {
       vibrate: [200, 100, 200],
       dir: "rtl",
       lang: "ar",
-      tag: "chat-" + (data.data?.conversation_id || "default"),
+      tag: tag,
       renotify: true,
-      data: data.data || {},
+      data: notifData,
     };
     event.waitUntil(self.registration.showNotification(title, options));
   } catch (e) {
@@ -78,13 +82,18 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
-  const url = event.notification.data?.url || "/";
+  const notifData = event.notification.data || {};
+  let url = notifData.url || "/";
+  if (notifData.type === "stock_transfer" && notifData.transfer_id) {
+    url = "/transfers/" + notifData.transfer_id;
+  }
   event.waitUntil(
     clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((windowClients) => {
         for (const client of windowClients) {
           if (client.url.includes(self.location.origin) && "focus" in client) {
+            client.navigate(url);
             return client.focus();
           }
         }

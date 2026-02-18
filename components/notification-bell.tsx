@@ -129,6 +129,12 @@ export function NotificationBell({ userId, branchId }: NotificationBellProps) {
       setOpen(false);
       router.push(`/invoices/${notif.reference_id}`);
     }
+
+    // Navigate to transfer details
+    if (notif.type === "stock_transfer" && notif.reference_id) {
+      setOpen(false);
+      router.push(`/transfers/${notif.reference_id}`);
+    }
   };
 
   /* ---------- mark all as read ---------- */
