@@ -124,7 +124,14 @@ export function ProductCard({
           <div className="min-w-0 flex-1">
             <h3 className="text-lg font-bold truncate leading-tight">
               {highlightText(product.name, searchQuery)}
-              {product.manufacturer ? <>{" - "}{highlightText(product.manufacturer, searchQuery)}</> : ""}
+              {product.manufacturer ? (
+                <>
+                  {" - "}
+                  {highlightText(product.manufacturer, searchQuery)}
+                </>
+              ) : (
+                ""
+              )}
             </h3>
           </div>
           <div className="flex items-center shrink-0">
@@ -147,7 +154,11 @@ export function ProductCard({
 
         {/* BARCODE */}
         <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground font-mono">
-          <span>{product.barcode ? highlightText(product.barcode, searchQuery) : "—"}</span>
+          <span>
+            {product.barcode
+              ? highlightText(product.barcode, searchQuery)
+              : "—"}
+          </span>
           {product.barcode && (
             <>
               <button

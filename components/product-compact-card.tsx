@@ -67,7 +67,14 @@ export function ProductCompactCard({
         <div className="min-w-0 flex-1">
           <h3 className="text-sm font-bold truncate">
             {highlightText(product.name, searchQuery)}
-            {product.manufacturer ? <>{" - "}{highlightText(product.manufacturer, searchQuery)}</> : ""}
+            {product.manufacturer ? (
+              <>
+                {" - "}
+                {highlightText(product.manufacturer, searchQuery)}
+              </>
+            ) : (
+              ""
+            )}
           </h3>
           <div className="flex items-center gap-2 mt-0.5">
             {product.barcode && (

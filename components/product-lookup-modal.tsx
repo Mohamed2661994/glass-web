@@ -78,8 +78,22 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     return filtered.sort((a, b) => {
       // Relevance sort when searching
       if (search.trim()) {
-        const scoreA = multiWordScore(search, a.name, String(a.id), a.description, a.barcode, a.manufacturer);
-        const scoreB = multiWordScore(search, b.name, String(b.id), b.description, b.barcode, b.manufacturer);
+        const scoreA = multiWordScore(
+          search,
+          a.name,
+          String(a.id),
+          a.description,
+          a.barcode,
+          a.manufacturer,
+        );
+        const scoreB = multiWordScore(
+          search,
+          b.name,
+          String(b.id),
+          b.description,
+          b.barcode,
+          b.manufacturer,
+        );
         if (scoreA !== scoreB) return scoreB - scoreA;
       }
       const aInStock = Number(a.available_quantity) > 0 ? 1 : 0;

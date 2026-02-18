@@ -192,7 +192,10 @@ body {
       <div className="barcode-grid">
         {barcodes.map((i) => (
           <div className="barcode-item" key={i}>
-            <div className="product-name">{product.name}{product.manufacturer ? ` - ${product.manufacturer}` : ""}</div>
+            <div className="product-name">
+              {product.name}
+              {product.manufacturer ? ` - ${product.manufacturer}` : ""}
+            </div>
             <svg className="barcode-svg" />
           </div>
         ))}

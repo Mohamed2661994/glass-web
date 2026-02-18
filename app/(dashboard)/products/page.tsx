@@ -182,8 +182,20 @@ export default function ProductsPage() {
     .sort((a, b) => {
       // Relevance sort when searching
       if (search.trim()) {
-        const scoreA = multiWordScore(search, a.name, a.barcode, a.description, a.manufacturer);
-        const scoreB = multiWordScore(search, b.name, b.barcode, b.description, b.manufacturer);
+        const scoreA = multiWordScore(
+          search,
+          a.name,
+          a.barcode,
+          a.description,
+          a.manufacturer,
+        );
+        const scoreB = multiWordScore(
+          search,
+          b.name,
+          b.barcode,
+          b.description,
+          b.manufacturer,
+        );
         if (scoreA !== scoreB) return scoreB - scoreA;
       }
       // الأصناف الغير مفعلة في الآخر

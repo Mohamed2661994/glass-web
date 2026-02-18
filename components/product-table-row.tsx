@@ -65,14 +65,25 @@ export function ProductTableRow({
         <td className="p-3">
           <div className="font-semibold text-sm">
             {highlightText(product.name, searchQuery)}
-            {product.manufacturer ? <>{" - "}{highlightText(product.manufacturer, searchQuery)}</> : ""}
+            {product.manufacturer ? (
+              <>
+                {" - "}
+                {highlightText(product.manufacturer, searchQuery)}
+              </>
+            ) : (
+              ""
+            )}
           </div>
         </td>
 
         {/* الباركود */}
         <td className="p-3">
           <div className="flex items-center gap-1 font-mono text-xs">
-            <span>{product.barcode ? highlightText(product.barcode, searchQuery) : "—"}</span>
+            <span>
+              {product.barcode
+                ? highlightText(product.barcode, searchQuery)
+                : "—"}
+            </span>
             {product.barcode && (
               <>
                 <button

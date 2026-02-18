@@ -12,6 +12,7 @@ import { NotificationBell } from "@/components/notification-bell";
 import { CashCounterModal } from "@/components/cash-counter-modal";
 import { ProductFormDialog } from "@/components/product-form-dialog";
 import { ProductLookupModal } from "@/components/product-lookup-modal";
+import { ChatDrawer } from "@/components/chat-drawer";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -103,6 +104,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
             {/* RIGHT */}
             <div className="flex items-center gap-4">
+              {mounted && user?.id && (
+                <ChatDrawer userId={user.id} branchId={user.branch_id} />
+              )}
+
               {mounted && user?.id && user?.branch_id === 2 && (
                 <NotificationBell userId={user.id} branchId={user.branch_id} />
               )}
