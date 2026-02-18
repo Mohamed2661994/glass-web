@@ -191,9 +191,12 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
         conversation_id: number;
         message: Message;
       }) => {
-        // If we're viewing this conversation, add the message
+        // Check if we're viewing this conversation
+        let isViewing = false;
+
         setActiveConv((current) => {
           if (current && current.id === conversation_id) {
+            isViewing = true;
             setMessages((prev) => [...prev, message]);
             scrollToBottom();
 
@@ -206,12 +209,16 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
               reader_id: userId,
               to_user_id: message.sender_id,
             });
-          } else {
-            // Not viewing this conv — play sound
-            playSound();
           }
           return current;
         });
+
+        // Play sound outside state updater if not viewing
+        setTimeout(() => {
+          if (!isViewing) {
+            playSound();
+          }
+        }, 50);
 
         // Always refresh conversations list & unread
         fetchConversations();
