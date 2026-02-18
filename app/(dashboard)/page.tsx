@@ -987,18 +987,18 @@ export default function DashboardPage() {
     switch (id) {
       case "kpi_cards":
         return (
-          <div key={id} className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div key={id} className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Card>
-              <CardContent className="p-4 flex items-center gap-3">
+              <CardContent className="p-4 flex flex-col items-center text-center gap-2">
                 <div className="rounded-lg bg-blue-100 dark:bg-blue-900/30 p-2.5">
                   <ShoppingCart className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">مبيعات اليوم</p>
                   {loadingStats ? (
-                    <Skeleton className="h-6 w-20 mt-1" />
+                    <Skeleton className="h-6 w-20 mt-1 mx-auto" />
                   ) : (
-                    <p className="text-lg font-bold">
+                    <p className="text-lg font-bold mt-0.5">
                       {Math.round(stats?.today_sales ?? 0).toLocaleString()} ج
                     </p>
                   )}
@@ -1007,16 +1007,16 @@ export default function DashboardPage() {
             </Card>
 
             <Card>
-              <CardContent className="p-4 flex items-center gap-3">
+              <CardContent className="p-4 flex flex-col items-center text-center gap-2">
                 <div className="rounded-lg bg-green-100 dark:bg-green-900/30 p-2.5">
                   <FileText className="h-5 w-5 text-green-600 dark:text-green-400" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">فواتير اليوم</p>
                   {loadingStats ? (
-                    <Skeleton className="h-6 w-12 mt-1" />
+                    <Skeleton className="h-6 w-12 mt-1 mx-auto" />
                   ) : (
-                    <p className="text-lg font-bold">
+                    <p className="text-lg font-bold mt-0.5">
                       {stats?.today_invoices_count ?? 0}
                     </p>
                   )}
@@ -1025,16 +1025,16 @@ export default function DashboardPage() {
             </Card>
 
             <Card>
-              <CardContent className="p-4 flex items-center gap-3">
+              <CardContent className="p-4 flex flex-col items-center text-center gap-2">
                 <div className="rounded-lg bg-emerald-100 dark:bg-emerald-900/30 p-2.5">
                   <Banknote className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">نقدية اليوم</p>
                   {loadingStats ? (
-                    <Skeleton className="h-6 w-20 mt-1" />
+                    <Skeleton className="h-6 w-20 mt-1 mx-auto" />
                   ) : (
-                    <p className="text-lg font-bold">
+                    <p className="text-lg font-bold mt-0.5">
                       {Math.round(stats?.today_cash ?? 0).toLocaleString()} ج
                     </p>
                   )}
@@ -1046,16 +1046,16 @@ export default function DashboardPage() {
               className="cursor-pointer hover:shadow-md transition-shadow"
               onClick={() => router.push("/reports/low-stock")}
             >
-              <CardContent className="p-4 flex items-center gap-3">
+              <CardContent className="p-4 flex flex-col items-center text-center gap-2">
                 <div className="rounded-lg bg-orange-100 dark:bg-orange-900/30 p-2.5">
                   <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">أصناف منخفضة</p>
                   {loadingStats ? (
-                    <Skeleton className="h-6 w-12 mt-1" />
+                    <Skeleton className="h-6 w-12 mt-1 mx-auto" />
                   ) : (
-                    <p className="text-lg font-bold">
+                    <p className="text-lg font-bold mt-0.5">
                       {stats?.low_stock_count ?? 0}
                     </p>
                   )}
