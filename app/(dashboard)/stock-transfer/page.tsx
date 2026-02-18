@@ -150,6 +150,8 @@ export default function StockTransferPage() {
       return;
     }
 
+    const pct = mfgPercentMap[product.manufacturer] || 0;
+
     setItems((prev) => [
       ...prev,
       {
@@ -159,8 +161,8 @@ export default function StockTransferPage() {
         product_name: product.name,
         manufacturer: product.manufacturer,
         quantity: 1,
-        percent: mfgPercentMap[product.manufacturer] || 0,
-        price_addition: 0,
+        percent: pct,
+        price_addition: pct ? 0 : 5,
         wholesale_package: pkg,
         retail_package: retailPkg || product.retail_package,
         wholesale_price: price,

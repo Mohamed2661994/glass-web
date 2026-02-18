@@ -125,7 +125,10 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
           const Ctx = window.AudioContext || (window as any).webkitAudioContext;
           if (!Ctx) return;
           audioCtxRef.current = new Ctx();
-          console.log("[sound] ctx created in gesture, state:", audioCtxRef.current.state);
+          console.log(
+            "[sound] ctx created in gesture, state:",
+            audioCtxRef.current.state,
+          );
         }
 
         const ctx = audioCtxRef.current;
@@ -156,7 +159,13 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
 
     // Use every possible event type, capture phase, passive
     const opts: AddEventListenerOptions = { capture: true, passive: true };
-    const events = ["touchstart", "touchend", "pointerdown", "click", "keydown"];
+    const events = [
+      "touchstart",
+      "touchend",
+      "pointerdown",
+      "click",
+      "keydown",
+    ];
     events.forEach((evt) => document.addEventListener(evt, unlock, opts));
 
     return () => {
@@ -167,7 +176,14 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   }, [loadBuffer]);
 
   const playSound = useCallback(() => {
-    console.log("[sound] playSound — ready:", audioReadyRef.current, "buffer:", !!audioBufferRef.current, "ctx:", audioCtxRef.current?.state);
+    console.log(
+      "[sound] playSound — ready:",
+      audioReadyRef.current,
+      "buffer:",
+      !!audioBufferRef.current,
+      "ctx:",
+      audioCtxRef.current?.state,
+    );
 
     let played = false;
 
@@ -205,7 +221,9 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
     }
 
     // Vibrate on mobile
-    try { navigator?.vibrate?.(200); } catch {}
+    try {
+      navigator?.vibrate?.(200);
+    } catch {}
   }, []);
 
   /* ---------- scroll to bottom ---------- */
