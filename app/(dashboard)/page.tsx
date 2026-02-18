@@ -826,6 +826,17 @@ export default function DashboardPage() {
     });
   };
 
+  const moveQuickLink = (index: number, direction: "up" | "down") => {
+    setQuickLinks((prev) => {
+      const next = [...prev];
+      const targetIdx = direction === "up" ? index - 1 : index + 1;
+      if (targetIdx < 0 || targetIdx >= next.length) return prev;
+      [next[index], next[targetIdx]] = [next[targetIdx], next[index]];
+      saveQuickLinksPrefs(next);
+      return next;
+    });
+  };
+
   const resetQuickLinks = () => {
     setQuickLinks(DEFAULT_QUICK_LINKS);
     saveQuickLinksPrefs(DEFAULT_QUICK_LINKS);
@@ -1091,10 +1102,14 @@ export default function DashboardPage() {
                   <TableRow>
                     <TableHead className="text-right">#</TableHead>
                     <TableHead className="text-right">العميل</TableHead>
-                    <TableHead className="text-right hidden sm:table-cell">النوع</TableHead>
+                    <TableHead className="text-right hidden sm:table-cell">
+                      النوع
+                    </TableHead>
                     <TableHead className="text-right">الإجمالي</TableHead>
                     <TableHead className="text-right">الحالة</TableHead>
-                    <TableHead className="text-right hidden sm:table-cell">التاريخ</TableHead>
+                    <TableHead className="text-right hidden sm:table-cell">
+                      التاريخ
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1117,7 +1132,9 @@ export default function DashboardPage() {
                         onClick={() => router.push(`/invoices/${inv.id}`)}
                       >
                         <TableCell className="font-medium">{inv.id}</TableCell>
-                        <TableCell className="max-w-[80px] truncate">{inv.customer_name || "—"}</TableCell>
+                        <TableCell className="max-w-[80px] truncate">
+                          {inv.customer_name || "—"}
+                        </TableCell>
                         <TableCell className="hidden sm:table-cell">
                           {movementLabel(inv.movement_type)}
                         </TableCell>
@@ -1537,6 +1554,24 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0"
+                      disabled={quickLinks.indexOf(link) === 0}
+                      onClick={() => moveQuickLink(quickLinks.indexOf(link), "up")}
+                    >
+                      <ArrowUp className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0"
+                      disabled={quickLinks.indexOf(link) === quickLinks.length - 1}
+                      onClick={() => moveQuickLink(quickLinks.indexOf(link), "down")}
+                    >
+                      <ArrowDown className="h-3 w-3" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="sm"
