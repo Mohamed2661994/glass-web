@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, useRef } from "react";
 import { useAuth } from "@/app/context/auth-context";
-import api from "@/services/api";
+import api, { API_URL } from "@/services/api";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { ChatPrefs } from "@/hooks/use-user-preferences";
 import { PageContainer } from "@/components/layout/page-container";
@@ -111,6 +111,36 @@ export default function SettingsPage() {
     }));
   };
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+  const soundInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploadingSound, setUploadingSound] = useState(false);
+
+  const handleSoundUpload = async (file: File) => {
+    setUploadingSound(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const { data } = await api.post("/sounds/upload", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      if (data.success) {
+        setChatPrefs({
+          notificationSound: data.url,
+          customSoundName: file.name,
+        });
+        // preview
+        if (previewAudioRef.current) previewAudioRef.current.pause();
+        const audio = new Audio(`${API_URL}${data.url}`);
+        audio.volume = 0.5;
+        audio.play().catch(() => {});
+        previewAudioRef.current = audio;
+        toast.success("تم رفع النغمة بنجاح");
+      }
+    } catch {
+      toast.error("فشل رفع الملف الصوتي");
+    } finally {
+      setUploadingSound(false);
+    }
+  };
 
   /* ---- Print settings state ---- */
   const [autoPrint, setAutoPrint] = useState(true);
@@ -509,7 +539,9 @@ export default function SettingsPage() {
           <div className="space-y-5">
             {/* My bubble color */}
             <div>
-              <Label className="text-sm font-medium mb-2 block">لون رسائلي</Label>
+              <Label className="text-sm font-medium mb-2 block">
+                لون رسائلي
+              </Label>
               <div className="flex flex-wrap gap-2">
                 {[
                   { color: "#2563eb", label: "أزرق" },
@@ -527,8 +559,14 @@ export default function SettingsPage() {
                     className="relative w-9 h-9 rounded-full border-2 transition-all"
                     style={{
                       backgroundColor: c.color,
-                      borderColor: (chatPrefs.myBubbleColor || "#2563eb") === c.color ? "white" : "transparent",
-                      boxShadow: (chatPrefs.myBubbleColor || "#2563eb") === c.color ? `0 0 0 2px ${c.color}` : "none",
+                      borderColor:
+                        (chatPrefs.myBubbleColor || "#2563eb") === c.color
+                          ? "white"
+                          : "transparent",
+                      boxShadow:
+                        (chatPrefs.myBubbleColor || "#2563eb") === c.color
+                          ? `0 0 0 2px ${c.color}`
+                          : "none",
                     }}
                     title={c.label}
                   >
@@ -541,7 +579,9 @@ export default function SettingsPage() {
                   <input
                     type="color"
                     value={chatPrefs.myBubbleColor || "#2563eb"}
-                    onChange={(e) => setChatPrefs({ myBubbleColor: e.target.value })}
+                    onChange={(e) =>
+                      setChatPrefs({ myBubbleColor: e.target.value })
+                    }
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   />
                   <div
@@ -558,7 +598,9 @@ export default function SettingsPage() {
 
             {/* Other bubble color */}
             <div>
-              <Label className="text-sm font-medium mb-2 block">لون رسائل الطرف الآخر</Label>
+              <Label className="text-sm font-medium mb-2 block">
+                لون رسائل الطرف الآخر
+              </Label>
               <div className="flex flex-wrap gap-2">
                 {[
                   { color: "#e5e7eb", label: "رمادي" },
@@ -576,8 +618,14 @@ export default function SettingsPage() {
                     className="relative w-9 h-9 rounded-full border-2 transition-all"
                     style={{
                       backgroundColor: c.color,
-                      borderColor: (chatPrefs.otherBubbleColor || "#e5e7eb") === c.color ? "#6b7280" : "transparent",
-                      boxShadow: (chatPrefs.otherBubbleColor || "#e5e7eb") === c.color ? `0 0 0 2px ${c.color === '#e5e7eb' ? '#6b7280' : c.color}` : "none",
+                      borderColor:
+                        (chatPrefs.otherBubbleColor || "#e5e7eb") === c.color
+                          ? "#6b7280"
+                          : "transparent",
+                      boxShadow:
+                        (chatPrefs.otherBubbleColor || "#e5e7eb") === c.color
+                          ? `0 0 0 2px ${c.color === "#e5e7eb" ? "#6b7280" : c.color}`
+                          : "none",
                     }}
                     title={c.label}
                   >
@@ -590,7 +638,9 @@ export default function SettingsPage() {
                   <input
                     type="color"
                     value={chatPrefs.otherBubbleColor || "#e5e7eb"}
-                    onChange={(e) => setChatPrefs({ otherBubbleColor: e.target.value })}
+                    onChange={(e) =>
+                      setChatPrefs({ otherBubbleColor: e.target.value })
+                    }
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   />
                   <div
@@ -612,7 +662,9 @@ export default function SettingsPage() {
                 <div className="flex justify-end">
                   <div
                     className="max-w-[70%] rounded-2xl rounded-br-sm px-4 py-2 text-sm text-white"
-                    style={{ backgroundColor: chatPrefs.myBubbleColor || "#2563eb" }}
+                    style={{
+                      backgroundColor: chatPrefs.myBubbleColor || "#2563eb",
+                    }}
                   >
                     أهلا بيك 👋
                   </div>
@@ -620,7 +672,9 @@ export default function SettingsPage() {
                 <div className="flex justify-start">
                   <div
                     className="max-w-[70%] rounded-2xl rounded-bl-sm px-4 py-2 text-sm"
-                    style={{ backgroundColor: chatPrefs.otherBubbleColor || "#e5e7eb" }}
+                    style={{
+                      backgroundColor: chatPrefs.otherBubbleColor || "#e5e7eb",
+                    }}
                   >
                     أهلاً! إزايك 😊
                   </div>
@@ -628,7 +682,9 @@ export default function SettingsPage() {
                 <div className="flex justify-end">
                   <div
                     className="max-w-[70%] rounded-2xl rounded-br-sm px-4 py-2 text-sm text-white"
-                    style={{ backgroundColor: chatPrefs.myBubbleColor || "#2563eb" }}
+                    style={{
+                      backgroundColor: chatPrefs.myBubbleColor || "#2563eb",
+                    }}
                   >
                     الحمد لله تمام ❤️
                   </div>
@@ -640,7 +696,9 @@ export default function SettingsPage() {
 
             {/* Notification sound */}
             <div>
-              <Label className="text-sm font-medium mb-2 block">نغمة إشعار الرسائل</Label>
+              <Label className="text-sm font-medium mb-2 block">
+                نغمة إشعار الرسائل
+              </Label>
               <div className="space-y-2">
                 {[
                   { file: "beepmasage.mp3", label: "الافتراضية" },
@@ -651,7 +709,7 @@ export default function SettingsPage() {
                   <button
                     key={s.file}
                     onClick={() => {
-                      setChatPrefs({ notificationSound: s.file });
+                      setChatPrefs({ notificationSound: s.file, customSoundName: undefined });
                       if (s.file !== "none") {
                         if (previewAudioRef.current) {
                           previewAudioRef.current.pause();
@@ -663,21 +721,65 @@ export default function SettingsPage() {
                       }
                     }}
                     className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors border ${
-                      (chatPrefs.notificationSound || "beepmasage.mp3") === s.file
+                      (chatPrefs.notificationSound || "beepmasage.mp3") ===
+                      s.file
                         ? "border-primary bg-primary/5 text-primary"
                         : "border-muted hover:bg-muted/50"
                     }`}
                   >
-                    <Volume2 className={`h-4 w-4 ${
-                      (chatPrefs.notificationSound || "beepmasage.mp3") === s.file
-                        ? "text-primary" : "text-muted-foreground"
-                    }`} />
+                    <Volume2
+                      className={`h-4 w-4 ${
+                        (chatPrefs.notificationSound || "beepmasage.mp3") ===
+                        s.file
+                          ? "text-primary"
+                          : "text-muted-foreground"
+                      }`}
+                    />
                     <span className="flex-1 text-right">{s.label}</span>
-                    {(chatPrefs.notificationSound || "beepmasage.mp3") === s.file && (
-                      <Check className="h-4 w-4 text-primary" />
-                    )}
+                    {(chatPrefs.notificationSound || "beepmasage.mp3") ===
+                      s.file && <Check className="h-4 w-4 text-primary" />}
                   </button>
                 ))}
+
+                {/* Custom sound upload */}
+                <input
+                  ref={soundInputRef}
+                  type="file"
+                  accept="audio/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleSoundUpload(file);
+                    e.target.value = "";
+                  }}
+                />
+                <button
+                  onClick={() => soundInputRef.current?.click()}
+                  disabled={uploadingSound}
+                  className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors border ${
+                    chatPrefs.notificationSound?.startsWith("/uploads/")
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-dashed border-muted-foreground/40 hover:bg-muted/50"
+                  }`}
+                >
+                  {uploadingSound ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className={`h-4 w-4 ${
+                      chatPrefs.notificationSound?.startsWith("/uploads/")
+                        ? "text-primary"
+                        : "text-muted-foreground"
+                    }`} />
+                  )}
+                  <span className="flex-1 text-right">
+                    {chatPrefs.notificationSound?.startsWith("/uploads/")
+                      ? chatPrefs.customSoundName || "نغمة مخصصة"
+                      : "رفع نغمة خارجية..."}
+                  </span>
+                  {chatPrefs.notificationSound?.startsWith("/uploads/") && (
+                    <Check className="h-4 w-4 text-primary" />
+                  )}
+                </button>
               </div>
             </div>
           </div>

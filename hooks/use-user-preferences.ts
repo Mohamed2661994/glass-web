@@ -27,9 +27,10 @@ export interface SidebarPref {
 }
 
 export interface ChatPrefs {
-  myBubbleColor?: string;     // hex color for my messages
-  otherBubbleColor?: string;  // hex color for other's messages
-  notificationSound?: string; // sound file name
+  myBubbleColor?: string; // hex color for my messages
+  otherBubbleColor?: string; // hex color for other's messages
+  notificationSound?: string; // sound file name or /uploads/sounds/... path
+  customSoundName?: string; // display name for custom uploaded sound
 }
 
 export interface UserPreferences {

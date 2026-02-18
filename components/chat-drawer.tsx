@@ -87,6 +87,13 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   const otherColor = chatPrefs.otherBubbleColor || "";
   const soundFile = chatPrefs.notificationSound || "beepmasage.mp3";
 
+  // Resolve sound URL: custom uploads use API_URL, built-in use /sounds/
+  const getSoundUrl = useCallback(
+    (sf: string) =>
+      sf.startsWith("/uploads/") ? `${API_URL}${sf}` : `/sounds/${sf}`,
+    [],
+  );
+
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"list" | "chat" | "new">("list");
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -153,15 +160,18 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
         (async () => {
           try {
             bufferLoadingRef.current = true;
-            const res = await fetch(`/sounds/${soundFile}`);
+            const res = await fetch(getSoundUrl(soundFile));
             if (!res.ok) throw new Error("fetch " + res.status);
             const ab = await res.arrayBuffer();
-            audioBufferRef.current = await audioCtxRef.current!.decodeAudioData(ab);
-          } catch { bufferLoadingRef.current = false; }
+            audioBufferRef.current =
+              await audioCtxRef.current!.decodeAudioData(ab);
+          } catch {
+            bufferLoadingRef.current = false;
+          }
         })();
       }
     }
-  }, [soundFile]);
+  }, [soundFile, getSoundUrl]);
 
   // Load the mp3 into the AudioContext buffer
   const loadBuffer = useCallback(async () => {
@@ -171,7 +181,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
     if (!ctx) return;
     bufferLoadingRef.current = true;
     try {
-      const res = await fetch(`/sounds/${soundFile}`);
+      const res = await fetch(getSoundUrl(soundFile));
       if (!res.ok) throw new Error("fetch " + res.status);
       const ab = await res.arrayBuffer();
       audioBufferRef.current = await ctx.decodeAudioData(ab);
@@ -180,7 +190,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
       console.warn("[sound] buffer load error:", e);
       bufferLoadingRef.current = false;
     }
-  }, [soundFile]);
+  }, [soundFile, getSoundUrl]);
 
   useEffect(() => {
     // On first user gesture: CREATE AudioContext + resume + silent oscillator + load buffer
@@ -242,7 +252,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
         document.removeEventListener(evt, unlock, opts as EventListenerOptions),
       );
     };
-  }, [soundFile]);
+  }, [soundFile, loadBuffer]);
 
   const playSound = useCallback(() => {
     if (soundFile === "none") return;
@@ -282,7 +292,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
     // Strategy 2: HTML Audio fallback — only if WebAudio didn't play
     if (!played) {
       try {
-        const audio = new Audio(`/sounds/${soundFile}`);
+        const audio = new Audio(getSoundUrl(soundFile));
         audio.volume = 0.7;
         const p = audio.play();
         if (p) p.catch(() => {});
@@ -294,7 +304,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
     try {
       navigator?.vibrate?.(200);
     } catch {}
-  }, [soundFile]);
+  }, [soundFile, getSoundUrl]);
 
   /* ---------- scroll to bottom ---------- */
   const scrollToBottom = useCallback((instant?: boolean) => {
@@ -664,7 +674,10 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
           >
             <MessageCircle className="h-5 w-5" />
             {totalUnread > 0 && (
-              <Badge className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-[10px] text-white border-0" style={{ backgroundColor: myColor }}>
+              <Badge
+                className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-[10px] text-white border-0"
+                style={{ backgroundColor: myColor }}
+              >
                 {totalUnread > 99 ? "99+" : totalUnread}
               </Badge>
             )}
@@ -686,7 +699,10 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
             }}
             className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 w-64 cursor-pointer rounded-xl border bg-background p-3 shadow-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-200"
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white text-xs font-bold" style={{ backgroundColor: myColor }}>
+            <div
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white text-xs font-bold"
+              style={{ backgroundColor: myColor }}
+            >
               {popup.senderName.charAt(0)}
             </div>
             <div className="flex-1 min-w-0">
@@ -837,7 +853,10 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                             : "لا توجد رسائل"}
                         </p>
                         {conv.unread_count > 0 && (
-                          <Badge className="h-5 min-w-5 px-1 text-[10px] text-white border-0 shrink-0" style={{ backgroundColor: myColor }}>
+                          <Badge
+                            className="h-5 min-w-5 px-1 text-[10px] text-white border-0 shrink-0"
+                            style={{ backgroundColor: myColor }}
+                          >
                             {conv.unread_count}
                           </Badge>
                         )}
@@ -945,9 +964,17 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                           msg.type === "image" ? "p-1" : "px-4 py-2",
                           isMine
                             ? "text-white rounded-br-sm"
-                            : otherColor ? "rounded-bl-sm" : "bg-muted rounded-bl-sm",
+                            : otherColor
+                              ? "rounded-bl-sm"
+                              : "bg-muted rounded-bl-sm",
                         )}
-                        style={isMine ? { backgroundColor: myColor } : otherColor ? { backgroundColor: otherColor } : undefined}
+                        style={
+                          isMine
+                            ? { backgroundColor: myColor }
+                            : otherColor
+                              ? { backgroundColor: otherColor }
+                              : undefined
+                        }
                       >
                         {/* Quoted reply */}
                         {msg.reply_to_id && (
@@ -958,7 +985,11 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                                 ? "border-r-white/40"
                                 : "border-r-blue-500",
                             )}
-                            style={isMine ? { backgroundColor: "rgba(0,0,0,0.15)" } : { backgroundColor: "rgba(0,0,0,0.05)" }}
+                            style={
+                              isMine
+                                ? { backgroundColor: "rgba(0,0,0,0.15)" }
+                                : { backgroundColor: "rgba(0,0,0,0.05)" }
+                            }
                             onClick={() => {
                               const el = document.querySelector(
                                 `[data-msg-id="${msg.reply_to_id}"]`,
@@ -979,9 +1010,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                             <span
                               className={cn(
                                 "font-semibold block text-[11px]",
-                                isMine
-                                  ? "text-white/80"
-                                  : "text-blue-600",
+                                isMine ? "text-white/80" : "text-blue-600",
                               )}
                             >
                               {msg.reply_sender_id === userId
