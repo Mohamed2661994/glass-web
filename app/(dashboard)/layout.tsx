@@ -13,6 +13,7 @@ import { CashCounterModal } from "@/components/cash-counter-modal";
 import { ProductFormDialog } from "@/components/product-form-dialog";
 import { ProductLookupModal } from "@/components/product-lookup-modal";
 import { ChatDrawer } from "@/components/chat-drawer";
+import { PullToRefresh } from "@/components/pull-to-refresh";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -119,8 +120,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </header>
 
         {/* ===== CONTENT ONLY ===== */}
-        <main className="flex-1 overflow-auto scrollbar-hide py-6 print:py-0">
-          <div className="w-full px-4 print:px-0">{children}</div>
+        <main className="flex-1 overflow-auto scrollbar-hide print:py-0">
+          <PullToRefresh className="h-full overflow-auto scrollbar-hide">
+            <div className="w-full px-4 py-6 print:px-0 print:py-0">{children}</div>
+          </PullToRefresh>
         </main>
       </div>
 

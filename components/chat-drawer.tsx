@@ -9,6 +9,7 @@ import {
   Check,
   CheckCheck,
   Search,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -409,9 +410,14 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
           {view === "list" ? (
             <>
               <h2 className="text-lg font-bold">المحادثات</h2>
-              <Button variant="ghost" size="icon" onClick={openNewChat}>
-                <Plus className="h-5 w-5" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" onClick={openNewChat}>
+                  <Plus className="h-5 w-5" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
             </>
           ) : view === "new" ? (
             <>
