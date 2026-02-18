@@ -897,10 +897,10 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                             setReplyTo(msg);
                             textareaRef.current?.focus();
                           }}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-muted mb-1"
+                          className="p-1 rounded-full hover:bg-muted mb-1 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
                           title="رد"
                         >
-                          <Reply className="h-3.5 w-3.5 text-muted-foreground" />
+                          <Reply className="h-3.5 w-3.5" />
                         </button>
                       )}
                       <div
@@ -922,17 +922,29 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                                 : "bg-background/50 border-r-blue-500",
                             )}
                           >
-                            <span className={cn(
-                              "font-semibold block text-[11px]",
-                              isMine ? "text-blue-200" : "text-blue-600",
-                            )}>
-                              {msg.reply_sender_id === userId ? "أنت" : msg.reply_sender_name}
+                            <span
+                              className={cn(
+                                "font-semibold block text-[11px]",
+                                isMine ? "text-blue-200" : "text-blue-600",
+                              )}
+                            >
+                              {msg.reply_sender_id === userId
+                                ? "أنت"
+                                : msg.reply_sender_name}
                             </span>
-                            <span className={cn(
-                              "line-clamp-2",
-                              isMine ? "text-blue-100/80" : "text-muted-foreground",
-                            )}>
-                              {msg.reply_type === "image" ? "📷 صورة" : msg.reply_type === "file" ? "📄 ملف" : msg.reply_content}
+                            <span
+                              className={cn(
+                                "line-clamp-2",
+                                isMine
+                                  ? "text-blue-100/80"
+                                  : "text-muted-foreground",
+                              )}
+                            >
+                              {msg.reply_type === "image"
+                                ? "📷 صورة"
+                                : msg.reply_type === "file"
+                                  ? "📄 ملف"
+                                  : msg.reply_content}
                             </span>
                           </div>
                         )}
@@ -1005,10 +1017,10 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                             setReplyTo(msg);
                             textareaRef.current?.focus();
                           }}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-muted mb-1"
+                          className="p-1 rounded-full hover:bg-muted mb-1 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
                           title="رد"
                         >
-                          <Reply className="h-3.5 w-3.5 text-muted-foreground" />
+                          <Reply className="h-3.5 w-3.5" />
                         </button>
                       )}
                     </div>
@@ -1062,10 +1074,17 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                     {replyTo.sender_id === userId ? "أنت" : replyTo.full_name}
                   </span>
                   <span className="text-xs text-muted-foreground line-clamp-1">
-                    {replyTo.type === "image" ? "📷 صورة" : replyTo.type === "file" ? "📄 ملف" : replyTo.content}
+                    {replyTo.type === "image"
+                      ? "📷 صورة"
+                      : replyTo.type === "file"
+                        ? "📄 ملف"
+                        : replyTo.content}
                   </span>
                 </div>
-                <button onClick={() => setReplyTo(null)} className="shrink-0 p-1 rounded-full hover:bg-muted">
+                <button
+                  onClick={() => setReplyTo(null)}
+                  className="shrink-0 p-1 rounded-full hover:bg-muted"
+                >
                   <X className="h-3.5 w-3.5 text-muted-foreground" />
                 </button>
               </div>
