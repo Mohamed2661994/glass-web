@@ -14,8 +14,10 @@ import {
   Pencil,
   RefreshCw,
   FilePlus2,
+  Save,
 } from "lucide-react";
 import { useCachedProducts } from "@/hooks/use-cached-products";
+import { CustomerLookupModal } from "@/components/customer-lookup-modal";
 import { highlightText } from "@/lib/highlight-text";
 import { noSpaces } from "@/lib/utils";
 import { BarcodeDetector } from "barcode-detector";
@@ -70,6 +72,8 @@ export default function CreateRetailInvoicePage() {
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [originalPhone, setOriginalPhone] = useState("");
+  const [savingPhone, setSavingPhone] = useState(false);
   const [customerId, setCustomerId] = useState<number | null>(null);
   const [previousBalance, setPreviousBalance] = useState("0");
   const [savedInvoiceId, setSavedInvoiceId] = useState<number | null>(null);
@@ -96,6 +100,7 @@ export default function CreateRetailInvoicePage() {
 
   const [items, setItems] = useState<any[]>([]);
   const [showProductModal, setShowProductModal] = useState(false);
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [search, setSearch] = useState("");
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [refreshingProducts, setRefreshingProducts] = useState(false);
@@ -429,9 +434,11 @@ export default function CreateRetailInvoicePage() {
   };
 
   const selectCustomer = (customer: any) => {
+    const ph = customer.phone || customer.phones?.[0] || "";
     setCustomerName(customer.name);
     setCustomerId(customer.id);
-    setCustomerPhone(customer.phone || customer.phones?.[0] || "");
+    setCustomerPhone(ph);
+    setOriginalPhone(ph);
     setShowNameDropdown(false);
     setCustomerSuggestions([]);
     fetchCustomerBalance(customer.id);
@@ -442,6 +449,20 @@ export default function CreateRetailInvoicePage() {
       customer.apply_items_discount !== null
     ) {
       setApplyItemsDiscount(customer.apply_items_discount);
+    }
+  };
+
+  const saveNewPhone = async () => {
+    if (!customerId || !customerPhone.trim()) return;
+    try {
+      setSavingPhone(true);
+      await api.post(`/customers/${customerId}/phones`, { phone: customerPhone.trim() });
+      setOriginalPhone(customerPhone.trim());
+      toast.success("تم حفظ الرقم الجديد");
+    } catch {
+      toast.error("فشل حفظ الرقم - ربما مسجل بالفعل");
+    } finally {
+      setSavingPhone(false);
     }
   };
 
@@ -468,9 +489,11 @@ export default function CreateRetailInvoicePage() {
   };
 
   const selectFromPhone = (customer: any) => {
+    const ph = customer.phone || "";
     setCustomerName(customer.name);
     setCustomerId(customer.id);
-    setCustomerPhone(customer.phone || "");
+    setCustomerPhone(ph);
+    setOriginalPhone(ph);
     setShowPhoneDropdown(false);
     setPhoneSuggestions([]);
     fetchCustomerBalance(customer.id);
@@ -826,6 +849,21 @@ export default function CreateRetailInvoicePage() {
   }, [showProductModal]);
 
   /* =========================================================
+     F2 shortcut to open customer lookup
+     ========================================================= */
+
+  useEffect(() => {
+    const handleF2 = (e: KeyboardEvent) => {
+      if (e.key === "F2") {
+        e.preventDefault();
+        setShowCustomerModal(true);
+      }
+    };
+    window.addEventListener("keydown", handleF2);
+    return () => window.removeEventListener("keydown", handleF2);
+  }, []);
+
+  /* =========================================================
      Filtered products memo
      ========================================================= */
 
@@ -1078,6 +1116,19 @@ export default function CreateRetailInvoicePage() {
                     </div>
                   ))}
                 </div>
+              )}
+              {customerId && customerPhone.trim() && customerPhone.trim() !== originalPhone && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="mt-2 text-xs gap-1"
+                  disabled={savingPhone}
+                  onClick={saveNewPhone}
+                >
+                  <Save className="h-3 w-3" />
+                  {savingPhone ? "جاري الحفظ..." : "حفظ الرقم الجديد"}
+                </Button>
               )}
             </div>
           </div>
@@ -1819,6 +1870,22 @@ export default function CreateRetailInvoicePage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Customer Lookup Modal (F2) */}
+        <CustomerLookupModal
+          open={showCustomerModal}
+          onOpenChange={setShowCustomerModal}
+          onSelect={(c) => {
+            setCustomerName(c.name);
+            setCustomerId(c.id);
+            setCustomerPhone(c.phone || "");
+            setOriginalPhone(c.phone || "");
+            fetchCustomerBalance(c.id);
+            if (c.apply_items_discount !== undefined && c.apply_items_discount !== null) {
+              setApplyItemsDiscount(c.apply_items_discount);
+            }
+          }}
+        />
       </div>
     </div>
   );

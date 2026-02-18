@@ -150,6 +150,7 @@ export function Sidebar({
     { label: "لوحة التحكم", icon: LayoutDashboard, href: "/" },
     { label: "الاصناف", icon: Package, href: "/products" },
     { label: "المصانع", icon: Factory, href: "/manufacturers" },
+    { label: "العملاء", icon: Users, href: "/customers" },
     { label: "قائمة الفواتير", icon: ClipboardList, href: "/invoices" },
     ...(branchId === 1
       ? [
