@@ -113,6 +113,23 @@ export default function SettingsPage() {
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const soundInputRef = useRef<HTMLInputElement | null>(null);
   const [uploadingSound, setUploadingSound] = useState(false);
+  const [uploadedSounds, setUploadedSounds] = useState<
+    { filename: string; url: string }[]
+  >([]);
+
+  // Fetch uploaded sounds so all users can see them
+  const fetchUploadedSounds = useCallback(async () => {
+    try {
+      const { data } = await api.get("/sounds/list");
+      setUploadedSounds(data.sounds ?? []);
+    } catch {
+      /* silent */
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUploadedSounds();
+  }, [fetchUploadedSounds]);
 
   const handleSoundUpload = async (file: File) => {
     setUploadingSound(true);
@@ -134,6 +151,7 @@ export default function SettingsPage() {
         audio.play().catch(() => {});
         previewAudioRef.current = audio;
         toast.success("تم رفع النغمة بنجاح");
+        fetchUploadedSounds(); // refresh list for all users
       }
     } catch {
       toast.error("فشل رفع الملف الصوتي");
@@ -759,32 +777,52 @@ export default function SettingsPage() {
                 <button
                   onClick={() => soundInputRef.current?.click()}
                   disabled={uploadingSound}
-                  className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors border ${
-                    chatPrefs.notificationSound?.startsWith("/uploads/")
-                      ? "border-primary bg-primary/5 text-primary"
-                      : "border-dashed border-muted-foreground/40 hover:bg-muted/50"
-                  }`}
+                  className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors border border-dashed border-muted-foreground/40 hover:bg-muted/50"
                 >
                   {uploadingSound ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Upload
-                      className={`h-4 w-4 ${
-                        chatPrefs.notificationSound?.startsWith("/uploads/")
-                          ? "text-primary"
-                          : "text-muted-foreground"
-                      }`}
-                    />
+                    <Upload className="h-4 w-4 text-muted-foreground" />
                   )}
-                  <span className="flex-1 text-right">
-                    {chatPrefs.notificationSound?.startsWith("/uploads/")
-                      ? chatPrefs.customSoundName || "نغمة مخصصة"
-                      : "رفع نغمة خارجية..."}
-                  </span>
-                  {chatPrefs.notificationSound?.startsWith("/uploads/") && (
-                    <Check className="h-4 w-4 text-primary" />
-                  )}
+                  <span className="flex-1 text-right">رفع نغمة خارجية...</span>
                 </button>
+
+                {/* Uploaded sounds from server */}
+                {uploadedSounds.length > 0 && (
+                  <div className="pt-2">
+                    <p className="text-xs text-muted-foreground mb-2">نغمات مرفوعة</p>
+                    {uploadedSounds.map((s) => (
+                      <button
+                        key={s.url}
+                        onClick={() => {
+                          setChatPrefs({ notificationSound: s.url, customSoundName: s.filename });
+                          if (previewAudioRef.current) previewAudioRef.current.pause();
+                          const audio = new Audio(`${API_URL}${s.url}`);
+                          audio.volume = 0.5;
+                          audio.play().catch(() => {});
+                          previewAudioRef.current = audio;
+                        }}
+                        className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors border mb-1 ${
+                          chatPrefs.notificationSound === s.url
+                            ? "border-primary bg-primary/5 text-primary"
+                            : "border-muted hover:bg-muted/50"
+                        }`}
+                      >
+                        <Volume2
+                          className={`h-4 w-4 ${
+                            chatPrefs.notificationSound === s.url
+                              ? "text-primary"
+                              : "text-muted-foreground"
+                          }`}
+                        />
+                        <span className="flex-1 text-right truncate">{s.filename}</span>
+                        {chatPrefs.notificationSound === s.url && (
+                          <Check className="h-4 w-4 text-primary" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
