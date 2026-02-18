@@ -1099,7 +1099,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
             <img
               src={previewImg}
               alt="معاينة"
-              className="max-w-full max-h-[90vh] object-contain rounded-lg"
+              className="w-full h-full object-contain rounded-lg"
             />
           )}
         </DialogContent>
