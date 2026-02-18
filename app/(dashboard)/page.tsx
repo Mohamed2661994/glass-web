@@ -1417,7 +1417,7 @@ export default function DashboardPage() {
   return (
     <div className="p-4 md:p-6 space-y-6" dir="rtl">
       {/* ====== Header with settings ====== */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between animate-in fade-in slide-in-from-bottom-2 duration-400">
         <h1 className="text-xl font-bold">لوحة التحكم</h1>
         <Button
           variant="outline"
@@ -1432,14 +1432,15 @@ export default function DashboardPage() {
 
       {/* ====== Render widgets in grid layout ====== */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {sortedWidgets.map((w) => {
+        {sortedWidgets.map((w, i) => {
           if (!w.visible) return null;
           const content = renderWidget(w.id);
           if (!content) return null;
           return (
             <div
               key={w.id}
-              className={w.size === "full" ? "md:col-span-2" : "md:col-span-1"}
+              className={`${w.size === "full" ? "md:col-span-2" : "md:col-span-1"} animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both`}
+              style={{ animationDelay: `${i * 80}ms` }}
             >
               {content}
             </div>
@@ -1559,7 +1560,9 @@ export default function DashboardPage() {
                       size="sm"
                       className="h-7 w-7 p-0"
                       disabled={quickLinks.indexOf(link) === 0}
-                      onClick={() => moveQuickLink(quickLinks.indexOf(link), "up")}
+                      onClick={() =>
+                        moveQuickLink(quickLinks.indexOf(link), "up")
+                      }
                     >
                       <ArrowUp className="h-3 w-3" />
                     </Button>
@@ -1567,8 +1570,12 @@ export default function DashboardPage() {
                       variant="ghost"
                       size="sm"
                       className="h-7 w-7 p-0"
-                      disabled={quickLinks.indexOf(link) === quickLinks.length - 1}
-                      onClick={() => moveQuickLink(quickLinks.indexOf(link), "down")}
+                      disabled={
+                        quickLinks.indexOf(link) === quickLinks.length - 1
+                      }
+                      onClick={() =>
+                        moveQuickLink(quickLinks.indexOf(link), "down")
+                      }
                     >
                       <ArrowDown className="h-3 w-3" />
                     </Button>
