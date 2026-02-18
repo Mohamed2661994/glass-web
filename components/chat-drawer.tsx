@@ -83,6 +83,12 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   const [allUsers, setAllUsers] = useState<ChatUser[]>([]);
   const [userSearch, setUserSearch] = useState("");
   const [typing, setTyping] = useState(false);
+  const [popup, setPopup] = useState<{
+    senderName: string;
+    preview: string;
+    conversationId: number;
+  } | null>(null);
+  const popupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -388,7 +394,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
         // (chat drawer open + chat view + same conversation)
         playSound();
 
-        // Show WhatsApp-style notification banner if not viewing this conversation
+        // Show popup notification below chat icon if not viewing this conversation
         if (!isViewingThisConv) {
           const senderName =
             message.full_name || message.username || "رسالة جديدة";
@@ -401,38 +407,9 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                   ? message.content.slice(0, 60) + "…"
                   : message.content;
 
-          toast.custom(
-            (t) => (
-              <div
-                onClick={() => {
-                  toast.dismiss(t);
-                  // Open chat drawer and navigate to this conversation
-                  setOpen(true);
-                  const conv = conversationsRef.current.find(
-                    (c) => c.id === conversation_id,
-                  );
-                  if (conv) {
-                    openConvRef.current(conv);
-                  }
-                }}
-                className="w-full max-w-sm cursor-pointer rounded-xl border bg-background p-3 shadow-lg flex items-start gap-3"
-              >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white text-sm font-bold">
-                  {senderName.charAt(0)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{senderName}</p>
-                  <p
-                    className="text-xs text-muted-foreground truncate mt-0.5"
-                    dir="auto"
-                  >
-                    {preview}
-                  </p>
-                </div>
-              </div>
-            ),
-            { duration: 4000, position: "top-center" },
-          );
+          if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
+          setPopup({ senderName, preview, conversationId: conversation_id });
+          popupTimerRef.current = setTimeout(() => setPopup(null), 4000);
         }
 
         // Always refresh conversations list & unread
@@ -623,26 +600,59 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative"
-          onClick={() => {
-            setOpen(true);
-            setView("list");
-            fetchConversations();
-            fetchUnread();
-          }}
-        >
-          <MessageCircle className="h-5 w-5" />
-          {totalUnread > 0 && (
-            <Badge className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-[10px] bg-blue-600 text-white border-0">
-              {totalUnread > 99 ? "99+" : totalUnread}
-            </Badge>
-          )}
-        </Button>
-      </SheetTrigger>
+      <div className="relative">
+        <SheetTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative"
+            onClick={() => {
+              setOpen(true);
+              setView("list");
+              setPopup(null);
+              fetchConversations();
+              fetchUnread();
+            }}
+          >
+            <MessageCircle className="h-5 w-5" />
+            {totalUnread > 0 && (
+              <Badge className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-[10px] bg-blue-600 text-white border-0">
+                {totalUnread > 99 ? "99+" : totalUnread}
+              </Badge>
+            )}
+          </Button>
+        </SheetTrigger>
+
+        {/* Notification popup below chat icon */}
+        {popup && (
+          <div
+            onClick={() => {
+              setPopup(null);
+              setOpen(true);
+              const conv = conversationsRef.current.find(
+                (c) => c.id === popup.conversationId,
+              );
+              if (conv) {
+                openConvRef.current(conv);
+              }
+            }}
+            className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 w-64 cursor-pointer rounded-xl border bg-background p-3 shadow-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-200"
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold">
+              {popup.senderName.charAt(0)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold truncate">{popup.senderName}</p>
+              <p
+                className="text-xs text-muted-foreground truncate mt-0.5"
+                dir="auto"
+              >
+                {popup.preview}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
 
       <SheetContent
         side="left"
