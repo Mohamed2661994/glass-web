@@ -79,9 +79,15 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   const activeConvIdRef = useRef<number | null>(null);
 
   // Keep refs in sync with state so socket handler can read latest values
-  useEffect(() => { openRef.current = open; }, [open]);
-  useEffect(() => { viewRef.current = view; }, [view]);
-  useEffect(() => { activeConvIdRef.current = activeConv?.id ?? null; }, [activeConv]);
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
+  useEffect(() => {
+    viewRef.current = view;
+  }, [view]);
+  useEffect(() => {
+    activeConvIdRef.current = activeConv?.id ?? null;
+  }, [activeConv]);
 
   /* ---------- Audio notification ---------- */
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -91,57 +97,60 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   useEffect(() => {
     let cancelled = false;
 
-    const setup = async () => {
-      try {
-        // 1. Create AudioContext (will be "suspended" until user gesture — that's OK)
-        const Ctx = window.AudioContext || (window as any).webkitAudioContext;
-        if (!Ctx) return;
-        const ctx = new Ctx();
-        audioCtxRef.current = ctx;
+    // 1. Create AudioContext immediately
+    const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    audioCtxRef.current = ctx;
+    console.log("[sound] ctx created, state:", ctx.state);
 
-        // 2. Fetch + decode audio RIGHT AWAY (works even in suspended state)
+    // 2. Fetch + decode audio in parallel (works even in suspended state)
+    (async () => {
+      try {
         const res = await fetch("/sounds/beepmasage.mp3");
-        if (!res.ok) throw new Error("fetch failed " + res.status);
+        if (!res.ok) throw new Error("fetch " + res.status);
         const ab = await res.arrayBuffer();
         if (cancelled) return;
         const buffer = await ctx.decodeAudioData(ab);
         if (cancelled) return;
         audioBufferRef.current = buffer;
-        console.log("[sound] buffer decoded, ctx state:", ctx.state);
+        console.log("[sound] buffer ready, ctx state:", ctx.state);
       } catch (e) {
-        console.warn("[sound] setup error:", e);
+        console.warn("[sound] buffer load error:", e);
       }
-    };
+    })();
 
-    setup();
-
-    // 3. On first user gesture — resume AudioContext + play real sound at low vol
-    const unlock = async () => {
+    // 3. Unlock AudioContext on ANY user gesture
+    //    Uses OscillatorNode — does NOT need buffer to be loaded yet
+    const unlock = () => {
       if (audioReadyRef.current) return;
-      const ctx = audioCtxRef.current;
-      const buffer = audioBufferRef.current;
-      if (!ctx || !buffer) return;
+      const c = audioCtxRef.current;
+      if (!c) return;
 
+      // Resume must be called synchronously in the gesture handler (no await)
+      if (c.state === "suspended") {
+        c.resume().then(() => {
+          console.log("[sound] ctx resumed to:", c.state);
+        });
+      }
+
+      // Play silent oscillator to fully activate the audio pipeline
       try {
-        if (ctx.state === "suspended") await ctx.resume();
-
-        // Play the REAL sound at near-zero volume — this fully unlocks the pipeline
-        const src = ctx.createBufferSource();
-        src.buffer = buffer;
-        const g = ctx.createGain();
-        g.gain.value = 0.01; // barely audible
-        src.connect(g);
-        g.connect(ctx.destination);
-        src.start(0);
-
+        const osc = c.createOscillator();
+        const gain = c.createGain();
+        gain.gain.value = 0;
+        osc.connect(gain);
+        gain.connect(c.destination);
+        osc.start(0);
+        osc.stop(c.currentTime + 0.05);
         audioReadyRef.current = true;
-        console.log("[sound] UNLOCKED — ctx state:", ctx.state);
+        console.log("[sound] UNLOCKED via oscillator");
       } catch (e) {
-        console.warn("[sound] unlock error:", e);
+        console.warn("[sound] oscillator unlock error:", e);
       }
     };
 
-    // Use capture + passive to catch taps even when Radix stops propagation
+    // Capture phase + passive — fired before any component can stopPropagation
     const opts: AddEventListenerOptions = { capture: true, passive: true };
     document.addEventListener("pointerdown", unlock, opts);
     document.addEventListener("click", unlock, opts);
@@ -300,11 +309,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
           activeConvIdRef.current === conversation_id;
 
         setActiveConv((current) => {
-          if (
-            isViewingThisConv &&
-            current &&
-            current.id === conversation_id
-          ) {
+          if (isViewingThisConv && current && current.id === conversation_id) {
             setMessages((prev) => [...prev, message]);
             scrollToBottom();
 
