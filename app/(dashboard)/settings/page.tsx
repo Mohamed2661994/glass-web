@@ -790,13 +790,19 @@ export default function SettingsPage() {
                 {/* Uploaded sounds from server */}
                 {uploadedSounds.length > 0 && (
                   <div className="pt-2">
-                    <p className="text-xs text-muted-foreground mb-2">نغمات مرفوعة</p>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      نغمات مرفوعة
+                    </p>
                     {uploadedSounds.map((s) => (
                       <button
                         key={s.url}
                         onClick={() => {
-                          setChatPrefs({ notificationSound: s.url, customSoundName: s.filename });
-                          if (previewAudioRef.current) previewAudioRef.current.pause();
+                          setChatPrefs({
+                            notificationSound: s.url,
+                            customSoundName: s.filename,
+                          });
+                          if (previewAudioRef.current)
+                            previewAudioRef.current.pause();
                           const audio = new Audio(`${API_URL}${s.url}`);
                           audio.volume = 0.5;
                           audio.play().catch(() => {});
@@ -815,7 +821,9 @@ export default function SettingsPage() {
                               : "text-muted-foreground"
                           }`}
                         />
-                        <span className="flex-1 text-right truncate">{s.filename}</span>
+                        <span className="flex-1 text-right truncate">
+                          {s.filename}
+                        </span>
                         {chatPrefs.notificationSound === s.url && (
                           <Check className="h-4 w-4 text-primary" />
                         )}

@@ -26,6 +26,7 @@ import {
   FilePlus2,
   PackagePlus,
   Factory,
+  ShieldOff,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -221,6 +222,11 @@ export function Sidebar({
                   icon: PackagePlus,
                   href: "/opening-stock",
                 },
+                {
+                  label: "تعطيل أصناف بالجملة",
+                  icon: ShieldOff,
+                  href: "/products/bulk-deactivate",
+                },
               ]
             : []),
           cashGroup,
@@ -254,6 +260,11 @@ export function Sidebar({
                     label: "رصيد أول المدة",
                     icon: PackagePlus,
                     href: "/opening-stock",
+                  },
+                  {
+                    label: "تعطيل أصناف بالجملة",
+                    icon: ShieldOff,
+                    href: "/products/bulk-deactivate",
                   },
                 ]
               : []),
