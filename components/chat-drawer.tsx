@@ -74,6 +74,14 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const openRef = useRef(false);
+  const viewRef = useRef<"list" | "chat" | "new">("list");
+  const activeConvIdRef = useRef<number | null>(null);
+
+  // Keep refs in sync with state so socket handler can read latest values
+  useEffect(() => { openRef.current = open; }, [open]);
+  useEffect(() => { viewRef.current = view; }, [view]);
+  useEffect(() => { activeConvIdRef.current = activeConv?.id ?? null; }, [activeConv]);
 
   /* ---------- Audio notification ---------- */
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -142,10 +150,26 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
 
     return () => {
       cancelled = true;
-      document.removeEventListener("pointerdown", unlock, opts as EventListenerOptions);
-      document.removeEventListener("click", unlock, opts as EventListenerOptions);
-      document.removeEventListener("touchend", unlock, opts as EventListenerOptions);
-      document.removeEventListener("keydown", unlock, opts as EventListenerOptions);
+      document.removeEventListener(
+        "pointerdown",
+        unlock,
+        opts as EventListenerOptions,
+      );
+      document.removeEventListener(
+        "click",
+        unlock,
+        opts as EventListenerOptions,
+      );
+      document.removeEventListener(
+        "touchend",
+        unlock,
+        opts as EventListenerOptions,
+      );
+      document.removeEventListener(
+        "keydown",
+        unlock,
+        opts as EventListenerOptions,
+      );
     };
   }, []);
 
@@ -269,12 +293,18 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
         conversation_id: number;
         message: Message;
       }) => {
-        // Check if we're viewing this conversation
-        let isViewing = false;
+        // Is the user actively viewing THIS specific conversation?
+        const isViewingThisConv =
+          openRef.current &&
+          viewRef.current === "chat" &&
+          activeConvIdRef.current === conversation_id;
 
         setActiveConv((current) => {
-          if (current && current.id === conversation_id) {
-            isViewing = true;
+          if (
+            isViewingThisConv &&
+            current &&
+            current.id === conversation_id
+          ) {
             setMessages((prev) => [...prev, message]);
             scrollToBottom();
 
@@ -287,16 +317,15 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
               reader_id: userId,
               to_user_id: message.sender_id,
             });
+            return current;
           }
           return current;
         });
 
-        // Play sound outside state updater if not viewing
-        setTimeout(() => {
-          if (!isViewing) {
-            playSound();
-          }
-        }, 50);
+        // ALWAYS play sound unless actively viewing this specific conversation
+        if (!isViewingThisConv) {
+          playSound();
+        }
 
         // Always refresh conversations list & unread
         fetchConversations();
