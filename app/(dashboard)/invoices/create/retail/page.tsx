@@ -456,7 +456,9 @@ export default function CreateRetailInvoicePage() {
     if (!customerId || !customerPhone.trim()) return;
     try {
       setSavingPhone(true);
-      await api.post(`/customers/${customerId}/phones`, { phone: customerPhone.trim() });
+      await api.post(`/customers/${customerId}/phones`, {
+        phone: customerPhone.trim(),
+      });
       setOriginalPhone(customerPhone.trim());
       toast.success("تم حفظ الرقم الجديد");
     } catch {
@@ -970,7 +972,7 @@ export default function CreateRetailInvoicePage() {
           </Button>
         </div>
 
-        <Card className="p-6 space-y-6 overflow-hidden">
+        <Card className="p-6 space-y-6">
           <div className="space-y-6">
             <div>
               <label className="text-sm mb-2 block">نوع الحركة</label>
@@ -1117,19 +1119,21 @@ export default function CreateRetailInvoicePage() {
                   ))}
                 </div>
               )}
-              {customerId && customerPhone.trim() && customerPhone.trim() !== originalPhone && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="mt-2 text-xs gap-1"
-                  disabled={savingPhone}
-                  onClick={saveNewPhone}
-                >
-                  <Save className="h-3 w-3" />
-                  {savingPhone ? "جاري الحفظ..." : "حفظ الرقم الجديد"}
-                </Button>
-              )}
+              {customerId &&
+                customerPhone.trim() &&
+                customerPhone.trim() !== originalPhone && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="mt-2 text-xs gap-1"
+                    disabled={savingPhone}
+                    onClick={saveNewPhone}
+                  >
+                    <Save className="h-3 w-3" />
+                    {savingPhone ? "جاري الحفظ..." : "حفظ الرقم الجديد"}
+                  </Button>
+                )}
             </div>
           </div>
         </Card>
@@ -1881,7 +1885,10 @@ export default function CreateRetailInvoicePage() {
             setCustomerPhone(c.phone || "");
             setOriginalPhone(c.phone || "");
             fetchCustomerBalance(c.id);
-            if (c.apply_items_discount !== undefined && c.apply_items_discount !== null) {
+            if (
+              c.apply_items_discount !== undefined &&
+              c.apply_items_discount !== null
+            ) {
               setApplyItemsDiscount(c.apply_items_discount);
             }
           }}

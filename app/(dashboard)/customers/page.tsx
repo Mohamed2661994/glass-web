@@ -127,9 +127,7 @@ export default function CustomersPage() {
       });
       toast.success("تم إضافة الرقم");
       // Refresh phones
-      const { data } = await api.get(
-        `/customers/${editCustomer.id}/phones`,
-      );
+      const { data } = await api.get(`/customers/${editCustomer.id}/phones`);
       setEditPhones(data);
       setNewPhone("");
       // Update main list
@@ -167,9 +165,7 @@ export default function CustomersPage() {
       setEditPhones(updated);
       setCustomers((prev) =>
         prev.map((c) =>
-          c.id === deletePhoneTarget.customerId
-            ? { ...c, phones: updated }
-            : c,
+          c.id === deletePhoneTarget.customerId ? { ...c, phones: updated } : c,
         ),
       );
     } catch {

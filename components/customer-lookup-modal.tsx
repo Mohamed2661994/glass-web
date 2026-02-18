@@ -269,9 +269,7 @@ export function CustomerLookupModal({ open, onOpenChange, onSelect }: Props) {
                       onClick={() => handleSelect(c)}
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">
-                          {c.name}
-                        </p>
+                        <p className="font-medium text-sm truncate">{c.name}</p>
                         {c.phones.length > 0 && (
                           <div className="flex flex-wrap gap-1.5 mt-0.5">
                             {c.phones.map((p) => (
