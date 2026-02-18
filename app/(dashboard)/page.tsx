@@ -1052,7 +1052,10 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card
+              className="cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => router.push("/reports/low-stock")}
+            >
               <CardContent className="p-4 flex items-center gap-3">
                 <div className="rounded-lg bg-orange-100 dark:bg-orange-900/30 p-2.5">
                   <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
