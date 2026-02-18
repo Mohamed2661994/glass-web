@@ -73,34 +73,78 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
 
   const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /* ---------- preload audio ---------- */
-  useEffect(() => {
-    const audio = new Audio("/sounds/beepmasage.wav");
-    audio.volume = 0.5;
-    audioRef.current = audio;
+  /* ---------- preload audio with Web Audio API ---------- */
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const audioBufferRef = useRef<AudioBuffer | null>(null);
 
-    // Warm up audio on first user interaction (browser autoplay policy)
+  useEffect(() => {
+    let cancelled = false;
+
+    // Create AudioContext and fetch the sound file as a buffer
+    const init = async () => {
+      try {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioCtxRef.current = ctx;
+
+        const response = await fetch("/sounds/beepmasage.wav");
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = await ctx.decodeAudioData(arrayBuffer);
+        if (!cancelled) {
+          audioBufferRef.current = buffer;
+        }
+      } catch (e) {
+        console.error("Audio init error:", e);
+      }
+    };
+
+    init();
+
+    // Unlock AudioContext on first user interaction
     const unlock = () => {
-      audio.load();
+      const ctx = audioCtxRef.current;
+      if (ctx && ctx.state === "suspended") {
+        ctx.resume();
+      }
       document.removeEventListener("click", unlock);
       document.removeEventListener("touchstart", unlock);
+      document.removeEventListener("touchend", unlock);
     };
-    document.addEventListener("click", unlock, { once: true });
-    document.addEventListener("touchstart", unlock, { once: true });
+    document.addEventListener("click", unlock);
+    document.addEventListener("touchstart", unlock);
+    document.addEventListener("touchend", unlock);
 
     return () => {
+      cancelled = true;
       document.removeEventListener("click", unlock);
       document.removeEventListener("touchstart", unlock);
+      document.removeEventListener("touchend", unlock);
     };
   }, []);
 
   const playSound = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = 0;
-      audioRef.current.play().catch(() => {});
+    try {
+      const ctx = audioCtxRef.current;
+      const buffer = audioBufferRef.current;
+      if (!ctx || !buffer) return;
+
+      // Resume context if suspended
+      if (ctx.state === "suspended") {
+        ctx.resume();
+      }
+
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+
+      const gainNode = ctx.createGain();
+      gainNode.gain.value = 0.5;
+
+      source.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      source.start(0);
+    } catch (e) {
+      console.error("Play sound error:", e);
     }
   }, []);
 
