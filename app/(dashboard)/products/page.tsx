@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import api from "@/services/api";
-import { multiWordMatch } from "@/lib/utils";
+import { multiWordMatch, multiWordScore } from "@/lib/utils";
 import { ProductCard } from "@/components/product-card";
 import { ProductCompactCard } from "@/components/product-compact-card";
 import { ProductTableRow } from "@/components/product-table-row";
@@ -172,6 +172,7 @@ export default function ProductsPage() {
         product.name,
         product.barcode,
         product.description,
+        product.manufacturer,
       );
       const matchesManufacturer =
         selectedManufacturer === "الكل" ||
@@ -179,6 +180,12 @@ export default function ProductsPage() {
       return matchesSearch && matchesManufacturer;
     })
     .sort((a, b) => {
+      // Relevance sort when searching
+      if (search.trim()) {
+        const scoreA = multiWordScore(search, a.name, a.barcode, a.description, a.manufacturer);
+        const scoreB = multiWordScore(search, b.name, b.barcode, b.description, b.manufacturer);
+        if (scoreA !== scoreB) return scoreB - scoreA;
+      }
       // الأصناف الغير مفعلة في الآخر
       if (a.is_active !== b.is_active) return a.is_active ? -1 : 1;
       return 0;

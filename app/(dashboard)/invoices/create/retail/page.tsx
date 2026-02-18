@@ -19,7 +19,7 @@ import {
 import { useCachedProducts } from "@/hooks/use-cached-products";
 import { CustomerLookupModal } from "@/components/customer-lookup-modal";
 import { highlightText } from "@/lib/highlight-text";
-import { multiWordMatch } from "@/lib/utils";
+import { multiWordMatch, multiWordScore } from "@/lib/utils";
 import { BarcodeDetector } from "barcode-detector";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -882,6 +882,11 @@ export default function CreateRetailInvoicePage() {
     );
 
     return filtered.sort((a, b) => {
+      if (search.trim()) {
+        const scoreA = multiWordScore(search, a.name, String(a.id), a.description, a.barcode, a.manufacturer);
+        const scoreB = multiWordScore(search, b.name, String(b.id), b.description, b.barcode, b.manufacturer);
+        if (scoreA !== scoreB) return scoreB - scoreA;
+      }
       const aInStock = Number(a.available_quantity) > 0 ? 1 : 0;
       const bInStock = Number(b.available_quantity) > 0 ? 1 : 0;
       if (aInStock !== bInStock) return bInStock - aInStock;
