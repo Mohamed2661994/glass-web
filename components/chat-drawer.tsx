@@ -10,12 +10,21 @@ import {
   CheckCheck,
   Search,
   X,
+  Paperclip,
+  Camera,
+  FileText,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import api, { API_URL } from "@/services/api";
 import { io, Socket } from "socket.io-client";
@@ -38,6 +47,8 @@ interface Message {
   created_at: string;
   username: string;
   full_name: string;
+  type?: "text" | "image" | "file";
+  file_url?: string;
 }
 
 interface Conversation {
@@ -88,6 +99,12 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   useEffect(() => {
     activeConvIdRef.current = activeConv?.id ?? null;
   }, [activeConv]);
+
+  /* ---------- File upload refs ---------- */
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [attachOpen, setAttachOpen] = useState(false);
 
   /* ---------- Audio notification (PWA-safe) ---------- */
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -242,6 +259,31 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
       /* silent */
     }
   }, []);
+
+  /* ---------- file upload handler ---------- */
+  const handleFileUpload = useCallback(
+    async (file: File) => {
+      if (!activeConv || uploading) return;
+      setUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const { data } = await api.post(
+          `/chat/conversations/${activeConv.id}/upload`,
+          formData,
+          { headers: { "Content-Type": "multipart/form-data" } },
+        );
+        setMessages((prev) => [...prev, data.data]);
+        scrollToBottom();
+        fetchConversations();
+      } catch {
+        toast.error("فشل رفع الملف");
+      } finally {
+        setUploading(false);
+      }
+    },
+    [activeConv, uploading, scrollToBottom, fetchConversations],
+  );
 
   /* ---------- fetch unread count ---------- */
   const fetchUnread = useCallback(async () => {
@@ -755,24 +797,59 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                       key={msg.id}
                       className={cn(
                         "flex",
-                        isMine ? "justify-start" : "justify-end",
+                        isMine ? "justify-end" : "justify-start",
                       )}
                     >
                       <div
                         className={cn(
-                          "max-w-[80%] rounded-2xl px-4 py-2 text-sm",
+                          "max-w-[80%] rounded-2xl text-sm overflow-hidden",
+                          msg.type === "image" ? "p-1" : "px-4 py-2",
                           isMine
-                            ? "bg-blue-600 text-white rounded-bl-sm"
-                            : "bg-muted rounded-br-sm",
+                            ? "bg-blue-600 text-white rounded-br-sm"
+                            : "bg-muted rounded-bl-sm",
                         )}
                       >
-                        <p className="whitespace-pre-wrap break-words">
-                          {msg.content}
-                        </p>
+                        {/* Message content by type */}
+                        {msg.type === "image" && msg.file_url ? (
+                          <a
+                            href={`${API_URL}${msg.file_url}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={`${API_URL}${msg.file_url}`}
+                              alt={msg.content || "صورة"}
+                              className="rounded-xl max-w-full max-h-64 object-cover cursor-pointer"
+                              loading="lazy"
+                            />
+                          </a>
+                        ) : msg.type === "file" && msg.file_url ? (
+                          <a
+                            href={`${API_URL}${msg.file_url}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={cn(
+                              "flex items-center gap-2 py-1",
+                              isMine
+                                ? "text-white hover:text-blue-100"
+                                : "text-foreground hover:text-muted-foreground",
+                            )}
+                          >
+                            <Download className="h-4 w-4 shrink-0" />
+                            <span className="whitespace-pre-wrap break-words text-sm underline">
+                              {msg.content || "ملف"}
+                            </span>
+                          </a>
+                        ) : (
+                          <p className="whitespace-pre-wrap break-words">
+                            {msg.content}
+                          </p>
+                        )}
                         <div
                           className={cn(
                             "flex items-center gap-1 mt-1",
-                            isMine ? "justify-start" : "justify-end",
+                            isMine ? "justify-end" : "justify-start",
                           )}
                         >
                           <span
@@ -798,8 +875,8 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                 })}
 
                 {typing && (
-                  <div className="flex justify-end">
-                    <div className="bg-muted rounded-2xl rounded-br-sm px-4 py-2">
+                  <div className="flex justify-start">
+                    <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-2">
                       <span className="text-sm text-muted-foreground animate-pulse">
                         يكتب...
                       </span>
@@ -810,6 +887,31 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                 <div ref={messagesEndRef} />
               </div>
             </ScrollArea>
+
+            {/* Hidden file inputs */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="*/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFileUpload(file);
+                e.target.value = "";
+              }}
+            />
+            <input
+              type="file"
+              ref={cameraInputRef}
+              className="hidden"
+              accept="image/*"
+              capture="environment"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFileUpload(file);
+                e.target.value = "";
+              }}
+            />
 
             {/* Input */}
             <div className="border-t p-3 flex items-center gap-2 shrink-0 safe-area-bottom">
@@ -837,6 +939,48 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                 className="flex-1"
                 autoFocus
               />
+              <Popover open={attachOpen} onOpenChange={setAttachOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="shrink-0"
+                    disabled={uploading}
+                  >
+                    {uploading ? (
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    ) : (
+                      <Paperclip className="h-4 w-4" />
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  side="top"
+                  align="end"
+                  className="w-48 p-2"
+                >
+                  <button
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted transition-colors"
+                    onClick={() => {
+                      setAttachOpen(false);
+                      fileInputRef.current?.click();
+                    }}
+                  >
+                    <FileText className="h-4 w-4" />
+                    <span>ارسال ملف</span>
+                  </button>
+                  <button
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted transition-colors"
+                    onClick={() => {
+                      setAttachOpen(false);
+                      cameraInputRef.current?.click();
+                    }}
+                  >
+                    <Camera className="h-4 w-4" />
+                    <span>التقاط صورة</span>
+                  </button>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         )}
