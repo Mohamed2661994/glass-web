@@ -122,7 +122,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         {/* ===== CONTENT ONLY ===== */}
         <main className="flex-1 overflow-auto scrollbar-hide print:py-0">
           <PullToRefresh className="h-full overflow-auto scrollbar-hide">
-            <div className="w-full px-4 py-6 print:px-0 print:py-0">{children}</div>
+            <div className="w-full px-4 py-6 print:px-0 print:py-0">
+              {children}
+            </div>
           </PullToRefresh>
         </main>
       </div>

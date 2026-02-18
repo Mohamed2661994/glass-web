@@ -81,6 +81,20 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
     const audio = new Audio("/sounds/beepmasage.wav");
     audio.volume = 0.5;
     audioRef.current = audio;
+
+    // Warm up audio on first user interaction (browser autoplay policy)
+    const unlock = () => {
+      audio.load();
+      document.removeEventListener("click", unlock);
+      document.removeEventListener("touchstart", unlock);
+    };
+    document.addEventListener("click", unlock, { once: true });
+    document.addEventListener("touchstart", unlock, { once: true });
+
+    return () => {
+      document.removeEventListener("click", unlock);
+      document.removeEventListener("touchstart", unlock);
+    };
   }, []);
 
   const playSound = useCallback(() => {
@@ -414,7 +428,11 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                 <Button variant="ghost" size="icon" onClick={openNewChat}>
                   <Plus className="h-5 w-5" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setOpen(false)}
+                >
                   <X className="h-5 w-5" />
                 </Button>
               </div>
