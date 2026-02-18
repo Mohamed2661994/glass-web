@@ -16,7 +16,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Printer } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import { Loader2, Printer, Eye } from "lucide-react";
 
 /* ========== Types ========== */
 type Invoice = {
@@ -38,6 +45,25 @@ export default function CustomerDebtDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+
+  /* ========== Invoice Preview Modal ========== */
+  const [previewInvoice, setPreviewInvoice] = useState<any>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  const openInvoicePreview = async (invoiceId: number) => {
+    setPreviewOpen(true);
+    setPreviewLoading(true);
+    setPreviewInvoice(null);
+    try {
+      const res = await api.get(`/invoices/${invoiceId}/edit`);
+      setPreviewInvoice(res.data);
+    } catch {
+      setPreviewInvoice(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
 
   /* ========== Fetch ========== */
   const fetchDetails = useCallback(async () => {
@@ -85,6 +111,22 @@ export default function CustomerDebtDetailsPage() {
   );
 
   const netDebt = totalRemaining - totalPaid;
+
+  /* ========== Running Balance (الحساب السابق) ========== */
+  const runningBalances = useMemo(() => {
+    const balances: number[] = [];
+    let balance = 0;
+    for (let i = 0; i < data.length; i++) {
+      balances.push(balance);
+      const row = data[i];
+      if (row.record_type === "invoice") {
+        balance += Number(row.remaining_amount);
+      } else {
+        balance -= Number(row.paid_amount);
+      }
+    }
+    return balances;
+  }, [data]);
 
   return (
     <PageContainer size="xl">
@@ -178,13 +220,17 @@ export default function CustomerDebtDetailsPage() {
                       <TableHead className="text-center">النوع</TableHead>
                       <TableHead className="text-center">رقم</TableHead>
                       <TableHead className="text-center">التاريخ</TableHead>
+                      <TableHead className="text-center">
+                        الحساب السابق
+                      </TableHead>
                       <TableHead className="text-center">الإجمالي</TableHead>
                       <TableHead className="text-center">المدفوع</TableHead>
                       <TableHead className="text-center">الباقي</TableHead>
+                      <TableHead className="text-center w-12"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {data.map((inv) => (
+                    {data.map((inv, idx) => (
                       <TableRow key={`${inv.record_type}-${inv.invoice_id}`}>
                         <TableCell className="text-center">
                           <Badge
@@ -207,6 +253,11 @@ export default function CustomerDebtDetailsPage() {
                             "ar-EG",
                           )}
                         </TableCell>
+                        <TableCell className="text-center font-medium">
+                          {runningBalances[idx] === 0
+                            ? "—"
+                            : runningBalances[idx].toLocaleString()}
+                        </TableCell>
                         <TableCell className="text-center">
                           {inv.record_type === "invoice"
                             ? Number(inv.total).toLocaleString()
@@ -219,6 +270,21 @@ export default function CustomerDebtDetailsPage() {
                           {inv.record_type === "invoice"
                             ? Number(inv.remaining_amount).toLocaleString()
                             : "—"}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {inv.record_type === "invoice" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              title="عرض الفاتورة"
+                              onClick={() =>
+                                openInvoicePreview(inv.invoice_id)
+                              }
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -266,6 +332,204 @@ export default function CustomerDebtDetailsPage() {
           </Card>
         )}
       </div>
+
+      {/* ========== Invoice Preview Modal ========== */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent
+          dir="rtl"
+          className="max-w-lg max-h-[85vh] overflow-y-auto"
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              {previewInvoice
+                ? `فاتورة #${previewInvoice.id}`
+                : "عرض الفاتورة"}
+            </DialogTitle>
+          </DialogHeader>
+
+          {previewLoading && (
+            <div className="flex justify-center py-10">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          )}
+
+          {!previewLoading && !previewInvoice && (
+            <p className="text-center text-muted-foreground py-6">
+              لم يتم العثور على الفاتورة
+            </p>
+          )}
+
+          {!previewLoading && previewInvoice && (
+            <div className="space-y-4 text-sm">
+              {/* Header info */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <p className="text-muted-foreground text-xs">العميل</p>
+                  <p className="font-medium">
+                    {previewInvoice.customer_name || "نقدي"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">التاريخ</p>
+                  <p className="font-medium">
+                    {new Date(previewInvoice.invoice_date).toLocaleDateString(
+                      "ar-EG",
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">النوع</p>
+                  <p className="font-medium">
+                    {previewInvoice.invoice_type === "retail"
+                      ? "قطاعي"
+                      : "جملة"}
+                    {previewInvoice.is_return && (
+                      <Badge className="bg-orange-500 mr-2 text-xs">
+                        مرتجع
+                      </Badge>
+                    )}
+                  </p>
+                </div>
+                {previewInvoice.customer_phone && (
+                  <div>
+                    <p className="text-muted-foreground text-xs">الهاتف</p>
+                    <p className="font-medium">
+                      {previewInvoice.customer_phone}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Items table */}
+              {previewInvoice.items && previewInvoice.items.length > 0 && (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-right text-xs">
+                          الصنف
+                        </TableHead>
+                        <TableHead className="text-center text-xs">
+                          العبوة
+                        </TableHead>
+                        <TableHead className="text-center text-xs">
+                          الكمية
+                        </TableHead>
+                        <TableHead className="text-center text-xs">
+                          السعر
+                        </TableHead>
+                        <TableHead className="text-center text-xs">
+                          الخصم
+                        </TableHead>
+                        <TableHead className="text-center text-xs">
+                          الإجمالي
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {previewInvoice.items.map((item: any, i: number) => (
+                        <TableRow key={i}>
+                          <TableCell className="text-right text-xs">
+                            {item.product_name}
+                            {item.manufacturer && (
+                              <span className="text-muted-foreground">
+                                {" "}
+                                - {item.manufacturer}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center text-xs">
+                            {item.package}
+                          </TableCell>
+                          <TableCell className="text-center text-xs">
+                            {item.quantity}
+                          </TableCell>
+                          <TableCell className="text-center text-xs">
+                            {Number(item.price).toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-center text-xs">
+                            {Number(item.discount || 0).toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-center text-xs">
+                            {Number(item.total).toLocaleString()}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              <Separator />
+
+              {/* Totals */}
+              <div className="space-y-1.5">
+                {previewInvoice.subtotal && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">
+                      الإجمالي قبل الخصم
+                    </span>
+                    <span>
+                      {Number(previewInvoice.subtotal).toLocaleString()}
+                    </span>
+                  </div>
+                )}
+                {Number(previewInvoice.items_discount || 0) > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">خصم الأصناف</span>
+                    <span className="text-red-500">
+                      -{Number(previewInvoice.items_discount).toLocaleString()}
+                    </span>
+                  </div>
+                )}
+                {Number(previewInvoice.extra_discount || 0) > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">خصم إضافي</span>
+                    <span className="text-red-500">
+                      -{Number(previewInvoice.extra_discount).toLocaleString()}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold text-base">
+                  <span>الإجمالي</span>
+                  <span>{Number(previewInvoice.total).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">المدفوع</span>
+                  <span className="text-green-600">
+                    {Number(previewInvoice.paid_amount).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">المتبقي</span>
+                  <span className="text-red-600">
+                    {Number(previewInvoice.remaining_amount).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Created/Updated by */}
+              {(previewInvoice.created_by_name ||
+                previewInvoice.updated_by_name) && (
+                <>
+                  <Separator />
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    {previewInvoice.created_by_name && (
+                      <p>أنشأها: {previewInvoice.created_by_name}</p>
+                    )}
+                    {previewInvoice.updated_by_name && (
+                      <p>آخر تعديل: {previewInvoice.updated_by_name}</p>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 }
