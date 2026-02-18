@@ -106,12 +106,7 @@ export default function ReplacePage() {
   /* ========== Filter ========== */
   const filterProducts = (search: string) => {
     return products.filter((p) =>
-      multiWordMatch(
-        search,
-        String(p.id),
-        p.name,
-        p.manufacturer,
-      ),
+      multiWordMatch(search, String(p.id), p.name, p.manufacturer),
     );
   };
 

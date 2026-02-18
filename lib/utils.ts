@@ -29,9 +29,7 @@ export function multiWordMatch(
   if (words.length === 0) return true;
 
   // Concatenate all fields into one searchable string
-  const combined = fields
-    .map((f) => noSpaces(f || "").toLowerCase())
-    .join(" ");
+  const combined = fields.map((f) => noSpaces(f || "").toLowerCase()).join(" ");
 
   // Every word must appear in at least one field
   return words.some((word) => combined.includes(word));

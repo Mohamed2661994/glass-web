@@ -116,12 +116,7 @@ export default function StockTransferPage() {
   const filtered = products.filter((p) => {
     return (
       p.available_quantity > 0 &&
-      multiWordMatch(
-        search,
-        String(p.id),
-        p.name,
-        p.manufacturer,
-      )
+      multiWordMatch(search, String(p.id), p.name, p.manufacturer)
     );
   });
 

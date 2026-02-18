@@ -65,9 +65,7 @@ export default function ManufacturersPage() {
     fetchManufacturers();
   }, [fetchManufacturers]);
 
-  const filtered = manufacturers.filter((m) =>
-    multiWordMatch(search, m.name),
-  );
+  const filtered = manufacturers.filter((m) => multiWordMatch(search, m.name));
 
   const openAdd = () => {
     setEditing(null);
