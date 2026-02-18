@@ -18,6 +18,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import api, { API_URL } from "@/services/api";
 import { io, Socket } from "socket.io-client";
+import { toast } from "sonner";
 
 /* ========== Types ========== */
 interface ChatUser {
@@ -323,8 +324,9 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
       setView("chat");
       fetchMessages(convId);
       fetchConversations();
-    } catch {
-      /* silent */
+    } catch (err) {
+      console.error("START CONVERSATION ERROR:", err);
+      toast.error("فشل فتح المحادثة");
     }
   };
 
@@ -476,7 +478,9 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                         "bg-blue-50/50 dark:bg-blue-950/20",
                     )}
                     onClick={() => openConversation(conv)}
-                    onKeyDown={(e) => { if (e.key === "Enter") openConversation(conv); }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") openConversation(conv);
+                    }}
                   >
                     {/* Avatar */}
                     <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
@@ -551,8 +555,16 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                     role="button"
                     tabIndex={0}
                     className="w-full flex items-center gap-3 p-4 hover:bg-muted/50 transition-colors text-right cursor-pointer"
-                    onClick={() => startNewConversation(u)}
-                    onKeyDown={(e) => { if (e.key === "Enter") startNewConversation(u); }}
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startNewConversation(u);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") startNewConversation(u);
+                    }}
                   >
                     <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
                       {(u.full_name || u.username)[0]?.toUpperCase() || "?"}
