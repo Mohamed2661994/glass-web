@@ -90,6 +90,8 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   const openRef = useRef(false);
   const viewRef = useRef<"list" | "chat" | "new">("list");
   const activeConvIdRef = useRef<number | null>(null);
+  const conversationsRef = useRef<Conversation[]>([]);
+  const openConvRef = useRef<(conv: Conversation) => void>(() => {});
 
   // Keep refs in sync with state so socket handler can read latest values
   useEffect(() => {
@@ -386,6 +388,47 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
         // (chat drawer open + chat view + same conversation)
         playSound();
 
+        // Show WhatsApp-style notification banner if not viewing this conversation
+        if (!isViewingThisConv) {
+          const senderName = message.full_name || message.username || "رسالة جديدة";
+          const preview =
+            message.type === "image"
+              ? "📷 صورة"
+              : message.type === "file"
+                ? "📄 ملف"
+                : message.content?.length > 60
+                  ? message.content.slice(0, 60) + "…"
+                  : message.content;
+
+          toast.custom(
+            (t) => (
+              <div
+                onClick={() => {
+                  toast.dismiss(t);
+                  // Open chat drawer and navigate to this conversation
+                  setOpen(true);
+                  const conv = conversationsRef.current.find((c) => c.id === conversation_id);
+                  if (conv) {
+                    openConvRef.current(conv);
+                  }
+                }}
+                className="w-full max-w-sm cursor-pointer rounded-xl border bg-background p-3 shadow-lg flex items-start gap-3"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white text-sm font-bold">
+                  {senderName.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate">{senderName}</p>
+                  <p className="text-xs text-muted-foreground truncate mt-0.5" dir="auto">
+                    {preview}
+                  </p>
+                </div>
+              </div>
+            ),
+            { duration: 4000, position: "top-center" },
+          );
+        }
+
         // Always refresh conversations list & unread
         fetchConversations();
         fetchUnread();
@@ -491,6 +534,13 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
     setTyping(false);
     fetchMessages(conv.id);
   };
+
+  useEffect(() => {
+    conversationsRef.current = conversations;
+  }, [conversations]);
+  useEffect(() => {
+    openConvRef.current = openConversation;
+  });
 
   /* ---------- start new conversation ---------- */
   const startNewConversation = async (otherUser: ChatUser) => {
