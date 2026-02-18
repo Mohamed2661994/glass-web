@@ -14,6 +14,7 @@ import {
   Camera,
   FileText,
   Download,
+  Reply,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +51,11 @@ interface Message {
   full_name: string;
   type?: "text" | "image" | "file";
   file_url?: string;
+  reply_to_id?: number;
+  reply_content?: string;
+  reply_sender_id?: number;
+  reply_sender_name?: string;
+  reply_type?: string;
 }
 
 interface Conversation {
@@ -84,6 +90,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   const [allUsers, setAllUsers] = useState<ChatUser[]>([]);
   const [userSearch, setUserSearch] = useState("");
   const [typing, setTyping] = useState(false);
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [popup, setPopup] = useState<{
     senderName: string;
     preview: string;
@@ -257,9 +264,11 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   }, []);
 
   /* ---------- scroll to bottom ---------- */
-  const scrollToBottom = useCallback(() => {
+  const scrollToBottom = useCallback((instant?: boolean) => {
     setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      messagesEndRef.current?.scrollIntoView({
+        behavior: instant ? "instant" : "smooth",
+      });
     }, 100);
   }, []);
 
@@ -316,7 +325,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
           `/chat/conversations/${convId}/messages`,
         );
         setMessages(data.data ?? []);
-        scrollToBottom();
+        scrollToBottom(true);
 
         // Notify sender that messages were read
         const otherUserId = activeConv?.other_user?.id;
@@ -471,10 +480,12 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
         `/chat/conversations/${activeConv.id}/messages`,
         {
           content: newMsg.trim(),
+          reply_to_id: replyTo?.id || null,
         },
       );
       setMessages((prev) => [...prev, data.data]);
       setNewMsg("");
+      setReplyTo(null);
       if (textareaRef.current) textareaRef.current.style.height = "auto";
       scrollToBottom();
       fetchConversations();
@@ -875,10 +886,23 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                     <div
                       key={msg.id}
                       className={cn(
-                        "flex",
+                        "flex items-end gap-1 group",
                         isMine ? "justify-end" : "justify-start",
                       )}
                     >
+                      {/* Reply button - left side for my messages */}
+                      {isMine && (
+                        <button
+                          onClick={() => {
+                            setReplyTo(msg);
+                            textareaRef.current?.focus();
+                          }}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-muted mb-1"
+                          title="رد"
+                        >
+                          <Reply className="h-3.5 w-3.5 text-muted-foreground" />
+                        </button>
+                      )}
                       <div
                         className={cn(
                           "max-w-[80%] rounded-2xl text-sm overflow-hidden",
@@ -888,6 +912,30 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                             : "bg-muted rounded-bl-sm",
                         )}
                       >
+                        {/* Quoted reply */}
+                        {msg.reply_to_id && (
+                          <div
+                            className={cn(
+                              "rounded-lg px-3 py-1.5 mb-2 border-r-2 text-xs",
+                              isMine
+                                ? "bg-blue-700/50 border-r-blue-300"
+                                : "bg-background/50 border-r-blue-500",
+                            )}
+                          >
+                            <span className={cn(
+                              "font-semibold block text-[11px]",
+                              isMine ? "text-blue-200" : "text-blue-600",
+                            )}>
+                              {msg.reply_sender_id === userId ? "أنت" : msg.reply_sender_name}
+                            </span>
+                            <span className={cn(
+                              "line-clamp-2",
+                              isMine ? "text-blue-100/80" : "text-muted-foreground",
+                            )}>
+                              {msg.reply_type === "image" ? "📷 صورة" : msg.reply_type === "file" ? "📄 ملف" : msg.reply_content}
+                            </span>
+                          </div>
+                        )}
                         {/* Message content by type */}
                         {msg.type === "image" && msg.file_url ? (
                           <div
@@ -950,6 +998,19 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                             ))}
                         </div>
                       </div>
+                      {/* Reply button - right side for their messages */}
+                      {!isMine && (
+                        <button
+                          onClick={() => {
+                            setReplyTo(msg);
+                            textareaRef.current?.focus();
+                          }}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-muted mb-1"
+                          title="رد"
+                        >
+                          <Reply className="h-3.5 w-3.5 text-muted-foreground" />
+                        </button>
+                      )}
                     </div>
                   );
                 })}
@@ -992,6 +1053,23 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                 e.target.value = "";
               }}
             />
+
+            {/* Reply preview */}
+            {replyTo && (
+              <div className="border-t bg-muted/50 px-3 py-2 flex items-center gap-2">
+                <div className="flex-1 border-r-2 border-r-blue-500 pr-2 min-w-0">
+                  <span className="text-xs font-semibold text-blue-600 block">
+                    {replyTo.sender_id === userId ? "أنت" : replyTo.full_name}
+                  </span>
+                  <span className="text-xs text-muted-foreground line-clamp-1">
+                    {replyTo.type === "image" ? "📷 صورة" : replyTo.type === "file" ? "📄 ملف" : replyTo.content}
+                  </span>
+                </div>
+                <button onClick={() => setReplyTo(null)} className="shrink-0 p-1 rounded-full hover:bg-muted">
+                  <X className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
+              </div>
+            )}
 
             {/* Input */}
             <div className="border-t p-3 flex items-center gap-2 shrink-0 safe-area-bottom">
