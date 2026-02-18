@@ -18,9 +18,18 @@ export function ThemeToggle() {
   }, []);
 
   const handleToggle = () => {
-    const newTheme = resolvedTheme === "dark" ? "light" : "dark";
+    const current = resolvedTheme || "light";
+    const newTheme = current === "dark" ? "light" : "dark";
+
+    // 1. Update next-themes
     setTheme(newTheme);
-    // حفظ الثيم لليوزر (localStorage + backend)
+
+    // 2. Force DOM class immediately (safety net if next-themes is slow)
+    document.documentElement.classList.remove("light", "dark");
+    document.documentElement.classList.add(newTheme);
+    document.documentElement.style.colorScheme = newTheme;
+
+    // 3. Save for user
     if (user?.id) {
       localStorage.setItem(`theme_user_${user.id}`, newTheme);
       setThemePref(newTheme);

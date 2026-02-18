@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useCallback, useEffect, useState } from "react";
+import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Sidebar } from "@/components/sidebar";
@@ -43,17 +43,20 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  // استعادة ثيم اليوزر عند الدخول
+  // استعادة ثيم اليوزر عند الدخول (only once on mount, not on prefs change)
+  const themeRestoredRef = useRef(false);
   useEffect(() => {
-    if (user?.id) {
-      // Try from preferences first, then fall back to old key
+    if (user?.id && !themeRestoredRef.current) {
+      themeRestoredRef.current = true;
       const savedTheme =
         prefs.theme || localStorage.getItem(`theme_user_${user.id}`);
       if (savedTheme) {
         setTheme(savedTheme);
+        document.documentElement.classList.remove("light", "dark");
+        document.documentElement.classList.add(savedTheme);
       }
     }
-  }, [user?.id, prefs.theme, setTheme]);
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ✅ لو مفيش توكن → يروح لصفحة الدخول
   useEffect(() => {
