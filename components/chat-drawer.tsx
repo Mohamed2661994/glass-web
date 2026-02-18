@@ -75,164 +75,111 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /* ---------- Audio: dual strategy (Web Audio API + HTML Audio fallback) ---------- */
+  /* ---------- Audio notification ---------- */
   const audioCtxRef = useRef<AudioContext | null>(null);
   const audioBufferRef = useRef<AudioBuffer | null>(null);
-  const audioUnlockedRef = useRef(false);
-  const fallbackAudioRef = useRef<HTMLAudioElement | null>(null);
-
-  // Helper: get or create AudioContext
-  const getAudioCtx = useCallback(() => {
-    if (!audioCtxRef.current) {
-      const Ctx = window.AudioContext || (window as any).webkitAudioContext;
-      if (Ctx) {
-        audioCtxRef.current = new Ctx();
-        console.log(
-          "[sound] AudioContext created, state:",
-          audioCtxRef.current.state,
-        );
-      }
-    }
-    return audioCtxRef.current;
-  }, []);
-
-  // Load buffer (mp3 for max compat, fallback to wav)
-  const loadBuffer = useCallback(async (ctx: AudioContext) => {
-    if (audioBufferRef.current) return;
-    for (const src of ["/sounds/beepmasage.mp3", "/sounds/beepmasage.wav"]) {
-      try {
-        const res = await fetch(src);
-        if (!res.ok) continue;
-        const ab = await res.arrayBuffer();
-        audioBufferRef.current = await ctx.decodeAudioData(ab);
-        console.log("[sound] Buffer loaded from", src);
-        return;
-      } catch (e) {
-        console.warn("[sound] Failed to load", src, e);
-      }
-    }
-  }, []);
+  const audioReadyRef = useRef(false);
 
   useEffect(() => {
-    // Pre-create fallback HTML Audio element
-    const fa = new Audio("/sounds/beepmasage.mp3");
-    fa.volume = 0.5;
-    fa.preload = "auto";
-    fallbackAudioRef.current = fa;
+    let cancelled = false;
 
-    // Unlock audio on user interaction
-    const unlock = async () => {
-      if (audioUnlockedRef.current) return;
-      audioUnlockedRef.current = true;
-      console.log("[sound] Unlocking audio...");
-
-      // Strategy 1: Web Audio API — resume + play silent oscillator
-      const ctx = getAudioCtx();
-      if (ctx) {
-        try {
-          if (ctx.state === "suspended") await ctx.resume();
-          // Play silent oscillator to fully unlock the pipeline
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          gain.gain.value = 0; // silent
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start(0);
-          osc.stop(ctx.currentTime + 0.001);
-          console.log("[sound] AudioContext unlocked, state:", ctx.state);
-          // Load the actual sound buffer
-          loadBuffer(ctx);
-        } catch (e) {
-          console.warn("[sound] AudioContext unlock failed:", e);
-        }
-      }
-
-      // Strategy 2: HTML Audio — warm it up with silent play
+    const setup = async () => {
       try {
-        const a = fallbackAudioRef.current;
-        if (a) {
-          a.muted = true;
-          await a.play();
-          a.pause();
-          a.muted = false;
-          a.currentTime = 0;
-          console.log("[sound] HTML Audio unlocked");
-        }
+        // 1. Create AudioContext (will be "suspended" until user gesture — that's OK)
+        const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+        if (!Ctx) return;
+        const ctx = new Ctx();
+        audioCtxRef.current = ctx;
+
+        // 2. Fetch + decode audio RIGHT AWAY (works even in suspended state)
+        const res = await fetch("/sounds/beepmasage.mp3");
+        if (!res.ok) throw new Error("fetch failed " + res.status);
+        const ab = await res.arrayBuffer();
+        if (cancelled) return;
+        const buffer = await ctx.decodeAudioData(ab);
+        if (cancelled) return;
+        audioBufferRef.current = buffer;
+        console.log("[sound] buffer decoded, ctx state:", ctx.state);
       } catch (e) {
-        console.warn("[sound] HTML Audio unlock failed:", e);
+        console.warn("[sound] setup error:", e);
       }
     };
 
-    document.addEventListener("click", unlock, { capture: true });
-    document.addEventListener("touchstart", unlock, { capture: true });
-    document.addEventListener("touchend", unlock, { capture: true });
+    setup();
 
-    return () => {
-      document.removeEventListener("click", unlock, { capture: true });
-      document.removeEventListener("touchstart", unlock, { capture: true });
-      document.removeEventListener("touchend", unlock, { capture: true });
-    };
-  }, [getAudioCtx, loadBuffer]);
-
-  const playSound = useCallback(() => {
-    console.log(
-      "[sound] playSound called, unlocked:",
-      audioUnlockedRef.current,
-    );
-
-    // Strategy 1: Web Audio API (preferred — works from non-gesture contexts once unlocked)
-    try {
+    // 3. On first user gesture — resume AudioContext + play real sound at low vol
+    const unlock = async () => {
+      if (audioReadyRef.current) return;
       const ctx = audioCtxRef.current;
       const buffer = audioBufferRef.current;
-      if (ctx && buffer && ctx.state === "running") {
-        const source = ctx.createBufferSource();
-        source.buffer = buffer;
-        const gainNode = ctx.createGain();
-        gainNode.gain.value = 0.5;
-        source.connect(gainNode);
-        gainNode.connect(ctx.destination);
-        source.start(0);
-        console.log("[sound] Played via Web Audio API");
-        return;
+      if (!ctx || !buffer) return;
+
+      try {
+        if (ctx.state === "suspended") await ctx.resume();
+
+        // Play the REAL sound at near-zero volume — this fully unlocks the pipeline
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        const g = ctx.createGain();
+        g.gain.value = 0.01; // barely audible
+        src.connect(g);
+        g.connect(ctx.destination);
+        src.start(0);
+
+        audioReadyRef.current = true;
+        console.log("[sound] UNLOCKED — ctx state:", ctx.state);
+      } catch (e) {
+        console.warn("[sound] unlock error:", e);
       }
-      console.log(
-        "[sound] Web Audio not ready — ctx state:",
-        ctx?.state,
-        "buffer:",
-        !!buffer,
-      );
-    } catch (e) {
-      console.warn("[sound] Web Audio play error:", e);
+    };
+
+    // Use capture + passive to catch taps even when Radix stops propagation
+    const opts: AddEventListenerOptions = { capture: true, passive: true };
+    document.addEventListener("pointerdown", unlock, opts);
+    document.addEventListener("click", unlock, opts);
+    document.addEventListener("touchend", unlock, opts);
+    document.addEventListener("keydown", unlock, opts);
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener("pointerdown", unlock, opts as EventListenerOptions);
+      document.removeEventListener("click", unlock, opts as EventListenerOptions);
+      document.removeEventListener("touchend", unlock, opts as EventListenerOptions);
+      document.removeEventListener("keydown", unlock, opts as EventListenerOptions);
+    };
+  }, []);
+
+  const playSound = useCallback(() => {
+    const ctx = audioCtxRef.current;
+    const buffer = audioBufferRef.current;
+
+    if (!ctx || !buffer) {
+      console.log("[sound] playSound — no ctx/buffer");
+      return;
     }
 
-    // Strategy 2: HTML Audio fallback
-    try {
-      const a = fallbackAudioRef.current;
-      if (a) {
-        a.currentTime = 0;
-        const p = a.play();
-        if (p)
-          p.catch((e: unknown) =>
-            console.warn("[sound] HTML Audio play error:", e),
-          );
-        console.log("[sound] Played via HTML Audio fallback");
-        return;
-      }
-    } catch (e) {
-      console.warn("[sound] HTML Audio fallback error:", e);
+    // Resume if suspended (e.g. tab was in background)
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
     }
 
-    // Strategy 3: Last resort — create fresh Audio
     try {
-      const fresh = new Audio("/sounds/beepmasage.mp3");
-      fresh.volume = 0.5;
-      const p = fresh.play();
-      if (p)
-        p.catch((e: unknown) => console.warn("[sound] Fresh Audio error:", e));
-      console.log("[sound] Played via fresh Audio");
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      const g = ctx.createGain();
+      g.gain.value = 0.6;
+      src.connect(g);
+      g.connect(ctx.destination);
+      src.start(0);
+      console.log("[sound] ✓ played");
     } catch (e) {
-      console.warn("[sound] All strategies failed:", e);
+      console.warn("[sound] play error:", e);
     }
+
+    // Also vibrate on mobile as backup
+    try {
+      navigator?.vibrate?.(200);
+    } catch {}
   }, []);
 
   /* ---------- scroll to bottom ---------- */
