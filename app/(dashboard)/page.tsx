@@ -239,6 +239,7 @@ interface DashboardStats {
   today_invoices_count: number;
   today_cash: number;
   low_stock_count: number;
+  negative_stock_count: number;
 }
 
 interface CashInItem {
@@ -998,7 +999,7 @@ export default function DashboardPage() {
     switch (id) {
       case "kpi_cards":
         return (
-          <div key={id} className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div key={id} className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <Card>
               <CardContent className="p-4 flex flex-col items-center text-center gap-2">
                 <div className="rounded-lg bg-blue-100 dark:bg-blue-900/30 p-2.5">
@@ -1068,6 +1069,27 @@ export default function DashboardPage() {
                   ) : (
                     <p className="text-lg font-bold mt-0.5">
                       {stats?.low_stock_count ?? 0}
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card
+              className="cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => router.push("/reports/negative-stock")}
+            >
+              <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                <div className="rounded-lg bg-red-100 dark:bg-red-900/30 p-2.5">
+                  <TrendingDown className="h-5 w-5 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">أصناف سالبة</p>
+                  {loadingStats ? (
+                    <Skeleton className="h-6 w-12 mt-1 mx-auto" />
+                  ) : (
+                    <p className="text-lg font-bold mt-0.5 text-red-600">
+                      {stats?.negative_stock_count ?? 0}
                     </p>
                   )}
                 </div>
