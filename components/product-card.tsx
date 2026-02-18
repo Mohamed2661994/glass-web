@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Copy, Pencil, Printer, Check, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { highlightText } from "@/lib/highlight-text";
 
 interface Variant {
   id: number;
@@ -28,6 +29,7 @@ interface ProductCardProps {
   onDelete?: () => void;
   onToggle?: (value: boolean) => Promise<void>;
   onPrintBarcode?: (product: any) => void;
+  searchQuery?: string;
 }
 
 export function ProductCard({
@@ -37,6 +39,7 @@ export function ProductCard({
   onDelete,
   onToggle,
   onPrintBarcode,
+  searchQuery = "",
 }: ProductCardProps) {
   const [active, setActive] = useState(product.is_active);
   const [toggling, setToggling] = useState(false);
@@ -120,8 +123,8 @@ export function ProductCard({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             <h3 className="text-lg font-bold truncate leading-tight">
-              {product.name}
-              {product.manufacturer ? ` - ${product.manufacturer}` : ""}
+              {highlightText(product.name, searchQuery)}
+              {product.manufacturer ? <>{" - "}{highlightText(product.manufacturer, searchQuery)}</> : ""}
             </h3>
           </div>
           <div className="flex items-center shrink-0">
@@ -144,7 +147,7 @@ export function ProductCard({
 
         {/* BARCODE */}
         <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground font-mono">
-          <span>{product.barcode || "—"}</span>
+          <span>{product.barcode ? highlightText(product.barcode, searchQuery) : "—"}</span>
           {product.barcode && (
             <>
               <button

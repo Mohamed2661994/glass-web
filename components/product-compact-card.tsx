@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Copy, Pencil, Check, Trash2, Printer } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { highlightText } from "@/lib/highlight-text";
 
 interface ProductCompactCardProps {
   product: any;
@@ -13,6 +14,7 @@ interface ProductCompactCardProps {
   onDelete?: () => void;
   onToggle?: (value: boolean) => Promise<void>;
   onPrintBarcode?: (product: any) => void;
+  searchQuery?: string;
 }
 
 export function ProductCompactCard({
@@ -22,6 +24,7 @@ export function ProductCompactCard({
   onDelete,
   onToggle,
   onPrintBarcode,
+  searchQuery = "",
 }: ProductCompactCardProps) {
   const [active, setActive] = useState(product.is_active);
   const [toggling, setToggling] = useState(false);
@@ -63,13 +66,13 @@ export function ProductCompactCard({
       <div className="flex items-center justify-between p-2.5 gap-2">
         <div className="min-w-0 flex-1">
           <h3 className="text-sm font-bold truncate">
-            {product.name}
-            {product.manufacturer ? ` - ${product.manufacturer}` : ""}
+            {highlightText(product.name, searchQuery)}
+            {product.manufacturer ? <>{" - "}{highlightText(product.manufacturer, searchQuery)}</> : ""}
           </h3>
           <div className="flex items-center gap-2 mt-0.5">
             {product.barcode && (
               <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground font-mono">
-                <span>{product.barcode}</span>
+                <span>{highlightText(product.barcode, searchQuery)}</span>
                 <button
                   onClick={() =>
                     handleCopy(product.barcode, `cmp-${product.id}`)

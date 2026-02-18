@@ -466,6 +466,7 @@ export default function ProductsPage() {
                   key={product.id}
                   product={product}
                   variants={variantsMap[product.id] || []}
+                  searchQuery={search}
                   onToggle={(value) => handleToggle(product.id, value)}
                   onEdit={() => {
                     setSelectedProduct(product);
@@ -492,6 +493,7 @@ export default function ProductsPage() {
                   key={product.id}
                   product={product}
                   variants={variantsMap[product.id] || []}
+                  searchQuery={search}
                   onToggle={(value) => handleToggle(product.id, value)}
                   onEdit={() => {
                     setSelectedProduct(product);
@@ -560,6 +562,7 @@ export default function ProductsPage() {
                         key={product.id}
                         product={product}
                         variants={variantsMap[product.id] || []}
+                        searchQuery={search}
                         onToggle={(value) => handleToggle(product.id, value)}
                         onEdit={() => {
                           setSelectedProduct(product);
