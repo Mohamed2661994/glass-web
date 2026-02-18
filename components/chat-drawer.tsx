@@ -169,16 +169,15 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   const playSound = useCallback(() => {
     console.log("[sound] playSound — ready:", audioReadyRef.current, "buffer:", !!audioBufferRef.current, "ctx:", audioCtxRef.current?.state);
 
-    // Try Web Audio API
+    let played = false;
+
+    // Strategy 1: Web Audio API
     const ctx = audioCtxRef.current;
     const buffer = audioBufferRef.current;
-
     if (ctx && buffer) {
-      // Resume if suspended (e.g. tab was backgrounded)
       if (ctx.state === "suspended") {
         ctx.resume().catch(() => {});
       }
-
       try {
         const src = ctx.createBufferSource();
         src.buffer = buffer;
@@ -187,22 +186,25 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
         src.connect(g);
         g.connect(ctx.destination);
         src.start(0);
+        played = true;
         console.log("[sound] ✓ played via WebAudio");
       } catch (e) {
-        console.warn("[sound] WebAudio play error:", e);
+        console.warn("[sound] WebAudio error:", e);
       }
     }
 
-    // ALWAYS also try HTML Audio as fallback (even if WebAudio worked)
-    // On iOS PWA, WebAudio may fail silently — this is the safety net
-    try {
-      const audio = new Audio("/sounds/beepmasage.mp3");
-      audio.volume = 0.7;
-      const p = audio.play();
-      if (p) p.catch(() => {}); // suppress DOMException silently
-    } catch {}
+    // Strategy 2: HTML Audio fallback — only if WebAudio didn't play
+    if (!played) {
+      try {
+        const audio = new Audio("/sounds/beepmasage.mp3");
+        audio.volume = 0.7;
+        const p = audio.play();
+        if (p) p.catch(() => {});
+        console.log("[sound] ✓ played via HTML Audio fallback");
+      } catch {}
+    }
 
-    // Vibrate on mobile as extra notification
+    // Vibrate on mobile
     try { navigator?.vibrate?.(200); } catch {}
   }, []);
 
@@ -318,10 +320,9 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
           return current;
         });
 
-        // ALWAYS play sound unless actively viewing this specific conversation
-        if (!isViewingThisConv) {
-          playSound();
-        }
+        // Play sound unless actively reading this exact conversation
+        // (chat drawer open + chat view + same conversation)
+        playSound();
 
         // Always refresh conversations list & unread
         fetchConversations();
