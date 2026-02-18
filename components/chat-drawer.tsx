@@ -25,6 +25,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import api, { API_URL } from "@/services/api";
 import { io, Socket } from "socket.io-client";
@@ -113,8 +118,10 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   /* ---------- File upload refs ---------- */
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [uploading, setUploading] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
+  const [previewImg, setPreviewImg] = useState<string | null>(null);
 
   /* ---------- Audio notification (PWA-safe) ---------- */
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -472,6 +479,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
       );
       setMessages((prev) => [...prev, data.data]);
       setNewMsg("");
+      if (textareaRef.current) textareaRef.current.style.height = "auto";
       scrollToBottom();
       fetchConversations();
 
@@ -886,19 +894,20 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                       >
                         {/* Message content by type */}
                         {msg.type === "image" && msg.file_url ? (
-                          <a
-                            href={`${API_URL}${msg.file_url}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <div
+                            className="cursor-pointer"
+                            onClick={() =>
+                              setPreviewImg(`${API_URL}${msg.file_url}`)
+                            }
                           >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={`${API_URL}${msg.file_url}`}
                               alt={msg.content || "صورة"}
-                              className="rounded-xl max-w-full max-h-64 object-cover cursor-pointer"
+                              className="rounded-xl max-w-full max-h-64 object-cover"
                               loading="lazy"
                             />
-                          </a>
+                          </div>
                         ) : msg.type === "file" && msg.file_url ? (
                           <a
                             href={`${API_URL}${msg.file_url}`}
@@ -998,12 +1007,16 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
               >
                 <Send className="h-4 w-4" />
               </Button>
-              <Input
+              <textarea
+                ref={textareaRef}
                 placeholder="اكتب رسالة..."
                 value={newMsg}
                 onChange={(e) => {
                   setNewMsg(e.target.value);
                   handleTyping();
+                  // Auto-grow
+                  e.target.style.height = "auto";
+                  e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
                 }}
                 onPaste={(e) => {
                   const items = e.clipboardData?.items;
@@ -1030,7 +1043,9 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                     handleSend();
                   }
                 }}
-                className="flex-1"
+                rows={1}
+                className="flex-1 resize-none overflow-y-auto rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                style={{ maxHeight: 120 }}
                 autoFocus
               />
               <Popover open={attachOpen} onOpenChange={setAttachOpen}>
@@ -1077,6 +1092,21 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
           </div>
         )}
       </SheetContent>
+
+      {/* Image preview modal */}
+      <Dialog open={!!previewImg} onOpenChange={() => setPreviewImg(null)}>
+        <DialogContent className="max-w-[90vw] max-h-[90vh] p-2 flex items-center justify-center bg-black/90 border-none">
+          <DialogTitle className="sr-only">معاينة الصورة</DialogTitle>
+          {previewImg && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={previewImg}
+              alt="معاينة"
+              className="max-w-full max-h-[85vh] object-contain rounded-lg"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Sheet>
   );
 }

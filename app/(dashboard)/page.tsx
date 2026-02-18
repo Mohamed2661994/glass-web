@@ -1078,7 +1078,10 @@ export default function DashboardPage() {
 
       case "recent_invoices":
         return (
-          <Card key={id} className="border-t-2 border-t-indigo-500/60 dark:border-t-indigo-400/40">
+          <Card
+            key={id}
+            className="border-t-2 border-t-indigo-500/60 dark:border-t-indigo-400/40"
+          >
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <FileText className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
@@ -1093,7 +1096,12 @@ export default function DashboardPage() {
                 >
                   <RefreshCw className="h-4 w-4" />
                 </Button>
-                <Badge variant="outline" className="border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300">{invoices.length} فاتورة</Badge>
+                <Badge
+                  variant="outline"
+                  className="border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300"
+                >
+                  {invoices.length} فاتورة
+                </Badge>
               </div>
             </CardHeader>
             <CardContent className="overflow-x-auto p-0">
@@ -1159,13 +1167,21 @@ export default function DashboardPage() {
       case "recent_transfers":
         if (branchId !== 2) return null;
         return (
-          <Card key={id} className="border-t-2 border-t-violet-500/60 dark:border-t-violet-400/40">
+          <Card
+            key={id}
+            className="border-t-2 border-t-violet-500/60 dark:border-t-violet-400/40"
+          >
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Truck className="h-5 w-5 text-violet-600 dark:text-violet-400" />
                 آخر التحويلات
               </CardTitle>
-              <Badge variant="outline" className="border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300">{transfers.length} تحويل</Badge>
+              <Badge
+                variant="outline"
+                className="border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300"
+              >
+                {transfers.length} تحويل
+              </Badge>
             </CardHeader>
             <CardContent className="overflow-x-auto p-0">
               <Table>
@@ -1223,7 +1239,10 @@ export default function DashboardPage() {
       case "cash_summary": {
         const netCash = cashInTotal - cashOutTotal;
         return (
-          <Card key={id} className="border-t-2 border-t-emerald-500/60 dark:border-t-emerald-400/40">
+          <Card
+            key={id}
+            className="border-t-2 border-t-emerald-500/60 dark:border-t-emerald-400/40"
+          >
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Wallet className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
@@ -1305,7 +1324,10 @@ export default function DashboardPage() {
       /* ===== Quick Links Widget ===== */
       case "quick_links": {
         return (
-          <Card key={id} className="border-t-2 border-t-amber-500/60 dark:border-t-amber-400/40">
+          <Card
+            key={id}
+            className="border-t-2 border-t-amber-500/60 dark:border-t-amber-400/40"
+          >
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Link2 className="h-5 w-5 text-amber-600 dark:text-amber-400" />
@@ -1354,13 +1376,19 @@ export default function DashboardPage() {
       /* ===== Notifications Widget ===== */
       case "notifications":
         return (
-          <Card key={id} className="border-t-2 border-t-rose-500/60 dark:border-t-rose-400/40">
+          <Card
+            key={id}
+            className="border-t-2 border-t-rose-500/60 dark:border-t-rose-400/40"
+          >
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Bell className="h-5 w-5 text-rose-600 dark:text-rose-400" />
                 آخر الإشعارات
               </CardTitle>
-              <Badge variant="outline" className="border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300">
+              <Badge
+                variant="outline"
+                className="border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300"
+              >
                 {notifications.filter((n) => !n.is_read).length} جديد
               </Badge>
             </CardHeader>
