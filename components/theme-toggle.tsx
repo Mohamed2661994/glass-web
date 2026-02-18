@@ -8,7 +8,7 @@ import { useAuth } from "@/app/context/auth-context";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const { user } = useAuth();
   const { setThemePref } = useUserPreferences();
   const [mounted, setMounted] = useState(false);
@@ -18,7 +18,7 @@ export function ThemeToggle() {
   }, []);
 
   const handleToggle = () => {
-    const newTheme = theme === "dark" ? "light" : "dark";
+    const newTheme = resolvedTheme === "dark" ? "light" : "dark";
     setTheme(newTheme);
     // حفظ الثيم لليوزر (localStorage + backend)
     if (user?.id) {
@@ -35,7 +35,7 @@ export function ThemeToggle() {
       suppressHydrationWarning
     >
       {mounted ? (
-        theme === "dark" ? (
+        resolvedTheme === "dark" ? (
           <Sun className="h-4 w-4" />
         ) : (
           <Moon className="h-4 w-4" />
