@@ -204,88 +204,180 @@ export default function CustomerDebtDetailsPage() {
           </div>
         )}
 
-        {/* Table */}
+        {/* Table (Desktop) + Cards (Mobile) */}
         {!loading && data.length > 0 && (
-          <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-center">النوع</TableHead>
-                      <TableHead className="text-center">رقم</TableHead>
-                      <TableHead className="text-center">التاريخ</TableHead>
-                      <TableHead className="text-center">
-                        الحساب السابق
-                      </TableHead>
-                      <TableHead className="text-center">الإجمالي</TableHead>
-                      <TableHead className="text-center">المدفوع</TableHead>
-                      <TableHead className="text-center">الباقي</TableHead>
-                      <TableHead className="text-center w-12"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {data.map((inv, idx) => (
-                      <TableRow key={`${inv.record_type}-${inv.invoice_id}`}>
-                        <TableCell className="text-center">
-                          <Badge
-                            variant={
-                              inv.record_type === "invoice"
-                                ? "default"
-                                : "secondary"
-                            }
-                          >
+          <>
+            {/* Desktop Table */}
+            <Card className="hidden md:block">
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-center">النوع</TableHead>
+                        <TableHead className="text-center">رقم</TableHead>
+                        <TableHead className="text-center">التاريخ</TableHead>
+                        <TableHead className="text-center">
+                          الحساب السابق
+                        </TableHead>
+                        <TableHead className="text-center">الإجمالي</TableHead>
+                        <TableHead className="text-center">المدفوع</TableHead>
+                        <TableHead className="text-center">الباقي</TableHead>
+                        <TableHead className="text-center w-12"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {data.map((inv, idx) => (
+                        <TableRow key={`${inv.record_type}-${inv.invoice_id}`}>
+                          <TableCell className="text-center">
+                            <Badge
+                              variant={
+                                inv.record_type === "invoice"
+                                  ? "default"
+                                  : "secondary"
+                              }
+                            >
+                              {inv.record_type === "invoice"
+                                ? "فاتورة"
+                                : "سند دفع"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {inv.invoice_id}
+                          </TableCell>
+                          <TableCell className="text-center text-xs">
+                            {new Date(inv.invoice_date).toLocaleDateString(
+                              "ar-EG",
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center font-medium">
+                            {runningBalances[idx] === 0
+                              ? "—"
+                              : runningBalances[idx].toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-center">
                             {inv.record_type === "invoice"
-                              ? "فاتورة"
-                              : "سند دفع"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {inv.invoice_id}
-                        </TableCell>
-                        <TableCell className="text-center text-xs">
+                              ? Number(inv.total).toLocaleString()
+                              : "—"}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {Number(inv.paid_amount).toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {inv.record_type === "invoice"
+                              ? Number(inv.remaining_amount).toLocaleString()
+                              : "—"}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {inv.record_type === "invoice" && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                title="عرض الفاتورة"
+                                onClick={() =>
+                                  openInvoicePreview(inv.invoice_id)
+                                }
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Mobile Cards */}
+            <div className="md:hidden space-y-2">
+              {data.map((inv, idx) => (
+                <Card
+                  key={`m-${inv.record_type}-${inv.invoice_id}`}
+                  className="overflow-hidden"
+                >
+                  <CardContent className="p-3 space-y-2">
+                    {/* Row 1: Type + Number + Date + View */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant={
+                            inv.record_type === "invoice"
+                              ? "default"
+                              : "secondary"
+                          }
+                          className="text-xs"
+                        >
+                          {inv.record_type === "invoice"
+                            ? "فاتورة"
+                            : "سند دفع"}
+                        </Badge>
+                        <span className="font-bold text-sm">
+                          #{inv.invoice_id}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
                           {new Date(inv.invoice_date).toLocaleDateString(
                             "ar-EG",
                           )}
-                        </TableCell>
-                        <TableCell className="text-center font-medium">
+                        </span>
+                        {inv.record_type === "invoice" && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            title="عرض الفاتورة"
+                            onClick={() =>
+                              openInvoicePreview(inv.invoice_id)
+                            }
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Row 2: Numbers grid */}
+                    <div className="grid grid-cols-4 gap-1 text-center text-xs">
+                      <div>
+                        <p className="text-muted-foreground">الحساب السابق</p>
+                        <p className="font-medium">
                           {runningBalances[idx] === 0
                             ? "—"
                             : runningBalances[idx].toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-center">
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">الإجمالي</p>
+                        <p className="font-medium">
                           {inv.record_type === "invoice"
                             ? Number(inv.total).toLocaleString()
                             : "—"}
-                        </TableCell>
-                        <TableCell className="text-center">
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">المدفوع</p>
+                        <p className="font-medium text-green-600">
                           {Number(inv.paid_amount).toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-center">
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">الباقي</p>
+                        <p className="font-medium text-red-600">
                           {inv.record_type === "invoice"
                             ? Number(inv.remaining_amount).toLocaleString()
                             : "—"}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {inv.record_type === "invoice" && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              title="عرض الفاتورة"
-                              onClick={() => openInvoicePreview(inv.invoice_id)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </>
         )}
 
         {/* Empty */}
