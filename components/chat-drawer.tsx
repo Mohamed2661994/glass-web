@@ -77,7 +77,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
 
   /* ---------- preload audio ---------- */
   useEffect(() => {
-    const audio = new Audio("/sounds/notification.wav");
+    const audio = new Audio("/sounds/beepmasage.wav");
     audio.volume = 0.5;
     audioRef.current = audio;
   }, []);
