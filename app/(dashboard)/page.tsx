@@ -1086,15 +1086,15 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent className="overflow-x-auto p-0">
-              <Table>
+              <Table className="text-xs sm:text-sm">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="text-right">#</TableHead>
                     <TableHead className="text-right">العميل</TableHead>
-                    <TableHead className="text-right">النوع</TableHead>
+                    <TableHead className="text-right hidden sm:table-cell">النوع</TableHead>
                     <TableHead className="text-right">الإجمالي</TableHead>
                     <TableHead className="text-right">الحالة</TableHead>
-                    <TableHead className="text-right">التاريخ</TableHead>
+                    <TableHead className="text-right hidden sm:table-cell">التاريخ</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1117,17 +1117,17 @@ export default function DashboardPage() {
                         onClick={() => router.push(`/invoices/${inv.id}`)}
                       >
                         <TableCell className="font-medium">{inv.id}</TableCell>
-                        <TableCell>{inv.customer_name || "—"}</TableCell>
-                        <TableCell>
+                        <TableCell className="max-w-[80px] truncate">{inv.customer_name || "—"}</TableCell>
+                        <TableCell className="hidden sm:table-cell">
                           {movementLabel(inv.movement_type)}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           {Math.round(inv.total).toLocaleString()} ج
                         </TableCell>
                         <TableCell>
                           {paymentBadge(inv.payment_status)}
                         </TableCell>
-                        <TableCell className="text-muted-foreground text-xs">
+                        <TableCell className="text-muted-foreground text-xs hidden sm:table-cell">
                           {formatDate(inv.created_at)}
                         </TableCell>
                       </TableRow>
