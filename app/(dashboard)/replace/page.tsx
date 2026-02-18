@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import api from "@/services/api";
 import { highlightText } from "@/lib/highlight-text";
-import { noSpaces } from "@/lib/utils";
+import { multiWordMatch } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -105,12 +105,13 @@ export default function ReplacePage() {
 
   /* ========== Filter ========== */
   const filterProducts = (search: string) => {
-    const s = noSpaces(search).toLowerCase();
-    return products.filter(
-      (p) =>
-        String(p.id).includes(s) ||
-        noSpaces(p.name).toLowerCase().includes(s) ||
-        (p.manufacturer && noSpaces(p.manufacturer).toLowerCase().includes(s)),
+    return products.filter((p) =>
+      multiWordMatch(
+        search,
+        String(p.id),
+        p.name,
+        p.manufacturer,
+      ),
     );
   };
 

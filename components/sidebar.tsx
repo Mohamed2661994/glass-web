@@ -27,9 +27,10 @@ import {
   PackagePlus,
   Factory,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/app/context/auth-context";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { LucideIcon } from "lucide-react";
 
 type RouteItem = {
@@ -62,14 +63,55 @@ export function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const { prefs, setSidebar } = useUserPreferences();
 
-  const [pinned, setPinned] = useState(false);
+  const savedSidebar = prefs.sidebar;
+  const [pinned, setPinnedLocal] = useState(false);
   const branchId = user?.branch_id ?? null;
   const isAdmin = user?.role === "admin" || user?.id === 7;
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const [openGroups, setOpenGroupsLocal] = useState<Record<string, boolean>>(
+    {},
+  );
   const sidebarRef = useRef<HTMLElement>(null);
 
   const open = isMobile ? true : pinned;
+
+  // Restore saved sidebar state when preferences load
+  useEffect(() => {
+    if (savedSidebar) {
+      if (savedSidebar.pinned !== undefined)
+        setPinnedLocal(savedSidebar.pinned);
+      if (savedSidebar.openGroups) setOpenGroupsLocal(savedSidebar.openGroups);
+    }
+  }, [savedSidebar]);
+
+  // Wrapper to persist pinned state
+  const setPinned = useCallback(
+    (val: boolean | ((prev: boolean) => boolean)) => {
+      setPinnedLocal((prev) => {
+        const next = typeof val === "function" ? val(prev) : val;
+        setSidebar((s) => ({ ...s, pinned: next }));
+        return next;
+      });
+    },
+    [setSidebar],
+  );
+
+  // Wrapper to persist open groups
+  const setOpenGroups = useCallback(
+    (
+      updater:
+        | Record<string, boolean>
+        | ((prev: Record<string, boolean>) => Record<string, boolean>),
+    ) => {
+      setOpenGroupsLocal((prev) => {
+        const next = typeof updater === "function" ? updater(prev) : updater;
+        setSidebar((s) => ({ ...s, openGroups: next }));
+        return next;
+      });
+    },
+    [setSidebar],
+  );
 
   // Close sidebar when clicking outside
   useEffect(() => {
@@ -96,13 +138,16 @@ export function Sidebar({
 
   // User data now comes from useAuth() context — no localStorage read needed
 
-  // Auto-open groups if current path is inside them
+  // Auto-open groups if current path is inside them (only if not already set by user prefs)
+  const autoOpenDone = useRef(false);
   useEffect(() => {
+    if (autoOpenDone.current) return;
+    autoOpenDone.current = true;
     if (pathname.startsWith("/cash")) {
-      setOpenGroups((prev) => ({ ...prev, الخزنة: true }));
+      setOpenGroupsLocal((prev) => ({ ...prev, الخزنة: true }));
     }
     if (pathname.startsWith("/reports")) {
-      setOpenGroups((prev) => ({ ...prev, التقارير: true }));
+      setOpenGroupsLocal((prev) => ({ ...prev, التقارير: true }));
     }
   }, [pathname]);
 

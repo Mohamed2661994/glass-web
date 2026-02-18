@@ -5,10 +5,12 @@ import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/app/context/auth-context";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
   const { user } = useAuth();
+  const { setThemePref } = useUserPreferences();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -18,9 +20,10 @@ export function ThemeToggle() {
   const handleToggle = () => {
     const newTheme = theme === "dark" ? "light" : "dark";
     setTheme(newTheme);
-    // حفظ الثيم باسم اليوزر
+    // حفظ الثيم لليوزر (localStorage + backend)
     if (user?.id) {
       localStorage.setItem(`theme_user_${user.id}`, newTheme);
+      setThemePref(newTheme);
     }
   };
 

@@ -13,7 +13,7 @@ import { Search, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCachedProducts } from "@/hooks/use-cached-products";
 import { highlightText } from "@/lib/highlight-text";
-import { noSpaces } from "@/lib/utils";
+import { multiWordMatch } from "@/lib/utils";
 
 interface Props {
   open: boolean;
@@ -64,16 +64,16 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
      Filtered products
      ========================================================= */
   const filteredProducts = useMemo(() => {
-    const filtered = products.filter((p) => {
-      const s = noSpaces(search).toLowerCase();
-      return (
-        String(p.id).includes(s) ||
-        noSpaces(p.name).toLowerCase().includes(s) ||
-        (p.description && noSpaces(p.description).toLowerCase().includes(s)) ||
-        (p.barcode && noSpaces(p.barcode).toLowerCase().includes(s)) ||
-        (p.manufacturer && noSpaces(p.manufacturer).toLowerCase().includes(s))
-      );
-    });
+    const filtered = products.filter((p) =>
+      multiWordMatch(
+        search,
+        String(p.id),
+        p.name,
+        p.description,
+        p.barcode,
+        p.manufacturer,
+      ),
+    );
 
     return filtered.sort((a, b) => {
       const aInStock = Number(a.available_quantity) > 0 ? 1 : 0;

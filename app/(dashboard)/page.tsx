@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/auth-context";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 import api from "@/services/api";
 import {
   FileText,
@@ -649,39 +650,16 @@ const DEFAULT_QUICK_LINKS: QuickLink[] = [
   },
 ];
 
-function getQuickLinks(userId: number): QuickLink[] {
-  try {
-    const raw = localStorage.getItem(`quick_links_${userId}`);
-    if (raw) return JSON.parse(raw);
-  } catch {
-    /* ignore */
-  }
-  return DEFAULT_QUICK_LINKS;
-}
-
-function saveQuickLinks(userId: number, links: QuickLink[]) {
-  localStorage.setItem(`quick_links_${userId}`, JSON.stringify(links));
-}
-
-function getDashboardConfig(userId: number): WidgetConfig[] {
-  try {
-    const raw = localStorage.getItem(`dashboard_config_${userId}`);
-    if (raw) {
-      const parsed = JSON.parse(raw) as WidgetConfig[];
-      const map = new Map(parsed.map((w) => [w.id, w]));
-      return DEFAULT_WIDGETS.map((dw) => {
-        const saved = map.get(dw.id);
-        return saved ? { ...dw, ...saved, label: dw.label } : dw;
-      }).sort((a, b) => a.order - b.order);
-    }
-  } catch {
-    /* ignore */
-  }
-  return DEFAULT_WIDGETS;
-}
-
-function saveDashboardConfig(userId: number, config: WidgetConfig[]) {
-  localStorage.setItem(`dashboard_config_${userId}`, JSON.stringify(config));
+/** Merge saved widget prefs with defaults (handles new widgets, label updates) */
+function mergeWidgetsWithDefaults(
+  saved: WidgetConfig[] | undefined,
+): WidgetConfig[] {
+  if (!saved || saved.length === 0) return DEFAULT_WIDGETS;
+  const map = new Map(saved.map((w) => [w.id, w]));
+  return DEFAULT_WIDGETS.map((dw) => {
+    const s = map.get(dw.id);
+    return s ? { ...dw, ...s, label: dw.label } : dw;
+  }).sort((a, b) => a.order - b.order);
 }
 
 /* ---------- helpers ---------- */
@@ -731,6 +709,13 @@ export default function DashboardPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loadingNotifs, setLoadingNotifs] = useState(true);
 
+  /* ---------- user preferences ---------- */
+  const {
+    prefs,
+    setDashboardWidgets: saveDashboardWidgets,
+    setQuickLinks: saveQuickLinksPrefs,
+  } = useUserPreferences();
+
   /* ---------- widget customization ---------- */
   const [widgets, setWidgets] = useState<WidgetConfig[]>(DEFAULT_WIDGETS);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -748,12 +733,17 @@ export default function DashboardPage() {
     color: COLOR_OPTIONS[0].value,
   });
 
+  // Sync from preferences when they load
   useEffect(() => {
-    if (user?.id) {
-      setWidgets(getDashboardConfig(user.id));
-      setQuickLinks(getQuickLinks(user.id));
+    if (prefs.dashboard_widgets) {
+      setWidgets(
+        mergeWidgetsWithDefaults(prefs.dashboard_widgets as WidgetConfig[]),
+      );
     }
-  }, [user?.id]);
+    if (prefs.quick_links) {
+      setQuickLinks(prefs.quick_links as QuickLink[]);
+    }
+  }, [prefs.dashboard_widgets, prefs.quick_links]);
 
   const isVisible = useCallback(
     (id: WidgetId) => widgets.find((w) => w.id === id)?.visible ?? true,
@@ -766,11 +756,11 @@ export default function DashboardPage() {
         const next = prev.map((w) =>
           w.id === id ? { ...w, visible: !w.visible } : w,
         );
-        if (user?.id) saveDashboardConfig(user.id, next);
+        saveDashboardWidgets(next);
         return next;
       });
     },
-    [user?.id],
+    [saveDashboardWidgets],
   );
 
   const toggleSize = useCallback(
@@ -784,11 +774,11 @@ export default function DashboardPage() {
               }
             : w,
         );
-        if (user?.id) saveDashboardConfig(user.id, next);
+        saveDashboardWidgets(next);
         return next;
       });
     },
-    [user?.id],
+    [saveDashboardWidgets],
   );
 
   const addQuickLink = () => {
@@ -799,7 +789,7 @@ export default function DashboardPage() {
     };
     setQuickLinks((prev) => {
       const next = [...prev, newLink];
-      if (user?.id) saveQuickLinks(user.id, next);
+      saveQuickLinksPrefs(next);
       return next;
     });
     setLinkForm({
@@ -816,7 +806,7 @@ export default function DashboardPage() {
       const next = prev.map((l) =>
         l.id === editingLink.id ? { ...l, ...linkForm } : l,
       );
-      if (user?.id) saveQuickLinks(user.id, next);
+      saveQuickLinksPrefs(next);
       return next;
     });
     setEditingLink(null);
@@ -831,14 +821,14 @@ export default function DashboardPage() {
   const deleteQuickLink = (id: string) => {
     setQuickLinks((prev) => {
       const next = prev.filter((l) => l.id !== id);
-      if (user?.id) saveQuickLinks(user.id, next);
+      saveQuickLinksPrefs(next);
       return next;
     });
   };
 
   const resetQuickLinks = () => {
     setQuickLinks(DEFAULT_QUICK_LINKS);
-    if (user?.id) saveQuickLinks(user.id, DEFAULT_QUICK_LINKS);
+    saveQuickLinksPrefs(DEFAULT_QUICK_LINKS);
   };
 
   const handleDragStart = (idx: number) => setDragIdx(idx);
@@ -850,7 +840,7 @@ export default function DashboardPage() {
       const [moved] = next.splice(dragIdx, 1);
       next.splice(idx, 0, moved);
       const reordered = next.map((w, i) => ({ ...w, order: i }));
-      if (user?.id) saveDashboardConfig(user.id, reordered);
+      saveDashboardWidgets(reordered);
       return reordered;
     });
     setDragIdx(idx);

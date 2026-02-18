@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import api from "@/services/api";
 import { highlightText } from "@/lib/highlight-text";
-import { noSpaces } from "@/lib/utils";
+import { multiWordMatch } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -114,12 +114,14 @@ export default function StockTransferPage() {
 
   /* ========== Filter ========== */
   const filtered = products.filter((p) => {
-    const s = noSpaces(search).toLowerCase();
     return (
       p.available_quantity > 0 &&
-      (String(p.id).includes(s) ||
-        noSpaces(p.name).toLowerCase().includes(s) ||
-        (p.manufacturer && noSpaces(p.manufacturer).toLowerCase().includes(s)))
+      multiWordMatch(
+        search,
+        String(p.id),
+        p.name,
+        p.manufacturer,
+      )
     );
   });
 

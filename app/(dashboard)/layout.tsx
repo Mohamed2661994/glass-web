@@ -7,6 +7,7 @@ import { Sidebar } from "@/components/sidebar";
 import { MobileSidebar } from "@/components/mobile-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/app/context/auth-context";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { NotificationBell } from "@/components/notification-bell";
 import { CashCounterModal } from "@/components/cash-counter-modal";
 import { ProductFormDialog } from "@/components/product-form-dialog";
@@ -14,6 +15,7 @@ import { ProductLookupModal } from "@/components/product-lookup-modal";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const { prefs } = useUserPreferences();
   const router = useRouter();
   const { setTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -42,12 +44,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   // استعادة ثيم اليوزر عند الدخول
   useEffect(() => {
     if (user?.id) {
-      const savedTheme = localStorage.getItem(`theme_user_${user.id}`);
+      // Try from preferences first, then fall back to old key
+      const savedTheme =
+        prefs.theme || localStorage.getItem(`theme_user_${user.id}`);
       if (savedTheme) {
         setTheme(savedTheme);
       }
     }
-  }, [user?.id, setTheme]);
+  }, [user?.id, prefs.theme, setTheme]);
 
   // ✅ لو مفيش توكن → يروح لصفحة الدخول
   useEffect(() => {

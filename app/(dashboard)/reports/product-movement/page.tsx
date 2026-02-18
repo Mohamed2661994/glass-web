@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "@/services/api";
 import { highlightText } from "@/lib/highlight-text";
-import { noSpaces } from "@/lib/utils";
+import { multiWordMatch } from "@/lib/utils";
 import { useAuth } from "@/app/context/auth-context";
 import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent } from "@/components/ui/card";
@@ -147,14 +147,13 @@ export default function ProductMovementPage() {
   /* ========== Product list filter ========== */
   const filteredProducts = useMemo(() => {
     if (!productSearch.trim()) return products;
-    const q = noSpaces(productSearch).toLowerCase();
-    return products.filter(
-      (p) =>
-        String(p.id).includes(q) ||
-        noSpaces(p.name).toLowerCase().includes(q) ||
-        noSpaces(p.manufacturer || p.manufacturer_name || "")
-          .toLowerCase()
-          .includes(q),
+    return products.filter((p) =>
+      multiWordMatch(
+        productSearch,
+        String(p.id),
+        p.name,
+        p.manufacturer || p.manufacturer_name || "",
+      ),
     );
   }, [products, productSearch]);
 

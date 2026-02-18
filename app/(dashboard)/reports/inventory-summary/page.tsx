@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "@/services/api";
-import { noSpaces } from "@/lib/utils";
+import { multiWordMatch } from "@/lib/utils";
 import { useAuth } from "@/app/context/auth-context";
 import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent } from "@/components/ui/card";
@@ -92,13 +92,12 @@ export default function InventorySummaryPage() {
 
     // بحث
     if (searchText.trim()) {
-      const q = noSpaces(searchText).toLowerCase();
-      result = result.filter(
-        (item) =>
-          noSpaces(item.product_name).toLowerCase().includes(q) ||
-          noSpaces(item.manufacturer_name || "")
-            .toLowerCase()
-            .includes(q),
+      result = result.filter((item) =>
+        multiWordMatch(
+          searchText,
+          item.product_name,
+          item.manufacturer_name || "",
+        ),
       );
     }
 

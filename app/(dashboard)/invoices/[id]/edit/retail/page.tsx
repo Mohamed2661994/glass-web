@@ -10,7 +10,7 @@ import api from "@/services/api";
 import { Trash2, Loader2, Pencil, RefreshCw } from "lucide-react";
 import { useCachedProducts } from "@/hooks/use-cached-products";
 import { highlightText } from "@/lib/highlight-text";
-import { noSpaces } from "@/lib/utils";
+import { multiWordMatch } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -512,16 +512,16 @@ export default function EditRetailInvoicePage() {
      ========================================================= */
 
   const filteredProducts = useMemo(() => {
-    const filtered = products.filter((p) => {
-      const s = noSpaces(search).toLowerCase();
-      return (
-        String(p.id).includes(s) ||
-        noSpaces(p.name).toLowerCase().includes(s) ||
-        (p.description && noSpaces(p.description).toLowerCase().includes(s)) ||
-        (p.barcode && noSpaces(p.barcode).toLowerCase().includes(s)) ||
-        (p.manufacturer && noSpaces(p.manufacturer).toLowerCase().includes(s))
-      );
-    });
+    const filtered = products.filter((p) =>
+      multiWordMatch(
+        search,
+        String(p.id),
+        p.name,
+        p.description,
+        p.barcode,
+        p.manufacturer,
+      ),
+    );
 
     return filtered.sort((a, b) => {
       const aInStock = Number(a.available_quantity) > 0 ? 1 : 0;
