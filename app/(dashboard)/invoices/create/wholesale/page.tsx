@@ -778,7 +778,8 @@ export default function CreateWholesaleInvoicePage() {
                 onChange={(e) => {
                   const v = e.target.value;
                   setCustomerPhone(v);
-                  if (phoneTimerRef.current) clearTimeout(phoneTimerRef.current);
+                  if (phoneTimerRef.current)
+                    clearTimeout(phoneTimerRef.current);
                   phoneTimerRef.current = setTimeout(
                     () => searchByPhone(v),
                     300,
@@ -800,14 +801,9 @@ export default function CreateWholesaleInvoicePage() {
                     setHighlightedPhoneIndex((prev) =>
                       prev > 0 ? prev - 1 : phoneSuggestions.length - 1,
                     );
-                  } else if (
-                    e.key === "Enter" &&
-                    highlightedPhoneIndex >= 0
-                  ) {
+                  } else if (e.key === "Enter" && highlightedPhoneIndex >= 0) {
                     e.preventDefault();
-                    selectFromPhone(
-                      phoneSuggestions[highlightedPhoneIndex],
-                    );
+                    selectFromPhone(phoneSuggestions[highlightedPhoneIndex]);
                     setHighlightedPhoneIndex(-1);
                   } else if (e.key === "Escape") {
                     setShowPhoneDropdown(false);

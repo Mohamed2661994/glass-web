@@ -102,16 +102,6 @@ export default function CustomerDebtDetailsPage() {
     [data],
   );
 
-  const totalRemaining = useMemo(
-    () =>
-      data
-        .filter((i) => i.record_type === "invoice")
-        .reduce((s, i) => s + Number(i.remaining_amount), 0),
-    [data],
-  );
-
-  const netDebt = totalRemaining - totalPaid;
-
   /* ========== Running Balance (الحساب السابق) ========== */
   const runningBalances = useMemo(() => {
     const balances: number[] = [];
@@ -120,13 +110,18 @@ export default function CustomerDebtDetailsPage() {
       balances.push(balance);
       const row = data[i];
       if (row.record_type === "invoice") {
-        balance += Number(row.remaining_amount);
+        // نستخدم total - paid بدل remaining
+        // لأن remaining بتشمل الحساب السابق المرحّل
+        balance += Number(row.total) - Number(row.paid_amount);
       } else {
         balance -= Number(row.paid_amount);
       }
     }
     return balances;
   }, [data]);
+
+  // صافي المديونية = الرصيد النهائي بعد آخر حركة
+  const netDebt = totalAll - totalPaid;
 
   return (
     <PageContainer size="xl">
@@ -278,9 +273,7 @@ export default function CustomerDebtDetailsPage() {
                               size="icon"
                               className="h-7 w-7"
                               title="عرض الفاتورة"
-                              onClick={() =>
-                                openInvoicePreview(inv.invoice_id)
-                              }
+                              onClick={() => openInvoicePreview(inv.invoice_id)}
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
@@ -318,12 +311,16 @@ export default function CustomerDebtDetailsPage() {
                   </p>
                 </div>
                 <div className="text-center">
-                  <p className="text-muted-foreground">إجمالي المتبقي</p>
-                  <p className="font-bold">{totalRemaining.toLocaleString()}</p>
-                </div>
-                <div className="text-center">
                   <p className="text-muted-foreground">صافي المديونية</p>
-                  <p className="font-bold text-red-600 text-lg">
+                  <p
+                    className={`font-bold text-lg ${
+                      netDebt > 0
+                        ? "text-red-600"
+                        : netDebt < 0
+                          ? "text-green-600"
+                          : ""
+                    }`}
+                  >
                     {netDebt.toLocaleString()}
                   </p>
                 </div>
@@ -342,9 +339,7 @@ export default function CustomerDebtDetailsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="h-5 w-5" />
-              {previewInvoice
-                ? `فاتورة #${previewInvoice.id}`
-                : "عرض الفاتورة"}
+              {previewInvoice ? `فاتورة #${previewInvoice.id}` : "عرض الفاتورة"}
             </DialogTitle>
           </DialogHeader>
 
