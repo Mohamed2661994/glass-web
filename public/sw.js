@@ -1,6 +1,6 @@
-const CACHE_VERSION = "glass-v3";
-const STATIC_CACHE = "glass-static-v3";
-const RUNTIME_CACHE = "glass-runtime-v3";
+const CACHE_VERSION = "glass-v4";
+const STATIC_CACHE = "glass-static-v4";
+const RUNTIME_CACHE = "glass-runtime-v4";
 const MAX_RUNTIME_ENTRIES = 80;
 
 /* =========================================================

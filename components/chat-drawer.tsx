@@ -89,130 +89,121 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
     activeConvIdRef.current = activeConv?.id ?? null;
   }, [activeConv]);
 
-  /* ---------- Audio notification ---------- */
+  /* ---------- Audio notification (PWA-safe) ---------- */
   const audioCtxRef = useRef<AudioContext | null>(null);
   const audioBufferRef = useRef<AudioBuffer | null>(null);
   const audioReadyRef = useRef(false);
+  const bufferLoadingRef = useRef(false);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    // 1. Create AudioContext immediately
-    const Ctx = window.AudioContext || (window as any).webkitAudioContext;
-    if (!Ctx) return;
-    const ctx = new Ctx();
-    audioCtxRef.current = ctx;
-    console.log("[sound] ctx created, state:", ctx.state);
-
-    // 2. Fetch + decode audio in parallel (works even in suspended state)
-    (async () => {
-      try {
-        const res = await fetch("/sounds/beepmasage.mp3");
-        if (!res.ok) throw new Error("fetch " + res.status);
-        const ab = await res.arrayBuffer();
-        if (cancelled) return;
-        const buffer = await ctx.decodeAudioData(ab);
-        if (cancelled) return;
-        audioBufferRef.current = buffer;
-        console.log("[sound] buffer ready, ctx state:", ctx.state);
-      } catch (e) {
-        console.warn("[sound] buffer load error:", e);
-      }
-    })();
-
-    // 3. Unlock AudioContext on ANY user gesture
-    //    Uses OscillatorNode — does NOT need buffer to be loaded yet
-    const unlock = () => {
-      if (audioReadyRef.current) return;
-      const c = audioCtxRef.current;
-      if (!c) return;
-
-      // Resume must be called synchronously in the gesture handler (no await)
-      if (c.state === "suspended") {
-        c.resume().then(() => {
-          console.log("[sound] ctx resumed to:", c.state);
-        });
-      }
-
-      // Play silent oscillator to fully activate the audio pipeline
-      try {
-        const osc = c.createOscillator();
-        const gain = c.createGain();
-        gain.gain.value = 0;
-        osc.connect(gain);
-        gain.connect(c.destination);
-        osc.start(0);
-        osc.stop(c.currentTime + 0.05);
-        audioReadyRef.current = true;
-        console.log("[sound] UNLOCKED via oscillator");
-      } catch (e) {
-        console.warn("[sound] oscillator unlock error:", e);
-      }
-    };
-
-    // Capture phase + passive — fired before any component can stopPropagation
-    const opts: AddEventListenerOptions = { capture: true, passive: true };
-    document.addEventListener("pointerdown", unlock, opts);
-    document.addEventListener("click", unlock, opts);
-    document.addEventListener("touchend", unlock, opts);
-    document.addEventListener("keydown", unlock, opts);
-
-    return () => {
-      cancelled = true;
-      document.removeEventListener(
-        "pointerdown",
-        unlock,
-        opts as EventListenerOptions,
-      );
-      document.removeEventListener(
-        "click",
-        unlock,
-        opts as EventListenerOptions,
-      );
-      document.removeEventListener(
-        "touchend",
-        unlock,
-        opts as EventListenerOptions,
-      );
-      document.removeEventListener(
-        "keydown",
-        unlock,
-        opts as EventListenerOptions,
-      );
-    };
+  // Load the mp3 into the AudioContext buffer
+  const loadBuffer = useCallback(async () => {
+    if (audioBufferRef.current || bufferLoadingRef.current) return;
+    const ctx = audioCtxRef.current;
+    if (!ctx) return;
+    bufferLoadingRef.current = true;
+    try {
+      const res = await fetch("/sounds/beepmasage.mp3");
+      if (!res.ok) throw new Error("fetch " + res.status);
+      const ab = await res.arrayBuffer();
+      audioBufferRef.current = await ctx.decodeAudioData(ab);
+      console.log("[sound] buffer loaded ✓");
+    } catch (e) {
+      console.warn("[sound] buffer load error:", e);
+      bufferLoadingRef.current = false;
+    }
   }, []);
 
+  useEffect(() => {
+    // On first user gesture: CREATE AudioContext + resume + silent oscillator + load buffer
+    // Creating AudioContext INSIDE the gesture handler is required for iOS PWA standalone mode
+    const unlock = () => {
+      if (audioReadyRef.current) return;
+
+      try {
+        // Create AudioContext inside gesture (required for iOS PWA)
+        if (!audioCtxRef.current) {
+          const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+          if (!Ctx) return;
+          audioCtxRef.current = new Ctx();
+          console.log("[sound] ctx created in gesture, state:", audioCtxRef.current.state);
+        }
+
+        const ctx = audioCtxRef.current;
+
+        // Resume synchronously in gesture handler
+        if (ctx.state === "suspended") {
+          ctx.resume();
+        }
+
+        // Play silent oscillator to fully activate the pipeline
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        gain.gain.value = 0;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(0);
+        osc.stop(ctx.currentTime + 0.05);
+
+        audioReadyRef.current = true;
+        console.log("[sound] UNLOCKED ✓ state:", ctx.state);
+
+        // Now load the actual audio file
+        loadBuffer();
+      } catch (e) {
+        console.warn("[sound] unlock error:", e);
+      }
+    };
+
+    // Use every possible event type, capture phase, passive
+    const opts: AddEventListenerOptions = { capture: true, passive: true };
+    const events = ["touchstart", "touchend", "pointerdown", "click", "keydown"];
+    events.forEach((evt) => document.addEventListener(evt, unlock, opts));
+
+    return () => {
+      events.forEach((evt) =>
+        document.removeEventListener(evt, unlock, opts as EventListenerOptions),
+      );
+    };
+  }, [loadBuffer]);
+
   const playSound = useCallback(() => {
+    console.log("[sound] playSound — ready:", audioReadyRef.current, "buffer:", !!audioBufferRef.current, "ctx:", audioCtxRef.current?.state);
+
+    // Try Web Audio API
     const ctx = audioCtxRef.current;
     const buffer = audioBufferRef.current;
 
-    if (!ctx || !buffer) {
-      console.log("[sound] playSound — no ctx/buffer");
-      return;
+    if (ctx && buffer) {
+      // Resume if suspended (e.g. tab was backgrounded)
+      if (ctx.state === "suspended") {
+        ctx.resume().catch(() => {});
+      }
+
+      try {
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        const g = ctx.createGain();
+        g.gain.value = 0.7;
+        src.connect(g);
+        g.connect(ctx.destination);
+        src.start(0);
+        console.log("[sound] ✓ played via WebAudio");
+      } catch (e) {
+        console.warn("[sound] WebAudio play error:", e);
+      }
     }
 
-    // Resume if suspended (e.g. tab was in background)
-    if (ctx.state === "suspended") {
-      ctx.resume().catch(() => {});
-    }
-
+    // ALWAYS also try HTML Audio as fallback (even if WebAudio worked)
+    // On iOS PWA, WebAudio may fail silently — this is the safety net
     try {
-      const src = ctx.createBufferSource();
-      src.buffer = buffer;
-      const g = ctx.createGain();
-      g.gain.value = 0.6;
-      src.connect(g);
-      g.connect(ctx.destination);
-      src.start(0);
-      console.log("[sound] ✓ played");
-    } catch (e) {
-      console.warn("[sound] play error:", e);
-    }
-
-    // Also vibrate on mobile as backup
-    try {
-      navigator?.vibrate?.(200);
+      const audio = new Audio("/sounds/beepmasage.mp3");
+      audio.volume = 0.7;
+      const p = audio.play();
+      if (p) p.catch(() => {}); // suppress DOMException silently
     } catch {}
+
+    // Vibrate on mobile as extra notification
+    try { navigator?.vibrate?.(200); } catch {}
   }, []);
 
   /* ---------- scroll to bottom ---------- */
