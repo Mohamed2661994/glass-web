@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,6 +31,54 @@ export default function CashInPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
   const [cashInNumber, setCashInNumber] = useState<number | null>(null);
+
+  /* ========== Customer Autocomplete ========== */
+  const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [highlightedIdx, setHighlightedIdx] = useState(-1);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const searchCustomers = async (query: string) => {
+    if (query.length < 2) {
+      setCustomerSuggestions([]);
+      setShowDropdown(false);
+      return;
+    }
+    try {
+      const res = await api.get("/customers/search", {
+        params: { name: query },
+      });
+      setCustomerSuggestions(res.data || []);
+      setShowDropdown((res.data || []).length > 0);
+      setHighlightedIdx(-1);
+    } catch {}
+  };
+
+  const selectCustomer = (c: any) => {
+    setSourceName(c.name);
+    setShowDropdown(false);
+    setCustomerSuggestions([]);
+  };
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   const finalDescription =
     description || (entryType === "customer_payment" ? "سند دفع" : "وارد نقدي");
@@ -90,12 +138,72 @@ export default function CashInPage() {
             <Label>
               {entryType === "customer_payment" ? "اسم العميل" : "الاسم"}
             </Label>
-            <Input
-              value={sourceName}
-              onChange={(e) => setSourceName(e.target.value)}
-              placeholder="اسم القيد"
-              className="mt-2"
-            />
+            {entryType === "customer_payment" ? (
+              <div className="relative mt-2" ref={dropdownRef}>
+                <Input
+                  value={sourceName}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setSourceName(v);
+                    if (timerRef.current) clearTimeout(timerRef.current);
+                    timerRef.current = setTimeout(
+                      () => searchCustomers(v),
+                      300,
+                    );
+                  }}
+                  onKeyDown={(e) => {
+                    if (!showDropdown) return;
+                    if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      setHighlightedIdx((p) =>
+                        p < customerSuggestions.length - 1 ? p + 1 : 0,
+                      );
+                    } else if (e.key === "ArrowUp") {
+                      e.preventDefault();
+                      setHighlightedIdx((p) =>
+                        p > 0 ? p - 1 : customerSuggestions.length - 1,
+                      );
+                    } else if (e.key === "Enter" && highlightedIdx >= 0) {
+                      e.preventDefault();
+                      selectCustomer(customerSuggestions[highlightedIdx]);
+                    } else if (e.key === "Escape") {
+                      setShowDropdown(false);
+                    }
+                  }}
+                  placeholder="ابحث باسم العميل..."
+                  className=""
+                />
+                {showDropdown && customerSuggestions.length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-background border rounded-md shadow-lg max-h-48 overflow-auto">
+                    {customerSuggestions.map((c, i) => (
+                      <div
+                        key={c.id}
+                        className={`px-3 py-2 cursor-pointer text-sm ${
+                          i === highlightedIdx
+                            ? "bg-blue-100 dark:bg-blue-900"
+                            : "hover:bg-muted"
+                        }`}
+                        onMouseDown={() => selectCustomer(c)}
+                      >
+                        <span className="font-medium">{c.name}</span>
+                        {c.phone && (
+                          <span className="text-muted-foreground mr-2">
+                            ({c.phone})
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Input
+                value={sourceName}
+                onChange={(e) => setSourceName(e.target.value)}
+                placeholder="اسم القيد"
+                className="mt-2"
+              />
+            )}
           </div>
 
           {/* نوع القيد */}

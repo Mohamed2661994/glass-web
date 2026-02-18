@@ -310,9 +310,7 @@ export default function CustomerDebtDetailsPage() {
                           }
                           className="text-xs"
                         >
-                          {inv.record_type === "invoice"
-                            ? "فاتورة"
-                            : "سند دفع"}
+                          {inv.record_type === "invoice" ? "فاتورة" : "سند دفع"}
                         </Badge>
                         <span className="font-bold text-sm">
                           #{inv.invoice_id}
@@ -330,9 +328,7 @@ export default function CustomerDebtDetailsPage() {
                             size="icon"
                             className="h-7 w-7"
                             title="عرض الفاتورة"
-                            onClick={() =>
-                              openInvoicePreview(inv.invoice_id)
-                            }
+                            onClick={() => openInvoicePreview(inv.invoice_id)}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>

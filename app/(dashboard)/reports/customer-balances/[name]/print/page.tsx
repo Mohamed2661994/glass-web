@@ -226,7 +226,8 @@ function CustomerStatementPrintInner() {
                 fontSize: 18,
                 fontWeight: "bold",
                 marginTop: 8,
-                color: netDebt > 0 ? "#dc2626" : netDebt < 0 ? "#16a34a" : "#000",
+                color:
+                  netDebt > 0 ? "#dc2626" : netDebt < 0 ? "#16a34a" : "#000",
               }}
             >
               صافي المديونية: {formatMoney(netDebt)}
