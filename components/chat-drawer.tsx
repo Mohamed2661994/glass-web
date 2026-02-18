@@ -890,7 +890,8 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                       className={cn(
                         "flex items-end gap-1 group transition-colors duration-500",
                         isMine ? "justify-end" : "justify-start",
-                        highlightedMsgId === msg.id && "bg-blue-500/20 rounded-lg",
+                        highlightedMsgId === msg.id &&
+                          "bg-blue-500/20 rounded-lg",
                       )}
                     >
                       {/* Reply button - left side for my messages */}
@@ -925,11 +926,19 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                                 : "bg-background/50 border-r-blue-500",
                             )}
                             onClick={() => {
-                              const el = document.querySelector(`[data-msg-id="${msg.reply_to_id}"]`);
+                              const el = document.querySelector(
+                                `[data-msg-id="${msg.reply_to_id}"]`,
+                              );
                               if (el) {
-                                el.scrollIntoView({ behavior: "smooth", block: "center" });
+                                el.scrollIntoView({
+                                  behavior: "smooth",
+                                  block: "center",
+                                });
                                 setHighlightedMsgId(msg.reply_to_id!);
-                                setTimeout(() => setHighlightedMsgId(null), 1500);
+                                setTimeout(
+                                  () => setHighlightedMsgId(null),
+                                  1500,
+                                );
                               }
                             }}
                           >

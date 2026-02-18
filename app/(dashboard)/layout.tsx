@@ -14,6 +14,7 @@ import { ProductFormDialog } from "@/components/product-form-dialog";
 import { ProductLookupModal } from "@/components/product-lookup-modal";
 import { ChatDrawer } from "@/components/chat-drawer";
 import { PullToRefresh } from "@/components/pull-to-refresh";
+import api, { API_URL } from "@/services/api";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -65,6 +66,58 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       router.push("/login");
     }
   }, [router]);
+
+  // 🔔 Push notification subscription
+  useEffect(() => {
+    if (!user?.id) return;
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+
+    const subscribeToPush = async () => {
+      try {
+        // Request notification permission
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") return;
+
+        const registration = await navigator.serviceWorker.ready;
+
+        // Get VAPID public key from backend
+        const { data: vapidData } = await api.get("/push/vapid-key");
+        const publicKey = vapidData.publicKey;
+
+        // Convert VAPID key to Uint8Array
+        const urlBase64ToUint8Array = (base64String: string) => {
+          const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+          const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+          const rawData = window.atob(base64);
+          const outputArray = new Uint8Array(rawData.length);
+          for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+          }
+          return outputArray;
+        };
+
+        // Check for existing subscription
+        let subscription = await registration.pushManager.getSubscription();
+        if (!subscription) {
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(publicKey),
+          });
+        }
+
+        // Send subscription to backend
+        const subJSON = subscription.toJSON();
+        await api.post("/push/subscribe", {
+          endpoint: subJSON.endpoint,
+          keys: subJSON.keys,
+        });
+      } catch (err) {
+        console.error("Push subscription error:", err);
+      }
+    };
+
+    subscribeToPush();
+  }, [user?.id]);
 
   const branchName =
     user?.branch_id === 1

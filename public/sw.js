@@ -47,6 +47,51 @@ self.addEventListener("activate", (event) => {
 });
 
 /* =========================================================
+   Push — handle incoming push notifications
+   ========================================================= */
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+
+  try {
+    const data = event.data.json();
+    const title = data.title || "Glass System";
+    const options = {
+      body: data.body || "",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-96.png",
+      vibrate: [200, 100, 200],
+      dir: "rtl",
+      lang: "ar",
+      tag: "chat-" + (data.data?.conversation_id || "default"),
+      renotify: true,
+      data: data.data || {},
+    };
+    event.waitUntil(self.registration.showNotification(title, options));
+  } catch (e) {
+    console.error("Push parse error:", e);
+  }
+});
+
+/* =========================================================
+   Notification click — open the app
+   ========================================================= */
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  const url = event.notification.data?.url || "/";
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
+      for (const client of windowClients) {
+        if (client.url.includes(self.location.origin) && "focus" in client) {
+          return client.focus();
+        }
+      }
+      return clients.openWindow(url);
+    }),
+  );
+});
+
+/* =========================================================
    Helpers
    ========================================================= */
 async function trimCache(cacheName, maxEntries) {
