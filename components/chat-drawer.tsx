@@ -390,7 +390,8 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
 
         // Show WhatsApp-style notification banner if not viewing this conversation
         if (!isViewingThisConv) {
-          const senderName = message.full_name || message.username || "رسالة جديدة";
+          const senderName =
+            message.full_name || message.username || "رسالة جديدة";
           const preview =
             message.type === "image"
               ? "📷 صورة"
@@ -407,7 +408,9 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                   toast.dismiss(t);
                   // Open chat drawer and navigate to this conversation
                   setOpen(true);
-                  const conv = conversationsRef.current.find((c) => c.id === conversation_id);
+                  const conv = conversationsRef.current.find(
+                    (c) => c.id === conversation_id,
+                  );
                   if (conv) {
                     openConvRef.current(conv);
                   }
@@ -419,7 +422,10 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold truncate">{senderName}</p>
-                  <p className="text-xs text-muted-foreground truncate mt-0.5" dir="auto">
+                  <p
+                    className="text-xs text-muted-foreground truncate mt-0.5"
+                    dir="auto"
+                  >
                     {preview}
                   </p>
                 </div>
