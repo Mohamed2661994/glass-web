@@ -50,11 +50,11 @@ function BarcodePrintPage() {
       document.querySelectorAll(".barcode-svg").forEach((el) => {
         JsBarcode(el, product.barcode, {
           format: "CODE128",
-          width: 1.2,
-          height: 30,
+          width: 1.5,
+          height: 40,
           displayValue: true,
-          fontSize: 10,
-          margin: 1,
+          fontSize: 13,
+          margin: 2,
         });
       });
 
@@ -126,7 +126,7 @@ body {
 
 .barcode-item {
   width: 25%;
-  height: 22mm;
+  height: 30mm;
   border: 1px dashed #eee;
   display: flex;
   flex-direction: column;
@@ -138,7 +138,7 @@ body {
 }
 
 .barcode-item .product-name {
-  font-size: 8px;
+  font-size: 12px;
   font-weight: bold;
   margin-bottom: 2px;
   overflow: hidden;
@@ -148,7 +148,7 @@ body {
 }
 
 .barcode-item .product-price {
-  font-size: 9px;
+  font-size: 12px;
   font-weight: bold;
   margin-top: 1px;
 }
