@@ -720,6 +720,7 @@ export default function OpeningStockPage() {
                         <TableHead className="text-center w-12">#</TableHead>
                         <TableHead className="text-center">كود الصنف</TableHead>
                         <TableHead className="text-center">اسم الصنف</TableHead>
+                        <TableHead className="text-center">الكمية</TableHead>
                         <TableHead className="text-center">الحالة</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -730,11 +731,17 @@ export default function OpeningStockPage() {
                           const isMatched = matchedCodes.has(
                             item.product_code?.trim(),
                           );
+                          const qty = parseFloat(item.quantity) || 0;
+                          const isNegative = qty < 0;
                           return (
                             <TableRow
                               key={i}
                               className={
-                                isMatched ? "" : "bg-red-50 dark:bg-red-950/20"
+                                !isMatched
+                                  ? "bg-red-50 dark:bg-red-950/20"
+                                  : isNegative
+                                    ? "bg-yellow-50 dark:bg-yellow-950/20"
+                                    : ""
                               }
                             >
                               <TableCell className="text-center">
@@ -745,6 +752,17 @@ export default function OpeningStockPage() {
                               </TableCell>
                               <TableCell className="text-center">
                                 {item.product_name || "—"}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <span className={isNegative ? "text-red-600 font-bold" : ""}>
+                                  {item.quantity || "—"}
+                                </span>
+                                {isNegative && (
+                                  <Badge variant="outline" className="mr-1 text-yellow-700 border-yellow-400 dark:text-yellow-400 text-[10px] px-1">
+                                    <AlertTriangle className="h-3 w-3 ml-0.5" />
+                                    سالب
+                                  </Badge>
+                                )}
                               </TableCell>
                               <TableCell className="text-center">
                                 {isMatched ? (
@@ -811,6 +829,43 @@ export default function OpeningStockPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Negative quantity warning */}
+                {(() => {
+                  const negativeItems = getMappedItems().filter(
+                    (item) => (parseFloat(item.quantity) || 0) < 0,
+                  );
+                  if (negativeItems.length === 0) return null;
+                  return (
+                    <div className="mt-4 p-4 rounded-lg border border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-800">
+                      <div className="flex items-center gap-2 mb-2">
+                        <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                        <span className="font-semibold text-yellow-700 dark:text-yellow-400">
+                          ⚠️ {negativeItems.length} صنف بكمية سالبة — سيتم إضافتهم مع تحذير
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2 max-h-[150px] overflow-auto">
+                        {negativeItems.slice(0, 30).map((item, i) => (
+                          <Badge
+                            key={i}
+                            variant="outline"
+                            className="font-mono text-sm py-1 px-2 border-yellow-400 text-yellow-700 dark:text-yellow-400"
+                          >
+                            {item.product_code}
+                            {item.product_name && (
+                              <span className="font-sans mr-1">
+                                ({item.product_name})
+                              </span>
+                            )}
+                            <span className="font-bold text-red-600 mr-1">
+                              الكمية: {item.quantity}
+                            </span>
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </>
             )}
 
@@ -897,29 +952,43 @@ export default function OpeningStockPage() {
                 <TableBody>
                   {getMappedItems()
                     .slice(0, 50)
-                    .map((item, i) => (
-                      <TableRow key={i}>
-                        <TableCell className="text-center">{i + 1}</TableCell>
-                        <TableCell className="text-center font-mono text-xs">
-                          {item.product_code || "—"}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {item.product_name || "—"}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {item.quantity || "—"}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {item.price || "—"}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {item.unit || "—"}
-                        </TableCell>
-                        <TableCell className="text-center font-medium">
-                          {parseFloat(item.total).toLocaleString("ar-EG")}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    .map((item, i) => {
+                      const qty = parseFloat(item.quantity) || 0;
+                      const isNegative = qty < 0;
+                      return (
+                        <TableRow
+                          key={i}
+                          className={isNegative ? "bg-yellow-50 dark:bg-yellow-950/20" : ""}
+                        >
+                          <TableCell className="text-center">{i + 1}</TableCell>
+                          <TableCell className="text-center font-mono text-xs">
+                            {item.product_code || "—"}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {item.product_name || "—"}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className={isNegative ? "text-red-600 font-bold" : ""}>
+                              {item.quantity || "—"}
+                            </span>
+                            {isNegative && (
+                              <AlertTriangle className="h-3.5 w-3.5 text-yellow-500 inline mr-1" />
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {item.price || "—"}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {item.unit || "—"}
+                          </TableCell>
+                          <TableCell className="text-center font-medium">
+                            <span className={isNegative ? "text-red-600" : ""}>
+                              {parseFloat(item.total).toLocaleString("ar-EG")}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                 </TableBody>
               </Table>
             </div>
@@ -928,6 +997,25 @@ export default function OpeningStockPage() {
                 يعرض أول 50 صف من {excelData.length}
               </p>
             )}
+
+            {/* Negative quantity warning in preview */}
+            {(() => {
+              const negativeItems = getMappedItems().filter(
+                (item) => (parseFloat(item.quantity) || 0) < 0,
+              );
+              if (negativeItems.length === 0) return null;
+              return (
+                <div className="mt-4 p-4 rounded-lg border border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-800">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                    <span className="font-semibold text-yellow-700 dark:text-yellow-400">
+                      ⚠️ تنبيه: {negativeItems.length} صنف بكمية سالبة — سيتم
+                      إضافتهم مع الكميات السالبة
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="flex items-center gap-3 mt-6 justify-between">
               <Button

@@ -377,9 +377,7 @@ export default function BulkDeactivatePage() {
 
           return (
             <div key={s.key} className="flex items-center gap-2">
-              {i > 0 && (
-                <ArrowLeft className="h-4 w-4 text-muted-foreground" />
-              )}
+              {i > 0 && <ArrowLeft className="h-4 w-4 text-muted-foreground" />}
               <div
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                   isActive
@@ -493,9 +491,7 @@ export default function BulkDeactivatePage() {
                 رجوع
               </Button>
               <div className="flex items-center gap-2">
-                <Badge variant="outline">
-                  صف العناوين: {headerRowIdx + 1}
-                </Badge>
+                <Badge variant="outline">صف العناوين: {headerRowIdx + 1}</Badge>
                 <Button onClick={confirmHeaderRow}>
                   تأكيد والمتابعة
                   <ArrowLeft className="h-4 w-4 mr-1" />
@@ -600,9 +596,7 @@ export default function BulkDeactivatePage() {
             {validating && (
               <div className="flex flex-col items-center justify-center py-12 gap-3">
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                <p className="text-lg font-medium">
-                  جاري التحقق من الأكواد...
-                </p>
+                <p className="text-lg font-medium">جاري التحقق من الأكواد...</p>
               </div>
             )}
 
@@ -613,9 +607,7 @@ export default function BulkDeactivatePage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="text-center w-12">#</TableHead>
-                        <TableHead className="text-center">
-                          كود الصنف
-                        </TableHead>
+                        <TableHead className="text-center">كود الصنف</TableHead>
                         <TableHead className="text-center">
                           اسم الصنف (من الملف)
                         </TableHead>
@@ -880,9 +872,7 @@ export default function BulkDeactivatePage() {
                       <TableRow>
                         <TableHead className="text-center w-12">#</TableHead>
                         <TableHead className="text-center">الباركود</TableHead>
-                        <TableHead className="text-center">
-                          اسم الصنف
-                        </TableHead>
+                        <TableHead className="text-center">اسم الصنف</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
