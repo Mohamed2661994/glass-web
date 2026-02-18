@@ -91,6 +91,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   const [userSearch, setUserSearch] = useState("");
   const [typing, setTyping] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [highlightedMsgId, setHighlightedMsgId] = useState<number | null>(null);
   const [popup, setPopup] = useState<{
     senderName: string;
     preview: string;
@@ -885,9 +886,11 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                   return (
                     <div
                       key={msg.id}
+                      data-msg-id={msg.id}
                       className={cn(
-                        "flex items-end gap-1 group",
+                        "flex items-end gap-1 group transition-colors duration-500",
                         isMine ? "justify-end" : "justify-start",
+                        highlightedMsgId === msg.id && "bg-blue-500/20 rounded-lg",
                       )}
                     >
                       {/* Reply button - left side for my messages */}
@@ -916,11 +919,19 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                         {msg.reply_to_id && (
                           <div
                             className={cn(
-                              "rounded-lg px-3 py-1.5 mb-2 border-r-2 text-xs",
+                              "rounded-lg px-3 py-1.5 mb-2 border-r-2 text-xs cursor-pointer hover:opacity-80",
                               isMine
                                 ? "bg-blue-700/50 border-r-blue-300"
                                 : "bg-background/50 border-r-blue-500",
                             )}
+                            onClick={() => {
+                              const el = document.querySelector(`[data-msg-id="${msg.reply_to_id}"]`);
+                              if (el) {
+                                el.scrollIntoView({ behavior: "smooth", block: "center" });
+                                setHighlightedMsgId(msg.reply_to_id!);
+                                setTimeout(() => setHighlightedMsgId(null), 1500);
+                              }
+                            }}
                           >
                             <span
                               className={cn(
