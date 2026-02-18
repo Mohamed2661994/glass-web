@@ -31,6 +31,8 @@ import { cn } from "@/lib/utils";
 import api, { API_URL } from "@/services/api";
 import { io, Socket } from "socket.io-client";
 import { toast } from "sonner";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
+import type { ChatPrefs } from "@/hooks/use-user-preferences";
 
 /* ========== Types ========== */
 interface ChatUser {
@@ -79,6 +81,12 @@ interface ChatDrawerProps {
 
 /* ========== Component ========== */
 export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
+  const { prefs } = useUserPreferences();
+  const chatPrefs: ChatPrefs = (prefs.chat as ChatPrefs) || {};
+  const myColor = chatPrefs.myBubbleColor || "#2563eb";
+  const otherColor = chatPrefs.otherBubbleColor || "";
+  const soundFile = chatPrefs.notificationSound || "beepmasage.mp3";
+
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"list" | "chat" | "new">("list");
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -132,15 +140,38 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   const audioBufferRef = useRef<AudioBuffer | null>(null);
   const audioReadyRef = useRef(false);
   const bufferLoadingRef = useRef(false);
+  const soundFileRef = useRef(soundFile);
+
+  // Reload buffer when sound file changes
+  useEffect(() => {
+    if (soundFileRef.current !== soundFile) {
+      soundFileRef.current = soundFile;
+      audioBufferRef.current = null;
+      bufferLoadingRef.current = false;
+      if (soundFile !== "none" && audioCtxRef.current) {
+        // reload
+        (async () => {
+          try {
+            bufferLoadingRef.current = true;
+            const res = await fetch(`/sounds/${soundFile}`);
+            if (!res.ok) throw new Error("fetch " + res.status);
+            const ab = await res.arrayBuffer();
+            audioBufferRef.current = await audioCtxRef.current!.decodeAudioData(ab);
+          } catch { bufferLoadingRef.current = false; }
+        })();
+      }
+    }
+  }, [soundFile]);
 
   // Load the mp3 into the AudioContext buffer
   const loadBuffer = useCallback(async () => {
     if (audioBufferRef.current || bufferLoadingRef.current) return;
+    if (soundFile === "none") return;
     const ctx = audioCtxRef.current;
     if (!ctx) return;
     bufferLoadingRef.current = true;
     try {
-      const res = await fetch("/sounds/beepmasage.mp3");
+      const res = await fetch(`/sounds/${soundFile}`);
       if (!res.ok) throw new Error("fetch " + res.status);
       const ab = await res.arrayBuffer();
       audioBufferRef.current = await ctx.decodeAudioData(ab);
@@ -149,7 +180,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
       console.warn("[sound] buffer load error:", e);
       bufferLoadingRef.current = false;
     }
-  }, []);
+  }, [soundFile]);
 
   useEffect(() => {
     // On first user gesture: CREATE AudioContext + resume + silent oscillator + load buffer
@@ -211,9 +242,10 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
         document.removeEventListener(evt, unlock, opts as EventListenerOptions),
       );
     };
-  }, [loadBuffer]);
+  }, [soundFile]);
 
   const playSound = useCallback(() => {
+    if (soundFile === "none") return;
     console.log(
       "[sound] playSound — ready:",
       audioReadyRef.current,
@@ -250,7 +282,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
     // Strategy 2: HTML Audio fallback — only if WebAudio didn't play
     if (!played) {
       try {
-        const audio = new Audio("/sounds/beepmasage.mp3");
+        const audio = new Audio(`/sounds/${soundFile}`);
         audio.volume = 0.7;
         const p = audio.play();
         if (p) p.catch(() => {});
@@ -262,7 +294,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
     try {
       navigator?.vibrate?.(200);
     } catch {}
-  }, []);
+  }, [soundFile]);
 
   /* ---------- scroll to bottom ---------- */
   const scrollToBottom = useCallback((instant?: boolean) => {
@@ -632,7 +664,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
           >
             <MessageCircle className="h-5 w-5" />
             {totalUnread > 0 && (
-              <Badge className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-[10px] bg-blue-600 text-white border-0">
+              <Badge className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-[10px] text-white border-0" style={{ backgroundColor: myColor }}>
                 {totalUnread > 99 ? "99+" : totalUnread}
               </Badge>
             )}
@@ -654,7 +686,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
             }}
             className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 w-64 cursor-pointer rounded-xl border bg-background p-3 shadow-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-200"
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white text-xs font-bold" style={{ backgroundColor: myColor }}>
               {popup.senderName.charAt(0)}
             </div>
             <div className="flex-1 min-w-0">
@@ -805,7 +837,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                             : "لا توجد رسائل"}
                         </p>
                         {conv.unread_count > 0 && (
-                          <Badge className="h-5 min-w-5 px-1 text-[10px] bg-blue-600 text-white border-0 shrink-0">
+                          <Badge className="h-5 min-w-5 px-1 text-[10px] text-white border-0 shrink-0" style={{ backgroundColor: myColor }}>
                             {conv.unread_count}
                           </Badge>
                         )}
@@ -912,9 +944,10 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                           "max-w-[80%] rounded-2xl text-sm overflow-hidden",
                           msg.type === "image" ? "p-1" : "px-4 py-2",
                           isMine
-                            ? "bg-blue-600 text-white rounded-br-sm"
-                            : "bg-muted rounded-bl-sm",
+                            ? "text-white rounded-br-sm"
+                            : otherColor ? "rounded-bl-sm" : "bg-muted rounded-bl-sm",
                         )}
+                        style={isMine ? { backgroundColor: myColor } : otherColor ? { backgroundColor: otherColor } : undefined}
                       >
                         {/* Quoted reply */}
                         {msg.reply_to_id && (
@@ -922,9 +955,10 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                             className={cn(
                               "rounded-lg px-3 py-1.5 mb-2 border-r-2 text-xs cursor-pointer hover:opacity-80",
                               isMine
-                                ? "bg-blue-700/50 border-r-blue-300"
-                                : "bg-background/50 border-r-blue-500",
+                                ? "border-r-white/40"
+                                : "border-r-blue-500",
                             )}
+                            style={isMine ? { backgroundColor: "rgba(0,0,0,0.15)" } : { backgroundColor: "rgba(0,0,0,0.05)" }}
                             onClick={() => {
                               const el = document.querySelector(
                                 `[data-msg-id="${msg.reply_to_id}"]`,
@@ -945,7 +979,9 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                             <span
                               className={cn(
                                 "font-semibold block text-[11px]",
-                                isMine ? "text-blue-200" : "text-blue-600",
+                                isMine
+                                  ? "text-white/80"
+                                  : "text-blue-600",
                               )}
                             >
                               {msg.reply_sender_id === userId
@@ -956,7 +992,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                               className={cn(
                                 "line-clamp-2",
                                 isMine
-                                  ? "text-blue-100/80"
+                                  ? "text-white/60"
                                   : "text-muted-foreground",
                               )}
                             >
@@ -1016,7 +1052,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                             className={cn(
                               "text-[10px]",
                               isMine
-                                ? "text-blue-200"
+                                ? "text-white/60"
                                 : "text-muted-foreground",
                             )}
                           >
@@ -1024,9 +1060,9 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                           </span>
                           {isMine &&
                             (msg.is_read ? (
-                              <CheckCheck className="h-3 w-3 text-blue-200" />
+                              <CheckCheck className="h-3 w-3 text-white/60" />
                             ) : (
-                              <Check className="h-3 w-3 text-blue-300" />
+                              <Check className="h-3 w-3 text-white/70" />
                             ))}
                         </div>
                       </div>
@@ -1116,7 +1152,8 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                 size="icon"
                 disabled={!newMsg.trim() || sending}
                 onClick={handleSend}
-                className="shrink-0 bg-blue-600 hover:bg-blue-700"
+                className="shrink-0 text-white hover:opacity-90"
+                style={{ backgroundColor: myColor }}
               >
                 <Send className="h-4 w-4" />
               </Button>

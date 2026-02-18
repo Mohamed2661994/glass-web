@@ -26,11 +26,18 @@ export interface SidebarPref {
   openGroups: Record<string, boolean>;
 }
 
+export interface ChatPrefs {
+  myBubbleColor?: string;     // hex color for my messages
+  otherBubbleColor?: string;  // hex color for other's messages
+  notificationSound?: string; // sound file name
+}
+
 export interface UserPreferences {
   dashboard_widgets?: DashboardWidgetPref[];
   quick_links?: QuickLinkPref[];
   sidebar?: SidebarPref;
   theme?: string;
+  chat?: ChatPrefs;
   /** Any future per-user preferences can be added here */
   [key: string]: unknown;
 }

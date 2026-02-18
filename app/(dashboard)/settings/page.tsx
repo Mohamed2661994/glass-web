@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useAuth } from "@/app/context/auth-context";
 import api from "@/services/api";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
+import type { ChatPrefs } from "@/hooks/use-user-preferences";
 import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,6 +36,9 @@ import {
   ExternalLink,
   Database,
   Loader2,
+  MessageCircle,
+  Volume2,
+  Check,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -95,6 +100,17 @@ function SectionCard({
 /* ========== Component ========== */
 export default function SettingsPage() {
   const { user, logout } = useAuth();
+  const { prefs, setPrefs } = useUserPreferences();
+
+  /* ---- Chat prefs ---- */
+  const chatPrefs: ChatPrefs = (prefs.chat as ChatPrefs) || {};
+  const setChatPrefs = (partial: Partial<ChatPrefs>) => {
+    setPrefs((prev) => ({
+      ...prev,
+      chat: { ...(prev.chat || {}), ...partial },
+    }));
+  };
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
   /* ---- Print settings state ---- */
   const [autoPrint, setAutoPrint] = useState(true);
@@ -478,6 +494,191 @@ export default function SettingsPage() {
                   saveSettings({ notifTransfers: v });
                 }}
               />
+            </div>
+          </div>
+        </SectionCard>
+
+        {/* ═══════════════ 5.5 Chat Settings ═══════════════ */}
+        <SectionCard
+          icon={MessageCircle}
+          title="إعدادات المحادثة"
+          description="تخصيص ألوان الشات ونغمة الإشعارات"
+          isOpen={openSections["chat"] ?? false}
+          onToggle={() => toggleSection("chat")}
+        >
+          <div className="space-y-5">
+            {/* My bubble color */}
+            <div>
+              <Label className="text-sm font-medium mb-2 block">لون رسائلي</Label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { color: "#2563eb", label: "أزرق" },
+                  { color: "#16a34a", label: "أخضر" },
+                  { color: "#9333ea", label: "بنفسجي" },
+                  { color: "#e11d48", label: "أحمر" },
+                  { color: "#ea580c", label: "برتقالي" },
+                  { color: "#0891b2", label: "تركواز" },
+                  { color: "#4f46e5", label: "نيلي" },
+                  { color: "#be185d", label: "وردي" },
+                ].map((c) => (
+                  <button
+                    key={c.color}
+                    onClick={() => setChatPrefs({ myBubbleColor: c.color })}
+                    className="relative w-9 h-9 rounded-full border-2 transition-all"
+                    style={{
+                      backgroundColor: c.color,
+                      borderColor: (chatPrefs.myBubbleColor || "#2563eb") === c.color ? "white" : "transparent",
+                      boxShadow: (chatPrefs.myBubbleColor || "#2563eb") === c.color ? `0 0 0 2px ${c.color}` : "none",
+                    }}
+                    title={c.label}
+                  >
+                    {(chatPrefs.myBubbleColor || "#2563eb") === c.color && (
+                      <Check className="h-4 w-4 text-white absolute inset-0 m-auto" />
+                    )}
+                  </button>
+                ))}
+                <label className="relative">
+                  <input
+                    type="color"
+                    value={chatPrefs.myBubbleColor || "#2563eb"}
+                    onChange={(e) => setChatPrefs({ myBubbleColor: e.target.value })}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <div
+                    className="w-9 h-9 rounded-full border-2 border-dashed border-muted-foreground/40 flex items-center justify-center text-muted-foreground text-xs cursor-pointer hover:border-muted-foreground transition-colors"
+                    title="لون مخصص"
+                  >
+                    +
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Other bubble color */}
+            <div>
+              <Label className="text-sm font-medium mb-2 block">لون رسائل الطرف الآخر</Label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { color: "#e5e7eb", label: "رمادي" },
+                  { color: "#dbeafe", label: "أزرق فاتح" },
+                  { color: "#dcfce7", label: "أخضر فاتح" },
+                  { color: "#fef3c7", label: "أصفر فاتح" },
+                  { color: "#fce7f3", label: "وردي فاتح" },
+                  { color: "#e0e7ff", label: "بنفسجي فاتح" },
+                  { color: "#f3e8ff", label: "لافندر" },
+                  { color: "#ccfbf1", label: "تركواز فاتح" },
+                ].map((c) => (
+                  <button
+                    key={c.color}
+                    onClick={() => setChatPrefs({ otherBubbleColor: c.color })}
+                    className="relative w-9 h-9 rounded-full border-2 transition-all"
+                    style={{
+                      backgroundColor: c.color,
+                      borderColor: (chatPrefs.otherBubbleColor || "#e5e7eb") === c.color ? "#6b7280" : "transparent",
+                      boxShadow: (chatPrefs.otherBubbleColor || "#e5e7eb") === c.color ? `0 0 0 2px ${c.color === '#e5e7eb' ? '#6b7280' : c.color}` : "none",
+                    }}
+                    title={c.label}
+                  >
+                    {(chatPrefs.otherBubbleColor || "#e5e7eb") === c.color && (
+                      <Check className="h-4 w-4 text-gray-600 absolute inset-0 m-auto" />
+                    )}
+                  </button>
+                ))}
+                <label className="relative">
+                  <input
+                    type="color"
+                    value={chatPrefs.otherBubbleColor || "#e5e7eb"}
+                    onChange={(e) => setChatPrefs({ otherBubbleColor: e.target.value })}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <div
+                    className="w-9 h-9 rounded-full border-2 border-dashed border-muted-foreground/40 flex items-center justify-center text-muted-foreground text-xs cursor-pointer hover:border-muted-foreground transition-colors"
+                    title="لون مخصص"
+                  >
+                    +
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Chat preview */}
+            <div>
+              <Label className="text-sm font-medium mb-2 block">معاينة</Label>
+              <div className="rounded-xl bg-background border p-4 space-y-2">
+                <div className="flex justify-end">
+                  <div
+                    className="max-w-[70%] rounded-2xl rounded-br-sm px-4 py-2 text-sm text-white"
+                    style={{ backgroundColor: chatPrefs.myBubbleColor || "#2563eb" }}
+                  >
+                    أهلا بيك 👋
+                  </div>
+                </div>
+                <div className="flex justify-start">
+                  <div
+                    className="max-w-[70%] rounded-2xl rounded-bl-sm px-4 py-2 text-sm"
+                    style={{ backgroundColor: chatPrefs.otherBubbleColor || "#e5e7eb" }}
+                  >
+                    أهلاً! إزايك 😊
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <div
+                    className="max-w-[70%] rounded-2xl rounded-br-sm px-4 py-2 text-sm text-white"
+                    style={{ backgroundColor: chatPrefs.myBubbleColor || "#2563eb" }}
+                  >
+                    الحمد لله تمام ❤️
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Notification sound */}
+            <div>
+              <Label className="text-sm font-medium mb-2 block">نغمة إشعار الرسائل</Label>
+              <div className="space-y-2">
+                {[
+                  { file: "beepmasage.mp3", label: "الافتراضية" },
+                  { file: "beep-7.mp3", label: "بيب قصير" },
+                  { file: "notification.wav", label: "نغمة إشعار" },
+                  { file: "none", label: "بدون صوت" },
+                ].map((s) => (
+                  <button
+                    key={s.file}
+                    onClick={() => {
+                      setChatPrefs({ notificationSound: s.file });
+                      if (s.file !== "none") {
+                        if (previewAudioRef.current) {
+                          previewAudioRef.current.pause();
+                        }
+                        const audio = new Audio(`/sounds/${s.file}`);
+                        audio.volume = 0.5;
+                        audio.play().catch(() => {});
+                        previewAudioRef.current = audio;
+                      }
+                    }}
+                    className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors border ${
+                      (chatPrefs.notificationSound || "beepmasage.mp3") === s.file
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-muted hover:bg-muted/50"
+                    }`}
+                  >
+                    <Volume2 className={`h-4 w-4 ${
+                      (chatPrefs.notificationSound || "beepmasage.mp3") === s.file
+                        ? "text-primary" : "text-muted-foreground"
+                    }`} />
+                    <span className="flex-1 text-right">{s.label}</span>
+                    {(chatPrefs.notificationSound || "beepmasage.mp3") === s.file && (
+                      <Check className="h-4 w-4 text-primary" />
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </SectionCard>

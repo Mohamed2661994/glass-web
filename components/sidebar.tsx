@@ -401,24 +401,8 @@ export function Sidebar({
         })}
       </nav>
 
-      {/* Logout + Settings at bottom */}
+      {/* Settings + Logout at bottom */}
       <div className="p-2 border-t space-y-1">
-        <button
-          onClick={() => {
-            onNavigate?.();
-            logout();
-          }}
-          className={cn(
-            "w-full flex items-center gap-3 rounded-xl px-2 py-2 text-sm transition-colors",
-            "text-muted-foreground hover:bg-destructive/10 hover:text-destructive",
-          )}
-        >
-          <div className="w-8 flex justify-center">
-            <LogOut className="h-5 w-5" />
-          </div>
-          {open && <span className="mr-2 whitespace-nowrap">تسجيل خروج</span>}
-        </button>
-
         <Link
           href="/settings"
           onClick={onNavigate}
@@ -434,6 +418,22 @@ export function Sidebar({
           </div>
           {open && <span className="mr-2 whitespace-nowrap">الإعدادات</span>}
         </Link>
+
+        <button
+          onClick={() => {
+            onNavigate?.();
+            logout();
+          }}
+          className={cn(
+            "w-full flex items-center gap-3 rounded-xl px-2 py-2 text-sm transition-colors",
+            "text-muted-foreground hover:bg-destructive/10 hover:text-destructive",
+          )}
+        >
+          <div className="w-8 flex justify-center">
+            <LogOut className="h-5 w-5" />
+          </div>
+          {open && <span className="mr-2 whitespace-nowrap">تسجيل خروج</span>}
+        </button>
       </div>
     </aside>
   );
