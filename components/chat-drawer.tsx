@@ -84,11 +84,13 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   // Helper: get or create AudioContext
   const getAudioCtx = useCallback(() => {
     if (!audioCtxRef.current) {
-      const Ctx =
-        window.AudioContext || (window as any).webkitAudioContext;
+      const Ctx = window.AudioContext || (window as any).webkitAudioContext;
       if (Ctx) {
         audioCtxRef.current = new Ctx();
-        console.log("[sound] AudioContext created, state:", audioCtxRef.current.state);
+        console.log(
+          "[sound] AudioContext created, state:",
+          audioCtxRef.current.state,
+        );
       }
     }
     return audioCtxRef.current;
@@ -97,7 +99,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   // Load buffer (mp3 for max compat, fallback to wav)
   const loadBuffer = useCallback(async (ctx: AudioContext) => {
     if (audioBufferRef.current) return;
-    for (const src of ["/sounds/beep-7.mp3", "/sounds/beepmasage.wav"]) {
+    for (const src of ["/sounds/beepmasage.mp3", "/sounds/beepmasage.wav"]) {
       try {
         const res = await fetch(src);
         if (!res.ok) continue;
@@ -113,7 +115,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
 
   useEffect(() => {
     // Pre-create fallback HTML Audio element
-    const fa = new Audio("/sounds/beep-7.mp3");
+    const fa = new Audio("/sounds/beepmasage.mp3");
     fa.volume = 0.5;
     fa.preload = "auto";
     fallbackAudioRef.current = fa;
@@ -173,7 +175,10 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   }, [getAudioCtx, loadBuffer]);
 
   const playSound = useCallback(() => {
-    console.log("[sound] playSound called, unlocked:", audioUnlockedRef.current);
+    console.log(
+      "[sound] playSound called, unlocked:",
+      audioUnlockedRef.current,
+    );
 
     // Strategy 1: Web Audio API (preferred — works from non-gesture contexts once unlocked)
     try {
@@ -190,7 +195,12 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
         console.log("[sound] Played via Web Audio API");
         return;
       }
-      console.log("[sound] Web Audio not ready — ctx state:", ctx?.state, "buffer:", !!buffer);
+      console.log(
+        "[sound] Web Audio not ready — ctx state:",
+        ctx?.state,
+        "buffer:",
+        !!buffer,
+      );
     } catch (e) {
       console.warn("[sound] Web Audio play error:", e);
     }
@@ -201,7 +211,10 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
       if (a) {
         a.currentTime = 0;
         const p = a.play();
-        if (p) p.catch((e: unknown) => console.warn("[sound] HTML Audio play error:", e));
+        if (p)
+          p.catch((e: unknown) =>
+            console.warn("[sound] HTML Audio play error:", e),
+          );
         console.log("[sound] Played via HTML Audio fallback");
         return;
       }
@@ -211,10 +224,11 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
 
     // Strategy 3: Last resort — create fresh Audio
     try {
-      const fresh = new Audio("/sounds/beep-7.mp3");
+      const fresh = new Audio("/sounds/beepmasage.mp3");
       fresh.volume = 0.5;
       const p = fresh.play();
-      if (p) p.catch((e: unknown) => console.warn("[sound] Fresh Audio error:", e));
+      if (p)
+        p.catch((e: unknown) => console.warn("[sound] Fresh Audio error:", e));
       console.log("[sound] Played via fresh Audio");
     } catch (e) {
       console.warn("[sound] All strategies failed:", e);
