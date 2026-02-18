@@ -73,6 +73,8 @@ self.addEventListener("push", (event) => {
       lang: "ar",
       tag: tag,
       renotify: true,
+      silent: false,
+      requireInteraction: true,
       data: notifData,
     };
     event.waitUntil(self.registration.showNotification(title, options));

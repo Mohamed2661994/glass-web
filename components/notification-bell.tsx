@@ -14,6 +14,8 @@ import { cn } from "@/lib/utils";
 import api, { API_URL } from "@/services/api";
 import { io, Socket } from "socket.io-client";
 import { useRouter } from "next/navigation";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
+import type { ChatPrefs } from "@/hooks/use-user-preferences";
 
 interface Notification {
   id: number;
@@ -32,15 +34,26 @@ interface NotificationBellProps {
 
 export function NotificationBell({ userId, branchId }: NotificationBellProps) {
   const router = useRouter();
+  const { prefs } = useUserPreferences();
+  const chatPrefs: ChatPrefs = (prefs.chat as ChatPrefs) || {};
+  const soundFile = chatPrefs.notificationSound || "beepmasage.mp3";
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Resolve sound URL
+  const getSoundUrl = useCallback(
+    (sf: string) =>
+      sf.startsWith("/uploads/") ? `${API_URL}${sf}` : `/sounds/${sf}`,
+    [],
+  );
+
   /* ---------- preload audio ---------- */
   useEffect(() => {
-    const audio = new Audio("/sounds/notification.wav");
+    if (soundFile === "none") return;
+    const audio = new Audio(getSoundUrl(soundFile));
     audio.volume = 0.7;
     audioRef.current = audio;
 
@@ -52,15 +65,16 @@ export function NotificationBell({ userId, branchId }: NotificationBellProps) {
     document.addEventListener("click", unlock, { once: true });
 
     return () => document.removeEventListener("click", unlock);
-  }, []);
+  }, [soundFile, getSoundUrl]);
 
   /* ---------- play sound helper ---------- */
   const playSound = useCallback(() => {
+    if (soundFile === "none") return;
     if (audioRef.current) {
       audioRef.current.currentTime = 0;
       audioRef.current.play().catch(() => {});
     }
-  }, []);
+  }, [soundFile]);
 
   /* ---------- fetch notifications ---------- */
   const fetchNotifications = useCallback(async () => {
