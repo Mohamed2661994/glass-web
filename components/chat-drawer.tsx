@@ -59,6 +59,8 @@ interface Conversation {
     content: string;
     created_at: string;
     sender_id: number;
+    type?: "text" | "image" | "file";
+    file_url?: string;
   } | null;
   unread_count: number;
 }
@@ -710,7 +712,12 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                           {conv.last_message
                             ? (conv.last_message.sender_id === userId
                                 ? "أنت: "
-                                : "") + conv.last_message.content
+                                : "") +
+                              (conv.last_message.type === "image"
+                                ? "📷 صورة"
+                                : conv.last_message.type === "file"
+                                  ? "📄 ملف"
+                                  : conv.last_message.content)
                             : "لا توجد رسائل"}
                         </p>
                         {conv.unread_count > 0 && (
@@ -930,6 +937,25 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                   setNewMsg(e.target.value);
                   handleTyping();
                 }}
+                onPaste={(e) => {
+                  const items = e.clipboardData?.items;
+                  if (!items) return;
+                  for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.startsWith("image/")) {
+                      e.preventDefault();
+                      const file = items[i].getAsFile();
+                      if (file) {
+                        const named = new File(
+                          [file],
+                          `paste_${Date.now()}.png`,
+                          { type: file.type },
+                        );
+                        handleFileUpload(named);
+                      }
+                      return;
+                    }
+                  }
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
@@ -954,11 +980,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent
-                  side="top"
-                  align="end"
-                  className="w-48 p-2"
-                >
+                <PopoverContent side="top" align="end" className="w-48 p-2">
                   <button
                     className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted transition-colors"
                     onClick={() => {
