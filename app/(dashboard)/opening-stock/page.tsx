@@ -754,11 +754,18 @@ export default function OpeningStockPage() {
                                 {item.product_name || "—"}
                               </TableCell>
                               <TableCell className="text-center">
-                                <span className={isNegative ? "text-red-600 font-bold" : ""}>
+                                <span
+                                  className={
+                                    isNegative ? "text-red-600 font-bold" : ""
+                                  }
+                                >
                                   {item.quantity || "—"}
                                 </span>
                                 {isNegative && (
-                                  <Badge variant="outline" className="mr-1 text-yellow-700 border-yellow-400 dark:text-yellow-400 text-[10px] px-1">
+                                  <Badge
+                                    variant="outline"
+                                    className="mr-1 text-yellow-700 border-yellow-400 dark:text-yellow-400 text-[10px] px-1"
+                                  >
                                     <AlertTriangle className="h-3 w-3 ml-0.5" />
                                     سالب
                                   </Badge>
@@ -841,7 +848,8 @@ export default function OpeningStockPage() {
                       <div className="flex items-center gap-2 mb-2">
                         <AlertTriangle className="h-5 w-5 text-yellow-500" />
                         <span className="font-semibold text-yellow-700 dark:text-yellow-400">
-                          ⚠️ {negativeItems.length} صنف بكمية سالبة — سيتم إضافتهم مع تحذير
+                          ⚠️ {negativeItems.length} صنف بكمية سالبة — سيتم
+                          إضافتهم مع تحذير
                         </span>
                       </div>
                       <div className="flex flex-wrap gap-2 max-h-[150px] overflow-auto">
@@ -958,7 +966,11 @@ export default function OpeningStockPage() {
                       return (
                         <TableRow
                           key={i}
-                          className={isNegative ? "bg-yellow-50 dark:bg-yellow-950/20" : ""}
+                          className={
+                            isNegative
+                              ? "bg-yellow-50 dark:bg-yellow-950/20"
+                              : ""
+                          }
                         >
                           <TableCell className="text-center">{i + 1}</TableCell>
                           <TableCell className="text-center font-mono text-xs">
@@ -968,7 +980,11 @@ export default function OpeningStockPage() {
                             {item.product_name || "—"}
                           </TableCell>
                           <TableCell className="text-center">
-                            <span className={isNegative ? "text-red-600 font-bold" : ""}>
+                            <span
+                              className={
+                                isNegative ? "text-red-600 font-bold" : ""
+                              }
+                            >
                               {item.quantity || "—"}
                             </span>
                             {isNegative && (

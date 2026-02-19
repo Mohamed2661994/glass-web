@@ -51,7 +51,13 @@ export default function NegativeStockReportPage() {
     try {
       setLoading(true);
       const res = await api.get("/reports/negative-stock");
-      setData(Array.isArray(res.data) ? res.data : []);
+      const items = Array.isArray(res.data) ? res.data : [];
+      setData(
+        items.map((item: NegativeStockItem) => ({
+          ...item,
+          current_stock: Number(item.current_stock) || 0,
+        })),
+      );
     } catch {
       setData([]);
     } finally {
@@ -185,9 +191,7 @@ export default function NegativeStockReportPage() {
                           {idx + 1}
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="font-medium">
-                            {item.product_name}
-                          </div>
+                          <div className="font-medium">{item.product_name}</div>
                           {item.manufacturer_name && (
                             <div className="text-xs text-muted-foreground">
                               {item.manufacturer_name}
