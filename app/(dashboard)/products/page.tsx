@@ -240,7 +240,10 @@ export default function ProductsPage() {
       setPage(1);
       toast.success("تم مسح جميع الأصناف بنجاح");
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.response?.data?.error || "فشل مسح الأصناف";
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        "فشل مسح الأصناف";
       toast.error(msg);
       console.error("Delete all products error:", err?.response?.data || err);
     } finally {
@@ -263,7 +266,10 @@ export default function ProductsPage() {
       });
       toast.success(`تم حذف الصنف: ${deleteTarget.name}`);
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.response?.data?.error || "فشل حذف الصنف";
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        "فشل حذف الصنف";
       toast.error(msg);
       console.error("Delete product error:", err?.response?.data || err);
     } finally {

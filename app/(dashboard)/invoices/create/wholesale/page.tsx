@@ -625,21 +625,21 @@ export default function CreateWholesaleInvoicePage() {
      ========================================================= */
 
   const filteredProducts = useMemo(() => {
-    const filtered = products
-      .filter((p) => {
-        // Only show products that have wholesale package
-        const wp = (p.wholesale_package || "").trim();
-        const hasWholesale = p.has_wholesale !== false && wp !== "" && wp !== "كرتونة 0";
-        if (!hasWholesale) return false;
-        return multiWordMatch(
-          search,
-          String(p.id),
-          p.name,
-          p.description,
-          p.barcode,
-          p.manufacturer,
-        );
-      });
+    const filtered = products.filter((p) => {
+      // Only show products that have wholesale package
+      const wp = (p.wholesale_package || "").trim();
+      const hasWholesale =
+        p.has_wholesale !== false && wp !== "" && wp !== "كرتونة 0";
+      if (!hasWholesale) return false;
+      return multiWordMatch(
+        search,
+        String(p.id),
+        p.name,
+        p.description,
+        p.barcode,
+        p.manufacturer,
+      );
+    });
 
     return filtered.sort((a, b) => {
       if (search.trim()) {

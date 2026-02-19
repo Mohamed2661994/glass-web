@@ -68,7 +68,8 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
       // For wholesale branch, only show products with wholesale package
       if (invoiceType === "wholesale") {
         const wp = (p.wholesale_package || "").trim();
-        const hasWholesale = p.has_wholesale !== false && wp !== "" && wp !== "كرتونة 0";
+        const hasWholesale =
+          p.has_wholesale !== false && wp !== "" && wp !== "كرتونة 0";
         if (!hasWholesale) return false;
       }
       return multiWordMatch(

@@ -74,7 +74,10 @@ export default function TransferDetailsPage() {
       toast.success("تم إلغاء الصنف");
       loadTransfer();
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.response?.data?.error || "فشل إلغاء الصنف";
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        "فشل إلغاء الصنف";
       toast.error(msg);
       console.error("Cancel item error:", err?.response?.data || err);
     } finally {
@@ -91,7 +94,10 @@ export default function TransferDetailsPage() {
       setShowCancelAll(false);
       loadTransfer();
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.response?.data?.error || "فشل إلغاء التحويل";
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        "فشل إلغاء التحويل";
       toast.error(msg);
       console.error("Cancel all error:", err?.response?.data || err);
     } finally {

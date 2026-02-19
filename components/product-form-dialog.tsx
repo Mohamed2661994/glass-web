@@ -626,7 +626,7 @@ export function ProductFormDialog({
             )}
           </div>
 
-          {/* Retail Package */
+          {/* Retail Package */}
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground">
               عبوة القطاعي
