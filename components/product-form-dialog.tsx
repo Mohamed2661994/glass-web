@@ -21,6 +21,7 @@ import api from "@/services/api";
 import { toast } from "sonner";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface Props {
   open: boolean;
@@ -87,6 +88,7 @@ export function ProductFormDialog({
   const [form, setForm] = useState<any>(emptyForm);
   const [variantForms, setVariantForms] = useState<VariantForm[]>([]);
   const [showDescription, setShowDescription] = useState(false);
+  const [hasWholesale, setHasWholesale] = useState(true);
 
   // ========= Parse helpers =========
   const parseWholesale = (value: string) => {
@@ -110,6 +112,10 @@ export function ProductFormDialog({
   const populateForm = (prod: any) => {
     const wholesaleParsed = parseWholesale(prod.wholesale_package);
     const retailParsed = parseRetail(prod.retail_package);
+
+    // Check if product has wholesale package data
+    const wholesaleHasData = !!(wholesaleParsed.qty && wholesaleParsed.type);
+    setHasWholesale(prod.has_wholesale !== undefined ? prod.has_wholesale : wholesaleHasData);
 
     setForm({
       ...prod,
@@ -153,6 +159,7 @@ export function ProductFormDialog({
       setForm(emptyForm);
       setVariantForms([]);
       setShowDescription(false);
+      setHasWholesale(true);
     }
   }, [product, open]);
 
@@ -289,7 +296,9 @@ export function ProductFormDialog({
     try {
       setLoading(true);
 
-      const wholesale_package = `كرتونة ${form.wholesale_package_qty || 0} ${form.wholesale_package_type || ""}`;
+      const wholesale_package = hasWholesale
+        ? `كرتونة ${form.wholesale_package_qty || 0} ${form.wholesale_package_type || ""}`
+        : "";
       const retailQty = form.retail_package_qty2
         ? `${form.retail_package_qty || 0},${form.retail_package_qty2}`
         : `${form.retail_package_qty || 0}`;
@@ -300,13 +309,14 @@ export function ProductFormDialog({
         manufacturer: form.manufacturer,
         wholesale_package,
         retail_package,
-        purchase_price: Number(form.purchase_price || 0),
+        purchase_price: hasWholesale ? Number(form.purchase_price || 0) : 0,
         retail_purchase_price: Number(form.retail_purchase_price || 0),
-        wholesale_price: Number(form.wholesale_price || 0),
+        wholesale_price: hasWholesale ? Number(form.wholesale_price || 0) : 0,
         retail_price: Number(form.retail_price || 0),
         discount_amount: Number(form.discount_amount || 0),
         barcode: form.barcode || undefined,
         description: form.description || "",
+        has_wholesale: hasWholesale,
       };
 
       let productId = product?.id;
@@ -566,9 +576,19 @@ export function ProductFormDialog({
             </DialogContent>
           </Dialog>
 
-          {/* Wholesale Package */}
-          <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">عبوة الجملة</label>
+          {/* Wholesale Toggle + Package */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="has-wholesale"
+                checked={hasWholesale}
+                onCheckedChange={(checked) => setHasWholesale(!!checked)}
+              />
+              <label htmlFor="has-wholesale" className="text-xs text-muted-foreground cursor-pointer">
+                عبوة الجملة
+              </label>
+            </div>
+            {hasWholesale && (
             <div className="grid grid-cols-2 gap-3 items-center">
               <Input
                 placeholder="عدد"
@@ -603,9 +623,10 @@ export function ProductFormDialog({
                 </SelectContent>
               </Select>
             </div>
+            )}
           </div>
 
-          {/* Retail Package */}
+          {/* Retail Package */
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground">
               عبوة القطاعي
@@ -648,6 +669,7 @@ export function ProductFormDialog({
 
           {/* Prices */}
           <div className="grid grid-cols-2 gap-3">
+            {hasWholesale && (
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">
                 سعر الشراء جملة
@@ -661,7 +683,9 @@ export function ProductFormDialog({
                 }
               />
             </div>
+            )}
 
+            {hasWholesale && (
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">
                 سعر البيع جملة
@@ -675,6 +699,7 @@ export function ProductFormDialog({
                 }
               />
             </div>
+            )}
 
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">

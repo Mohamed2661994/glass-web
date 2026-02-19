@@ -64,16 +64,22 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
      Filtered products
      ========================================================= */
   const filteredProducts = useMemo(() => {
-    const filtered = products.filter((p) =>
-      multiWordMatch(
+    const filtered = products.filter((p) => {
+      // For wholesale branch, only show products with wholesale package
+      if (invoiceType === "wholesale") {
+        const wp = (p.wholesale_package || "").trim();
+        const hasWholesale = p.has_wholesale !== false && wp !== "" && wp !== "كرتونة 0";
+        if (!hasWholesale) return false;
+      }
+      return multiWordMatch(
         search,
         String(p.id),
         p.name,
         p.description,
         p.barcode,
         p.manufacturer,
-      ),
-    );
+      );
+    });
 
     return filtered.sort((a, b) => {
       // Relevance sort when searching
