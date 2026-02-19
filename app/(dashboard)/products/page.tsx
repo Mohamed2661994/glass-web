@@ -234,13 +234,15 @@ export default function ProductsPage() {
   const handleDeleteAll = async () => {
     try {
       setDeletingAll(true);
-      await api.delete("/admin/products/all");
+      await api.delete("/admin/products/all?force=true");
       setAllProducts([]);
       setVariantsMap({});
       setPage(1);
       toast.success("تم مسح جميع الأصناف بنجاح");
-    } catch (err) {
-      toast.error("فشل مسح الأصناف");
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.response?.data?.error || "فشل مسح الأصناف";
+      toast.error(msg);
+      console.error("Delete all products error:", err?.response?.data || err);
     } finally {
       setDeletingAll(false);
       setShowDeleteAllConfirm(false);
@@ -252,7 +254,7 @@ export default function ProductsPage() {
     if (!deleteTarget) return;
     try {
       setDeletingSingle(true);
-      await api.delete(`/admin/products/${deleteTarget.id}`);
+      await api.delete(`/admin/products/${deleteTarget.id}?force=true`);
       setAllProducts((prev) => prev.filter((p) => p.id !== deleteTarget!.id));
       setVariantsMap((prev) => {
         const copy = { ...prev };
@@ -260,8 +262,10 @@ export default function ProductsPage() {
         return copy;
       });
       toast.success(`تم حذف الصنف: ${deleteTarget.name}`);
-    } catch {
-      toast.error("فشل حذف الصنف");
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.response?.data?.error || "فشل حذف الصنف";
+      toast.error(msg);
+      console.error("Delete product error:", err?.response?.data || err);
     } finally {
       setDeletingSingle(false);
       setDeleteTarget(null);

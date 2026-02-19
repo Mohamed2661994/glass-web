@@ -73,8 +73,10 @@ export default function TransferDetailsPage() {
       await api.post(`/stock-transfers/items/${itemId}/cancel`);
       toast.success("تم إلغاء الصنف");
       loadTransfer();
-    } catch {
-      toast.error("فشل إلغاء الصنف");
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.response?.data?.error || "فشل إلغاء الصنف";
+      toast.error(msg);
+      console.error("Cancel item error:", err?.response?.data || err);
     } finally {
       setCancellingItem(null);
     }
@@ -88,8 +90,10 @@ export default function TransferDetailsPage() {
       toast.success("تم إلغاء التحويل بالكامل");
       setShowCancelAll(false);
       loadTransfer();
-    } catch {
-      toast.error("فشل إلغاء التحويل");
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.response?.data?.error || "فشل إلغاء التحويل";
+      toast.error(msg);
+      console.error("Cancel all error:", err?.response?.data || err);
     } finally {
       setCancellingAll(false);
     }
