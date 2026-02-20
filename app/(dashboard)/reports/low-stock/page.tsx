@@ -96,8 +96,20 @@ export default function LowStockReportPage() {
       );
       // ترتيب حسب الأقرب
       result = [...result].sort((a, b) => {
-        const scoreA = multiWordScore(search, a.product_name, a.manufacturer_name, a.package_name, String(a.product_id));
-        const scoreB = multiWordScore(search, b.product_name, b.manufacturer_name, b.package_name, String(b.product_id));
+        const scoreA = multiWordScore(
+          search,
+          a.product_name,
+          a.manufacturer_name,
+          a.package_name,
+          String(a.product_id),
+        );
+        const scoreB = multiWordScore(
+          search,
+          b.product_name,
+          b.manufacturer_name,
+          b.package_name,
+          String(b.product_id),
+        );
         return scoreB - scoreA;
       });
     }

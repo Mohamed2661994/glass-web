@@ -215,6 +215,11 @@ export function Sidebar({
             icon: Truck,
             href: "/stock-transfer",
           },
+          {
+            label: "تحويلات حسب التاريخ",
+            icon: CalendarDays,
+            href: "/transfers/by-date",
+          },
           ...(isAdmin
             ? [
                 {
