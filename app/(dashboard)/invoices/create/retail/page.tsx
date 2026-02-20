@@ -1251,7 +1251,7 @@ export default function CreateRetailInvoicePage() {
                           {item.product_name} - {item.manufacturer}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {item.package}
+                          {item.package} - كود: {item.product_id}
                         </div>
                       </td>
                       <td className="p-3 text-center">
