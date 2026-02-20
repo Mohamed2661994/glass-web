@@ -42,7 +42,9 @@ function cssColorToHex(cssValue: string): string {
 /** Read a CSS variable from :root */
 function getCSSVar(name: string): string {
   if (typeof document === "undefined") return "";
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return getComputedStyle(document.documentElement)
+    .getPropertyValue(name)
+    .trim();
 }
 
 /** Set a CSS variable on :root */
@@ -53,6 +55,48 @@ function setCSSVar(name: string, value: string) {
 /** Remove a CSS variable override from :root */
 function removeCSSVar(name: string) {
   document.documentElement.style.removeProperty(name);
+}
+
+/** Inject or update the semantic color override <style> tag */
+function applySemanticOverrides(colors: Partial<CustomColors>) {
+  let style = document.getElementById("semantic-color-overrides") as HTMLStyleElement | null;
+  const rules: string[] = [];
+  if (colors.success) {
+    rules.push(`.text-green-600, .text-green-500, .text-emerald-600, .text-emerald-500 { color: ${colors.success} !important; }`);
+    rules.push(`.bg-green-100, .bg-green-50, .bg-emerald-100, .bg-emerald-50 { background-color: color-mix(in srgb, ${colors.success} 15%, transparent) !important; }`);
+    rules.push(`.border-green-200, .border-emerald-200 { border-color: color-mix(in srgb, ${colors.success} 30%, transparent) !important; }`);
+  }
+  if (colors.danger) {
+    rules.push(`.text-red-600, .text-red-500, .text-rose-600, .text-rose-500 { color: ${colors.danger} !important; }`);
+    rules.push(`.bg-red-100, .bg-red-50, .bg-rose-100, .bg-rose-50 { background-color: color-mix(in srgb, ${colors.danger} 15%, transparent) !important; }`);
+    rules.push(`.border-red-200, .border-rose-200 { border-color: color-mix(in srgb, ${colors.danger} 30%, transparent) !important; }`);
+  }
+  if (colors.info) {
+    rules.push(`.text-blue-600, .text-blue-500, .text-blue-400 { color: ${colors.info} !important; }`);
+    rules.push(`.bg-blue-100, .bg-blue-50 { background-color: color-mix(in srgb, ${colors.info} 15%, transparent) !important; }`);
+    rules.push(`.border-blue-200 { border-color: color-mix(in srgb, ${colors.info} 30%, transparent) !important; }`);
+  }
+  if (colors.warning) {
+    rules.push(`.text-amber-600, .text-amber-500, .text-orange-600, .text-orange-500, .text-yellow-700, .text-yellow-600, .text-yellow-500 { color: ${colors.warning} !important; }`);
+    rules.push(`.bg-amber-100, .bg-amber-50, .bg-orange-100, .bg-orange-50, .bg-yellow-100, .bg-yellow-50 { background-color: color-mix(in srgb, ${colors.warning} 15%, transparent) !important; }`);
+    rules.push(`.border-amber-200, .border-orange-200, .border-yellow-200 { border-color: color-mix(in srgb, ${colors.warning} 30%, transparent) !important; }`);
+  }
+  if (rules.length === 0) {
+    // No semantic overrides — remove the style tag if it exists
+    style?.remove();
+    return;
+  }
+  if (!style) {
+    style = document.createElement("style");
+    style.id = "semantic-color-overrides";
+    document.head.appendChild(style);
+  }
+  style.textContent = rules.join("\n");
+}
+
+/** Remove the semantic color override <style> tag */
+function removeSemanticOverrides() {
+  document.getElementById("semantic-color-overrides")?.remove();
 }
 
 /* ═══════════════ Editable color definitions ═══════════════ */
@@ -139,6 +183,47 @@ const COLOR_DEFS: ColorDef[] = [
   },
 ];
 
+/* ═══════════════ Semantic number color definitions ═══════════════ */
+
+interface SemanticColorDef {
+  key: keyof CustomColors;
+  label: string;
+  description: string;
+  defaultLight: string;
+  defaultDark: string;
+}
+
+const SEMANTIC_COLOR_DEFS: SemanticColorDef[] = [
+  {
+    key: "success",
+    label: "أرقام إيجابية (أخضر)",
+    description: "المبالغ الموجبة، الدخل، الكميات المتوفرة",
+    defaultLight: "#16a34a",
+    defaultDark: "#22c55e",
+  },
+  {
+    key: "danger",
+    label: "أرقام سلبية (أحمر)",
+    description: "المبالغ السالبة، المصروفات، نفاد المخزون",
+    defaultLight: "#dc2626",
+    defaultDark: "#ef4444",
+  },
+  {
+    key: "info",
+    label: "معلومات (أزرق)",
+    description: "الروابط، أيقونات التعديل، معلومات إضافية",
+    defaultLight: "#2563eb",
+    defaultDark: "#3b82f6",
+  },
+  {
+    key: "warning",
+    label: "تنبيهات (برتقالي)",
+    description: "الأسعار، التنبيهات، نقص المخزون",
+    defaultLight: "#d97706",
+    defaultDark: "#f59e0b",
+  },
+];
+
 /* ═══════════════ Preset themes ═══════════════ */
 
 interface ThemePreset {
@@ -185,12 +270,20 @@ const PRESETS: ThemePreset[] = [
       primaryForeground: "#ffffff",
       accent: "#ede9fe",
       background: "#faf5ff",
+      success: "#059669",
+      danger: "#be185d",
+      info: "#7c3aed",
+      warning: "#c026d3",
     },
     dark: {
       primary: "#8b5cf6",
       primaryForeground: "#ffffff",
       accent: "#3b0764",
       background: "#1e1b4b",
+      success: "#34d399",
+      danger: "#f472b6",
+      info: "#a78bfa",
+      warning: "#e879f9",
     },
   },
   {
@@ -200,12 +293,20 @@ const PRESETS: ThemePreset[] = [
       primaryForeground: "#ffffff",
       accent: "#fff7ed",
       background: "#fffbeb",
+      success: "#65a30d",
+      danger: "#dc2626",
+      info: "#ea580c",
+      warning: "#ca8a04",
     },
     dark: {
       primary: "#f97316",
       primaryForeground: "#ffffff",
       accent: "#431407",
       background: "#1c1917",
+      success: "#84cc16",
+      danger: "#ef4444",
+      info: "#fb923c",
+      warning: "#fbbf24",
     },
   },
   {
@@ -285,6 +386,7 @@ export function ThemeCustomizer() {
           setCSSVar(def.cssVar, saved[def.key]!);
         }
       }
+      applySemanticOverrides(saved);
     }
   }, [mode, prefs.customColors]);
 
@@ -309,6 +411,8 @@ export function ThemeCustomizer() {
         setCSSVar(def.cssVar, draft[def.key]!);
       }
     }
+    // Apply semantic color overrides
+    applySemanticOverrides(draft);
     setPreviewing(true);
     toast.info("وضع المعاينة — شوف التغييرات وأكّد أو ارجع");
   }, [draft]);
@@ -330,6 +434,9 @@ export function ThemeCustomizer() {
           setCSSVar(def.cssVar, saved[def.key]!);
         }
       }
+      applySemanticOverrides(saved);
+    } else {
+      removeSemanticOverrides();
     }
     setPreviewing(false);
     toast.info("تم إلغاء المعاينة");
@@ -342,6 +449,8 @@ export function ThemeCustomizer() {
       [mode]: { ...draft },
     };
     setPrefs((prev) => ({ ...prev, customColors: newCustomColors }));
+    // Ensure semantic overrides persist
+    applySemanticOverrides(draft);
     setPreviewing(false);
     toast.success("تم حفظ الألوان بنجاح ✨");
   }, [draft, mode, prefs.customColors, setPrefs]);
@@ -351,6 +460,8 @@ export function ThemeCustomizer() {
     for (const def of COLOR_DEFS) {
       removeCSSVar(def.cssVar);
     }
+    // Remove semantic overrides
+    removeSemanticOverrides();
     // Clear saved colors for current mode
     const newCustomColors = { ...(prefs.customColors || {}) };
     delete newCustomColors[mode];
@@ -369,6 +480,7 @@ export function ThemeCustomizer() {
         const val = colors[def.key];
         if (val) setCSSVar(def.cssVar, val);
       }
+      applySemanticOverrides(colors);
       setPreviewing(true);
       toast.info(`تم تطبيق ثيم "${preset.name}" — أكّد لحفظه`);
     },
@@ -381,9 +493,7 @@ export function ThemeCustomizer() {
     <div className="space-y-5">
       {/* Preset themes */}
       <div>
-        <Label className="text-sm font-medium mb-3 block">
-          ثيمات جاهزة
-        </Label>
+        <Label className="text-sm font-medium mb-3 block">ثيمات جاهزة</Label>
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
           {PRESETS.map((preset) => {
             const colors = isDark ? preset.dark : preset.light;
@@ -401,7 +511,8 @@ export function ThemeCustomizer() {
                   <div
                     className="w-5 h-5 rounded-full border"
                     style={{
-                      backgroundColor: colors.background || colors.accent || "#eee",
+                      backgroundColor:
+                        colors.background || colors.accent || "#eee",
                     }}
                   />
                 </div>
@@ -418,13 +529,57 @@ export function ThemeCustomizer() {
 
       {/* Individual color pickers */}
       <div>
-        <Label className="text-sm font-medium mb-3 block">
-          تخصيص يدوي
-        </Label>
+        <Label className="text-sm font-medium mb-3 block">تخصيص يدوي</Label>
         <div className="grid gap-3">
           {COLOR_DEFS.map((def) => {
             const draftVal = draft[def.key];
-            const currentVal = draftVal || currentHexValues[def.key] || "#000000";
+            const currentVal =
+              draftVal || currentHexValues[def.key] || "#000000";
+            return (
+              <div
+                key={def.key}
+                className="flex items-center gap-3 rounded-lg border p-3"
+              >
+                <label className="relative shrink-0 cursor-pointer">
+                  <input
+                    type="color"
+                    value={currentVal}
+                    onChange={(e) => updateDraftColor(def.key, e.target.value)}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <div
+                    className="w-10 h-10 rounded-lg border-2 border-muted-foreground/20"
+                    style={{ backgroundColor: currentVal }}
+                  />
+                </label>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{def.label}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {def.description}
+                  </p>
+                </div>
+                <span className="text-[10px] font-mono text-muted-foreground shrink-0">
+                  {currentVal.toUpperCase()}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Semantic number color pickers */}
+      <div>
+        <Label className="text-sm font-medium mb-1 block">ألوان الأرقام والحالات</Label>
+        <p className="text-xs text-muted-foreground mb-3">
+          غيّر ألوان الأرقام الخضراء والحمراء والزرقاء والبرتقالية في كل الصفحات
+        </p>
+        <div className="grid gap-3">
+          {SEMANTIC_COLOR_DEFS.map((def) => {
+            const draftVal = draft[def.key];
+            const defaultVal = isDark ? def.defaultDark : def.defaultLight;
+            const currentVal = draftVal || defaultVal;
             return (
               <div
                 key={def.key}
@@ -524,11 +679,43 @@ export function ThemeCustomizer() {
             className="rounded-lg p-2 text-xs"
             style={{
               backgroundColor: draft.muted || currentHexValues.muted,
-              color:
-                draft.mutedForeground || currentHexValues.mutedForeground,
+              color: draft.mutedForeground || currentHexValues.mutedForeground,
             }}
           >
             هذا نص ثانوي لاختبار الألوان المعتمة
+          </div>
+          {/* Semantic number colors preview */}
+          <div
+            className="rounded-lg p-3 border grid grid-cols-4 gap-2 text-center"
+            style={{
+              backgroundColor: draft.card || currentHexValues.card,
+              borderColor: draft.border || currentHexValues.border,
+            }}
+          >
+            <div>
+              <p className="text-xs opacity-60 mb-1">ربح</p>
+              <p className="text-base font-bold" style={{ color: draft.success || (isDark ? "#22c55e" : "#16a34a") }}>
+                +٢,٤٠٠
+              </p>
+            </div>
+            <div>
+              <p className="text-xs opacity-60 mb-1">خسارة</p>
+              <p className="text-base font-bold" style={{ color: draft.danger || (isDark ? "#ef4444" : "#dc2626") }}>
+                -٨٥٠
+              </p>
+            </div>
+            <div>
+              <p className="text-xs opacity-60 mb-1">كمية</p>
+              <p className="text-base font-bold" style={{ color: draft.info || (isDark ? "#3b82f6" : "#2563eb") }}>
+                ١٥٠
+              </p>
+            </div>
+            <div>
+              <p className="text-xs opacity-60 mb-1">سعر</p>
+              <p className="text-base font-bold" style={{ color: draft.warning || (isDark ? "#f59e0b" : "#d97706") }}>
+                ٣,٢٠٠
+              </p>
+            </div>
           </div>
         </div>
       </div>

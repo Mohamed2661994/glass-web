@@ -46,6 +46,11 @@ export interface CustomColors {
   border?: string;
   accent?: string;
   destructive?: string;
+  /* Semantic number colors */
+  success?: string;       // green numbers (positive, income, in-stock)
+  danger?: string;        // red numbers (negative, expenses, out-of-stock)
+  info?: string;          // blue numbers (links, edit icons, info)
+  warning?: string;       // amber/orange numbers (prices, warnings)
 }
 
 export interface UserPreferences {
