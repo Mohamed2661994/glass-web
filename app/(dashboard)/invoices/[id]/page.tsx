@@ -9,6 +9,18 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
+interface InvoiceItem {
+  product_id: number;
+  product_name: string;
+  package: string;
+  price: number;
+  quantity: number;
+  discount: number;
+  total: number;
+  manufacturer: string;
+  is_return?: boolean;
+}
+
 export default function InvoiceDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
@@ -32,7 +44,7 @@ export default function InvoiceDetailsPage() {
 
   if (loading)
     return (
-      <div className="p-6 space-y-6" dir="rtl">
+      <div className="p-4 md:p-6 space-y-6" dir="rtl">
         <Skeleton className="h-8 w-48" />
         <Card>
           <CardContent className="p-4 space-y-3">
@@ -40,6 +52,14 @@ export default function InvoiceDetailsPage() {
             <Skeleton className="h-5 w-40" />
             <Skeleton className="h-5 w-40" />
             <Skeleton className="h-5 w-40" />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
           </CardContent>
         </Card>
         <div className="flex gap-3">
@@ -50,28 +70,41 @@ export default function InvoiceDetailsPage() {
     );
   if (!invoice) return <div className="p-6">الفاتورة غير موجودة</div>;
 
+  const items: InvoiceItem[] = invoice.items || [];
+  const isWholesale = invoice.invoice_type === "wholesale";
+
+  const calcUnitPrice = (it: InvoiceItem) =>
+    isWholesale || invoice.apply_items_discount
+      ? Number(it.price) - Number(it.discount || 0)
+      : Number(it.price);
+
+  const calcItemTotal = (it: InvoiceItem) =>
+    calcUnitPrice(it) * Number(it.quantity || 0);
+
   return (
-    <div className="p-6 space-y-6" dir="rtl">
-      <h1 className="text-2xl font-bold">
+    <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto" dir="rtl">
+      <h1 className="text-xl md:text-2xl font-bold">
         تفاصيل الفاتورة #{invoice.id}
         {invoice.is_return && (
           <Badge className="bg-orange-500 mr-3 text-sm">مرتجع</Badge>
         )}
       </h1>
 
+      {/* Invoice Info */}
       <Card>
         <CardContent className="p-4 space-y-2">
           <p>
             <strong>العميل:</strong> {invoice.customer_name || "نقدي"}
           </p>
           <p>
-            <strong>الإجمالي:</strong> {invoice.total}
+            <strong>الإجمالي:</strong> {Number(invoice.total).toFixed(2)}
           </p>
           <p>
-            <strong>المدفوع:</strong> {invoice.paid_amount}
+            <strong>المدفوع:</strong> {Number(invoice.paid_amount).toFixed(2)}
           </p>
           <p>
-            <strong>المتبقي:</strong> {invoice.remaining_amount}
+            <strong>المتبقي:</strong>{" "}
+            {Number(invoice.remaining_amount).toFixed(2)}
           </p>
           {invoice.created_by_name && (
             <p>
@@ -85,6 +118,115 @@ export default function InvoiceDetailsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Invoice Items */}
+      {items.length > 0 && (
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            <h2 className="text-lg font-semibold">
+              الأصناف ({items.length})
+            </h2>
+
+            {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted">
+                  <tr>
+                    <th className="p-2 text-right">#</th>
+                    <th className="p-2 text-right">الصنف</th>
+                    <th className="p-2 text-right">العبوة</th>
+                    <th className="p-2 text-right">السعر</th>
+                    {(isWholesale || invoice.apply_items_discount) && (
+                      <th className="p-2 text-right">الخصم</th>
+                    )}
+                    <th className="p-2 text-right">صافي السعر</th>
+                    <th className="p-2 text-right">الكمية</th>
+                    <th className="p-2 text-right">الإجمالي</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item, idx) => {
+                    const unitPrice = calcUnitPrice(item);
+                    const itemTotal = calcItemTotal(item);
+                    return (
+                      <tr
+                        key={idx}
+                        className={`border-b hover:bg-muted/50 ${item.is_return ? "bg-orange-50 dark:bg-orange-950/20" : ""}`}
+                      >
+                        <td className="p-2">{idx + 1}</td>
+                        <td className="p-2">
+                          {item.product_name}
+                          {item.is_return && (
+                            <Badge className="bg-orange-500 mr-2 text-[10px] px-1 py-0">
+                              مرتجع
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="p-2 text-muted-foreground">
+                          {item.package || "-"}
+                        </td>
+                        <td className="p-2">
+                          {Number(item.price).toFixed(2)}
+                        </td>
+                        {(isWholesale || invoice.apply_items_discount) && (
+                          <td className="p-2 text-red-500">
+                            {Number(item.discount || 0).toFixed(2)}
+                          </td>
+                        )}
+                        <td className="p-2">{unitPrice.toFixed(2)}</td>
+                        <td className="p-2">{item.quantity}</td>
+                        <td className="p-2 font-semibold">
+                          {item.is_return ? "-" : ""}
+                          {Math.abs(itemTotal).toFixed(2)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Cards */}
+            <div className="md:hidden space-y-2">
+              {items.map((item, idx) => {
+                const unitPrice = calcUnitPrice(item);
+                const itemTotal = calcItemTotal(item);
+                return (
+                  <div
+                    key={idx}
+                    className={`border rounded-lg p-3 space-y-1 ${item.is_return ? "bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800" : ""}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm">
+                        {idx + 1}. {item.product_name}
+                      </span>
+                      {item.is_return && (
+                        <Badge className="bg-orange-500 text-[10px] px-1.5 py-0">
+                          مرتجع
+                        </Badge>
+                      )}
+                    </div>
+                    {item.package && (
+                      <p className="text-xs text-muted-foreground">
+                        العبوة: {item.package}
+                      </p>
+                    )}
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        {unitPrice.toFixed(2)} × {item.quantity}
+                      </span>
+                      <span className="font-semibold">
+                        {item.is_return ? "-" : ""}
+                        {Math.abs(itemTotal).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="flex gap-3">
         <Button

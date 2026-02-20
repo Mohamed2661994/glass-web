@@ -89,7 +89,11 @@ export default function TransfersByDatePage() {
       setShowCancelConfirm(null);
       fetchTransfers(); // Reload
     } catch (err: any) {
-      toast.error(err?.response?.data?.error || err?.response?.data?.message || "فشل إلغاء الصنف");
+      toast.error(
+        err?.response?.data?.error ||
+          err?.response?.data?.message ||
+          "فشل إلغاء الصنف",
+      );
     } finally {
       setCancellingItem(null);
     }

@@ -33,9 +33,9 @@ interface Props {
 const wholesaleTypes = ["دستة", "طقم", "قطعة"];
 
 const retailTypesByWholesale: Record<string, string[]> = {
-  "دستة": ["شيالة", "علبة", "قطعة"],
-  "طقم": ["طقم", "قطعة"],
-  "قطعة": ["قطعة"],
+  دستة: ["شيالة", "علبة", "قطعة"],
+  طقم: ["طقم", "قطعة"],
+  قطعة: ["قطعة"],
   "": ["شيالة", "علبة", "طقم", "قطعة"],
 };
 
@@ -668,7 +668,10 @@ export function ProductFormDialog({
                   <SelectValue placeholder="اختر" />
                 </SelectTrigger>
                 <SelectContent>
-                  {(retailTypesByWholesale[form.wholesale_package_type] || retailTypesByWholesale[""]).map((p) => (
+                  {(
+                    retailTypesByWholesale[form.wholesale_package_type] ||
+                    retailTypesByWholesale[""]
+                  ).map((p) => (
                     <SelectItem key={p} value={p}>
                       {p}
                     </SelectItem>
@@ -863,7 +866,11 @@ export function ProductFormDialog({
                             <SelectValue placeholder="اختر" />
                           </SelectTrigger>
                           <SelectContent>
-                            {(retailTypesByWholesale[vf.wholesale_package_type] || retailTypesByWholesale[""]).map((p) => (
+                            {(
+                              retailTypesByWholesale[
+                                vf.wholesale_package_type
+                              ] || retailTypesByWholesale[""]
+                            ).map((p) => (
                               <SelectItem key={p} value={p}>
                                 {p}
                               </SelectItem>
