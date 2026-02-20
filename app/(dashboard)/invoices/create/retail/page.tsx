@@ -1276,10 +1276,8 @@ export default function CreateRetailInvoicePage() {
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {item.package}
-                          {(() => {
-                            const bc = item.barcode || products.find((p: any) => p.id === item.product_id)?.barcode;
-                            return bc ? ` - باركود: ${bc}` : "";
-                          })()}
+                          {" - باركود: "}
+                          {item.barcode || products.find((p: any) => p.id === item.product_id)?.barcode || item.product_id}
                         </div>
                       </td>
                       <td className="p-3 text-center">
