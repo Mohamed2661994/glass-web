@@ -340,6 +340,20 @@ export default function CreateRetailInvoicePage() {
     cacheKey: `retail_${movementType}`,
   });
 
+  // Enrich restored draft items with barcode from products
+  useEffect(() => {
+    if (products.length === 0 || items.length === 0) return;
+    const needsEnrich = items.some((i: any) => !i.barcode);
+    if (!needsEnrich) return;
+    setItems((prev) =>
+      prev.map((item: any) => {
+        if (item.barcode) return item;
+        const prod = products.find((p: any) => p.id === item.product_id);
+        return prod?.barcode ? { ...item, barcode: prod.barcode } : item;
+      }),
+    );
+  }, [products]);
+
   // Cleanup customer search timer on unmount
   useEffect(() => {
     return () => {
