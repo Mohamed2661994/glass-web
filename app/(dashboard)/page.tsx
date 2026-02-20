@@ -884,10 +884,17 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!branchId) return;
     setLoadingInv(true);
+    const today = new Date().toISOString().substring(0, 10);
     (async () => {
       try {
         const { data } = await api.get("/invoices", {
-          params: { limit: 10, invoice_type: invoiceType, _t: Date.now() },
+          params: {
+            limit: 10,
+            invoice_type: invoiceType,
+            date_from: today,
+            date_to: today,
+            _t: Date.now(),
+          },
         });
         setInvoices(Array.isArray(data) ? data : (data.data ?? []));
       } catch {
@@ -1091,7 +1098,7 @@ export default function DashboardPage() {
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <FileText className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                آخر الفواتير
+                آخر فواتير اليوم
               </CardTitle>
               <div className="flex items-center gap-2">
                 <Button

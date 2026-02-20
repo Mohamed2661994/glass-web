@@ -377,11 +377,7 @@ export function QuickTransferModal({
                   <span className="text-sm font-medium">
                     الأصناف المختارة ({items.length})
                   </span>
-                  <Button
-                    size="sm"
-                    onClick={goToConfirm}
-                    className="gap-1.5"
-                  >
+                  <Button size="sm" onClick={goToConfirm} className="gap-1.5">
                     <ArrowLeftRight className="h-3.5 w-3.5" />
                     متابعة التحويل
                   </Button>
