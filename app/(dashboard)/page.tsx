@@ -222,6 +222,8 @@ interface Invoice {
   movement_type: "sale" | "purchase";
   customer_name: string;
   total: number;
+  paid_amount: number;
+  remaining_amount: number;
   payment_status: "paid" | "partial" | "unpaid";
   created_at: string;
 }
@@ -1136,6 +1138,8 @@ export default function DashboardPage() {
                       النوع
                     </TableHead>
                     <TableHead className="text-right">الإجمالي</TableHead>
+                    <TableHead className="text-right">المدفوع</TableHead>
+                    <TableHead className="text-right">الباقي</TableHead>
                     <TableHead className="text-right">الحالة</TableHead>
                     <TableHead className="text-right hidden sm:table-cell">
                       التاريخ
@@ -1148,7 +1152,7 @@ export default function DashboardPage() {
                   ) : invoices.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={6}
+                        colSpan={8}
                         className="text-center py-8 text-muted-foreground"
                       >
                         لا توجد فواتير
@@ -1170,6 +1174,12 @@ export default function DashboardPage() {
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           {Math.round(inv.total).toLocaleString()} ج
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-green-600 dark:text-green-400">
+                          {Math.round(Number(inv.paid_amount || 0)).toLocaleString()} ج
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-red-600 dark:text-red-400">
+                          {Math.round(Number(inv.remaining_amount || 0)).toLocaleString()} ج
                         </TableCell>
                         <TableCell>
                           {paymentBadge(inv.payment_status)}
