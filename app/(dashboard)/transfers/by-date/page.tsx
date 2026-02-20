@@ -25,6 +25,7 @@ import { Loader2, Printer } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/context/auth-context";
 
 interface TransferRow {
   id: number;
@@ -45,6 +46,15 @@ interface TransferRow {
 
 export default function TransfersByDatePage() {
   const router = useRouter();
+  const { user } = useAuth();
+
+  // Redirect retail users away from this page
+  useEffect(() => {
+    if (user && user.branch_id === 1) {
+      router.replace("/");
+    }
+  }, [user, router]);
+
   const [date, setDate] = useState(() => {
     const now = new Date();
     const y = now.getFullYear();
@@ -108,6 +118,9 @@ export default function TransfersByDatePage() {
   const handlePrint = () => {
     router.push(`/transfers/by-date/print?date=${date}`);
   };
+
+  // Don't render for retail users
+  if (user?.branch_id === 1) return null;
 
   return (
     <div dir="rtl" className="max-w-4xl mx-auto space-y-4 py-6 px-4">
