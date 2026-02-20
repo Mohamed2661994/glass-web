@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "@/services/api";
+import { broadcastUpdate } from "@/lib/broadcast";
 import {
   Trash2,
   Camera,
@@ -792,6 +793,9 @@ export default function CreateRetailInvoicePage() {
       setSavedInvoiceId(newId);
       setJournalPosted(res.data?.journal_posted || false);
       setShowSavedModal(true);
+
+      // إرسال إشعار تحديث لباقي الصفحات
+      broadcastUpdate("invoice_created");
 
       // تحديث كاش الأصناف بعد الحفظ
       refreshProductsSilently();

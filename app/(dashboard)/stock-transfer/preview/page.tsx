@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/services/api";
+import { broadcastUpdate } from "@/lib/broadcast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -94,6 +95,10 @@ export default function StockTransferPreviewPage() {
       const res = await api.post("/stock/wholesale-to-retail/execute", payload);
       setTransferNumber(res.data?.transfer_id ?? null);
       setShowSuccess(true);
+
+      // إرسال إشعار تحديث لباقي الصفحات
+      broadcastUpdate("transfer_created");
+
       // Clean up
       sessionStorage.removeItem("transfer_payload");
       sessionStorage.removeItem("transfer_items");

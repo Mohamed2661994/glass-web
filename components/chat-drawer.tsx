@@ -87,10 +87,14 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   const otherColor = chatPrefs.otherBubbleColor || "";
   const soundFile = chatPrefs.notificationSound || "beepmasage.mp3";
 
-  // Resolve sound URL: custom uploads use API_URL, built-in use /sounds/
+  // Resolve sound URL: Cloudinary returns full https:// URLs, old uploads use API_URL, built-in use /sounds/
   const getSoundUrl = useCallback(
     (sf: string) =>
-      sf.startsWith("/uploads/") ? `${API_URL}${sf}` : `/sounds/${sf}`,
+      sf.startsWith("http")
+        ? sf
+        : sf.startsWith("/uploads/")
+          ? `${API_URL}${sf}`
+          : `/sounds/${sf}`,
     [],
   );
 
@@ -1038,12 +1042,20 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                           <div
                             className="cursor-pointer"
                             onClick={() =>
-                              setPreviewImg(`${API_URL}${msg.file_url}`)
+                              setPreviewImg(
+                                msg.file_url!.startsWith("http")
+                                  ? msg.file_url!
+                                  : `${API_URL}${msg.file_url}`,
+                              )
                             }
                           >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
-                              src={`${API_URL}${msg.file_url}`}
+                              src={
+                                msg.file_url.startsWith("http")
+                                  ? msg.file_url
+                                  : `${API_URL}${msg.file_url}`
+                              }
                               alt={msg.content || "صورة"}
                               className="rounded-xl max-w-full max-h-64 object-cover"
                               loading="lazy"
@@ -1051,7 +1063,11 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                           </div>
                         ) : msg.type === "file" && msg.file_url ? (
                           <a
-                            href={`${API_URL}${msg.file_url}`}
+                            href={
+                              msg.file_url.startsWith("http")
+                                ? msg.file_url
+                                : `${API_URL}${msg.file_url}`
+                            }
                             target="_blank"
                             rel="noopener noreferrer"
                             className={cn(

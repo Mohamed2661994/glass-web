@@ -123,9 +123,7 @@ export default function InvoiceDetailsPage() {
       {items.length > 0 && (
         <Card>
           <CardContent className="p-4 space-y-3">
-            <h2 className="text-lg font-semibold">
-              الأصناف ({items.length})
-            </h2>
+            <h2 className="text-lg font-semibold">الأصناف ({items.length})</h2>
 
             {/* Desktop Table */}
             <div className="hidden md:block overflow-x-auto">
@@ -165,9 +163,7 @@ export default function InvoiceDetailsPage() {
                         <td className="p-2 text-muted-foreground">
                           {item.package || "-"}
                         </td>
-                        <td className="p-2">
-                          {Number(item.price).toFixed(2)}
-                        </td>
+                        <td className="p-2">{Number(item.price).toFixed(2)}</td>
                         {(isWholesale || invoice.apply_items_discount) && (
                           <td className="p-2 text-red-500">
                             {Number(item.discount || 0).toFixed(2)}

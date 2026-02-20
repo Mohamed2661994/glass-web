@@ -146,7 +146,10 @@ export default function SettingsPage() {
         });
         // preview
         if (previewAudioRef.current) previewAudioRef.current.pause();
-        const audio = new Audio(`${API_URL}${data.url}`);
+        const soundUrl = data.url.startsWith("http")
+          ? data.url
+          : `${API_URL}${data.url}`;
+        const audio = new Audio(soundUrl);
         audio.volume = 0.5;
         audio.play().catch(() => {});
         previewAudioRef.current = audio;
@@ -803,7 +806,10 @@ export default function SettingsPage() {
                           });
                           if (previewAudioRef.current)
                             previewAudioRef.current.pause();
-                          const audio = new Audio(`${API_URL}${s.url}`);
+                          const soundUrl = s.url.startsWith("http")
+                            ? s.url
+                            : `${API_URL}${s.url}`;
+                          const audio = new Audio(soundUrl);
                           audio.volume = 0.5;
                           audio.play().catch(() => {});
                           previewAudioRef.current = audio;

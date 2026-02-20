@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import axios from "@/services/api";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/auth-context";
+import { onUpdate, broadcastUpdate } from "@/lib/broadcast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -125,6 +126,28 @@ export default function InvoicesPage() {
     dateTo,
   ]);
 
+  // تحديث لحظي: استمع لإشعارات الفواتير والتحويلات الجديدة
+  useEffect(() => {
+    const cleanup = onUpdate(
+      ["invoice_created", "invoice_updated", "invoice_deleted", "transfer_created"],
+      () => {
+        fetchInvoices();
+      },
+    );
+    return cleanup;
+  }, [invoiceType, page, movementType, debouncedSearch, invoiceIdSearch, dateFrom, dateTo]);
+
+  // تحديث عند العودة للصفحة (visibility change)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        fetchInvoices();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [invoiceType, page, movementType, debouncedSearch, invoiceIdSearch, dateFrom, dateTo]);
+
   const getStatusBadge = (status: string) => {
     if (status === "paid")
       return <Badge className="bg-green-600">مدفوعة</Badge>;
@@ -146,6 +169,7 @@ export default function InvoicesPage() {
       setDeleteDialogOpen(false);
       await axios.delete(`/invoices/${invoiceToDelete}`);
       toast.success("تم حذف الفاتورة");
+      broadcastUpdate("invoice_deleted");
       fetchInvoices();
     } catch {
       toast.error("فشل حذف الفاتورة");
