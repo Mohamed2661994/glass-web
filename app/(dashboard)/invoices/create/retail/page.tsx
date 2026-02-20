@@ -16,9 +16,11 @@ import {
   RefreshCw,
   FilePlus2,
   Save,
+  ArrowLeftRight,
 } from "lucide-react";
 import { useCachedProducts } from "@/hooks/use-cached-products";
 import { CustomerLookupModal } from "@/components/customer-lookup-modal";
+import { QuickTransferModal } from "@/components/quick-transfer-modal";
 import { highlightText } from "@/lib/highlight-text";
 import { multiWordMatch, multiWordScore } from "@/lib/utils";
 import { BarcodeDetector } from "barcode-detector";
@@ -102,6 +104,7 @@ export default function CreateRetailInvoicePage() {
   const [items, setItems] = useState<any[]>([]);
   const [showProductModal, setShowProductModal] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
   const [search, setSearch] = useState("");
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [refreshingProducts, setRefreshingProducts] = useState(false);
@@ -1228,9 +1231,19 @@ export default function CreateRetailInvoicePage() {
           )}
         </Card>
 
-        <Button onClick={() => setShowProductModal(true)} className="w-full">
-          + إضافة صنف
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setShowProductModal(true)} className="flex-1">
+            + إضافة صنف
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-1.5 shrink-0"
+            onClick={() => setShowTransferModal(true)}
+          >
+            <ArrowLeftRight className="h-4 w-4" />
+            تحويل للمعرض
+          </Button>
+        </div>
 
         {items.length > 0 && (
           <Card className="p-6">
@@ -1901,6 +1914,16 @@ export default function CreateRetailInvoicePage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Quick Transfer Modal */}
+        <QuickTransferModal
+          open={showTransferModal}
+          onOpenChange={setShowTransferModal}
+          onTransferComplete={() => {
+            // Refresh products to reflect updated stock
+            refreshProducts();
+          }}
+        />
 
         {/* Customer Lookup Modal (F2) */}
         <CustomerLookupModal

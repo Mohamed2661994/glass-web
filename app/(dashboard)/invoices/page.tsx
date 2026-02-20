@@ -129,13 +129,26 @@ export default function InvoicesPage() {
   // تحديث لحظي: استمع لإشعارات الفواتير والتحويلات الجديدة
   useEffect(() => {
     const cleanup = onUpdate(
-      ["invoice_created", "invoice_updated", "invoice_deleted", "transfer_created"],
+      [
+        "invoice_created",
+        "invoice_updated",
+        "invoice_deleted",
+        "transfer_created",
+      ],
       () => {
         fetchInvoices();
       },
     );
     return cleanup;
-  }, [invoiceType, page, movementType, debouncedSearch, invoiceIdSearch, dateFrom, dateTo]);
+  }, [
+    invoiceType,
+    page,
+    movementType,
+    debouncedSearch,
+    invoiceIdSearch,
+    dateFrom,
+    dateTo,
+  ]);
 
   // تحديث عند العودة للصفحة (visibility change)
   useEffect(() => {
@@ -145,8 +158,17 @@ export default function InvoicesPage() {
       }
     };
     document.addEventListener("visibilitychange", handleVisibility);
-    return () => document.removeEventListener("visibilitychange", handleVisibility);
-  }, [invoiceType, page, movementType, debouncedSearch, invoiceIdSearch, dateFrom, dateTo]);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibility);
+  }, [
+    invoiceType,
+    page,
+    movementType,
+    debouncedSearch,
+    invoiceIdSearch,
+    dateFrom,
+    dateTo,
+  ]);
 
   const getStatusBadge = (status: string) => {
     if (status === "paid")
