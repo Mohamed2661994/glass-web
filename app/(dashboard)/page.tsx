@@ -1176,10 +1176,16 @@ export default function DashboardPage() {
                           {Math.round(inv.total).toLocaleString()} ج
                         </TableCell>
                         <TableCell className="whitespace-nowrap text-green-600 dark:text-green-400">
-                          {Math.round(Number(inv.paid_amount || 0)).toLocaleString()} ج
+                          {Math.round(
+                            Number(inv.paid_amount || 0),
+                          ).toLocaleString()}{" "}
+                          ج
                         </TableCell>
                         <TableCell className="whitespace-nowrap text-red-600 dark:text-red-400">
-                          {Math.round(Number(inv.remaining_amount || 0)).toLocaleString()} ج
+                          {Math.round(
+                            Number(inv.remaining_amount || 0),
+                          ).toLocaleString()}{" "}
+                          ج
                         </TableCell>
                         <TableCell>
                           {paymentBadge(inv.payment_status)}

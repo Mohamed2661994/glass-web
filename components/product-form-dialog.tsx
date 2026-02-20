@@ -115,7 +115,9 @@ export function ProductFormDialog({
 
     // Check if product has wholesale package data
     const wholesaleHasData = !!(wholesaleParsed.qty && wholesaleParsed.type);
-    setHasWholesale(prod.has_wholesale !== undefined ? prod.has_wholesale : wholesaleHasData);
+    setHasWholesale(
+      prod.has_wholesale !== undefined ? prod.has_wholesale : wholesaleHasData,
+    );
 
     setForm({
       ...prod,
@@ -584,45 +586,48 @@ export function ProductFormDialog({
                 checked={hasWholesale}
                 onCheckedChange={(checked) => setHasWholesale(!!checked)}
               />
-              <label htmlFor="has-wholesale" className="text-xs text-muted-foreground cursor-pointer">
+              <label
+                htmlFor="has-wholesale"
+                className="text-xs text-muted-foreground cursor-pointer"
+              >
                 عبوة الجملة
               </label>
             </div>
             {hasWholesale && (
-            <div className="grid grid-cols-2 gap-3 items-center">
-              <Input
-                placeholder="عدد"
-                type="number"
-                value={form.wholesale_package_qty}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    wholesale_package_qty: e.target.value,
-                  })
-                }
-              />
+              <div className="grid grid-cols-2 gap-3 items-center">
+                <Input
+                  placeholder="عدد"
+                  type="number"
+                  value={form.wholesale_package_qty}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      wholesale_package_qty: e.target.value,
+                    })
+                  }
+                />
 
-              <Select
-                value={form.wholesale_package_type}
-                onValueChange={(val) =>
-                  setForm({
-                    ...form,
-                    wholesale_package_type: val,
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر" />
-                </SelectTrigger>
-                <SelectContent>
-                  {wholesaleTypes.map((p) => (
-                    <SelectItem key={p} value={p}>
-                      {p}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                <Select
+                  value={form.wholesale_package_type}
+                  onValueChange={(val) =>
+                    setForm({
+                      ...form,
+                      wholesale_package_type: val,
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {wholesaleTypes.map((p) => (
+                      <SelectItem key={p} value={p}>
+                        {p}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
           </div>
 
@@ -670,35 +675,35 @@ export function ProductFormDialog({
           {/* Prices */}
           <div className="grid grid-cols-2 gap-3">
             {hasWholesale && (
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">
-                سعر الشراء جملة
-              </label>
-              <Input
-                type="number"
-                placeholder="0.00"
-                value={form.purchase_price}
-                onChange={(e) =>
-                  setForm({ ...form, purchase_price: e.target.value })
-                }
-              />
-            </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">
+                  سعر الشراء جملة
+                </label>
+                <Input
+                  type="number"
+                  placeholder="0.00"
+                  value={form.purchase_price}
+                  onChange={(e) =>
+                    setForm({ ...form, purchase_price: e.target.value })
+                  }
+                />
+              </div>
             )}
 
             {hasWholesale && (
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">
-                سعر البيع جملة
-              </label>
-              <Input
-                type="number"
-                placeholder="0.00"
-                value={form.wholesale_price}
-                onChange={(e) =>
-                  setForm({ ...form, wholesale_price: e.target.value })
-                }
-              />
-            </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">
+                  سعر البيع جملة
+                </label>
+                <Input
+                  type="number"
+                  placeholder="0.00"
+                  value={form.wholesale_price}
+                  onChange={(e) =>
+                    setForm({ ...form, wholesale_price: e.target.value })
+                  }
+                />
+              </div>
             )}
 
             <div className="space-y-1">
