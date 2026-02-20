@@ -31,7 +31,13 @@ interface Props {
 }
 
 const wholesaleTypes = ["دستة", "طقم", "قطعة"];
-const retailTypes = ["شيالة", "علبة", "طقم", "قطعة"];
+
+const retailTypesByWholesale: Record<string, string[]> = {
+  "دستة": ["شيالة", "علبة", "قطعة"],
+  "طقم": ["طقم", "قطعة"],
+  "قطعة": ["قطعة"],
+  "": ["شيالة", "علبة", "طقم", "قطعة"],
+};
 
 interface VariantForm {
   _key: string; // مفتاح فريد للـ React
@@ -662,7 +668,7 @@ export function ProductFormDialog({
                   <SelectValue placeholder="اختر" />
                 </SelectTrigger>
                 <SelectContent>
-                  {retailTypes.map((p) => (
+                  {(retailTypesByWholesale[form.wholesale_package_type] || retailTypesByWholesale[""]).map((p) => (
                     <SelectItem key={p} value={p}>
                       {p}
                     </SelectItem>
@@ -857,7 +863,7 @@ export function ProductFormDialog({
                             <SelectValue placeholder="اختر" />
                           </SelectTrigger>
                           <SelectContent>
-                            {retailTypes.map((p) => (
+                            {(retailTypesByWholesale[vf.wholesale_package_type] || retailTypesByWholesale[""]).map((p) => (
                               <SelectItem key={p} value={p}>
                                 {p}
                               </SelectItem>

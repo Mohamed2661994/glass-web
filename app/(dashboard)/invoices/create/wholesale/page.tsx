@@ -941,7 +941,9 @@ export default function CreateWholesaleInvoicePage() {
                 <tbody>
                   {items.map((item, index) => (
                     <tr key={item.uid} className="border-b">
-                      <td className="p-3 text-center text-muted-foreground">{index + 1}</td>
+                      <td className="p-3 text-center text-muted-foreground">
+                        {index + 1}
+                      </td>
                       <td className="p-3">
                         <div>
                           {item.product_name} - {item.manufacturer}
