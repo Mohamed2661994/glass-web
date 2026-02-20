@@ -59,6 +59,34 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Apply saved custom colors after theme is set
+  useEffect(() => {
+    if (!user?.id) return;
+    const savedColors = prefs.customColors;
+    if (!savedColors) return;
+    const mode = document.documentElement.classList.contains("dark") ? "dark" : "light";
+    const colors = savedColors[mode];
+    if (!colors) return;
+    const cssVarMap: Record<string, string> = {
+      background: "--background",
+      foreground: "--foreground",
+      card: "--card",
+      cardForeground: "--card-foreground",
+      primary: "--primary",
+      primaryForeground: "--primary-foreground",
+      secondary: "--secondary",
+      muted: "--muted",
+      mutedForeground: "--muted-foreground",
+      border: "--border",
+      accent: "--accent",
+      destructive: "--destructive",
+    };
+    for (const [key, cssVar] of Object.entries(cssVarMap)) {
+      const val = (colors as Record<string, string | undefined>)[key];
+      if (val) document.documentElement.style.setProperty(cssVar, val);
+    }
+  }, [user?.id, prefs.customColors]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ✅ لو مفيش توكن → يروح لصفحة الدخول
   useEffect(() => {
     const token = localStorage.getItem("token");

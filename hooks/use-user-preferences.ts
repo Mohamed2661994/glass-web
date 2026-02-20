@@ -33,12 +33,28 @@ export interface ChatPrefs {
   customSoundName?: string; // display name for custom uploaded sound
 }
 
+export interface CustomColors {
+  background?: string;
+  foreground?: string;
+  card?: string;
+  cardForeground?: string;
+  primary?: string;
+  primaryForeground?: string;
+  secondary?: string;
+  muted?: string;
+  mutedForeground?: string;
+  border?: string;
+  accent?: string;
+  destructive?: string;
+}
+
 export interface UserPreferences {
   dashboard_widgets?: DashboardWidgetPref[];
   quick_links?: QuickLinkPref[];
   sidebar?: SidebarPref;
   theme?: string;
   chat?: ChatPrefs;
+  customColors?: { light?: CustomColors; dark?: CustomColors };
   /** Any future per-user preferences can be added here */
   [key: string]: unknown;
 }

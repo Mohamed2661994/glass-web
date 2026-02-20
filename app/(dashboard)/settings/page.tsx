@@ -39,10 +39,12 @@ import {
   MessageCircle,
   Volume2,
   Check,
+  Palette,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import Link from "next/link";
+import { ThemeCustomizer } from "@/components/theme-customizer";
 
 /* ========== Section Card (collapsible) ========== */
 function SectionCard({
@@ -840,6 +842,17 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
+        </SectionCard>
+
+        {/* ═══════════════ 5.6 Theme Customizer ═══════════════ */}
+        <SectionCard
+          icon={Palette}
+          title="تخصيص الألوان"
+          description="تغيير ألوان الخلفية والأزرار والنصوص حسب ذوقك"
+          isOpen={openSections["theme"] ?? false}
+          onToggle={() => toggleSection("theme")}
+        >
+          <ThemeCustomizer />
         </SectionCard>
 
         {/* ═══════════════ 6. System Info ═══════════════ */}
