@@ -929,14 +929,16 @@ export default function CreateWholesaleInvoicePage() {
           <Button onClick={() => setShowProductModal(true)} className="flex-1">
             + إضافة صنف
           </Button>
-          <Button
-            variant="outline"
-            className="gap-1.5 shrink-0"
-            onClick={() => setShowTransferModal(true)}
-          >
-            <ArrowLeftRight className="h-4 w-4" />
-            تحويل للمعرض
-          </Button>
+          {user?.branch_id === 1 && (
+            <Button
+              variant="outline"
+              className="gap-1.5 shrink-0"
+              onClick={() => setShowTransferModal(true)}
+            >
+              <ArrowLeftRight className="h-4 w-4" />
+              تحويل للمعرض
+            </Button>
+          )}
         </div>
 
         {items.length > 0 && (

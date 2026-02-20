@@ -92,7 +92,7 @@ export default function ProductsPage() {
       if (user) {
         const parsed = JSON.parse(user);
         setUserId(parsed.id);
-        setIsAdmin(parsed.role === "admin" || parsed.id === 7);
+        setIsAdmin(parsed.role === "admin" || parsed.id === 7 || parsed.id === 5);
       }
     } catch {}
   }, []);

@@ -1252,14 +1252,16 @@ export default function CreateRetailInvoicePage() {
           <Button onClick={() => setShowProductModal(true)} className="flex-1">
             + إضافة صنف
           </Button>
-          <Button
-            variant="outline"
-            className="gap-1.5 shrink-0"
-            onClick={() => setShowTransferModal(true)}
-          >
-            <ArrowLeftRight className="h-4 w-4" />
-            تحويل للمعرض
-          </Button>
+          {user?.branch_id === 1 && (
+            <Button
+              variant="outline"
+              className="gap-1.5 shrink-0"
+              onClick={() => setShowTransferModal(true)}
+            >
+              <ArrowLeftRight className="h-4 w-4" />
+              تحويل للمعرض
+            </Button>
+          )}
         </div>
 
         {items.length > 0 && (
@@ -1291,7 +1293,10 @@ export default function CreateRetailInvoicePage() {
                         <div className="text-xs text-muted-foreground">
                           {item.package}
                           {" - باركود: "}
-                          {item.barcode || products.find((p: any) => p.id === item.product_id)?.barcode || item.product_id}
+                          {item.barcode ||
+                            products.find((p: any) => p.id === item.product_id)
+                              ?.barcode ||
+                            item.product_id}
                         </div>
                       </td>
                       <td className="p-3 text-center">
