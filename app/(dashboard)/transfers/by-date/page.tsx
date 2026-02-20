@@ -88,8 +88,8 @@ export default function TransfersByDatePage() {
       toast.success("تم إلغاء الصنف");
       setShowCancelConfirm(null);
       fetchTransfers(); // Reload
-    } catch {
-      toast.error("فشل إلغاء الصنف");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || err?.response?.data?.message || "فشل إلغاء الصنف");
     } finally {
       setCancellingItem(null);
     }
