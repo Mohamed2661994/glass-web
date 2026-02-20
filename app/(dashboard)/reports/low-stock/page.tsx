@@ -15,7 +15,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { multiWordMatch, multiWordScore } from "@/lib/utils";
 
 /* ========== Types ========== */
 type LowStockItem = {
@@ -37,6 +39,7 @@ export default function LowStockReportPage() {
 
   const [data, setData] = useState<LowStockItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
   const [selectedWarehouse, setSelectedWarehouse] = useState<WarehouseFilter>(
     isShowroomUser
       ? "مخزن المعرض"
@@ -80,8 +83,27 @@ export default function LowStockReportPage() {
       );
     }
 
+    // بحث
+    if (search.trim()) {
+      result = result.filter((item) =>
+        multiWordMatch(
+          search,
+          item.product_name,
+          item.manufacturer_name,
+          item.package_name,
+          String(item.product_id),
+        ),
+      );
+      // ترتيب حسب الأقرب
+      result = [...result].sort((a, b) => {
+        const scoreA = multiWordScore(search, a.product_name, a.manufacturer_name, a.package_name, String(a.product_id));
+        const scoreB = multiWordScore(search, b.product_name, b.manufacturer_name, b.package_name, String(b.product_id));
+        return scoreB - scoreA;
+      });
+    }
+
     return result;
-  }, [data, selectedWarehouse, isShowroomUser, isWarehouseUser]);
+  }, [data, selectedWarehouse, search, isShowroomUser, isWarehouseUser]);
 
   /* ========== Warehouse buttons ========== */
   const warehouseOptions: WarehouseFilter[] =
@@ -109,6 +131,17 @@ export default function LowStockReportPage() {
             ))}
           </div>
         )}
+
+        {/* Search */}
+        <div className="relative max-w-md mx-auto">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="ابحث باسم الصنف أو المصنع..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pr-9"
+          />
+        </div>
 
         {/* Loading */}
         {loading && (
