@@ -584,6 +584,7 @@ export default function CreateRetailInvoicePage() {
             quantity: 1,
             discount: product.discount_amount || 0,
             variant_id: vid,
+            barcode: product.barcode || "",
           },
         ];
       });
@@ -618,6 +619,7 @@ export default function CreateRetailInvoicePage() {
           quantity: 1,
           discount: product.discount_amount || 0,
           variant_id: vid,
+          barcode: product.barcode || "",
         },
       ];
     });
@@ -649,6 +651,7 @@ export default function CreateRetailInvoicePage() {
         quantity: 1,
         discount: product.discount_amount || 0,
         variant_id: vid,
+        barcode: product.barcode || "",
       },
     ]);
 
@@ -1272,7 +1275,7 @@ export default function CreateRetailInvoicePage() {
                           {item.product_name} - {item.manufacturer}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {item.package} - كود: {item.product_id}
+                          {item.package}{item.barcode ? ` - باركود: ${item.barcode}` : ""}
                         </div>
                       </td>
                       <td className="p-3 text-center">
