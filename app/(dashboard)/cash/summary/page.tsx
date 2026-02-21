@@ -64,13 +64,13 @@ const getPreviousDay = (d: Date) =>
 
 /** Parse {{total|paid|remaining}} from notes */
 const parseMetadata = (notes?: string | null) => {
-  const m = notes?.match(/\{\{([\d.]+)\|([\d.]+)\|([\d.]+)\}\}/);
+  const m = notes?.match(/\{\{(-?[\d.]+)\|(-?[\d.]+)\|(-?[\d.]+)\}\}/);
   if (!m) return null;
   return { total: Number(m[1]), paid: Number(m[2]), remaining: Number(m[3]) };
 };
 
 const cleanNotes = (notes?: string | null) =>
-  notes?.replace(/\{\{[\d.|]+\}\}/, "").trim() || null;
+  notes?.replace(/\{\{[-\d.|]+\}\}/, "").trim() || null;
 
 /** Get effective paid amount for a cash-in item */
 const effectivePaid = (i: CashInItem) => {

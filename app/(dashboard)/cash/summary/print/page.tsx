@@ -37,15 +37,21 @@ const getPreviousDay = (d: Date) =>
 
 /** Parse {{total|paid|remaining}} from notes */
 const parseMetadata = (notes?: string | null) => {
-  const m = notes?.match(/\{\\{([\d.]+)\|([\d.]+)\|([\d.]+)\}\\}/);
-  if (m) return { total: Number(m[1]), paid: Number(m[2]), remaining: Number(m[3]) };
-  const m2 = notes?.match(/\{\{([\d.]+)\|([\d.]+)\|([\d.]+)\}\}/);
-  if (m2) return { total: Number(m2[1]), paid: Number(m2[2]), remaining: Number(m2[3]) };
+  const m = notes?.match(/\{\\{(-?[\d.]+)\|(-?[\d.]+)\|(-?[\d.]+)\}\\}/);
+  if (m)
+    return { total: Number(m[1]), paid: Number(m[2]), remaining: Number(m[3]) };
+  const m2 = notes?.match(/\{\{(-?[\d.]+)\|(-?[\d.]+)\|(-?[\d.]+)\}\}/);
+  if (m2)
+    return {
+      total: Number(m2[1]),
+      paid: Number(m2[2]),
+      remaining: Number(m2[3]),
+    };
   return null;
 };
 
 const cleanNotes = (notes?: string | null) =>
-  notes?.replace(/\{\{[\d.|]+\}\}/, "").trim() || null;
+  notes?.replace(/\{\{[-\d.|]+\}\}/, "").trim() || null;
 
 const effectivePaid = (i: CashInItem) => {
   const meta = parseMetadata(i.notes);
@@ -180,7 +186,9 @@ function CashSummaryPrintInner() {
       className="bg-white text-black min-h-screen"
       style={{ colorScheme: "light" }}
     >
-      <div className={`${isLandscape ? 'max-w-[1100px]' : 'max-w-[800px]'} mx-auto border border-black p-5 print:border-0 print:p-5`}>
+      <div
+        className={`${isLandscape ? "max-w-[1100px]" : "max-w-[800px]"} mx-auto border border-black p-5 print:border-0 print:p-5`}
+      >
         {/* Header */}
         <div className="text-center mb-3">
           <h1 className="text-xl font-bold">اليومية</h1>
@@ -238,7 +246,7 @@ function CashSummaryPrintInner() {
       {/* Print styles */}
       <style>{`
         @media print {
-          @page { size: ${isLandscape ? 'A4 landscape' : 'A4'}; margin: 15mm; }
+          @page { size: ${isLandscape ? "A4 landscape" : "A4"}; margin: 15mm; }
           body { background: #fff !important; }
           * { overflow: visible !important; }
         }

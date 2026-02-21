@@ -245,13 +245,13 @@ export default function CashInListPage() {
                 filtered.map((item) => {
                   // Parse breakdown from notes: {{total|paid|remaining}}
                   const metaMatch = item.notes?.match(
-                    /\{\{([\d.]+)\|([\d.]+)\|([\d.]+)\}\}/,
+                    /\{\{(-?[\d.]+)\|(-?[\d.]+)\|(-?[\d.]+)\}\}/,
                   );
                   const metaTotal = metaMatch ? Number(metaMatch[1]) : null;
                   const metaPaid = metaMatch ? Number(metaMatch[2]) : null;
                   const metaRemaining = metaMatch ? Number(metaMatch[3]) : null;
                   const displayNotes =
-                    item.notes?.replace(/\{\{[\d.|]+\}\}/, "").trim() || null;
+                    item.notes?.replace(/\{\{[-\d.|]+\}\}/, "").trim() || null;
 
                   const totalAmount =
                     metaTotal != null
