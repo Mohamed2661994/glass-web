@@ -62,14 +62,24 @@ export default function InventorySummaryPage() {
   const fetchReport = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get("/reports/inventory-summary");
-      setData(Array.isArray(res.data) ? res.data : []);
+      const [invRes, prodRes] = await Promise.all([
+        api.get("/reports/inventory-summary"),
+        api.get("/products", { params: { branch_id: isShowroomUser ? 1 : 2, invoice_type: isShowroomUser ? "retail" : "wholesale", movement_type: "sale" } }),
+      ]);
+      const products: any[] = Array.isArray(prodRes.data) ? prodRes.data : (prodRes.data?.data ?? []);
+      const barcodeMap: Record<number, string> = {};
+      products.forEach((p: any) => { if (p.barcode) barcodeMap[p.id] = p.barcode; });
+      const items: InventoryItem[] = (Array.isArray(invRes.data) ? invRes.data : []).map((item: any) => ({
+        ...item,
+        barcode: item.barcode || barcodeMap[item.product_id] || null,
+      }));
+      setData(items);
     } catch {
       setData([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isShowroomUser]);
 
   useEffect(() => {
     fetchReport();
@@ -217,7 +227,10 @@ export default function InventorySummaryPage() {
                             <div className="font-medium">
                               {item.product_name}
                               {item.manufacturer_name && (
-                                <span className="text-muted-foreground font-normal"> - {item.manufacturer_name}</span>
+                                <span className="text-muted-foreground font-normal">
+                                  {" "}
+                                  - {item.manufacturer_name}
+                                </span>
                               )}
                             </div>
                             {item.barcode && (
@@ -272,7 +285,10 @@ export default function InventorySummaryPage() {
 
         {/* Discrepancy Modal */}
         <Dialog open={discrepancyOpen} onOpenChange={setDiscrepancyOpen}>
-          <DialogContent dir="rtl" className="sm:max-w-4xl max-h-[85vh] flex flex-col p-0">
+          <DialogContent
+            dir="rtl"
+            className="sm:max-w-4xl max-h-[85vh] flex flex-col p-0"
+          >
             <DialogHeader className="p-4 border-b shrink-0">
               <DialogTitle className="flex items-center gap-2 text-red-600">
                 <AlertTriangle className="h-5 w-5" />
@@ -281,7 +297,9 @@ export default function InventorySummaryPage() {
             </DialogHeader>
             <div className="flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {discrepancyItems.length === 0 ? (
-                <p className="text-center py-12 text-muted-foreground">لا توجد أصناف بها فرق</p>
+                <p className="text-center py-12 text-muted-foreground">
+                  لا توجد أصناف بها فرق
+                </p>
               ) : (
                 <Table className="text-xs sm:text-sm">
                   <TableHeader>
@@ -303,24 +321,44 @@ export default function InventorySummaryPage() {
                       const expectedStock = totalIn - totalOut;
                       const difference = currentStock - expectedStock;
                       return (
-                        <TableRow key={`disc-${item.product_id}-${item.warehouse_name}-${idx}`} className="bg-red-50 dark:bg-red-950/20">
+                        <TableRow
+                          key={`disc-${item.product_id}-${item.warehouse_name}-${idx}`}
+                          className="bg-red-50 dark:bg-red-950/20"
+                        >
                           <TableCell className="text-right">
                             <div className="font-medium">
                               {item.product_name}
                               {item.manufacturer_name && (
-                                <span className="text-muted-foreground font-normal"> - {item.manufacturer_name}</span>
+                                <span className="text-muted-foreground font-normal">
+                                  {" "}
+                                  - {item.manufacturer_name}
+                                </span>
                               )}
                             </div>
                             {item.barcode && (
-                              <div className="text-xs text-muted-foreground font-mono">{item.barcode}</div>
+                              <div className="text-xs text-muted-foreground font-mono">
+                                {item.barcode}
+                              </div>
                             )}
                           </TableCell>
-                          <TableCell className="text-center text-xs">{item.warehouse_name}</TableCell>
-                          <TableCell className="text-center">{totalIn}</TableCell>
-                          <TableCell className="text-center">{totalOut}</TableCell>
-                          <TableCell className="text-center font-bold">{currentStock}</TableCell>
-                          <TableCell className="text-center">{expectedStock}</TableCell>
-                          <TableCell className="text-center font-bold text-red-600">{difference}</TableCell>
+                          <TableCell className="text-center text-xs">
+                            {item.warehouse_name}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {totalIn}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {totalOut}
+                          </TableCell>
+                          <TableCell className="text-center font-bold">
+                            {currentStock}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {expectedStock}
+                          </TableCell>
+                          <TableCell className="text-center font-bold text-red-600">
+                            {difference}
+                          </TableCell>
                         </TableRow>
                       );
                     })}
