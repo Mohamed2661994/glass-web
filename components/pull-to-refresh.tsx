@@ -118,7 +118,7 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
   }, [refreshing, updateVisuals]);
 
   return (
-    <div ref={containerRef} className={cn("relative", className)}>
+    <div ref={containerRef} className={cn("relative", className)} style={{ overscrollBehaviorY: "contain" }}>
       {/* Pull indicator */}
       <div
         ref={indicatorRef}
