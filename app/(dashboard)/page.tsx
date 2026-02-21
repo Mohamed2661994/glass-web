@@ -1147,23 +1147,29 @@ export default function DashboardPage() {
               </CardTitle>
               <div className="flex items-center gap-2">
                 {/* view mode toggle */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  title={
-                    invoiceView === "table" ? "جدول كامل" : invoiceView === "compact" ? "مضغوط" : "كروت"
-                  }
-                  onClick={cycleInvoiceView}
-                >
-                  {invoiceView === "table" ? (
-                    <List className="h-4 w-4" />
-                  ) : invoiceView === "compact" ? (
-                    <Layers className="h-4 w-4" />
-                  ) : (
-                    <LayoutGrid className="h-4 w-4" />
-                  )}
-                </Button>
+                <div className="flex items-center border rounded-md overflow-hidden">
+                  {([
+                    { mode: "table" as const, icon: <List className="h-3.5 w-3.5" />, title: "جدول كامل" },
+                    { mode: "compact" as const, icon: <Layers className="h-3.5 w-3.5" />, title: "مضغوط" },
+                    { mode: "cards" as const, icon: <LayoutGrid className="h-3.5 w-3.5" />, title: "كروت" },
+                  ]).map(({ mode, icon, title }) => (
+                    <button
+                      key={mode}
+                      title={title}
+                      className={`h-7 w-7 flex items-center justify-center transition-colors ${
+                        invoiceView === mode
+                          ? "bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300"
+                          : "text-muted-foreground hover:bg-muted"
+                      }`}
+                      onClick={() => {
+                        setInvoiceView(mode);
+                        localStorage.setItem("dash_invoice_view", mode);
+                      }}
+                    >
+                      {icon}
+                    </button>
+                  ))}
+                </div>
                 <Button
                   variant="ghost"
                   size="icon"
