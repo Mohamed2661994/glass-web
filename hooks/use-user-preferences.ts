@@ -61,6 +61,7 @@ export interface UserPreferences {
   chat?: ChatPrefs;
   customColors?: { light?: CustomColors; dark?: CustomColors };
   dash_invoice_view?: "table" | "compact" | "cards";
+  dash_transfer_view?: "table" | "cards";
   products_view?: "cards" | "compact" | "table";
   /** Any future per-user preferences can be added here */
   [key: string]: unknown;
@@ -218,6 +219,13 @@ export function useUserPreferences() {
     [setPrefs],
   );
 
+  const setDashTransferView = useCallback(
+    (dash_transfer_view: "table" | "cards") => {
+      setPrefs((prev) => ({ ...prev, dash_transfer_view }));
+    },
+    [setPrefs],
+  );
+
   return {
     prefs,
     loaded,
@@ -228,6 +236,7 @@ export function useUserPreferences() {
     setThemePref,
     setDashInvoiceView,
     setProductsView,
+    setDashTransferView,
   };
 }
 

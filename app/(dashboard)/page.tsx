@@ -735,6 +735,7 @@ export default function DashboardPage() {
     setDashboardWidgets: saveDashboardWidgets,
     setQuickLinks: saveQuickLinksPrefs,
     setDashInvoiceView: saveDashInvoiceView,
+    setDashTransferView: saveDashTransferView,
   } = useUserPreferences();
 
   /* ---------- widget customization ---------- */
@@ -751,6 +752,15 @@ export default function DashboardPage() {
       setInvoiceView(prefs.dash_invoice_view);
     }
   }, [prefsLoaded, prefs.dash_invoice_view]);
+
+  /* ---------- transfer view mode ---------- */
+  const [transferView, setTransferView] = useState<"table" | "cards">("table");
+
+  useEffect(() => {
+    if (prefsLoaded && prefs.dash_transfer_view) {
+      setTransferView(prefs.dash_transfer_view);
+    }
+  }, [prefsLoaded, prefs.dash_transfer_view]);
 
   /* ---------- product lookup ---------- */
   const [lookupOpen, setLookupOpen] = useState(false);
@@ -1403,62 +1413,133 @@ export default function DashboardPage() {
                 <Truck className="h-5 w-5 text-violet-600 dark:text-violet-400" />
                 آخر التحويلات
               </CardTitle>
-              <Badge
-                variant="outline"
-                className="border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300"
-              >
-                {transfers.length} تحويل
-              </Badge>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center border rounded-md overflow-hidden">
+                  {([
+                    { mode: "table" as const, icon: <List className="h-3.5 w-3.5" />, title: "جدول" },
+                    { mode: "cards" as const, icon: <LayoutGrid className="h-3.5 w-3.5" />, title: "كروت" },
+                  ]).map(({ mode, icon, title }) => (
+                    <button
+                      key={mode}
+                      title={title}
+                      className={`h-7 w-7 flex items-center justify-center transition-colors ${
+                        transferView === mode
+                          ? "bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-300"
+                          : "text-muted-foreground hover:bg-muted"
+                      }`}
+                      onClick={() => {
+                        setTransferView(mode);
+                        saveDashTransferView(mode);
+                      }}
+                    >
+                      {icon}
+                    </button>
+                  ))}
+                </div>
+                <Badge
+                  variant="outline"
+                  className="border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300"
+                >
+                  {transfers.length} تحويل
+                </Badge>
+              </div>
             </CardHeader>
-            <CardContent className="overflow-x-auto p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-right">رقم التحويل</TableHead>
-                    <TableHead className="text-right">عدد الأصناف</TableHead>
-                    <TableHead className="text-right">إجمالي الكمية</TableHead>
-                    <TableHead className="text-right">الحالة</TableHead>
-                    <TableHead className="text-right">التاريخ</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loadingTr ? (
-                    skelRows(5)
-                  ) : transfers.length === 0 ? (
+
+            {/* -------- TABLE VIEW -------- */}
+            {transferView === "table" && (
+              <CardContent className="overflow-x-auto p-0">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell
-                        colSpan={5}
-                        className="text-center py-8 text-muted-foreground"
-                      >
-                        لا توجد تحويلات
-                      </TableCell>
+                      <TableHead className="text-right">رقم التحويل</TableHead>
+                      <TableHead className="text-right">عدد الأصناف</TableHead>
+                      <TableHead className="text-right">إجمالي الكمية</TableHead>
+                      <TableHead className="text-right">الحالة</TableHead>
+                      <TableHead className="text-right">التاريخ</TableHead>
                     </TableRow>
-                  ) : (
-                    transfers.map((tr) => (
-                      <TableRow
-                        key={tr.id}
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => router.push(`/transfers/${tr.id}`)}
-                      >
-                        <TableCell className="font-medium">{tr.id}</TableCell>
-                        <TableCell>{tr.items_count}</TableCell>
-                        <TableCell>{tr.total_from_quantity}</TableCell>
-                        <TableCell>
-                          {tr.status === "cancelled" ? (
-                            <Badge variant="destructive">ملغي</Badge>
-                          ) : (
-                            <Badge className="bg-green-600">تم</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-xs">
-                          {formatDate(tr.created_at)}
+                  </TableHeader>
+                  <TableBody>
+                    {loadingTr ? (
+                      skelRows(5)
+                    ) : transfers.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={5}
+                          className="text-center py-8 text-muted-foreground"
+                        >
+                          لا توجد تحويلات
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
+                    ) : (
+                      transfers.map((tr) => (
+                        <TableRow
+                          key={tr.id}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => router.push(`/transfers/${tr.id}`)}
+                        >
+                          <TableCell className="font-medium">{tr.id}</TableCell>
+                          <TableCell>{tr.items_count}</TableCell>
+                          <TableCell>{tr.total_from_quantity}</TableCell>
+                          <TableCell>
+                            {tr.status === "cancelled" ? (
+                              <Badge variant="destructive">ملغي</Badge>
+                            ) : (
+                              <Badge className="bg-green-600">تم</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-xs">
+                            {formatDate(tr.created_at)}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            )}
+
+            {/* -------- CARDS VIEW -------- */}
+            {transferView === "cards" && (
+              <CardContent className="overflow-y-auto max-h-[400px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-3 pb-3 pt-0">
+                {loadingTr ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <Skeleton key={i} className="h-24 rounded-lg" />
+                    ))}
+                  </div>
+                ) : transfers.length === 0 ? (
+                  <p className="text-center py-8 text-muted-foreground text-sm">
+                    لا توجد تحويلات
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {transfers.map((tr) => (
+                      <div
+                        key={tr.id}
+                        className="rounded-lg border bg-card p-2.5 cursor-pointer hover:bg-muted/50 transition-colors space-y-1.5"
+                        onClick={() => router.push(`/transfers/${tr.id}`)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-muted-foreground">#{tr.id}</span>
+                          {tr.status === "cancelled" ? (
+                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0">ملغي</Badge>
+                          ) : (
+                            <Badge className="bg-green-600 text-[10px] px-1.5 py-0">تم</Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-muted-foreground">أصناف: {tr.items_count}</span>
+                          <span className="font-semibold">كمية: {tr.total_from_quantity}</span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">
+                          {formatDate(tr.created_at)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            )}
           </Card>
         );
 
