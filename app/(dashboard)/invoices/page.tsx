@@ -523,7 +523,9 @@ export default function InvoicesPage() {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <p className="text-[10px] text-muted-foreground">
-                    {new Date(invoice.invoice_date || invoice.created_at).toLocaleDateString("ar-EG", {
+                    {new Date(
+                      invoice.invoice_date || invoice.created_at,
+                    ).toLocaleDateString("ar-EG", {
                       day: "numeric",
                       month: "short",
                     })}

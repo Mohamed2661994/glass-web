@@ -481,18 +481,19 @@ export default function EditRetailInvoicePage() {
       try {
         const paidNum = Number(paidAmount) || 0;
         // Try to find existing cash entry linked to this invoice
-        const cashRes = await api.get("/cash-in", { params: { invoice_id: id } });
+        const cashRes = await api.get("/cash-in", {
+          params: { invoice_id: id },
+        });
         const entries: any[] = cashRes.data?.data || cashRes.data || [];
         const existing = entries.find(
-          (e: any) => String(e.invoice_id) === String(id) && e.source_type === "invoice",
+          (e: any) =>
+            String(e.invoice_id) === String(id) && e.source_type === "invoice",
         );
 
         if (existing && paidNum > 0) {
-          // Update existing cash entry with new amounts
+          // Update existing cash entry with the paid amount
           await api.put(`/cash-in/${existing.id}`, {
-            amount: finalTotal,
-            paid_amount: paidNum,
-            remaining_amount: finalTotal - paidNum,
+            amount: paidNum,
             customer_name: customerName || "نقدي",
             transaction_date: invoiceDate,
           });
@@ -505,9 +506,7 @@ export default function EditRetailInvoicePage() {
             transaction_date: invoiceDate,
             customer_name: customerName || "نقدي",
             description: `فاتورة قطاعي رقم #${id}`,
-            amount: finalTotal,
-            paid_amount: paidNum,
-            remaining_amount: finalTotal - paidNum,
+            amount: paidNum,
             source_type: "invoice",
             invoice_id: Number(id),
           });

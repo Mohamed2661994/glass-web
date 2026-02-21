@@ -407,29 +407,21 @@ export default function EditWholesaleInvoicePage() {
          ------------------------------------------------------- */
       try {
         const paidNum = Number(paidAmount) || 0;
-        const manualDiscount = Number(extraDiscount) || 0;
-        const computedTotal = items.reduce((sum: number, item: any) => {
-          const raw =
-            Number(item.price) * (Number(item.quantity) || 0) -
-            (applyItemsDiscount
-              ? (Number(item.discount) || 0) * (Number(item.quantity) || 0)
-              : 0);
-          return sum + (item.is_return ? -raw : raw);
-        }, 0) - manualDiscount;
 
         // Try to find existing cash entry linked to this invoice
-        const cashRes = await api.get("/cash-in", { params: { invoice_id: id } });
+        const cashRes = await api.get("/cash-in", {
+          params: { invoice_id: id },
+        });
         const entries: any[] = cashRes.data?.data || cashRes.data || [];
         const existing = entries.find(
-          (e: any) => String(e.invoice_id) === String(id) && e.source_type === "invoice",
+          (e: any) =>
+            String(e.invoice_id) === String(id) && e.source_type === "invoice",
         );
 
         if (existing && paidNum > 0) {
-          // Update existing cash entry with new amounts
+          // Update existing cash entry with the paid amount
           await api.put(`/cash-in/${existing.id}`, {
-            amount: computedTotal,
-            paid_amount: paidNum,
-            remaining_amount: computedTotal - paidNum,
+            amount: paidNum,
             customer_name: customerName,
             transaction_date: invoiceDate,
           });
@@ -442,9 +434,7 @@ export default function EditWholesaleInvoicePage() {
             transaction_date: invoiceDate,
             customer_name: customerName,
             description: `فاتورة جملة رقم #${id}`,
-            amount: computedTotal,
-            paid_amount: paidNum,
-            remaining_amount: computedTotal - paidNum,
+            amount: paidNum,
             source_type: "invoice",
             invoice_id: Number(id),
           });
