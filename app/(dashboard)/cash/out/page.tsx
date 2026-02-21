@@ -100,7 +100,8 @@ function CashOutPage() {
       (item) =>
         normalizeArabic(noSpaces(item.name).toLowerCase()).includes(q) ||
         item.permission_number?.toLowerCase().includes(q) ||
-        (item.notes && normalizeArabic(noSpaces(item.notes).toLowerCase()).includes(q)),
+        (item.notes &&
+          normalizeArabic(noSpaces(item.notes).toLowerCase()).includes(q)),
     );
   }, [modalData, modalSearch]);
 
