@@ -220,11 +220,16 @@ function CashSummaryPrintInner() {
           {/* الوارد */}
           <DataTable
             title="الوارد"
-            rows={filteredIn.map((i) => [
-              i.customer_name,
-              effectivePaid(i),
-              i.source_type !== "invoice" ? (cleanNotes(i.notes) || "-") : "-",
-            ])}
+            thirdColumnHeader="المتبقي"
+            rows={filteredIn.map((i) => {
+              const meta = parseMetadata(i.notes);
+              const remaining = meta ? meta.remaining : Number(i.remaining_amount || 0);
+              return [
+                i.customer_name,
+                effectivePaid(i),
+                remaining !== 0 ? remaining : "-",
+              ];
+            })}
           />
 
           {/* المصروفات */}
@@ -271,9 +276,11 @@ function SummaryRow({ label, value }: { label: string; value: number }) {
 function DataTable({
   title,
   rows,
+  thirdColumnHeader = "ملاحظات",
 }: {
   title: string;
   rows: (string | number | null | undefined)[][];
+  thirdColumnHeader?: string;
 }) {
   return (
     <div className="flex-1 min-w-[200px]">
@@ -283,7 +290,7 @@ function DataTable({
           <tr className="bg-gray-100">
             <th className="border border-black p-1.5 text-right">الاسم</th>
             <th className="border border-black p-1.5 text-center">المبلغ</th>
-            <th className="border border-black p-1.5 text-right">ملاحظات</th>
+            <th className="border border-black p-1.5 text-right">{thirdColumnHeader}</th>
           </tr>
         </thead>
         <tbody>
