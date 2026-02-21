@@ -402,6 +402,58 @@ export default function EditWholesaleInvoicePage() {
         updated_by_name: user?.username,
       });
 
+      /* -------------------------------------------------------
+         Sync cash entry (اليومية) after invoice update
+         ------------------------------------------------------- */
+      try {
+        const paidNum = Number(paidAmount) || 0;
+        const manualDiscount = Number(extraDiscount) || 0;
+        const computedTotal = items.reduce((sum: number, item: any) => {
+          const raw =
+            Number(item.price) * (Number(item.quantity) || 0) -
+            (applyItemsDiscount
+              ? (Number(item.discount) || 0) * (Number(item.quantity) || 0)
+              : 0);
+          return sum + (item.is_return ? -raw : raw);
+        }, 0) - manualDiscount;
+
+        // Try to find existing cash entry linked to this invoice
+        const cashRes = await api.get("/cash-in", { params: { invoice_id: id } });
+        const entries: any[] = cashRes.data?.data || cashRes.data || [];
+        const existing = entries.find(
+          (e: any) => String(e.invoice_id) === String(id) && e.source_type === "invoice",
+        );
+
+        if (existing && paidNum > 0) {
+          // Update existing cash entry with new amounts
+          await api.put(`/cash-in/${existing.id}`, {
+            amount: computedTotal,
+            paid_amount: paidNum,
+            remaining_amount: computedTotal - paidNum,
+            customer_name: customerName,
+            transaction_date: invoiceDate,
+          });
+        } else if (existing && paidNum === 0) {
+          // Paid became 0 → remove the cash entry
+          await api.delete(`/cash-in/${existing.id}`);
+        } else if (!existing && paidNum > 0) {
+          // No cash entry existed, but now there's a payment → create one
+          await api.post("/cash/in", {
+            transaction_date: invoiceDate,
+            customer_name: customerName,
+            description: `فاتورة جملة رقم #${id}`,
+            amount: computedTotal,
+            paid_amount: paidNum,
+            remaining_amount: computedTotal - paidNum,
+            source_type: "invoice",
+            invoice_id: Number(id),
+          });
+        }
+      } catch {
+        // Don't block invoice save if cash sync fails
+        console.warn("تعذّر تحديث قيد اليومية");
+      }
+
       toast.success("تم تعديل الفاتورة بنجاح");
       invalidateCache();
       window.location.reload();

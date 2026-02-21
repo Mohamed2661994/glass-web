@@ -42,6 +42,7 @@ interface Invoice {
   paid_amount: number;
   remaining_amount: number;
   payment_status: "paid" | "partial" | "unpaid";
+  invoice_date: string;
   created_at: string;
   created_by?: number;
   created_by_name?: string;
@@ -522,11 +523,9 @@ export default function InvoicesPage() {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <p className="text-[10px] text-muted-foreground">
-                    {new Date(invoice.created_at).toLocaleDateString("ar-EG", {
+                    {new Date(invoice.invoice_date || invoice.created_at).toLocaleDateString("ar-EG", {
                       day: "numeric",
                       month: "short",
-                      hour: "2-digit",
-                      minute: "2-digit",
                     })}
                   </p>
                   <div className="flex items-center gap-1">

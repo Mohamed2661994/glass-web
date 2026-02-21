@@ -225,6 +225,7 @@ interface Invoice {
   paid_amount: number;
   remaining_amount: number;
   payment_status: "paid" | "partial" | "unpaid";
+  invoice_date: string;
   created_at: string;
 }
 
@@ -1184,7 +1185,7 @@ export default function DashboardPage() {
                           {paymentBadge(inv.payment_status)}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-xs hidden sm:table-cell">
-                          {formatDate(inv.created_at)}
+                          {formatDate(inv.invoice_date || inv.created_at)}
                         </TableCell>
                       </TableRow>
                     ))
