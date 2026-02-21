@@ -257,6 +257,7 @@ interface CashInItem {
 interface CashOutItem {
   id: number;
   amount: number;
+  entry_type?: string;
 }
 
 interface Notification {
@@ -718,6 +719,8 @@ export default function DashboardPage() {
   /* cash summary */
   const [cashInTotal, setCashInTotal] = useState(0);
   const [cashOutTotal, setCashOutTotal] = useState(0);
+  const [cashExpenseTotal, setCashExpenseTotal] = useState(0);
+  const [cashPurchaseTotal, setCashPurchaseTotal] = useState(0);
   const [loadingCash, setLoadingCash] = useState(true);
 
   /* notifications */
@@ -987,6 +990,12 @@ export default function DashboardPage() {
         );
         setCashOutTotal(
           outItems.reduce((s, i) => s + Number(i.amount || 0), 0),
+        );
+        setCashExpenseTotal(
+          outItems.filter((i) => i.entry_type !== "purchase").reduce((s, i) => s + Number(i.amount || 0), 0),
+        );
+        setCashPurchaseTotal(
+          outItems.filter((i) => i.entry_type === "purchase").reduce((s, i) => s + Number(i.amount || 0), 0),
         );
       } catch {
         /* silent */
@@ -1326,12 +1335,27 @@ export default function DashboardPage() {
                   {/* منصرف */}
                   <div className="rounded-xl bg-red-500/10 dark:bg-red-500/15 p-4 text-center">
                     <TrendingDown className="h-5 w-5 text-red-500 dark:text-red-400 mx-auto mb-1" />
-                    <p className="text-[11px] text-muted-foreground mb-1">
-                      المنصرف
-                    </p>
-                    <p className="text-lg font-bold text-red-500 dark:text-red-400">
-                      {Math.round(cashOutTotal).toLocaleString()}
-                    </p>
+                    <div className="flex items-center justify-center gap-3 mb-1">
+                      <div>
+                        <p className="text-[10px] text-muted-foreground">المصروفات</p>
+                        <p className="text-sm font-bold text-red-500 dark:text-red-400">
+                          {Math.round(cashExpenseTotal).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="w-px h-8 bg-red-300/40 dark:bg-red-600/40" />
+                      <div>
+                        <p className="text-[10px] text-muted-foreground">المشتريات</p>
+                        <p className="text-sm font-bold text-red-500 dark:text-red-400">
+                          {Math.round(cashPurchaseTotal).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="border-t border-red-300/30 dark:border-red-600/30 pt-1 mt-1">
+                      <p className="text-[10px] text-muted-foreground">المنصرف</p>
+                      <p className="text-lg font-bold text-red-500 dark:text-red-400">
+                        {Math.round(cashOutTotal).toLocaleString()}
+                      </p>
+                    </div>
                   </div>
                   {/* صافي */}
                   <div

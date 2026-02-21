@@ -64,12 +64,24 @@ export default function InventorySummaryPage() {
       setLoading(true);
       const [invRes, prodRes] = await Promise.all([
         api.get("/reports/inventory-summary"),
-        api.get("/products", { params: { branch_id: isShowroomUser ? 1 : 2, invoice_type: isShowroomUser ? "retail" : "wholesale", movement_type: "sale" } }),
+        api.get("/products", {
+          params: {
+            branch_id: isShowroomUser ? 1 : 2,
+            invoice_type: isShowroomUser ? "retail" : "wholesale",
+            movement_type: "sale",
+          },
+        }),
       ]);
-      const products: any[] = Array.isArray(prodRes.data) ? prodRes.data : (prodRes.data?.data ?? []);
+      const products: any[] = Array.isArray(prodRes.data)
+        ? prodRes.data
+        : (prodRes.data?.data ?? []);
       const barcodeMap: Record<number, string> = {};
-      products.forEach((p: any) => { if (p.barcode) barcodeMap[p.id] = p.barcode; });
-      const items: InventoryItem[] = (Array.isArray(invRes.data) ? invRes.data : []).map((item: any) => ({
+      products.forEach((p: any) => {
+        if (p.barcode) barcodeMap[p.id] = p.barcode;
+      });
+      const items: InventoryItem[] = (
+        Array.isArray(invRes.data) ? invRes.data : []
+      ).map((item: any) => ({
         ...item,
         barcode: item.barcode || barcodeMap[item.product_id] || null,
       }));
