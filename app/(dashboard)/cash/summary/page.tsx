@@ -384,7 +384,11 @@ export default function CashSummaryPage() {
               </div>
               <div className="flex items-center gap-2">
                 <Link href="/cash/in/list">
-                  <Button variant="outline" size="sm" className="h-7 gap-1.5 text-[11px]">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1.5 text-[11px]"
+                  >
                     <ExternalLink className="h-3 w-3" />
                     عرض الكل
                   </Button>
@@ -457,7 +461,11 @@ export default function CashSummaryPage() {
               </div>
               <div className="flex items-center gap-2">
                 <Link href="/cash/out/list">
-                  <Button variant="outline" size="sm" className="h-7 gap-1.5 text-[11px]">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1.5 text-[11px]"
+                  >
                     <ExternalLink className="h-3 w-3" />
                     عرض الكل
                   </Button>

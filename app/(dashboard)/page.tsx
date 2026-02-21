@@ -959,8 +959,11 @@ export default function DashboardPage() {
         ]);
         const inItems: CashInItem[] = inRes.data?.data ?? [];
         const outItems: CashOutItem[] = outRes.data?.data ?? [];
+        const todayInItems = inItems.filter(
+          (i) => i.transaction_date.substring(0, 10) === today,
+        );
         setCashInTotal(
-          inItems.reduce(
+          todayInItems.reduce(
             (s, i) => s + Number(i.paid_amount || i.amount || 0),
             0,
           ),

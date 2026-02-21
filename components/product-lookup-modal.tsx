@@ -44,7 +44,11 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     cacheKey: `lookup_${invoiceType}`,
   });
 
-  const { products: otherBranchProducts, loading: otherLoading, refresh: refreshOther } = useCachedProducts({
+  const {
+    products: otherBranchProducts,
+    loading: otherLoading,
+    refresh: refreshOther,
+  } = useCachedProducts({
     endpoint: "/products",
     params: {
       branch_id: otherBranchId,
@@ -311,11 +315,25 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
                   {/* Row 3: Branch Balances */}
                   <div className="text-xs mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
-                    <span className={Number(product.available_quantity) > 0 ? "text-green-600 dark:text-green-400 font-semibold" : "text-red-500 font-semibold"}>
-                      رصيد {branchId === 1 ? "القطاعي" : "الجملة"}: {product.available_quantity}
+                    <span
+                      className={
+                        Number(product.available_quantity) > 0
+                          ? "text-green-600 dark:text-green-400 font-semibold"
+                          : "text-red-500 font-semibold"
+                      }
+                    >
+                      رصيد {branchId === 1 ? "القطاعي" : "الجملة"}:{" "}
+                      {product.available_quantity}
                     </span>
-                    <span className={(otherBranchQtyMap[product.id] || 0) > 0 ? "text-green-600 dark:text-green-400 font-semibold" : "text-red-500 font-semibold"}>
-                      رصيد {branchId === 1 ? "الجملة" : "القطاعي"}: {otherBranchQtyMap[product.id] ?? "-"}
+                    <span
+                      className={
+                        (otherBranchQtyMap[product.id] || 0) > 0
+                          ? "text-green-600 dark:text-green-400 font-semibold"
+                          : "text-red-500 font-semibold"
+                      }
+                    >
+                      رصيد {branchId === 1 ? "الجملة" : "القطاعي"}:{" "}
+                      {otherBranchQtyMap[product.id] ?? "-"}
                     </span>
                   </div>
 
