@@ -1504,23 +1504,23 @@ export default function DashboardPage() {
                     </p>
                   </div>
                   {/* منصرف */}
-                  <div className="rounded-xl bg-red-500/10 dark:bg-red-500/15 p-4 text-center">
+                  <div className="rounded-xl bg-red-500/10 dark:bg-red-500/15 p-3 sm:p-4 text-center">
                     <TrendingDown className="h-5 w-5 text-red-500 dark:text-red-400 mx-auto mb-1" />
-                    <div className="flex items-center justify-center gap-3 mb-1">
-                      <div>
+                    <div className="flex flex-col items-center gap-1 mb-1">
+                      <div className="flex items-center justify-center gap-1">
                         <p className="text-[10px] text-muted-foreground">
-                          المصروفات
+                          مصروفات
                         </p>
-                        <p className="text-sm font-bold text-red-500 dark:text-red-400">
+                        <p className="text-xs font-bold text-red-500 dark:text-red-400">
                           {Math.round(cashExpenseTotal).toLocaleString()}
                         </p>
                       </div>
-                      <div className="w-px h-8 bg-red-300/40 dark:bg-red-600/40" />
-                      <div>
+                      <div className="h-px w-8 bg-red-300/40 dark:bg-red-600/40" />
+                      <div className="flex items-center justify-center gap-1">
                         <p className="text-[10px] text-muted-foreground">
-                          المشتريات
+                          مشتريات
                         </p>
-                        <p className="text-sm font-bold text-red-500 dark:text-red-400">
+                        <p className="text-xs font-bold text-red-500 dark:text-red-400">
                           {Math.round(cashPurchaseTotal).toLocaleString()}
                         </p>
                       </div>
@@ -1529,7 +1529,7 @@ export default function DashboardPage() {
                       <p className="text-[10px] text-muted-foreground">
                         المنصرف
                       </p>
-                      <p className="text-lg font-bold text-red-500 dark:text-red-400">
+                      <p className="text-base sm:text-lg font-bold text-red-500 dark:text-red-400">
                         {Math.round(cashOutTotal).toLocaleString()}
                       </p>
                     </div>
