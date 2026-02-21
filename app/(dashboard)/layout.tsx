@@ -91,26 +91,88 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     // Inject semantic number color overrides
     const semanticRules: string[] = [];
     if (colors.success) {
-      semanticRules.push(`.text-green-600, .text-green-500, .text-emerald-600, .text-emerald-500 { color: ${colors.success} !important; }`);
-      semanticRules.push(`.bg-green-100, .bg-green-50, .bg-emerald-100, .bg-emerald-50 { background-color: color-mix(in srgb, ${colors.success} 15%, transparent) !important; }`);
-      semanticRules.push(`.border-green-200, .border-emerald-200 { border-color: color-mix(in srgb, ${colors.success} 30%, transparent) !important; }`);
+      semanticRules.push(
+        `.text-green-600, .text-green-500, .text-green-400, .text-emerald-600, .text-emerald-500, .text-emerald-400 { color: ${colors.success} !important; }`,
+      );
+      semanticRules.push(
+        `.bg-green-100, .bg-green-50, .bg-emerald-100, .bg-emerald-50 { background-color: color-mix(in srgb, ${colors.success} 15%, transparent) !important; }`,
+      );
+      semanticRules.push(
+        `.bg-green-500\\/10, .bg-emerald-500\\/10 { background-color: color-mix(in srgb, ${colors.success} 10%, transparent) !important; }`,
+      );
+      semanticRules.push(
+        `.bg-green-500\\/5, .bg-emerald-500\\/5 { background-color: color-mix(in srgb, ${colors.success} 5%, transparent) !important; }`,
+      );
+      semanticRules.push(
+        `.bg-green-500\\/15 { background-color: color-mix(in srgb, ${colors.success} 15%, transparent) !important; }`,
+      );
+      semanticRules.push(
+        `.bg-green-900\\/30, .bg-green-950\\/20, .bg-green-950\\/30 { background-color: color-mix(in srgb, ${colors.success} 20%, transparent) !important; }`,
+      );
+      semanticRules.push(
+        `.border-green-200, .border-emerald-200, .border-green-500\\/20, .border-emerald-500\\/20 { border-color: color-mix(in srgb, ${colors.success} 30%, transparent) !important; }`,
+      );
     }
     if (colors.danger) {
-      semanticRules.push(`.text-red-600, .text-red-500, .text-rose-600, .text-rose-500 { color: ${colors.danger} !important; }`);
-      semanticRules.push(`.bg-red-100, .bg-red-50, .bg-rose-100, .bg-rose-50 { background-color: color-mix(in srgb, ${colors.danger} 15%, transparent) !important; }`);
-      semanticRules.push(`.border-red-200, .border-rose-200 { border-color: color-mix(in srgb, ${colors.danger} 30%, transparent) !important; }`);
+      semanticRules.push(
+        `.text-red-600, .text-red-500, .text-red-400, .text-rose-600, .text-rose-500, .text-rose-400 { color: ${colors.danger} !important; }`,
+      );
+      semanticRules.push(
+        `.bg-red-100, .bg-red-50, .bg-rose-100, .bg-rose-50 { background-color: color-mix(in srgb, ${colors.danger} 15%, transparent) !important; }`,
+      );
+      semanticRules.push(
+        `.bg-red-500\\/10, .bg-rose-500\\/10 { background-color: color-mix(in srgb, ${colors.danger} 10%, transparent) !important; }`,
+      );
+      semanticRules.push(
+        `.bg-red-500\\/5, .bg-rose-500\\/5 { background-color: color-mix(in srgb, ${colors.danger} 5%, transparent) !important; }`,
+      );
+      semanticRules.push(
+        `.bg-red-500\\/15 { background-color: color-mix(in srgb, ${colors.danger} 15%, transparent) !important; }`,
+      );
+      semanticRules.push(
+        `.bg-red-900\\/30, .bg-red-900\\/20, .bg-red-950\\/20, .bg-red-950\\/30, .bg-red-950\\/10 { background-color: color-mix(in srgb, ${colors.danger} 20%, transparent) !important; }`,
+      );
+      semanticRules.push(
+        `.border-red-200, .border-rose-200, .border-red-500, .border-red-500\\/20 { border-color: color-mix(in srgb, ${colors.danger} 30%, transparent) !important; }`,
+      );
     }
     if (colors.info) {
-      semanticRules.push(`.text-blue-600, .text-blue-500, .text-blue-400 { color: ${colors.info} !important; }`);
-      semanticRules.push(`.bg-blue-100, .bg-blue-50 { background-color: color-mix(in srgb, ${colors.info} 15%, transparent) !important; }`);
-      semanticRules.push(`.border-blue-200 { border-color: color-mix(in srgb, ${colors.info} 30%, transparent) !important; }`);
+      semanticRules.push(
+        `.text-blue-600, .text-blue-500, .text-blue-400 { color: ${colors.info} !important; }`,
+      );
+      semanticRules.push(
+        `.bg-blue-100, .bg-blue-50 { background-color: color-mix(in srgb, ${colors.info} 15%, transparent) !important; }`,
+      );
+      semanticRules.push(
+        `.bg-blue-500\\/10 { background-color: color-mix(in srgb, ${colors.info} 10%, transparent) !important; }`,
+      );
+      semanticRules.push(
+        `.bg-blue-500\\/15 { background-color: color-mix(in srgb, ${colors.info} 15%, transparent) !important; }`,
+      );
+      semanticRules.push(
+        `.border-blue-200, .border-blue-500\\/20 { border-color: color-mix(in srgb, ${colors.info} 30%, transparent) !important; }`,
+      );
     }
     if (colors.warning) {
-      semanticRules.push(`.text-amber-600, .text-amber-500, .text-orange-600, .text-orange-500, .text-yellow-700, .text-yellow-600, .text-yellow-500 { color: ${colors.warning} !important; }`);
-      semanticRules.push(`.bg-amber-100, .bg-amber-50, .bg-orange-100, .bg-orange-50, .bg-yellow-100, .bg-yellow-50 { background-color: color-mix(in srgb, ${colors.warning} 15%, transparent) !important; }`);
-      semanticRules.push(`.border-amber-200, .border-orange-200, .border-yellow-200 { border-color: color-mix(in srgb, ${colors.warning} 30%, transparent) !important; }`);
+      semanticRules.push(
+        `.text-amber-600, .text-amber-500, .text-orange-600, .text-orange-500, .text-orange-400, .text-yellow-700, .text-yellow-600, .text-yellow-500 { color: ${colors.warning} !important; }`,
+      );
+      semanticRules.push(
+        `.bg-amber-100, .bg-amber-50, .bg-orange-100, .bg-orange-50, .bg-yellow-100, .bg-yellow-50 { background-color: color-mix(in srgb, ${colors.warning} 15%, transparent) !important; }`,
+      );
+      semanticRules.push(
+        `.bg-amber-500\\/10, .bg-orange-500\\/10 { background-color: color-mix(in srgb, ${colors.warning} 10%, transparent) !important; }`,
+      );
+      semanticRules.push(
+        `.bg-orange-900\\/30, .bg-orange-950\\/20 { background-color: color-mix(in srgb, ${colors.warning} 20%, transparent) !important; }`,
+      );
+      semanticRules.push(
+        `.border-amber-200, .border-orange-200, .border-yellow-200, .border-amber-500\\/20, .border-orange-500\\/20 { border-color: color-mix(in srgb, ${colors.warning} 30%, transparent) !important; }`,
+      );
     }
-    let styleEl = document.getElementById("semantic-color-overrides") as HTMLStyleElement | null;
+    let styleEl = document.getElementById(
+      "semantic-color-overrides",
+    ) as HTMLStyleElement | null;
     if (semanticRules.length > 0) {
       if (!styleEl) {
         styleEl = document.createElement("style");
