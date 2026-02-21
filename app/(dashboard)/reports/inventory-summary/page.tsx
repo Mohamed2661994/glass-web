@@ -330,8 +330,6 @@ export default function InventorySummaryPage() {
             </div>
           </DialogContent>
         </Dialog>
-          </div>
-        )}
       </div>
     </PageContainer>
   );
