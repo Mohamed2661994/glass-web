@@ -126,18 +126,25 @@ export default function CashSummaryPage() {
     [cashOut, fromDate, toDate],
   );
 
-  /* ================= PREVIOUS DAY ================= */
+  /* ================= PREVIOUS DAY (cumulative before fromDate) ================= */
 
-  const previousDate = getPreviousDay(new Date(fromDate + "T00:00:00"));
+  const fromDateTime = toDateOnly(new Date(fromDate + "T00:00:00"));
 
   const prevCashIn = cashIn.filter(
-    (i) =>
-      toDateOnly(new Date(i.transaction_date)) === toDateOnly(previousDate),
+    (i) => toDateOnly(new Date(i.transaction_date)) < fromDateTime,
   );
   const prevCashOut = cashOut.filter(
-    (o) =>
-      toDateOnly(new Date(o.transaction_date)) === toDateOnly(previousDate),
+    (o) => toDateOnly(new Date(o.transaction_date)) < fromDateTime,
   );
+
+  const lastPrevDate = useMemo(() => {
+    const allDates = [
+      ...prevCashIn.map((i) => toDateOnly(new Date(i.transaction_date))),
+      ...prevCashOut.map((o) => toDateOnly(new Date(o.transaction_date))),
+    ];
+    if (allDates.length === 0) return null;
+    return new Date(Math.max(...allDates));
+  }, [prevCashIn, prevCashOut]);
 
   const prevSummary = useMemo(() => {
     const totalIn = prevCashIn.reduce((s, i) => {
@@ -281,7 +288,8 @@ export default function CashSummaryPage() {
         <Card className="border-dashed">
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground font-medium mb-3">
-              اليومية السابقة ({formatLocalDate(previousDate)})
+              الرصيد المُرحَّل
+              {lastPrevDate ? ` (حتى ${formatLocalDate(lastPrevDate)})` : ""}
             </p>
             <div className="grid grid-cols-3 gap-3 text-center">
               <div>

@@ -96,20 +96,27 @@ function CashSummaryPrintInner() {
   const expenses = filteredOut.filter((o) => o.entry_type === "expense");
   const purchases = filteredOut.filter((o) => o.entry_type === "purchase");
 
-  const previousDate = fromDate ? getPreviousDay(fromDate) : null;
+  const fromDateTime = fromDate ? toDateOnly(fromDate) : null;
 
-  const prevCashIn = previousDate
+  const prevCashIn = fromDateTime
     ? cashIn.filter(
-        (i) =>
-          toDateOnly(new Date(i.transaction_date)) === toDateOnly(previousDate),
+        (i) => toDateOnly(new Date(i.transaction_date)) < fromDateTime,
       )
     : [];
-  const prevCashOut = previousDate
+  const prevCashOut = fromDateTime
     ? cashOut.filter(
-        (o) =>
-          toDateOnly(new Date(o.transaction_date)) === toDateOnly(previousDate),
+        (o) => toDateOnly(new Date(o.transaction_date)) < fromDateTime,
       )
     : [];
+
+  const lastPrevDate = useMemo(() => {
+    const allDates = [
+      ...prevCashIn.map((i) => toDateOnly(new Date(i.transaction_date))),
+      ...prevCashOut.map((o) => toDateOnly(new Date(o.transaction_date))),
+    ];
+    if (allDates.length === 0) return null;
+    return new Date(Math.max(...allDates));
+  }, [prevCashIn, prevCashOut]);
 
   const prevSummary = useMemo(() => {
     const totalIn = prevCashIn.reduce((s, i) => {
@@ -170,10 +177,10 @@ function CashSummaryPrintInner() {
 
         {/* Summary Box */}
         <div className="border border-black p-3 mb-5">
-          {previousDate && showOpeningBalance && (
+          {showOpeningBalance && (
             <>
               <SummaryRow
-                label={`رصيد افتتاحي (${previousDate.toLocaleDateString("ar-EG")})`}
+                label={`الرصيد المُرحَّل${lastPrevDate ? ` (حتى ${lastPrevDate.toLocaleDateString("ar-EG")})` : ""}`}
                 value={openingBalance}
               />
               <hr className="border-gray-300 my-1" />
