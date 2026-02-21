@@ -19,6 +19,8 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
   const startYRef = useRef(0);
   const isPullingRef = useRef(false);
   const pullDistanceRef = useRef(0);
+  // Only allow pull if the PREVIOUS touch ended while already at top
+  const readyRef = useRef(false);
 
   const THRESHOLD = 80;
   const MAX_PULL = 120;
@@ -49,9 +51,15 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
     const container = containerRef.current;
     if (!container) return;
 
+    // Mark ready when user is settled at the top (scroll ends at 0)
+    const handleScroll = () => {
+      readyRef.current = container.scrollTop <= 0;
+    };
+
     const handleTouchStart = (e: TouchEvent) => {
       if (refreshing) return;
-      if (container.scrollTop <= 0) {
+      // Only allow pull if already at top AND previous gesture ended at top
+      if (container.scrollTop <= 0 && readyRef.current) {
         startYRef.current = e.touches[0].clientY;
         isPullingRef.current = true;
       }
@@ -78,6 +86,9 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
     };
 
     const handleTouchEnd = () => {
+      // Update ready state: mark ready only if we ended at top
+      readyRef.current = container.scrollTop <= 0;
+
       if (!isPullingRef.current) return;
       isPullingRef.current = false;
 
@@ -102,6 +113,7 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
       }
     };
 
+    container.addEventListener("scroll", handleScroll, { passive: true });
     container.addEventListener("touchstart", handleTouchStart, {
       passive: true,
     });
@@ -110,7 +122,11 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
     });
     container.addEventListener("touchend", handleTouchEnd, { passive: true });
 
+    // Initialize: if page starts at top, pull is ready
+    readyRef.current = container.scrollTop <= 0;
+
     return () => {
+      container.removeEventListener("scroll", handleScroll);
       container.removeEventListener("touchstart", handleTouchStart);
       container.removeEventListener("touchmove", handleTouchMove);
       container.removeEventListener("touchend", handleTouchEnd);
