@@ -904,7 +904,6 @@ export default function DashboardPage() {
       try {
         const { data } = await api.get("/invoices", {
           params: {
-            limit: 10,
             invoice_type: invoiceType,
             date_from: today,
             date_to: today,
@@ -1119,7 +1118,7 @@ export default function DashboardPage() {
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <FileText className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                آخر فواتير اليوم
+                فواتير اليوم
               </CardTitle>
               <div className="flex items-center gap-2">
                 <Button
@@ -1138,7 +1137,7 @@ export default function DashboardPage() {
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="overflow-x-auto p-0">
+            <CardContent className="overflow-x-auto overflow-y-auto max-h-[500px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden p-0">
               <Table className="text-xs sm:text-sm">
                 <TableHeader>
                   <TableRow>
