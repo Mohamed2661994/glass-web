@@ -740,6 +740,21 @@ export default function DashboardPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
 
+  /* ---------- invoice view mode ---------- */
+  const [invoiceView, setInvoiceView] = useState<"table" | "compact" | "cards">(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("dash_invoice_view") as "table" | "compact" | "cards") || "table";
+    }
+    return "table";
+  });
+  const cycleInvoiceView = useCallback(() => {
+    setInvoiceView((prev) => {
+      const next = prev === "table" ? "compact" : prev === "compact" ? "cards" : "table";
+      localStorage.setItem("dash_invoice_view", next);
+      return next;
+    });
+  }, []);
+
   /* ---------- product lookup ---------- */
   const [lookupOpen, setLookupOpen] = useState(false);
 
@@ -1131,6 +1146,24 @@ export default function DashboardPage() {
                 فواتير اليوم
               </CardTitle>
               <div className="flex items-center gap-2">
+                {/* view mode toggle */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  title={
+                    invoiceView === "table" ? "جدول كامل" : invoiceView === "compact" ? "مضغوط" : "كروت"
+                  }
+                  onClick={cycleInvoiceView}
+                >
+                  {invoiceView === "table" ? (
+                    <List className="h-4 w-4" />
+                  ) : invoiceView === "compact" ? (
+                    <Layers className="h-4 w-4" />
+                  ) : (
+                    <LayoutGrid className="h-4 w-4" />
+                  )}
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -1147,77 +1180,184 @@ export default function DashboardPage() {
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="overflow-x-auto overflow-y-auto max-h-[500px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden p-0">
-              <Table className="text-xs sm:text-sm">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-right">#</TableHead>
-                    <TableHead className="text-right">العميل</TableHead>
-                    <TableHead className="text-right hidden sm:table-cell">
-                      النوع
-                    </TableHead>
-                    <TableHead className="text-right">الإجمالي</TableHead>
-                    <TableHead className="text-right">المدفوع</TableHead>
-                    <TableHead className="text-right">الباقي</TableHead>
-                    <TableHead className="text-right">الحالة</TableHead>
-                    <TableHead className="text-right hidden sm:table-cell">
-                      التاريخ
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loadingInv ? (
-                    skelRows(6)
-                  ) : invoices.length === 0 ? (
+
+            {/* -------- TABLE VIEW -------- */}
+            {invoiceView === "table" && (
+              <CardContent className="overflow-x-auto overflow-y-auto max-h-[500px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden p-0">
+                <Table className="text-xs sm:text-sm">
+                  <TableHeader>
                     <TableRow>
-                      <TableCell
-                        colSpan={8}
-                        className="text-center py-8 text-muted-foreground"
-                      >
-                        لا توجد فواتير
-                      </TableCell>
+                      <TableHead className="text-right">#</TableHead>
+                      <TableHead className="text-right">العميل</TableHead>
+                      <TableHead className="text-right hidden sm:table-cell">
+                        النوع
+                      </TableHead>
+                      <TableHead className="text-right">الإجمالي</TableHead>
+                      <TableHead className="text-right">المدفوع</TableHead>
+                      <TableHead className="text-right">الباقي</TableHead>
+                      <TableHead className="text-right">الحالة</TableHead>
+                      <TableHead className="text-right hidden sm:table-cell">
+                        التاريخ
+                      </TableHead>
                     </TableRow>
-                  ) : (
-                    invoices.map((inv) => (
-                      <TableRow
-                        key={inv.id}
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => router.push(`/invoices/${inv.id}`)}
-                      >
-                        <TableCell className="font-medium">{inv.id}</TableCell>
-                        <TableCell className="max-w-[80px] truncate">
-                          {inv.customer_name || "—"}
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          {movementLabel(inv.movement_type)}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          {Math.round(inv.total).toLocaleString()} ج
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap text-green-600 dark:text-green-400">
-                          {Math.round(
-                            Number(inv.paid_amount || 0),
-                          ).toLocaleString()}{" "}
-                          ج
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap text-red-600 dark:text-red-400">
-                          {Math.round(
-                            Number(inv.remaining_amount || 0),
-                          ).toLocaleString()}{" "}
-                          ج
-                        </TableCell>
-                        <TableCell>
-                          {paymentBadge(inv.payment_status)}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-xs hidden sm:table-cell">
-                          {formatDate(inv.invoice_date || inv.created_at)}
+                  </TableHeader>
+                  <TableBody>
+                    {loadingInv ? (
+                      skelRows(6)
+                    ) : invoices.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={8}
+                          className="text-center py-8 text-muted-foreground"
+                        >
+                          لا توجد فواتير
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
+                    ) : (
+                      invoices.map((inv) => (
+                        <TableRow
+                          key={inv.id}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => router.push(`/invoices/${inv.id}`)}
+                        >
+                          <TableCell className="font-medium">{inv.id}</TableCell>
+                          <TableCell className="max-w-[80px] truncate">
+                            {inv.customer_name || "—"}
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            {movementLabel(inv.movement_type)}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {Math.round(inv.total).toLocaleString()} ج
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap text-green-600 dark:text-green-400">
+                            {Math.round(
+                              Number(inv.paid_amount || 0),
+                            ).toLocaleString()}{" "}
+                            ج
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap text-red-600 dark:text-red-400">
+                            {Math.round(
+                              Number(inv.remaining_amount || 0),
+                            ).toLocaleString()}{" "}
+                            ج
+                          </TableCell>
+                          <TableCell>
+                            {paymentBadge(inv.payment_status)}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-xs hidden sm:table-cell">
+                            {formatDate(inv.invoice_date || inv.created_at)}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            )}
+
+            {/* -------- COMPACT VIEW -------- */}
+            {invoiceView === "compact" && (
+              <CardContent className="overflow-x-auto overflow-y-auto max-h-[500px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden p-0">
+                <Table className="text-[11px] sm:text-xs">
+                  <TableHeader>
+                    <TableRow className="h-7">
+                      <TableHead className="text-right py-1">#</TableHead>
+                      <TableHead className="text-right py-1">العميل</TableHead>
+                      <TableHead className="text-right py-1">الإجمالي</TableHead>
+                      <TableHead className="text-right py-1">الباقي</TableHead>
+                      <TableHead className="text-right py-1">الحالة</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loadingInv ? (
+                      skelRows(4)
+                    ) : invoices.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={5}
+                          className="text-center py-6 text-muted-foreground"
+                        >
+                          لا توجد فواتير
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      invoices.map((inv) => (
+                        <TableRow
+                          key={inv.id}
+                          className="cursor-pointer hover:bg-muted/50 h-7"
+                          onClick={() => router.push(`/invoices/${inv.id}`)}
+                        >
+                          <TableCell className="font-medium py-1">{inv.id}</TableCell>
+                          <TableCell className="max-w-[90px] truncate py-1">
+                            {inv.customer_name || "—"}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap py-1">
+                            {Math.round(inv.total).toLocaleString()} ج
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap py-1 text-red-600 dark:text-red-400">
+                            {Number(inv.remaining_amount || 0) > 0
+                              ? `${Math.round(Number(inv.remaining_amount)).toLocaleString()} ج`
+                              : "—"}
+                          </TableCell>
+                          <TableCell className="py-1">
+                            {paymentBadge(inv.payment_status)}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            )}
+
+            {/* -------- CARDS VIEW -------- */}
+            {invoiceView === "cards" && (
+              <CardContent className="overflow-y-auto max-h-[500px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-3 pb-3 pt-0">
+                {loadingInv ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <Skeleton key={i} className="h-24 rounded-lg" />
+                    ))}
+                  </div>
+                ) : invoices.length === 0 ? (
+                  <p className="text-center py-8 text-muted-foreground text-sm">
+                    لا توجد فواتير
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {invoices.map((inv) => (
+                      <div
+                        key={inv.id}
+                        className="rounded-lg border bg-card p-2.5 cursor-pointer hover:bg-muted/50 transition-colors space-y-1.5"
+                        onClick={() => router.push(`/invoices/${inv.id}`)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-muted-foreground">#{inv.id}</span>
+                          {paymentBadge(inv.payment_status)}
+                        </div>
+                        <p className="text-xs font-medium truncate">
+                          {inv.customer_name || "—"}
+                        </p>
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-semibold">
+                            {Math.round(inv.total).toLocaleString()} ج
+                          </span>
+                          {Number(inv.remaining_amount || 0) > 0 && (
+                            <span className="text-red-600 dark:text-red-400">
+                              -{Math.round(Number(inv.remaining_amount)).toLocaleString()}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">
+                          {formatDate(inv.invoice_date || inv.created_at)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            )}
           </Card>
         );
 
