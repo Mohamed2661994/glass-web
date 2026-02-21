@@ -242,10 +242,7 @@ export default function InvoiceDetailsPage() {
         >
           تعديل الفاتورة
         </Button>
-        <Button
-          variant="outline"
-          onClick={() => setPreviewOpen(true)}
-        >
+        <Button variant="outline" onClick={() => setPreviewOpen(true)}>
           معاينة
         </Button>
         <Button
@@ -257,7 +254,10 @@ export default function InvoiceDetailsPage() {
 
       {/* Preview Modal */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent dir="rtl" className="sm:max-w-4xl h-[85vh] p-0 flex flex-col overflow-hidden">
+        <DialogContent
+          dir="rtl"
+          className="sm:max-w-4xl h-[85vh] p-0 flex flex-col overflow-hidden"
+        >
           <DialogHeader className="p-4 pb-2 shrink-0">
             <DialogTitle>معاينة الفاتورة</DialogTitle>
           </DialogHeader>
@@ -267,8 +267,22 @@ export default function InvoiceDetailsPage() {
             style={{ minHeight: 0 }}
           />
           <div className="flex gap-3 p-4 pt-2 border-t shrink-0">
-            <Button className="flex-1" onClick={() => { window.open(`/invoices/${invoice?.id}/print`, "_blank"); setPreviewOpen(false); }}>طباعة</Button>
-            <Button variant="outline" className="flex-1" onClick={() => setPreviewOpen(false)}>إغلاق</Button>
+            <Button
+              className="flex-1"
+              onClick={() => {
+                window.open(`/invoices/${invoice?.id}/print`, "_blank");
+                setPreviewOpen(false);
+              }}
+            >
+              طباعة
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setPreviewOpen(false)}
+            >
+              إغلاق
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
