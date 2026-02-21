@@ -441,7 +441,8 @@ export default function CashSummaryPage() {
                     ? i.paid_amount
                     : i.amount;
                 const displayRemaining = meta ? meta.remaining : null;
-                const displayNotes = i.source_type !== "invoice" ? cleanNotes(i.notes) : null;
+                const displayNotes =
+                  i.source_type !== "invoice" ? cleanNotes(i.notes) : null;
                 return (
                   <div
                     key={i.id}

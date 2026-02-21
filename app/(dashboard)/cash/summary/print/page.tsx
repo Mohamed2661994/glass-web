@@ -224,7 +224,9 @@ function CashSummaryPrintInner() {
             thirdColumnHeader="المتبقي"
             rows={filteredIn.map((i) => {
               const meta = parseMetadata(i.notes);
-              const remaining = meta ? meta.remaining : Number(i.remaining_amount || 0);
+              const remaining = meta
+                ? meta.remaining
+                : Number(i.remaining_amount || 0);
               return [
                 i.customer_name,
                 effectivePaid(i),
@@ -291,7 +293,9 @@ function DataTable({
           <tr className="bg-gray-100">
             <th className="border border-black p-1.5 text-right">الاسم</th>
             <th className="border border-black p-1.5 text-center">المبلغ</th>
-            <th className="border border-black p-1.5 text-right">{thirdColumnHeader}</th>
+            <th className="border border-black p-1.5 text-right">
+              {thirdColumnHeader}
+            </th>
           </tr>
         </thead>
         <tbody>

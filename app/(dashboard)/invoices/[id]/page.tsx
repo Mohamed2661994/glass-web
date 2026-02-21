@@ -236,6 +236,12 @@ export default function InvoiceDetailsPage() {
           تعديل الفاتورة
         </Button>
         <Button
+          variant="outline"
+          onClick={() => window.open(`/invoices/${invoice.id}/print?preview=1`, "_blank")}
+        >
+          معاينة
+        </Button>
+        <Button
           onClick={() => window.open(`/invoices/${invoice.id}/print`, "_blank")}
         >
           طباعة

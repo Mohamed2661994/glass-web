@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import api from "@/services/api";
 
 const ROWS_PER_PAGE = 20;
@@ -47,8 +47,18 @@ interface InvoiceData {
   items: InvoiceItem[];
 }
 
-export default function InvoicePrintPage() {
+export default function InvoicePrintPageWrapper() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><p>جاري التحميل...</p></div>}>
+      <InvoicePrintPage />
+    </Suspense>
+  );
+}
+
+function InvoicePrintPage() {
   const { id } = useParams();
+  const searchParams = useSearchParams();
+  const isPreview = searchParams.get("preview") === "1";
   const [invoice, setInvoice] = useState<InvoiceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -69,10 +79,10 @@ export default function InvoicePrintPage() {
   }, [id]);
 
   useEffect(() => {
-    if (invoice && !loading) {
+    if (invoice && !loading && !isPreview) {
       setTimeout(() => window.print(), 500);
     }
-  }, [invoice, loading]);
+  }, [invoice, loading, isPreview]);
 
   if (loading) {
     return (

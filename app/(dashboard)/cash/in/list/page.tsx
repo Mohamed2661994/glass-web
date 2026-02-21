@@ -294,7 +294,9 @@ export default function CashInListPage() {
                         {formatDate(item.transaction_date)}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground max-w-[120px] truncate">
-                        {item.source_type !== "invoice" ? (displayNotes || "—") : "—"}
+                        {item.source_type !== "invoice"
+                          ? displayNotes || "—"
+                          : "—"}
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
