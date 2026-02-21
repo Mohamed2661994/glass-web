@@ -515,9 +515,6 @@ export default function EditRetailInvoicePage() {
             invoice_id: Number(id),
           });
         }
-            invoice_id: Number(id),
-          });
-        }
       } catch {
         // Don't block invoice save if cash sync fails
         console.warn("تعذّر تحديث قيد اليومية");
