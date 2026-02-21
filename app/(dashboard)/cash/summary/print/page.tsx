@@ -11,6 +11,7 @@ type CashInItem = {
   transaction_date: string;
   amount: number;
   paid_amount: number;
+  remaining_amount: number;
   source_type: "manual" | "invoice" | "customer_payment";
   customer_name: string;
   notes?: string | null;
