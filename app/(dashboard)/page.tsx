@@ -731,8 +731,10 @@ export default function DashboardPage() {
   /* ---------- user preferences ---------- */
   const {
     prefs,
+    loaded: prefsLoaded,
     setDashboardWidgets: saveDashboardWidgets,
     setQuickLinks: saveQuickLinksPrefs,
+    setDashInvoiceView: saveDashInvoiceView,
   } = useUserPreferences();
 
   /* ---------- widget customization ---------- */
@@ -741,27 +743,14 @@ export default function DashboardPage() {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
 
   /* ---------- invoice view mode ---------- */
-  const [invoiceView, setInvoiceView] = useState<"table" | "compact" | "cards">(
-    () => {
-      if (typeof window !== "undefined") {
-        return (
-          (localStorage.getItem("dash_invoice_view") as
-            | "table"
-            | "compact"
-            | "cards") || "table"
-        );
-      }
-      return "table";
-    },
-  );
-  const cycleInvoiceView = useCallback(() => {
-    setInvoiceView((prev) => {
-      const next =
-        prev === "table" ? "compact" : prev === "compact" ? "cards" : "table";
-      localStorage.setItem("dash_invoice_view", next);
-      return next;
-    });
-  }, []);
+  const [invoiceView, setInvoiceView] = useState<"table" | "compact" | "cards">("table");
+
+  // Sync from prefs when loaded
+  useEffect(() => {
+    if (prefsLoaded && prefs.dash_invoice_view) {
+      setInvoiceView(prefs.dash_invoice_view);
+    }
+  }, [prefsLoaded, prefs.dash_invoice_view]);
 
   /* ---------- product lookup ---------- */
   const [lookupOpen, setLookupOpen] = useState(false);
@@ -1187,7 +1176,7 @@ export default function DashboardPage() {
                       }`}
                       onClick={() => {
                         setInvoiceView(mode);
-                        localStorage.setItem("dash_invoice_view", mode);
+                        saveDashInvoiceView(mode);
                       }}
                     >
                       {icon}

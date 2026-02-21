@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import api from "@/services/api";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { multiWordMatch, multiWordScore } from "@/lib/utils";
 import { ProductCard } from "@/components/product-card";
 import { ProductCompactCard } from "@/components/product-compact-card";
@@ -69,19 +70,15 @@ export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [selectedManufacturer, setSelectedManufacturer] =
     useState<string>("الكل");
-  const [viewMode, setViewMode] = useState<"cards" | "compact" | "table">(
-    () => {
-      if (typeof window !== "undefined") {
-        return (
-          (localStorage.getItem("products_view") as
-            | "cards"
-            | "compact"
-            | "table") || "cards"
-        );
-      }
-      return "cards";
-    },
-  );
+  const { prefs, loaded: prefsLoaded, setProductsView: saveProductsView } = useUserPreferences();
+  const [viewMode, setViewMode] = useState<"cards" | "compact" | "table">("cards");
+
+  // Sync from prefs when loaded
+  useEffect(() => {
+    if (prefsLoaded && prefs.products_view) {
+      setViewMode(prefs.products_view);
+    }
+  }, [prefsLoaded, prefs.products_view]);
   const [userId, setUserId] = useState<number | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -423,7 +420,7 @@ export default function ProductsPage() {
               <button
                 onClick={() => {
                   setViewMode("cards");
-                  localStorage.setItem("products_view", "cards");
+                  saveProductsView("cards");
                 }}
                 className={`p-1.5 rounded-md transition-all ${
                   viewMode === "cards"
@@ -437,7 +434,7 @@ export default function ProductsPage() {
               <button
                 onClick={() => {
                   setViewMode("compact");
-                  localStorage.setItem("products_view", "compact");
+                  saveProductsView("compact");
                 }}
                 className={`p-1.5 rounded-md transition-all ${
                   viewMode === "compact"
@@ -451,7 +448,7 @@ export default function ProductsPage() {
               <button
                 onClick={() => {
                   setViewMode("table");
-                  localStorage.setItem("products_view", "table");
+                  saveProductsView("table");
                 }}
                 className={`p-1.5 rounded-md transition-all ${
                   viewMode === "table"

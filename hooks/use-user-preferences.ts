@@ -60,6 +60,8 @@ export interface UserPreferences {
   theme?: string;
   chat?: ChatPrefs;
   customColors?: { light?: CustomColors; dark?: CustomColors };
+  dash_invoice_view?: "table" | "compact" | "cards";
+  products_view?: "cards" | "compact" | "table";
   /** Any future per-user preferences can be added here */
   [key: string]: unknown;
 }
@@ -202,6 +204,20 @@ export function useUserPreferences() {
     [setPrefs],
   );
 
+  const setDashInvoiceView = useCallback(
+    (dash_invoice_view: "table" | "compact" | "cards") => {
+      setPrefs((prev) => ({ ...prev, dash_invoice_view }));
+    },
+    [setPrefs],
+  );
+
+  const setProductsView = useCallback(
+    (products_view: "cards" | "compact" | "table") => {
+      setPrefs((prev) => ({ ...prev, products_view }));
+    },
+    [setPrefs],
+  );
+
   return {
     prefs,
     loaded,
@@ -210,6 +226,8 @@ export function useUserPreferences() {
     setQuickLinks,
     setSidebar,
     setThemePref,
+    setDashInvoiceView,
+    setProductsView,
   };
 }
 
@@ -240,6 +258,18 @@ function migrateOldKeys(
     const oldTheme = localStorage.getItem(`theme_user_${userId}`);
     if (oldTheme) {
       updates.theme = oldTheme;
+      migrated = true;
+    }
+
+    // Old view modes (device-local → synced)
+    const oldDashView = localStorage.getItem("dash_invoice_view");
+    if (oldDashView) {
+      updates.dash_invoice_view = oldDashView as "table" | "compact" | "cards";
+      migrated = true;
+    }
+    const oldProductsView = localStorage.getItem("products_view");
+    if (oldProductsView) {
+      updates.products_view = oldProductsView as "cards" | "compact" | "table";
       migrated = true;
     }
 
