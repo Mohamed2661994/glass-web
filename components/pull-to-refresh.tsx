@@ -51,14 +51,9 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
     const container = containerRef.current;
     if (!container) return;
 
-    // Mark ready when user is settled at the top (scroll ends at 0)
-    const handleScroll = () => {
-      readyRef.current = container.scrollTop <= 0;
-    };
-
     const handleTouchStart = (e: TouchEvent) => {
       if (refreshing) return;
-      // Only allow pull if already at top AND previous gesture ended at top
+      // Only allow pull if at top AND the previous touch ended at top
       if (container.scrollTop <= 0 && readyRef.current) {
         startYRef.current = e.touches[0].clientY;
         isPullingRef.current = true;
@@ -86,7 +81,8 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
     };
 
     const handleTouchEnd = () => {
-      // Update ready state: mark ready only if we ended at top
+      // Only mark ready if finger lifted while at top
+      // This prevents momentum-scroll-to-top from enabling pull
       readyRef.current = container.scrollTop <= 0;
 
       if (!isPullingRef.current) return;
@@ -113,7 +109,6 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
       }
     };
 
-    container.addEventListener("scroll", handleScroll, { passive: true });
     container.addEventListener("touchstart", handleTouchStart, {
       passive: true,
     });
@@ -126,7 +121,6 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
     readyRef.current = container.scrollTop <= 0;
 
     return () => {
-      container.removeEventListener("scroll", handleScroll);
       container.removeEventListener("touchstart", handleTouchStart);
       container.removeEventListener("touchmove", handleTouchMove);
       container.removeEventListener("touchend", handleTouchEnd);
