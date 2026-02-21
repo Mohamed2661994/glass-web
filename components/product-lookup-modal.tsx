@@ -28,6 +28,8 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
   const listRef = useRef<HTMLDivElement>(null);
 
   const invoiceType = branchId === 1 ? "retail" : "wholesale";
+  const otherBranchId = branchId === 1 ? 2 : 1;
+  const otherInvoiceType = branchId === 1 ? "wholesale" : "retail";
 
   /* =========================================================
      Fetch products (Cached — localStorage + auto-refresh)
@@ -42,6 +44,25 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     cacheKey: `lookup_${invoiceType}`,
   });
 
+  const { products: otherBranchProducts, loading: otherLoading, refresh: refreshOther } = useCachedProducts({
+    endpoint: "/products",
+    params: {
+      branch_id: otherBranchId,
+      invoice_type: otherInvoiceType,
+      movement_type: "sale",
+    },
+    cacheKey: `lookup_${otherInvoiceType}`,
+  });
+
+  // Map of product id -> available_quantity for the other branch
+  const otherBranchQtyMap = useMemo(() => {
+    const map: Record<number, number> = {};
+    otherBranchProducts.forEach((p) => {
+      map[p.id] = Number(p.available_quantity) || 0;
+    });
+    return map;
+  }, [otherBranchProducts]);
+
   const [refreshing, setRefreshing] = useState(false);
 
   // Reset search when modal opens (data loads from cache instantly)
@@ -54,7 +75,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await refresh();
+      await Promise.all([refresh(), refreshOther()]);
     } finally {
       setRefreshing(false);
     }
@@ -166,7 +187,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
       <DialogContent
         dir="rtl"
         className="max-w-2xl p-0 flex flex-col"
-        style={{ height: 500, maxHeight: "80vh" }}
+        style={{ height: 700, maxHeight: "90vh" }}
       >
         {/* ===== Header ===== */}
         <DialogHeader className="p-4 border-b shrink-0">
@@ -286,7 +307,16 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                         خصم: {product.discount_amount}
                       </span>
                     )}
-                    <span>الرصيد: {product.available_quantity}</span>
+                  </div>
+
+                  {/* Row 3: Branch Balances */}
+                  <div className="text-xs mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
+                    <span className={Number(product.available_quantity) > 0 ? "text-green-600 dark:text-green-400 font-semibold" : "text-red-500 font-semibold"}>
+                      رصيد {branchId === 1 ? "القطاعي" : "الجملة"}: {product.available_quantity}
+                    </span>
+                    <span className={(otherBranchQtyMap[product.id] || 0) > 0 ? "text-green-600 dark:text-green-400 font-semibold" : "text-red-500 font-semibold"}>
+                      رصيد {branchId === 1 ? "الجملة" : "القطاعي"}: {otherBranchQtyMap[product.id] ?? "-"}
+                    </span>
                   </div>
 
                   {/* Row 3: Description if exists */}

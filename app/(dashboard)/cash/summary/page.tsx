@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +19,7 @@ import {
   History,
   ArrowDownCircle,
   ArrowUpCircle,
+  ExternalLink,
 } from "lucide-react";
 import api from "@/services/api";
 import { useAuth } from "@/app/context/auth-context";
@@ -380,9 +382,17 @@ export default function CashSummaryPage() {
                 <ArrowDownCircle className="h-4 w-4 text-green-500" />
                 <h2 className="font-bold text-sm">الوارد</h2>
               </div>
-              <Badge variant="secondary" className="text-[11px]">
-                {filteredCashIn.length} عملية
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Link href="/cash/in/list">
+                  <Button variant="outline" size="sm" className="h-7 gap-1.5 text-[11px]">
+                    <ExternalLink className="h-3 w-3" />
+                    عرض الكل
+                  </Button>
+                </Link>
+                <Badge variant="secondary" className="text-[11px]">
+                  {filteredCashIn.length} عملية
+                </Badge>
+              </div>
             </div>
 
             <div className="p-4">
@@ -445,9 +455,17 @@ export default function CashSummaryPage() {
                 <ArrowUpCircle className="h-4 w-4 text-red-500" />
                 <h2 className="font-bold text-sm">المنصرف</h2>
               </div>
-              <Badge variant="secondary" className="text-[11px]">
-                {filteredCashOut.length} عملية
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Link href="/cash/out/list">
+                  <Button variant="outline" size="sm" className="h-7 gap-1.5 text-[11px]">
+                    <ExternalLink className="h-3 w-3" />
+                    عرض الكل
+                  </Button>
+                </Link>
+                <Badge variant="secondary" className="text-[11px]">
+                  {filteredCashOut.length} عملية
+                </Badge>
+              </div>
             </div>
 
             <div className="p-4">
