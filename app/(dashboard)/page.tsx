@@ -1612,7 +1612,8 @@ export default function DashboardPage() {
                   {/* منصرف */}
                   <div className="rounded-xl bg-red-500/10 dark:bg-red-500/15 p-3 sm:p-4 text-center">
                     <TrendingDown className="h-5 w-5 text-red-500 dark:text-red-400 mx-auto mb-1" />
-                    <div className="flex flex-col items-center gap-1 mb-1">
+                    {/* Mobile: stacked | Desktop: side by side */}
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3 mb-1">
                       <div className="flex items-center justify-center gap-1">
                         <p className="text-[10px] text-muted-foreground">
                           مصروفات
@@ -1621,7 +1622,7 @@ export default function DashboardPage() {
                           {Math.round(cashExpenseTotal).toLocaleString()}
                         </p>
                       </div>
-                      <div className="h-px w-8 bg-red-300/40 dark:bg-red-600/40" />
+                      <div className="h-px w-8 sm:h-8 sm:w-px bg-red-300/40 dark:bg-red-600/40" />
                       <div className="flex items-center justify-center gap-1">
                         <p className="text-[10px] text-muted-foreground">
                           مشتريات
