@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { noSpaces } from "@/lib/utils";
+import { noSpaces, normalizeArabic } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -95,12 +95,12 @@ function CashOutPage() {
 
   const filteredModal = useMemo(() => {
     if (!modalSearch.trim()) return modalData;
-    const q = noSpaces(modalSearch).toLowerCase();
+    const q = normalizeArabic(noSpaces(modalSearch).toLowerCase());
     return modalData.filter(
       (item) =>
-        noSpaces(item.name).toLowerCase().includes(q) ||
+        normalizeArabic(noSpaces(item.name).toLowerCase()).includes(q) ||
         item.permission_number?.toLowerCase().includes(q) ||
-        (item.notes && noSpaces(item.notes).toLowerCase().includes(q)),
+        (item.notes && normalizeArabic(noSpaces(item.notes).toLowerCase()).includes(q)),
     );
   }, [modalData, modalSearch]);
 
