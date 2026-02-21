@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/auth-context";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import api from "@/services/api";
+import { ProductLookupModal } from "@/components/product-lookup-modal";
 import {
   FileText,
   Truck,
@@ -595,6 +596,7 @@ const ALL_PAGES: { label: string; href: string }[] = [
   { label: "رصيد افتتاحي", href: "/opening-stock" },
   { label: "الإعدادات", href: "/settings" },
   { label: "المستخدمين", href: "/users" },
+  { label: "استعلام عن الأصناف", href: "#product-lookup" },
 ];
 
 const DEFAULT_QUICK_LINKS: QuickLink[] = [
@@ -653,6 +655,13 @@ const DEFAULT_QUICK_LINKS: QuickLink[] = [
     href: "/cash/summary",
     icon: "Wallet",
     color: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
+  },
+  {
+    id: "9",
+    label: "استعلام عن الأصناف",
+    href: "#product-lookup",
+    icon: "Search",
+    color: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
   },
 ];
 
@@ -726,6 +735,9 @@ export default function DashboardPage() {
   const [widgets, setWidgets] = useState<WidgetConfig[]>(DEFAULT_WIDGETS);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
+
+  /* ---------- product lookup ---------- */
+  const [lookupOpen, setLookupOpen] = useState(false);
 
   /* ---------- quick links ---------- */
   const [quickLinks, setQuickLinks] =
@@ -1395,7 +1407,13 @@ export default function DashboardPage() {
                   return (
                     <button
                       key={link.id}
-                      onClick={() => router.push(link.href)}
+                      onClick={() => {
+                        if (link.href === "#product-lookup") {
+                          setLookupOpen(true);
+                        } else {
+                          router.push(link.href);
+                        }
+                      }}
                       className={`flex flex-col items-center gap-2 rounded-xl p-3 transition-all hover:scale-105 hover:shadow-md ${link.color}`}
                     >
                       <IconComp className="h-5 w-5" />
@@ -1808,6 +1826,15 @@ export default function DashboardPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* ===== Product Lookup Modal ===== */}
+      {branchId && (
+        <ProductLookupModal
+          open={lookupOpen}
+          onOpenChange={setLookupOpen}
+          branchId={branchId}
+        />
+      )}
     </div>
   );
 }
