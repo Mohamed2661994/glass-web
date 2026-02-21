@@ -423,11 +423,14 @@ export default function EditWholesaleInvoicePage() {
         if (existing && paidNum > 0) {
           // Backend blocks PUT on invoice entries → DELETE then re-create
           await api.delete(`/cash-in/${existing.id}`);
+          const remainingAmount = totalWithPrevious - paidNum;
           const recreateRes = await api.post("/cash/in", {
             transaction_date: invoiceDate,
             customer_name: customerName,
             description: `فاتورة جملة رقم #${id}`,
-            amount: paidNum,
+            amount: totalWithPrevious,
+            paid_amount: paidNum,
+            remaining_amount: remainingAmount,
             source_type: "invoice",
             invoice_id: Number(id),
           });
@@ -437,11 +440,14 @@ export default function EditWholesaleInvoicePage() {
           await api.delete(`/cash-in/${existing.id}`);
           toast.info("تم حذف قيد اليومية");
         } else if (!existing && paidNum > 0) {
+          const remainingAmount = totalWithPrevious - paidNum;
           const createRes = await api.post("/cash/in", {
             transaction_date: invoiceDate,
             customer_name: customerName,
             description: `فاتورة جملة رقم #${id}`,
-            amount: paidNum,
+            amount: totalWithPrevious,
+            paid_amount: paidNum,
+            remaining_amount: remainingAmount,
             source_type: "invoice",
             invoice_id: Number(id),
           });
