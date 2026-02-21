@@ -331,7 +331,7 @@ function CashOutPage() {
             className="mb-3"
           />
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {modalLoading ? (
               <div className="space-y-3 p-2">
                 {Array.from({ length: 5 }).map((_, i) => (
