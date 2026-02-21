@@ -318,7 +318,7 @@ function CashOutPage() {
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent
           dir="rtl"
-          className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col"
+          className="max-w-5xl max-h-[85vh] overflow-hidden flex flex-col"
         >
           <DialogHeader>
             <DialogTitle>جميع حركات المنصرف</DialogTitle>
