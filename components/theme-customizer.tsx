@@ -64,83 +64,91 @@ function applySemanticOverrides(colors: Partial<CustomColors>) {
   ) as HTMLStyleElement | null;
   const rules: string[] = [];
   if (colors.success) {
+    const c = colors.success;
+    // Text (light + dark variants)
     rules.push(
-      `.text-green-600, .text-green-500, .text-green-400, .text-emerald-600, .text-emerald-500, .text-emerald-400 { color: ${colors.success} !important; }`,
+      `.text-green-600, .text-green-500, .text-green-400, .text-green-700, .text-emerald-600, .text-emerald-500, .text-emerald-400, .dark\\:text-green-400, .dark\\:text-green-300, .dark\\:text-green-500, .dark\\:text-emerald-400, .dark\\:text-emerald-300 { color: ${c} !important; }`,
+    );
+    // Background solids
+    rules.push(
+      `.bg-green-100, .bg-green-50, .bg-emerald-100, .bg-emerald-50, .bg-green-600, .dark\\:bg-green-900, .dark\\:bg-green-900\\/30, .dark\\:bg-green-950\\/20, .dark\\:bg-green-950\\/30 { background-color: color-mix(in srgb, ${c} 15%, transparent) !important; }`,
+    );
+    // Background with opacity modifiers
+    rules.push(
+      `.bg-green-500\\/10, .bg-emerald-500\\/10, .dark\\:bg-green-500\\/15 { background-color: color-mix(in srgb, ${c} 10%, transparent) !important; }`,
     );
     rules.push(
-      `.bg-green-100, .bg-green-50, .bg-emerald-100, .bg-emerald-50 { background-color: color-mix(in srgb, ${colors.success} 15%, transparent) !important; }`,
+      `.bg-green-500\\/5, .bg-emerald-500\\/5, .dark\\:bg-green-500\\/5 { background-color: color-mix(in srgb, ${c} 5%, transparent) !important; }`,
     );
     rules.push(
-      `.bg-green-500\\/10, .bg-emerald-500\\/10 { background-color: color-mix(in srgb, ${colors.success} 10%, transparent) !important; }`,
+      `.bg-green-500\\/15, .dark\\:bg-green-500\\/15 { background-color: color-mix(in srgb, ${c} 15%, transparent) !important; }`,
     );
     rules.push(
-      `.bg-green-500\\/5, .bg-emerald-500\\/5 { background-color: color-mix(in srgb, ${colors.success} 5%, transparent) !important; }`,
+      `.bg-green-900\\/30, .bg-green-950\\/20, .bg-green-950\\/30 { background-color: color-mix(in srgb, ${c} 20%, transparent) !important; }`,
     );
+    // Borders
     rules.push(
-      `.bg-green-500\\/15 { background-color: color-mix(in srgb, ${colors.success} 15%, transparent) !important; }`,
-    );
-    rules.push(
-      `.bg-green-900\\/30, .bg-green-950\\/20, .bg-green-950\\/30 { background-color: color-mix(in srgb, ${colors.success} 20%, transparent) !important; }`,
-    );
-    rules.push(
-      `.border-green-200, .border-emerald-200, .border-green-500\\/20, .border-emerald-500\\/20 { border-color: color-mix(in srgb, ${colors.success} 30%, transparent) !important; }`,
+      `.border-green-200, .border-emerald-200, .border-green-500\\/20, .border-emerald-500\\/20, .border-green-500, .dark\\:border-green-800 { border-color: color-mix(in srgb, ${c} 30%, transparent) !important; }`,
     );
   }
   if (colors.danger) {
+    const c = colors.danger;
     rules.push(
-      `.text-red-600, .text-red-500, .text-red-400, .text-rose-600, .text-rose-500, .text-rose-400 { color: ${colors.danger} !important; }`,
+      `.text-red-600, .text-red-500, .text-red-400, .text-red-700, .text-rose-600, .text-rose-500, .text-rose-400, .text-rose-700, .dark\\:text-red-400, .dark\\:text-red-300, .dark\\:text-red-500, .dark\\:text-rose-400, .dark\\:text-rose-300 { color: ${c} !important; }`,
     );
     rules.push(
-      `.bg-red-100, .bg-red-50, .bg-rose-100, .bg-rose-50 { background-color: color-mix(in srgb, ${colors.danger} 15%, transparent) !important; }`,
+      `.bg-red-100, .bg-red-50, .bg-rose-100, .bg-rose-50, .dark\\:bg-red-900, .dark\\:bg-red-900\\/20, .dark\\:bg-red-900\\/30, .dark\\:bg-red-950\\/10, .dark\\:bg-red-950\\/20, .dark\\:bg-red-950\\/30, .dark\\:bg-rose-900 { background-color: color-mix(in srgb, ${c} 15%, transparent) !important; }`,
     );
     rules.push(
-      `.bg-red-500\\/10, .bg-rose-500\\/10 { background-color: color-mix(in srgb, ${colors.danger} 10%, transparent) !important; }`,
+      `.bg-red-500\\/10, .bg-rose-500\\/10, .dark\\:bg-red-500\\/15 { background-color: color-mix(in srgb, ${c} 10%, transparent) !important; }`,
     );
     rules.push(
-      `.bg-red-500\\/5, .bg-rose-500\\/5 { background-color: color-mix(in srgb, ${colors.danger} 5%, transparent) !important; }`,
+      `.bg-red-500\\/5, .bg-rose-500\\/5 { background-color: color-mix(in srgb, ${c} 5%, transparent) !important; }`,
     );
     rules.push(
-      `.bg-red-500\\/15 { background-color: color-mix(in srgb, ${colors.danger} 15%, transparent) !important; }`,
+      `.bg-red-500\\/15, .dark\\:bg-red-500\\/15 { background-color: color-mix(in srgb, ${c} 15%, transparent) !important; }`,
     );
     rules.push(
-      `.bg-red-900\\/30, .bg-red-900\\/20, .bg-red-950\\/20, .bg-red-950\\/30, .bg-red-950\\/10 { background-color: color-mix(in srgb, ${colors.danger} 20%, transparent) !important; }`,
+      `.bg-red-900\\/30, .bg-red-900\\/20, .bg-red-950\\/20, .bg-red-950\\/30, .bg-red-950\\/10, .bg-red-50\\/50, .dark\\:bg-red-50\\/50 { background-color: color-mix(in srgb, ${c} 20%, transparent) !important; }`,
     );
     rules.push(
-      `.border-red-200, .border-rose-200, .border-red-500, .border-red-500\\/20 { border-color: color-mix(in srgb, ${colors.danger} 30%, transparent) !important; }`,
+      `.border-red-200, .border-rose-200, .border-red-500, .border-red-500\\/20, .dark\\:border-red-800, .dark\\:border-rose-800 { border-color: color-mix(in srgb, ${c} 30%, transparent) !important; }`,
     );
   }
   if (colors.info) {
+    const c = colors.info;
     rules.push(
-      `.text-blue-600, .text-blue-500, .text-blue-400 { color: ${colors.info} !important; }`,
+      `.text-blue-600, .text-blue-500, .text-blue-400, .text-blue-700, .dark\\:text-blue-400, .dark\\:text-blue-300, .dark\\:text-blue-500 { color: ${c} !important; }`,
     );
     rules.push(
-      `.bg-blue-100, .bg-blue-50 { background-color: color-mix(in srgb, ${colors.info} 15%, transparent) !important; }`,
+      `.bg-blue-100, .bg-blue-50, .dark\\:bg-blue-900, .dark\\:bg-blue-900\\/30, .dark\\:bg-blue-900\\/40, .dark\\:bg-blue-950\\/20, .dark\\:bg-blue-950\\/30, .dark\\:bg-blue-950\\/60 { background-color: color-mix(in srgb, ${c} 15%, transparent) !important; }`,
     );
     rules.push(
-      `.bg-blue-500\\/10 { background-color: color-mix(in srgb, ${colors.info} 10%, transparent) !important; }`,
+      `.bg-blue-500\\/10, .dark\\:bg-blue-500\\/10 { background-color: color-mix(in srgb, ${c} 10%, transparent) !important; }`,
     );
     rules.push(
-      `.bg-blue-500\\/15 { background-color: color-mix(in srgb, ${colors.info} 15%, transparent) !important; }`,
+      `.bg-blue-500\\/15, .dark\\:bg-blue-500\\/15 { background-color: color-mix(in srgb, ${c} 15%, transparent) !important; }`,
     );
     rules.push(
-      `.border-blue-200, .border-blue-500\\/20 { border-color: color-mix(in srgb, ${colors.info} 30%, transparent) !important; }`,
+      `.border-blue-200, .border-blue-500\\/20, .border-blue-800, .border-blue-900, .dark\\:border-blue-800 { border-color: color-mix(in srgb, ${c} 30%, transparent) !important; }`,
     );
   }
   if (colors.warning) {
+    const c = colors.warning;
     rules.push(
-      `.text-amber-600, .text-amber-500, .text-orange-600, .text-orange-500, .text-orange-400, .text-yellow-700, .text-yellow-600, .text-yellow-500 { color: ${colors.warning} !important; }`,
+      `.text-amber-600, .text-amber-500, .text-orange-600, .text-orange-500, .text-orange-400, .text-yellow-700, .text-yellow-600, .text-yellow-500, .dark\\:text-amber-400, .dark\\:text-orange-400, .dark\\:text-yellow-400, .dark\\:text-yellow-500 { color: ${c} !important; }`,
     );
     rules.push(
-      `.bg-amber-100, .bg-amber-50, .bg-orange-100, .bg-orange-50, .bg-yellow-100, .bg-yellow-50 { background-color: color-mix(in srgb, ${colors.warning} 15%, transparent) !important; }`,
+      `.bg-amber-100, .bg-amber-50, .bg-orange-100, .bg-orange-50, .bg-yellow-100, .bg-yellow-50, .dark\\:bg-orange-900\\/30, .dark\\:bg-orange-950\\/20, .dark\\:bg-amber-900, .dark\\:bg-amber-900\\/30 { background-color: color-mix(in srgb, ${c} 15%, transparent) !important; }`,
     );
     rules.push(
-      `.bg-amber-500\\/10, .bg-orange-500\\/10 { background-color: color-mix(in srgb, ${colors.warning} 10%, transparent) !important; }`,
+      `.bg-amber-500\\/10, .bg-orange-500\\/10, .dark\\:bg-amber-500\\/10, .dark\\:bg-orange-500\\/10 { background-color: color-mix(in srgb, ${c} 10%, transparent) !important; }`,
     );
     rules.push(
-      `.bg-orange-900\\/30, .bg-orange-950\\/20 { background-color: color-mix(in srgb, ${colors.warning} 20%, transparent) !important; }`,
+      `.bg-orange-900\\/30, .bg-orange-950\\/20 { background-color: color-mix(in srgb, ${c} 20%, transparent) !important; }`,
     );
     rules.push(
-      `.border-amber-200, .border-orange-200, .border-yellow-200, .border-amber-500\\/20, .border-orange-500\\/20 { border-color: color-mix(in srgb, ${colors.warning} 30%, transparent) !important; }`,
+      `.border-amber-200, .border-orange-200, .border-yellow-200, .border-amber-500\\/20, .border-orange-500\\/20, .dark\\:border-orange-800, .dark\\:border-amber-800 { border-color: color-mix(in srgb, ${c} 30%, transparent) !important; }`,
     );
   }
   if (rules.length === 0) {
