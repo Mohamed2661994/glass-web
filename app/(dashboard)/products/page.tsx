@@ -70,8 +70,14 @@ export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [selectedManufacturer, setSelectedManufacturer] =
     useState<string>("الكل");
-  const { prefs, loaded: prefsLoaded, setProductsView: saveProductsView } = useUserPreferences();
-  const [viewMode, setViewMode] = useState<"cards" | "compact" | "table">("cards");
+  const {
+    prefs,
+    loaded: prefsLoaded,
+    setProductsView: saveProductsView,
+  } = useUserPreferences();
+  const [viewMode, setViewMode] = useState<"cards" | "compact" | "table">(
+    "cards",
+  );
 
   // Sync from prefs when loaded
   useEffect(() => {

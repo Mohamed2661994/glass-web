@@ -744,7 +744,9 @@ export default function DashboardPage() {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
 
   /* ---------- invoice view mode ---------- */
-  const [invoiceView, setInvoiceView] = useState<"table" | "compact" | "cards">("table");
+  const [invoiceView, setInvoiceView] = useState<"table" | "compact" | "cards">(
+    "table",
+  );
 
   // Sync from prefs when loaded
   useEffect(() => {
@@ -1415,10 +1417,18 @@ export default function DashboardPage() {
               </CardTitle>
               <div className="flex items-center gap-2">
                 <div className="flex items-center border rounded-md overflow-hidden">
-                  {([
-                    { mode: "table" as const, icon: <List className="h-3.5 w-3.5" />, title: "جدول" },
-                    { mode: "cards" as const, icon: <LayoutGrid className="h-3.5 w-3.5" />, title: "كروت" },
-                  ]).map(({ mode, icon, title }) => (
+                  {[
+                    {
+                      mode: "table" as const,
+                      icon: <List className="h-3.5 w-3.5" />,
+                      title: "جدول",
+                    },
+                    {
+                      mode: "cards" as const,
+                      icon: <LayoutGrid className="h-3.5 w-3.5" />,
+                      title: "كروت",
+                    },
+                  ].map(({ mode, icon, title }) => (
                     <button
                       key={mode}
                       title={title}
@@ -1453,7 +1463,9 @@ export default function DashboardPage() {
                     <TableRow>
                       <TableHead className="text-right">رقم التحويل</TableHead>
                       <TableHead className="text-right">عدد الأصناف</TableHead>
-                      <TableHead className="text-right">إجمالي الكمية</TableHead>
+                      <TableHead className="text-right">
+                        إجمالي الكمية
+                      </TableHead>
                       <TableHead className="text-right">الحالة</TableHead>
                       <TableHead className="text-right">التاريخ</TableHead>
                     </TableRow>
@@ -1520,16 +1532,29 @@ export default function DashboardPage() {
                         onClick={() => router.push(`/transfers/${tr.id}`)}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-bold text-muted-foreground">#{tr.id}</span>
+                          <span className="text-[11px] font-bold text-muted-foreground">
+                            #{tr.id}
+                          </span>
                           {tr.status === "cancelled" ? (
-                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0">ملغي</Badge>
+                            <Badge
+                              variant="destructive"
+                              className="text-[10px] px-1.5 py-0"
+                            >
+                              ملغي
+                            </Badge>
                           ) : (
-                            <Badge className="bg-green-600 text-[10px] px-1.5 py-0">تم</Badge>
+                            <Badge className="bg-green-600 text-[10px] px-1.5 py-0">
+                              تم
+                            </Badge>
                           )}
                         </div>
                         <div className="flex items-center justify-between text-[11px]">
-                          <span className="text-muted-foreground">أصناف: {tr.items_count}</span>
-                          <span className="font-semibold">كمية: {tr.total_from_quantity}</span>
+                          <span className="text-muted-foreground">
+                            أصناف: {tr.items_count}
+                          </span>
+                          <span className="font-semibold">
+                            كمية: {tr.total_from_quantity}
+                          </span>
                         </div>
                         <p className="text-[10px] text-muted-foreground">
                           {formatDate(tr.created_at)}

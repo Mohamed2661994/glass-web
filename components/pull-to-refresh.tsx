@@ -11,69 +11,96 @@ interface PullToRefreshProps {
 
 export function PullToRefresh({ children, className }: PullToRefreshProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [pulling, setPulling] = useState(false);
-  const [pullDistance, setPullDistance] = useState(0);
+  const indicatorRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const iconRef = useRef<HTMLDivElement>(null);
   const [refreshing, setRefreshing] = useState(false);
+
   const startYRef = useRef(0);
   const isPullingRef = useRef(false);
+  const pullDistanceRef = useRef(0);
 
-  const THRESHOLD = 80; // px to trigger refresh
+  const THRESHOLD = 80;
   const MAX_PULL = 120;
 
-  const handleTouchStart = useCallback(
-    (e: TouchEvent) => {
-      const container = containerRef.current;
-      if (!container || refreshing) return;
+  // Direct DOM updates — no React re-renders during scroll
+  const updateVisuals = useCallback((distance: number) => {
+    const indicator = indicatorRef.current;
+    const content = contentRef.current;
+    const icon = iconRef.current;
+    if (!indicator || !content || !icon) return;
 
-      // Only activate when scrolled to top
-      if (container.scrollTop <= 0) {
-        startYRef.current = e.touches[0].clientY;
-        isPullingRef.current = true;
-      }
-    },
-    [refreshing],
-  );
-
-  const handleTouchMove = useCallback(
-    (e: TouchEvent) => {
-      if (!isPullingRef.current || refreshing) return;
-
-      const currentY = e.touches[0].clientY;
-      const diff = currentY - startYRef.current;
-
-      if (diff > 0) {
-        const distance = Math.min(diff * 0.5, MAX_PULL);
-        setPullDistance(distance);
-        setPulling(true);
-
-        // Prevent default scroll when pulling
-        if (distance > 10) {
-          e.preventDefault();
-        }
-      }
-    },
-    [refreshing],
-  );
-
-  const handleTouchEnd = useCallback(() => {
-    if (!isPullingRef.current) return;
-    isPullingRef.current = false;
-
-    if (pullDistance >= THRESHOLD && !refreshing) {
-      setRefreshing(true);
-      setPullDistance(50); // keep indicator visible
-
-      // Reload the page
-      window.location.reload();
+    if (distance > 0) {
+      indicator.style.transform = `translateY(${distance - 40}px)`;
+      indicator.style.opacity = "1";
+      content.style.transform = `translateY(${distance}px)`;
+      content.style.transition = "none";
+      const progress = Math.min(distance / THRESHOLD, 1);
+      icon.style.transform = `rotate(${progress * 360}deg)`;
     } else {
-      setPulling(false);
-      setPullDistance(0);
+      indicator.style.transform = "translateY(-40px)";
+      indicator.style.opacity = "0";
+      content.style.transform = "";
+      content.style.transition = "transform 0.3s ease";
     }
-  }, [pullDistance, refreshing]);
+  }, []);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (refreshing) return;
+      if (container.scrollTop <= 0) {
+        startYRef.current = e.touches[0].clientY;
+        isPullingRef.current = true;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isPullingRef.current || refreshing) return;
+
+      const diff = e.touches[0].clientY - startYRef.current;
+
+      if (diff > 0) {
+        const distance = Math.min(diff * 0.5, MAX_PULL);
+        pullDistanceRef.current = distance;
+        updateVisuals(distance);
+
+        if (distance > 10) {
+          e.preventDefault();
+        }
+      } else {
+        if (pullDistanceRef.current === 0) {
+          isPullingRef.current = false;
+        }
+      }
+    };
+
+    const handleTouchEnd = () => {
+      if (!isPullingRef.current) return;
+      isPullingRef.current = false;
+
+      const distance = pullDistanceRef.current;
+      pullDistanceRef.current = 0;
+
+      if (distance >= THRESHOLD) {
+        setRefreshing(true);
+        const indicator = indicatorRef.current;
+        const content = contentRef.current;
+        if (indicator) {
+          indicator.style.transform = "translateY(10px)";
+          indicator.style.opacity = "1";
+        }
+        if (content) {
+          content.style.transform = "translateY(50px)";
+          content.style.transition = "transform 0.3s ease";
+        }
+        window.location.reload();
+      } else {
+        updateVisuals(0);
+      }
+    };
 
     container.addEventListener("touchstart", handleTouchStart, {
       passive: true,
@@ -88,44 +115,30 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
       container.removeEventListener("touchmove", handleTouchMove);
       container.removeEventListener("touchend", handleTouchEnd);
     };
-  }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
-
-  const progress = Math.min(pullDistance / THRESHOLD, 1);
+  }, [refreshing, updateVisuals]);
 
   return (
     <div ref={containerRef} className={cn("relative", className)}>
       {/* Pull indicator */}
       <div
-        className="absolute left-0 right-0 flex justify-center z-10 pointer-events-none transition-transform duration-200"
-        style={{
-          transform: `translateY(${pulling || refreshing ? pullDistance - 40 : -40}px)`,
-          opacity: pulling || refreshing ? 1 : 0,
-        }}
+        ref={indicatorRef}
+        className="absolute left-0 right-0 flex justify-center z-10 pointer-events-none"
+        style={{ transform: "translateY(-40px)", opacity: 0 }}
       >
         <div className="bg-background border rounded-full p-2 shadow-md">
-          <RefreshCw
-            className={cn(
-              "h-5 w-5 text-muted-foreground transition-transform",
-              refreshing && "animate-spin",
-            )}
-            style={{
-              transform: refreshing
-                ? undefined
-                : `rotate(${progress * 360}deg)`,
-            }}
-          />
+          <div ref={iconRef}>
+            <RefreshCw
+              className={cn(
+                "h-5 w-5 text-muted-foreground",
+                refreshing && "animate-spin",
+              )}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Content with pull offset */}
-      <div
-        className="min-h-full"
-        style={{
-          transform:
-            pulling || refreshing ? `translateY(${pullDistance}px)` : undefined,
-          transition: pulling ? "none" : "transform 0.3s ease",
-        }}
-      >
+      {/* Content */}
+      <div ref={contentRef} className="min-h-full">
         {children}
       </div>
     </div>
