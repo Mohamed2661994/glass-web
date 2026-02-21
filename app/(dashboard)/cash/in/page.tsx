@@ -1,6 +1,13 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { noSpaces, normalizeArabic } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -109,10 +116,16 @@ function CashInPage() {
     const q = normalizeArabic(noSpaces(modalSearch).toLowerCase());
     return modalData.filter(
       (item) =>
-        normalizeArabic(noSpaces(item.customer_name || "").toLowerCase()).includes(q) ||
+        normalizeArabic(
+          noSpaces(item.customer_name || "").toLowerCase(),
+        ).includes(q) ||
         String(item.cash_in_number)?.includes(q) ||
-        (item.notes && normalizeArabic(noSpaces(item.notes).toLowerCase()).includes(q)) ||
-        (item.description && normalizeArabic(noSpaces(item.description).toLowerCase()).includes(q)),
+        (item.notes &&
+          normalizeArabic(noSpaces(item.notes).toLowerCase()).includes(q)) ||
+        (item.description &&
+          normalizeArabic(noSpaces(item.description).toLowerCase()).includes(
+            q,
+          )),
     );
   }, [modalData, modalSearch]);
 
@@ -470,10 +483,19 @@ function CashInPage() {
                 <TableBody>
                   {filteredModal.map((item) => {
                     const meta = parseMetadata(item.notes || item.description);
-                    const displayAmount = meta ? meta.total : Number(item.amount);
-                    const displayPaid = meta ? meta.paid : Number(item.paid_amount);
-                    const displayRemaining = meta ? meta.remaining : Number(item.remaining_amount);
-                    const notes = cleanNotes(item.notes || item.description) || "—";
+                    const displayAmount = meta
+                      ? meta.total
+                      : Number(item.amount);
+                    const displayPaid = meta
+                      ? meta.paid
+                      : Number(item.paid_amount);
+                    const displayRemaining = meta
+                      ? meta.remaining
+                      : Number(item.remaining_amount);
+                    const notes =
+                      item.source_type !== "invoice"
+                        ? cleanNotes(item.notes || item.description) || "—"
+                        : "—";
 
                     return (
                       <TableRow key={item.id}>
@@ -506,7 +528,9 @@ function CashInPage() {
                         <TableCell className="text-green-600 font-bold">
                           {Math.round(displayPaid).toLocaleString()} ج
                         </TableCell>
-                        <TableCell className={`font-bold ${displayRemaining > 0 ? "text-red-500" : displayRemaining < 0 ? "text-blue-500" : "text-muted-foreground"}`}>
+                        <TableCell
+                          className={`font-bold ${displayRemaining > 0 ? "text-red-500" : displayRemaining < 0 ? "text-blue-500" : "text-muted-foreground"}`}
+                        >
                           {Math.round(displayRemaining).toLocaleString()} ج
                         </TableCell>
                         <TableCell className="text-xs">
@@ -541,7 +565,9 @@ function CashInPage() {
               {Math.round(
                 filteredModal.reduce((s, i) => {
                   const meta = parseMetadata(i.notes || i.description);
-                  return s + (meta ? meta.paid : Number(i.paid_amount || i.amount));
+                  return (
+                    s + (meta ? meta.paid : Number(i.paid_amount || i.amount))
+                  );
                 }, 0),
               ).toLocaleString()}{" "}
               ج

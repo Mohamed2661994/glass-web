@@ -223,7 +223,7 @@ function CashSummaryPrintInner() {
             rows={filteredIn.map((i) => [
               i.customer_name,
               effectivePaid(i),
-              cleanNotes(i.notes) || "-",
+              i.source_type !== "invoice" ? (cleanNotes(i.notes) || "-") : "-",
             ])}
           />
 
