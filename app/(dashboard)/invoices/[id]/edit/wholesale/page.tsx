@@ -421,15 +421,18 @@ export default function EditWholesaleInvoicePage() {
         console.log("🔍 Cash entries count:", entries.length, "Found existing:", existing?.id, "invoice_id:", id);
 
         if (existing && paidNum > 0) {
-          const putRes = await api.put(`/cash-in/${existing.id}`, {
-            amount: totalWithPrevious,
-            paid_amount: paidNum,
-            remaining_amount: totalWithPrevious - paidNum,
-            customer_name: customerName,
+          // Backend blocks PUT on invoice entries → DELETE then re-create
+          await api.delete(`/cash-in/${existing.id}`);
+          const recreateRes = await api.post("/cash/in", {
             transaction_date: invoiceDate,
+            customer_name: customerName,
+            description: `فاتورة جملة رقم #${id}`,
+            amount: paidNum,
+            source_type: "invoice",
+            invoice_id: Number(id),
           });
-          console.log("✏️ PUT cash-in response:", JSON.stringify(putRes.data));
-          toast.info(`تم تحديث قيد اليومية رقم #${existing.id}`);
+          console.log("♻️ DELETE+CREATE cash-in response:", JSON.stringify(recreateRes.data));
+          toast.info(`تم تحديث قيد اليومية`);
         } else if (existing && paidNum === 0) {
           await api.delete(`/cash-in/${existing.id}`);
           toast.info("تم حذف قيد اليومية");
@@ -438,28 +441,13 @@ export default function EditWholesaleInvoicePage() {
             transaction_date: invoiceDate,
             customer_name: customerName,
             description: `فاتورة جملة رقم #${id}`,
-            amount: totalWithPrevious,
-            paid_amount: paidNum,
-            remaining_amount: totalWithPrevious - paidNum,
+            amount: paidNum,
             source_type: "invoice",
             invoice_id: Number(id),
           });
           console.log("📝 POST cash-in response:", JSON.stringify(createRes.data));
           const newEntryId = createRes.data?.cash_in_id || createRes.data?.id;
           toast.info(`تم إنشاء قيد يومية جديد #${newEntryId}`);
-
-          if (newEntryId) {
-            try {
-              const putRes = await api.put(`/cash-in/${newEntryId}`, {
-                amount: totalWithPrevious,
-                paid_amount: paidNum,
-                remaining_amount: totalWithPrevious - paidNum,
-              });
-              console.log("✏️ Follow-up PUT response:", JSON.stringify(putRes.data));
-            } catch (putErr: any) {
-              console.warn("PUT after POST failed:", putErr.response?.data || putErr.message);
-            }
-          }
         }
       } catch (cashErr: any) {
         console.error("Cash sync error:", cashErr.response?.data || cashErr.message);
