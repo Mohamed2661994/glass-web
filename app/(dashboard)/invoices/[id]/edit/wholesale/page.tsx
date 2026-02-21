@@ -419,9 +419,11 @@ export default function EditWholesaleInvoicePage() {
         );
 
         if (existing && paidNum > 0) {
-          // Update existing cash entry with the paid amount
+          // Update existing cash entry with correct amounts
           await api.put(`/cash-in/${existing.id}`, {
-            amount: paidNum,
+            amount: totalWithPrevious,
+            paid_amount: paidNum,
+            remaining_amount: totalWithPrevious - paidNum,
             customer_name: customerName,
             transaction_date: invoiceDate,
           });
@@ -434,7 +436,9 @@ export default function EditWholesaleInvoicePage() {
             transaction_date: invoiceDate,
             customer_name: customerName,
             description: `فاتورة جملة رقم #${id}`,
-            amount: paidNum,
+            amount: totalWithPrevious,
+            paid_amount: paidNum,
+            remaining_amount: totalWithPrevious - paidNum,
             source_type: "invoice",
             invoice_id: Number(id),
           });
