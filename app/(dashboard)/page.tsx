@@ -248,6 +248,7 @@ interface CashInItem {
   id: number;
   amount: number;
   paid_amount: number;
+  transaction_date: string;
 }
 
 interface CashOutItem {
