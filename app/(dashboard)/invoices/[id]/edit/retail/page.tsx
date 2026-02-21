@@ -126,9 +126,7 @@ export default function EditRetailInvoicePage() {
 
         setMovementType(inv.movement_type);
         setInvoiceDate(
-          inv.invoice_date
-            ? inv.invoice_date.substring(0, 10)
-            : "",
+          inv.invoice_date ? inv.invoice_date.substring(0, 10) : "",
         );
         setCustomerName(inv.customer_name || "");
         setCustomerPhone(inv.customer_phone || "");

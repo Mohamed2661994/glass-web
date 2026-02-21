@@ -10,12 +10,24 @@ import { useUserPreferences } from "@/hooks/use-user-preferences";
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
   const { user } = useAuth();
-  const { setThemePref } = useUserPreferences();
+  const { prefs, loaded, setThemePref } = useUserPreferences();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  /* ── Sync server-side theme pref to next-themes on load ── */
+  useEffect(() => {
+    if (!loaded || !prefs.theme || !mounted) return;
+    // Only apply if different from current to avoid loops
+    if (prefs.theme !== resolvedTheme) {
+      setTheme(prefs.theme);
+      document.documentElement.classList.remove("light", "dark");
+      document.documentElement.classList.add(prefs.theme);
+      document.documentElement.style.colorScheme = prefs.theme;
+    }
+  }, [loaded, prefs.theme, mounted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleToggle = () => {
     const current = resolvedTheme || "light";

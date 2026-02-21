@@ -741,15 +741,23 @@ export default function DashboardPage() {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
 
   /* ---------- invoice view mode ---------- */
-  const [invoiceView, setInvoiceView] = useState<"table" | "compact" | "cards">(() => {
-    if (typeof window !== "undefined") {
-      return (localStorage.getItem("dash_invoice_view") as "table" | "compact" | "cards") || "table";
-    }
-    return "table";
-  });
+  const [invoiceView, setInvoiceView] = useState<"table" | "compact" | "cards">(
+    () => {
+      if (typeof window !== "undefined") {
+        return (
+          (localStorage.getItem("dash_invoice_view") as
+            | "table"
+            | "compact"
+            | "cards") || "table"
+        );
+      }
+      return "table";
+    },
+  );
   const cycleInvoiceView = useCallback(() => {
     setInvoiceView((prev) => {
-      const next = prev === "table" ? "compact" : prev === "compact" ? "cards" : "table";
+      const next =
+        prev === "table" ? "compact" : prev === "compact" ? "cards" : "table";
       localStorage.setItem("dash_invoice_view", next);
       return next;
     });
@@ -1008,10 +1016,14 @@ export default function DashboardPage() {
           outItems.reduce((s, i) => s + Number(i.amount || 0), 0),
         );
         setCashExpenseTotal(
-          outItems.filter((i) => i.entry_type !== "purchase").reduce((s, i) => s + Number(i.amount || 0), 0),
+          outItems
+            .filter((i) => i.entry_type !== "purchase")
+            .reduce((s, i) => s + Number(i.amount || 0), 0),
         );
         setCashPurchaseTotal(
-          outItems.filter((i) => i.entry_type === "purchase").reduce((s, i) => s + Number(i.amount || 0), 0),
+          outItems
+            .filter((i) => i.entry_type === "purchase")
+            .reduce((s, i) => s + Number(i.amount || 0), 0),
         );
       } catch {
         /* silent */
@@ -1148,11 +1160,23 @@ export default function DashboardPage() {
               <div className="flex items-center gap-2">
                 {/* view mode toggle */}
                 <div className="flex items-center border rounded-md overflow-hidden">
-                  {([
-                    { mode: "table" as const, icon: <List className="h-3.5 w-3.5" />, title: "جدول كامل" },
-                    { mode: "compact" as const, icon: <Layers className="h-3.5 w-3.5" />, title: "مضغوط" },
-                    { mode: "cards" as const, icon: <LayoutGrid className="h-3.5 w-3.5" />, title: "كروت" },
-                  ]).map(({ mode, icon, title }) => (
+                  {[
+                    {
+                      mode: "table" as const,
+                      icon: <List className="h-3.5 w-3.5" />,
+                      title: "جدول كامل",
+                    },
+                    {
+                      mode: "compact" as const,
+                      icon: <Layers className="h-3.5 w-3.5" />,
+                      title: "مضغوط",
+                    },
+                    {
+                      mode: "cards" as const,
+                      icon: <LayoutGrid className="h-3.5 w-3.5" />,
+                      title: "كروت",
+                    },
+                  ].map(({ mode, icon, title }) => (
                     <button
                       key={mode}
                       title={title}
@@ -1226,7 +1250,9 @@ export default function DashboardPage() {
                           className="cursor-pointer hover:bg-muted/50"
                           onClick={() => router.push(`/invoices/${inv.id}`)}
                         >
-                          <TableCell className="font-medium">{inv.id}</TableCell>
+                          <TableCell className="font-medium">
+                            {inv.id}
+                          </TableCell>
                           <TableCell className="max-w-[80px] truncate">
                             {inv.customer_name || "—"}
                           </TableCell>
@@ -1270,7 +1296,9 @@ export default function DashboardPage() {
                     <TableRow className="h-7">
                       <TableHead className="text-right py-1">#</TableHead>
                       <TableHead className="text-right py-1">العميل</TableHead>
-                      <TableHead className="text-right py-1">الإجمالي</TableHead>
+                      <TableHead className="text-right py-1">
+                        الإجمالي
+                      </TableHead>
                       <TableHead className="text-right py-1">الباقي</TableHead>
                       <TableHead className="text-right py-1">الحالة</TableHead>
                     </TableRow>
@@ -1294,7 +1322,9 @@ export default function DashboardPage() {
                           className="cursor-pointer hover:bg-muted/50 h-7"
                           onClick={() => router.push(`/invoices/${inv.id}`)}
                         >
-                          <TableCell className="font-medium py-1">{inv.id}</TableCell>
+                          <TableCell className="font-medium py-1">
+                            {inv.id}
+                          </TableCell>
                           <TableCell className="max-w-[90px] truncate py-1">
                             {inv.customer_name || "—"}
                           </TableCell>
@@ -1339,7 +1369,9 @@ export default function DashboardPage() {
                         onClick={() => router.push(`/invoices/${inv.id}`)}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-bold text-muted-foreground">#{inv.id}</span>
+                          <span className="text-[11px] font-bold text-muted-foreground">
+                            #{inv.id}
+                          </span>
                           {paymentBadge(inv.payment_status)}
                         </div>
                         <p className="text-xs font-medium truncate">
@@ -1351,7 +1383,10 @@ export default function DashboardPage() {
                           </span>
                           {Number(inv.remaining_amount || 0) > 0 && (
                             <span className="text-red-600 dark:text-red-400">
-                              -{Math.round(Number(inv.remaining_amount)).toLocaleString()}
+                              -
+                              {Math.round(
+                                Number(inv.remaining_amount),
+                              ).toLocaleString()}
                             </span>
                           )}
                         </div>
@@ -1484,21 +1519,27 @@ export default function DashboardPage() {
                     <TrendingDown className="h-5 w-5 text-red-500 dark:text-red-400 mx-auto mb-1" />
                     <div className="flex items-center justify-center gap-3 mb-1">
                       <div>
-                        <p className="text-[10px] text-muted-foreground">المصروفات</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          المصروفات
+                        </p>
                         <p className="text-sm font-bold text-red-500 dark:text-red-400">
                           {Math.round(cashExpenseTotal).toLocaleString()}
                         </p>
                       </div>
                       <div className="w-px h-8 bg-red-300/40 dark:bg-red-600/40" />
                       <div>
-                        <p className="text-[10px] text-muted-foreground">المشتريات</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          المشتريات
+                        </p>
                         <p className="text-sm font-bold text-red-500 dark:text-red-400">
                           {Math.round(cashPurchaseTotal).toLocaleString()}
                         </p>
                       </div>
                     </div>
                     <div className="border-t border-red-300/30 dark:border-red-600/30 pt-1 mt-1">
-                      <p className="text-[10px] text-muted-foreground">المنصرف</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        المنصرف
+                      </p>
                       <p className="text-lg font-bold text-red-500 dark:text-red-400">
                         {Math.round(cashOutTotal).toLocaleString()}
                       </p>
