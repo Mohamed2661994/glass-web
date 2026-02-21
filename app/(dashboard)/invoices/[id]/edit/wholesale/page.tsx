@@ -465,7 +465,6 @@ export default function EditWholesaleInvoicePage() {
         console.error("Cash sync error:", cashErr.response?.data || cashErr.message);
         toast.warning("تعذّر تحديث قيد اليومية");
       }
-      }
 
       toast.success("تم تعديل الفاتورة بنجاح");
       invalidateCache();
