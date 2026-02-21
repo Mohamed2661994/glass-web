@@ -1270,15 +1270,26 @@ export default function CreateWholesaleInvoicePage() {
             )}
             <div className="flex gap-3">
               {!isRetailUser && (
-                <Button
-                  className="flex-1"
-                  onClick={() => {
-                    window.open(`/invoices/${savedInvoiceId}/print`, "_blank");
-                    window.location.reload();
-                  }}
-                >
-                  طباعة
-                </Button>
+                <>
+                  <Button
+                    className="flex-1"
+                    onClick={() => {
+                      window.open(`/invoices/${savedInvoiceId}/print`, "_blank");
+                      window.location.reload();
+                    }}
+                  >
+                    طباعة
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="flex-1"
+                    onClick={() => {
+                      window.open(`/invoices/${savedInvoiceId}/print?preview=1`, "_blank");
+                    }}
+                  >
+                    معاينة
+                  </Button>
+                </>
               )}
               <Button
                 variant={isRetailUser ? "default" : "outline"}

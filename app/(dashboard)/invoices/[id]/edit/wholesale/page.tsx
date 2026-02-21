@@ -1014,6 +1014,14 @@ export default function EditWholesaleInvoicePage() {
                 "تحديث الفاتورة"
               )}
             </Button>
+            <Button
+              variant="outline"
+              className="w-full mt-2"
+              size="lg"
+              onClick={() => window.open(`/invoices/${id}/print?preview=1`, "_blank")}
+            >
+              معاينة قبل الطباعة
+            </Button>
           </Card>
         )}
 

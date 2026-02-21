@@ -1656,6 +1656,15 @@ export default function CreateRetailInvoicePage() {
                 طباعة
               </Button>
               <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => {
+                  window.open(`/invoices/${savedInvoiceId}/print?preview=1`, "_blank");
+                }}
+              >
+                معاينة
+              </Button>
+              <Button
                 variant="outline"
                 className="flex-1"
                 onClick={() => window.location.reload()}
