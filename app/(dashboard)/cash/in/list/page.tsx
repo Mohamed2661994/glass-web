@@ -243,10 +243,21 @@ export default function CashInListPage() {
                 </TableRow>
               ) : (
                 filtered.map((item) => {
+                  // Parse breakdown from notes: {{total|paid|remaining}}
+                  const metaMatch = item.notes?.match(/\{\{([\d.]+)\|([\d.]+)\|([\d.]+)\}\}/);
+                  const metaTotal = metaMatch ? Number(metaMatch[1]) : null;
+                  const metaPaid = metaMatch ? Number(metaMatch[2]) : null;
+                  const metaRemaining = metaMatch ? Number(metaMatch[3]) : null;
+                  const displayNotes = item.notes?.replace(/\{\{[\d.|]+\}\}/, "").trim() || null;
+
                   const totalAmount =
-                    item.source_type === "invoice"
-                      ? Number(item.paid_amount) + Number(item.remaining_amount)
-                      : Number(item.amount);
+                    metaTotal != null
+                      ? metaTotal
+                      : item.source_type === "invoice"
+                        ? Number(item.paid_amount) + Number(item.remaining_amount)
+                        : Number(item.amount);
+                  const displayPaid = metaPaid != null ? metaPaid : Number(item.paid_amount || 0);
+                  const displayRemaining = metaRemaining != null ? metaRemaining : Number(item.remaining_amount || 0);
                   return (
                     <TableRow key={item.id}>
                       <TableCell>{item.id}</TableCell>
@@ -262,26 +273,22 @@ export default function CashInListPage() {
                         {Math.round(totalAmount).toLocaleString()} ج
                       </TableCell>
                       <TableCell>
-                        {Math.round(
-                          Number(item.paid_amount || 0),
-                        ).toLocaleString()}
+                        {Math.round(displayPaid).toLocaleString()}
                       </TableCell>
                       <TableCell
                         className={
-                          Number(item.remaining_amount) > 0
+                          displayRemaining > 0
                             ? "text-red-500 font-bold"
                             : ""
                         }
                       >
-                        {Math.round(
-                          Number(item.remaining_amount || 0),
-                        ).toLocaleString()}
+                        {Math.round(displayRemaining).toLocaleString()}
                       </TableCell>
                       <TableCell className="text-xs">
                         {formatDate(item.transaction_date)}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground max-w-[120px] truncate">
-                        {item.notes || "—"}
+                        {displayNotes || "—"}
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">

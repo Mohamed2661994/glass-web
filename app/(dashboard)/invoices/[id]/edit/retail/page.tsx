@@ -499,7 +499,7 @@ export default function EditRetailInvoicePage() {
           const recreateRes = await api.post("/cash/in", {
             transaction_date: invoiceDate,
             customer_name: customerName || "نقدي",
-            description: `فاتورة قطاعي رقم #${id}`,
+            description: `فاتورة قطاعي رقم #${id}{{${totalWithPrevious}|${paidNum}|${remainingAmount}}}`,
             amount: totalWithPrevious,
             paid_amount: paidNum,
             remaining_amount: remainingAmount,
@@ -517,7 +517,7 @@ export default function EditRetailInvoicePage() {
           const createRes = await api.post("/cash/in", {
             transaction_date: invoiceDate,
             customer_name: customerName || "نقدي",
-            description: `فاتورة قطاعي رقم #${id}`,
+            description: `فاتورة قطاعي رقم #${id}{{${totalWithPrevious}|${paidNum}|${remainingAmount}}}`,
             amount: totalWithPrevious,
             paid_amount: paidNum,
             remaining_amount: remainingAmount,

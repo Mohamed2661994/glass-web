@@ -427,7 +427,7 @@ export default function EditWholesaleInvoicePage() {
           const recreateRes = await api.post("/cash/in", {
             transaction_date: invoiceDate,
             customer_name: customerName,
-            description: `فاتورة جملة رقم #${id}`,
+            description: `فاتورة جملة رقم #${id}{{${totalWithPrevious}|${paidNum}|${remainingAmount}}}`,
             amount: totalWithPrevious,
             paid_amount: paidNum,
             remaining_amount: remainingAmount,
@@ -444,7 +444,7 @@ export default function EditWholesaleInvoicePage() {
           const createRes = await api.post("/cash/in", {
             transaction_date: invoiceDate,
             customer_name: customerName,
-            description: `فاتورة جملة رقم #${id}`,
+            description: `فاتورة جملة رقم #${id}{{${totalWithPrevious}|${paidNum}|${remainingAmount}}}`,
             amount: totalWithPrevious,
             paid_amount: paidNum,
             remaining_amount: remainingAmount,
