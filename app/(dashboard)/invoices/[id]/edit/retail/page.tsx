@@ -486,11 +486,21 @@ export default function EditRetailInvoicePage() {
         const invoiceIdStr = String(id);
         const existing = entries.find(
           (e: any) =>
-            (String(e.invoice_id) === invoiceIdStr && e.source_type === "invoice") ||
-            (e.notes && e.notes.includes(`#${invoiceIdStr}`) && e.source_type === "invoice"),
+            (String(e.invoice_id) === invoiceIdStr &&
+              e.source_type === "invoice") ||
+            (e.notes &&
+              e.notes.includes(`#${invoiceIdStr}`) &&
+              e.source_type === "invoice"),
         );
 
-        console.log("🔍 Cash entries count:", entries.length, "Found existing:", existing?.id, "invoice_id:", id);
+        console.log(
+          "🔍 Cash entries count:",
+          entries.length,
+          "Found existing:",
+          existing?.id,
+          "invoice_id:",
+          id,
+        );
 
         if (existing && paidNum > 0) {
           // Backend blocks PUT on invoice entries → DELETE then re-create
@@ -506,7 +516,10 @@ export default function EditRetailInvoicePage() {
             source_type: "invoice",
             invoice_id: Number(id),
           });
-          console.log("♻️ DELETE+CREATE cash-in response:", JSON.stringify(recreateRes.data));
+          console.log(
+            "♻️ DELETE+CREATE cash-in response:",
+            JSON.stringify(recreateRes.data),
+          );
           toast.info(`تم تحديث قيد اليومية`);
         } else if (existing && paidNum === 0) {
           await api.delete(`/cash-in/${existing.id}`);
@@ -524,12 +537,18 @@ export default function EditRetailInvoicePage() {
             source_type: "invoice",
             invoice_id: Number(id),
           });
-          console.log("📝 POST cash-in response:", JSON.stringify(createRes.data));
+          console.log(
+            "📝 POST cash-in response:",
+            JSON.stringify(createRes.data),
+          );
           const newEntryId = createRes.data?.cash_in_id || createRes.data?.id;
           toast.info(`تم إنشاء قيد يومية جديد #${newEntryId}`);
         }
       } catch (cashErr: any) {
-        console.error("Cash sync error:", cashErr.response?.data || cashErr.message);
+        console.error(
+          "Cash sync error:",
+          cashErr.response?.data || cashErr.message,
+        );
         toast.warning("تعذّر تحديث قيد اليومية");
       }
 

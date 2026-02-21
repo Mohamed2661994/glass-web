@@ -1,19 +1,41 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { noSpaces } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { toast } from "sonner";
+import { List, Pencil, Trash2 } from "lucide-react";
 import api from "@/services/api";
 import { useSearchParams } from "next/navigation";
 
@@ -41,6 +63,63 @@ function CashOutPage() {
   const [loading, setLoading] = useState(false);
   const [permissionNumber, setPermissionNumber] = useState<string | null>(null);
   const [successOpen, setSuccessOpen] = useState(false);
+
+  /* ========== Transactions Modal State ========== */
+  interface CashOutItem {
+    id: number;
+    name: string;
+    amount: number;
+    notes: string | null;
+    transaction_date: string;
+    permission_number: string;
+    entry_type: "expense" | "purchase";
+  }
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalData, setModalData] = useState<CashOutItem[]>([]);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [modalSearch, setModalSearch] = useState("");
+  const [deleteItem, setDeleteItem] = useState<CashOutItem | null>(null);
+
+  const openModal = useCallback(async () => {
+    setModalOpen(true);
+    setModalLoading(true);
+    try {
+      const { data } = await api.get("/cash/out");
+      setModalData(data.data || data || []);
+    } catch {
+      toast.error("فشل تحميل الحركات");
+    } finally {
+      setModalLoading(false);
+    }
+  }, []);
+
+  const filteredModal = useMemo(() => {
+    if (!modalSearch.trim()) return modalData;
+    const q = noSpaces(modalSearch).toLowerCase();
+    return modalData.filter(
+      (item) =>
+        noSpaces(item.name).toLowerCase().includes(q) ||
+        item.permission_number?.toLowerCase().includes(q) ||
+        (item.notes && noSpaces(item.notes).toLowerCase().includes(q)),
+    );
+  }, [modalData, modalSearch]);
+
+  const handleModalDelete = async () => {
+    if (!deleteItem) return;
+    try {
+      await api.delete(`/cash/out/${deleteItem.id}`);
+      toast.success("تم الحذف");
+      setDeleteItem(null);
+      setModalData((prev) => prev.filter((i) => i.id !== deleteItem.id));
+    } catch {
+      toast.error("فشل الحذف");
+    }
+  };
+
+  const formatDate = (s: string) => {
+    const d = s.substring(0, 10).split("-");
+    return `${d[2]}/${d[1]}/${d[0]}`;
+  };
 
   /* load edit data */
   useEffect(() => {
@@ -105,6 +184,16 @@ function CashOutPage() {
       <p className="text-sm text-muted-foreground text-center mb-6">
         تسجيل حركة منصرف على الخزنة
       </p>
+
+      {/* زرار عرض الحركات */}
+      <Button
+        variant="outline"
+        className="w-full mb-4 gap-2"
+        onClick={openModal}
+      >
+        <List className="h-4 w-4" />
+        عرض جميع الحركات
+      </Button>
 
       <Card className="overflow-hidden">
         <CardContent className="p-6 space-y-5">
@@ -224,6 +313,125 @@ function CashOutPage() {
           </Button>
         </DialogContent>
       </Dialog>
+
+      {/* Transactions Modal */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent dir="rtl" className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>جميع حركات المنصرف</DialogTitle>
+          </DialogHeader>
+
+          <Input
+            placeholder="🔍 بحث بالاسم أو رقم الإذن..."
+            value={modalSearch}
+            onChange={(e) => setModalSearch(e.target.value)}
+            className="mb-3"
+          />
+
+          <div className="flex-1 overflow-y-auto">
+            {modalLoading ? (
+              <div className="space-y-3 p-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full rounded" />
+                ))}
+              </div>
+            ) : filteredModal.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">لا يوجد حركات</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right">رقم الإذن</TableHead>
+                    <TableHead className="text-right">الاسم</TableHead>
+                    <TableHead className="text-right">النوع</TableHead>
+                    <TableHead className="text-right">المبلغ</TableHead>
+                    <TableHead className="text-right">التاريخ</TableHead>
+                    <TableHead className="text-right">ملاحظات</TableHead>
+                    <TableHead className="text-right">إجراء</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredModal.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-mono text-xs">
+                        {item.permission_number}
+                      </TableCell>
+                      <TableCell className="font-semibold">{item.name}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={item.entry_type === "expense" ? "destructive" : "default"}
+                        >
+                          {item.entry_type === "expense" ? "مصروفات" : "مشتريات"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-red-500 font-bold">
+                        {Math.round(item.amount).toLocaleString()} ج
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {formatDate(item.transaction_date)}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground max-w-[120px] truncate">
+                        {item.notes || "—"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => {
+                              setModalOpen(false);
+                              window.location.href = `/cash/out?edit=${item.id}`;
+                            }}
+                          >
+                            <Pencil className="h-3.5 w-3.5 text-blue-500" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => setDeleteItem(item)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+
+          <div className="text-xs text-muted-foreground text-center pt-2 border-t">
+            إجمالي: {filteredModal.length} حركة — المجموع:{" "}
+            <span className="text-red-500 font-bold">
+              {Math.round(filteredModal.reduce((s, i) => s + Number(i.amount), 0)).toLocaleString()} ج
+            </span>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirm */}
+      <AlertDialog open={!!deleteItem} onOpenChange={() => setDeleteItem(null)}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+            <AlertDialogDescription>
+              هل تريد حذف المنصرف &quot;{deleteItem?.name}&quot;؟
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleModalDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              حذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
