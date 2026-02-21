@@ -202,11 +202,12 @@ export default function CashSummaryPage() {
 
   /* ================= PRINT ================= */
 
-  const handlePrint = () => {
+  const handlePrint = (landscape = false) => {
     const params = new URLSearchParams({
       from: new Date(fromDate + "T00:00:00").toISOString(),
       to: new Date(toDate + "T00:00:00").toISOString(),
       includeOpeningBalance: includeOpeningBalance ? "1" : "0",
+      ...(landscape ? { orientation: "landscape" } : {}),
     });
     router.push(`/cash/summary/print?${params.toString()}`);
   };
@@ -241,15 +242,26 @@ export default function CashSummaryPage() {
             </p>
           </div>
         </div>
-        <Button
-          onClick={handlePrint}
-          size="sm"
-          variant="outline"
-          className="gap-2"
-        >
-          <Printer className="h-4 w-4" />
-          طباعة
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => handlePrint(false)}
+            size="sm"
+            variant="outline"
+            className="gap-2"
+          >
+            <Printer className="h-4 w-4" />
+            طباعة
+          </Button>
+          <Button
+            onClick={() => handlePrint(true)}
+            size="sm"
+            variant="outline"
+            className="gap-2"
+          >
+            <Printer className="h-4 w-4" />
+            طباعة عرضي
+          </Button>
+        </div>
       </div>
 
       {/* Date Filters + Toggle */}
@@ -423,57 +435,64 @@ export default function CashSummaryPage() {
 
               {filteredCashIn.map((i, idx) => {
                 const meta = parseMetadata(i.notes);
-                const displayAmount = meta ? meta.paid : (i.source_type === "invoice" ? i.paid_amount : i.amount);
+                const displayAmount = meta
+                  ? meta.paid
+                  : i.source_type === "invoice"
+                    ? i.paid_amount
+                    : i.amount;
                 const displayRemaining = meta ? meta.remaining : null;
                 const displayNotes = cleanNotes(i.notes);
                 return (
-                <div
-                  key={i.id}
-                  className={`py-3 space-y-1.5 ${idx > 0 ? "border-t" : ""}`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm">{i.customer_name}</span>
-                    <span className="text-green-500 font-extrabold tabular-nums">
-                      {Math.round(Number(displayAmount)).toLocaleString()}{" "}
-                      ج.م
-                    </span>
-                  </div>
-                  {displayRemaining != null && displayRemaining > 0 && (
+                  <div
+                    key={i.id}
+                    className={`py-3 space-y-1.5 ${idx > 0 ? "border-t" : ""}`}
+                  >
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-muted-foreground">المتبقي</span>
-                      <span className="text-red-500 font-bold text-xs tabular-nums">
-                        {Math.round(displayRemaining).toLocaleString()} ج.م
+                      <span className="font-bold text-sm">
+                        {i.customer_name}
+                      </span>
+                      <span className="text-green-500 font-extrabold tabular-nums">
+                        {Math.round(Number(displayAmount)).toLocaleString()} ج.م
                       </span>
                     </div>
-                  )}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                      <CalendarDays className="h-3 w-3" />
-                      {formatCardDate(i.transaction_date)}
-                    </div>
-                    <Badge
-                      className="text-[10px] px-1.5 py-0"
-                      variant={
-                        i.source_type === "invoice"
-                          ? "secondary"
+                    {displayRemaining != null && displayRemaining > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] text-muted-foreground">
+                          المتبقي
+                        </span>
+                        <span className="text-red-500 font-bold text-xs tabular-nums">
+                          {Math.round(displayRemaining).toLocaleString()} ج.م
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <CalendarDays className="h-3 w-3" />
+                        {formatCardDate(i.transaction_date)}
+                      </div>
+                      <Badge
+                        className="text-[10px] px-1.5 py-0"
+                        variant={
+                          i.source_type === "invoice"
+                            ? "secondary"
+                            : i.source_type === "customer_payment"
+                              ? "default"
+                              : "outline"
+                        }
+                      >
+                        {i.source_type === "invoice"
+                          ? "فاتورة"
                           : i.source_type === "customer_payment"
-                            ? "default"
-                            : "outline"
-                      }
-                    >
-                      {i.source_type === "invoice"
-                        ? "فاتورة"
-                        : i.source_type === "customer_payment"
-                          ? "سداد عميل"
-                          : "وارد يدوي"}
-                    </Badge>
+                            ? "سداد عميل"
+                            : "وارد يدوي"}
+                      </Badge>
+                    </div>
+                    {displayNotes && (
+                      <p className="text-[11px] text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 rounded px-2 py-1">
+                        {displayNotes}
+                      </p>
+                    )}
                   </div>
-                  {displayNotes && (
-                    <p className="text-[11px] text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 rounded px-2 py-1">
-                      {displayNotes}
-                    </p>
-                  )}
-                </div>
                 );
               })}
             </div>

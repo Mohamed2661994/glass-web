@@ -966,16 +966,13 @@ export default function DashboardPage() {
           (i) => i.transaction_date.substring(0, 10) === today,
         );
         setCashInTotal(
-          todayInItems.reduce(
-            (s, i) => {
-              // Parse {{total|paid|remaining}} from notes if available
-              const notes = (i as any).notes || (i as any).description || "";
-              const m = notes.match(/\{\{([\d.]+)\|([\d.]+)\|([\d.]+)\}\}/);
-              if (m) return s + Number(m[2]);
-              return s + Number(i.paid_amount || i.amount || 0);
-            },
-            0,
-          ),
+          todayInItems.reduce((s, i) => {
+            // Parse {{total|paid|remaining}} from notes if available
+            const notes = (i as any).notes || (i as any).description || "";
+            const m = notes.match(/\{\{([\d.]+)\|([\d.]+)\|([\d.]+)\}\}/);
+            if (m) return s + Number(m[2]);
+            return s + Number(i.paid_amount || i.amount || 0);
+          }, 0),
         );
         setCashOutTotal(
           outItems.reduce((s, i) => s + Number(i.amount || 0), 0),

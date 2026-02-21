@@ -35,6 +35,24 @@ const formatMoney = (n: number) => Math.round(n).toLocaleString("ar-EG");
 const getPreviousDay = (d: Date) =>
   new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
 
+/** Parse {{total|paid|remaining}} from notes */
+const parseMetadata = (notes?: string | null) => {
+  const m = notes?.match(/\{\\{([\d.]+)\|([\d.]+)\|([\d.]+)\}\\}/);
+  if (m) return { total: Number(m[1]), paid: Number(m[2]), remaining: Number(m[3]) };
+  const m2 = notes?.match(/\{\{([\d.]+)\|([\d.]+)\|([\d.]+)\}\}/);
+  if (m2) return { total: Number(m2[1]), paid: Number(m2[2]), remaining: Number(m2[3]) };
+  return null;
+};
+
+const cleanNotes = (notes?: string | null) =>
+  notes?.replace(/\{\{[\d.|]+\}\}/, "").trim() || null;
+
+const effectivePaid = (i: CashInItem) => {
+  const meta = parseMetadata(i.notes);
+  if (meta) return meta.paid;
+  return i.source_type === "invoice" ? Number(i.paid_amount) : Number(i.amount);
+};
+
 /* ================= INNER COMPONENT ================= */
 
 function CashSummaryPrintInner() {
@@ -42,6 +60,8 @@ function CashSummaryPrintInner() {
   const from = searchParams.get("from");
   const to = searchParams.get("to");
   const includeOpeningBalance = searchParams.get("includeOpeningBalance");
+  const orientation = searchParams.get("orientation") || "portrait";
+  const isLandscape = orientation === "landscape";
 
   const showOpeningBalance = includeOpeningBalance === "1";
 
@@ -120,8 +140,7 @@ function CashSummaryPrintInner() {
 
   const prevSummary = useMemo(() => {
     const totalIn = prevCashIn.reduce((s, i) => {
-      const val =
-        i.source_type === "invoice" ? Number(i.paid_amount) : Number(i.amount);
+      const val = effectivePaid(i);
       return s + (isNaN(val) ? 0 : val);
     }, 0);
     const totalOut = prevCashOut.reduce((s, o) => {
@@ -137,10 +156,7 @@ function CashSummaryPrintInner() {
     const totalIn =
       openingBalance +
       filteredIn.reduce((s, i) => {
-        const val =
-          i.source_type === "invoice"
-            ? Number(i.paid_amount)
-            : Number(i.amount);
+        const val = effectivePaid(i);
         return s + (isNaN(val) ? 0 : val);
       }, 0);
     const totalOut = filteredOut.reduce((s, o) => {
@@ -164,7 +180,7 @@ function CashSummaryPrintInner() {
       className="bg-white text-black min-h-screen"
       style={{ colorScheme: "light" }}
     >
-      <div className="max-w-[800px] mx-auto border border-black p-5 print:border-0 print:p-5">
+      <div className={`${isLandscape ? 'max-w-[1100px]' : 'max-w-[800px]'} mx-auto border border-black p-5 print:border-0 print:p-5`}>
         {/* Header */}
         <div className="text-center mb-3">
           <h1 className="text-xl font-bold">اليومية</h1>
@@ -198,8 +214,8 @@ function CashSummaryPrintInner() {
             title="الوارد"
             rows={filteredIn.map((i) => [
               i.customer_name,
-              i.source_type === "invoice" ? i.paid_amount : i.amount,
-              i.notes || "-",
+              effectivePaid(i),
+              cleanNotes(i.notes) || "-",
             ])}
           />
 
@@ -222,7 +238,7 @@ function CashSummaryPrintInner() {
       {/* Print styles */}
       <style>{`
         @media print {
-          @page { size: A4; margin: 20mm; }
+          @page { size: ${isLandscape ? 'A4 landscape' : 'A4'}; margin: 15mm; }
           body { background: #fff !important; }
           * { overflow: visible !important; }
         }
