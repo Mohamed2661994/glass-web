@@ -504,16 +504,23 @@ export default function EditRetailInvoicePage() {
           await api.delete(`/cash-in/${existing.id}`);
         } else if (!existing && paidNum > 0) {
           // No cash entry existed, but now there's a payment → create one
-          await api.post("/cash/in", {
+          const createRes = await api.post("/cash/in", {
             transaction_date: invoiceDate,
             customer_name: customerName || "نقدي",
             description: `فاتورة قطاعي رقم #${id}`,
             amount: totalWithPrevious,
-            paid_amount: paidNum,
-            remaining_amount: totalWithPrevious - paidNum,
             source_type: "invoice",
             invoice_id: Number(id),
           });
+          // POST doesn't save paid/remaining, so update immediately
+          const newEntryId = createRes.data?.cash_in_id || createRes.data?.id;
+          if (newEntryId) {
+            await api.put(`/cash-in/${newEntryId}`, {
+              amount: totalWithPrevious,
+              paid_amount: paidNum,
+              remaining_amount: totalWithPrevious - paidNum,
+            });
+          }
         }
       } catch {
         // Don't block invoice save if cash sync fails
