@@ -62,6 +62,23 @@ const formatLocalDate = (d: Date) => {
 const getPreviousDay = (d: Date) =>
   new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
 
+/** Parse {{total|paid|remaining}} from notes */
+const parseMetadata = (notes?: string | null) => {
+  const m = notes?.match(/\{\{([\d.]+)\|([\d.]+)\|([\d.]+)\}\}/);
+  if (!m) return null;
+  return { total: Number(m[1]), paid: Number(m[2]), remaining: Number(m[3]) };
+};
+
+const cleanNotes = (notes?: string | null) =>
+  notes?.replace(/\{\{[\d.|]+\}\}/, "").trim() || null;
+
+/** Get effective paid amount for a cash-in item */
+const effectivePaid = (i: CashInItem) => {
+  const meta = parseMetadata(i.notes);
+  if (meta) return meta.paid;
+  return i.source_type === "invoice" ? Number(i.paid_amount) : Number(i.amount);
+};
+
 /* ================= COMPONENT ================= */
 
 export default function CashSummaryPage() {
@@ -150,8 +167,7 @@ export default function CashSummaryPage() {
 
   const prevSummary = useMemo(() => {
     const totalIn = prevCashIn.reduce((s, i) => {
-      const val =
-        i.source_type === "invoice" ? Number(i.paid_amount) : Number(i.amount);
+      const val = effectivePaid(i);
       return s + (isNaN(val) ? 0 : val);
     }, 0);
     const totalOut = prevCashOut.reduce((s, o) => {
@@ -170,8 +186,7 @@ export default function CashSummaryPage() {
     let totalOut = 0;
 
     filteredCashIn.forEach((i) => {
-      totalIn +=
-        i.source_type === "invoice" ? Number(i.paid_amount) : Number(i.amount);
+      totalIn += effectivePaid(i);
     });
     filteredCashOut.forEach((o) => {
       totalOut += Number(o.amount);
@@ -406,7 +421,12 @@ export default function CashSummaryPage() {
                 </p>
               )}
 
-              {filteredCashIn.map((i, idx) => (
+              {filteredCashIn.map((i, idx) => {
+                const meta = parseMetadata(i.notes);
+                const displayAmount = meta ? meta.paid : (i.source_type === "invoice" ? i.paid_amount : i.amount);
+                const displayRemaining = meta ? meta.remaining : null;
+                const displayNotes = cleanNotes(i.notes);
+                return (
                 <div
                   key={i.id}
                   className={`py-3 space-y-1.5 ${idx > 0 ? "border-t" : ""}`}
@@ -414,10 +434,18 @@ export default function CashSummaryPage() {
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-sm">{i.customer_name}</span>
                     <span className="text-green-500 font-extrabold tabular-nums">
-                      {i.source_type === "invoice" ? i.paid_amount : i.amount}{" "}
+                      {Math.round(Number(displayAmount)).toLocaleString()}{" "}
                       ج.م
                     </span>
                   </div>
+                  {displayRemaining != null && displayRemaining > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-muted-foreground">المتبقي</span>
+                      <span className="text-red-500 font-bold text-xs tabular-nums">
+                        {Math.round(displayRemaining).toLocaleString()} ج.م
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                       <CalendarDays className="h-3 w-3" />
@@ -440,13 +468,14 @@ export default function CashSummaryPage() {
                           : "وارد يدوي"}
                     </Badge>
                   </div>
-                  {i.notes && (
+                  {displayNotes && (
                     <p className="text-[11px] text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 rounded px-2 py-1">
-                      {i.notes}
+                      {displayNotes}
                     </p>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>

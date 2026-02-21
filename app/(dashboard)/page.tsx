@@ -250,6 +250,7 @@ interface CashInItem {
   amount: number;
   paid_amount: number;
   transaction_date: string;
+  notes?: string | null;
 }
 
 interface CashOutItem {
@@ -966,7 +967,13 @@ export default function DashboardPage() {
         );
         setCashInTotal(
           todayInItems.reduce(
-            (s, i) => s + Number(i.paid_amount || i.amount || 0),
+            (s, i) => {
+              // Parse {{total|paid|remaining}} from notes if available
+              const notes = (i as any).notes || (i as any).description || "";
+              const m = notes.match(/\{\{([\d.]+)\|([\d.]+)\|([\d.]+)\}\}/);
+              if (m) return s + Number(m[2]);
+              return s + Number(i.paid_amount || i.amount || 0);
+            },
             0,
           ),
         );

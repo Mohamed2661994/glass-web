@@ -316,7 +316,10 @@ function CashOutPage() {
 
       {/* Transactions Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent dir="rtl" className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent
+          dir="rtl"
+          className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col"
+        >
           <DialogHeader>
             <DialogTitle>جميع حركات المنصرف</DialogTitle>
           </DialogHeader>
@@ -336,7 +339,9 @@ function CashOutPage() {
                 ))}
               </div>
             ) : filteredModal.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">لا يوجد حركات</p>
+              <p className="text-center text-muted-foreground py-8">
+                لا يوجد حركات
+              </p>
             ) : (
               <Table>
                 <TableHeader>
@@ -356,12 +361,20 @@ function CashOutPage() {
                       <TableCell className="font-mono text-xs">
                         {item.permission_number}
                       </TableCell>
-                      <TableCell className="font-semibold">{item.name}</TableCell>
+                      <TableCell className="font-semibold">
+                        {item.name}
+                      </TableCell>
                       <TableCell>
                         <Badge
-                          variant={item.entry_type === "expense" ? "destructive" : "default"}
+                          variant={
+                            item.entry_type === "expense"
+                              ? "destructive"
+                              : "default"
+                          }
                         >
-                          {item.entry_type === "expense" ? "مصروفات" : "مشتريات"}
+                          {item.entry_type === "expense"
+                            ? "مصروفات"
+                            : "مشتريات"}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-red-500 font-bold">
@@ -406,7 +419,10 @@ function CashOutPage() {
           <div className="text-xs text-muted-foreground text-center pt-2 border-t">
             إجمالي: {filteredModal.length} حركة — المجموع:{" "}
             <span className="text-red-500 font-bold">
-              {Math.round(filteredModal.reduce((s, i) => s + Number(i.amount), 0)).toLocaleString()} ج
+              {Math.round(
+                filteredModal.reduce((s, i) => s + Number(i.amount), 0),
+              ).toLocaleString()}{" "}
+              ج
             </span>
           </div>
         </DialogContent>
