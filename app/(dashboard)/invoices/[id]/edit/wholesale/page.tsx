@@ -120,7 +120,7 @@ export default function EditWholesaleInvoicePage() {
         setMovementType(inv.movement_type);
         setInvoiceDate(
           inv.invoice_date
-            ? new Date(inv.invoice_date).toISOString().substring(0, 10)
+            ? inv.invoice_date.substring(0, 10)
             : "",
         );
         setCustomerName(inv.customer_name || "");

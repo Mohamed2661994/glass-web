@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/auth-context";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import api from "@/services/api";
+import { getTodayDate } from "@/lib/constants";
 import { ProductLookupModal } from "@/components/product-lookup-modal";
 import {
   FileText,
@@ -902,7 +903,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!branchId) return;
     setLoadingInv(true);
-    const today = new Date().toISOString().substring(0, 10);
+    const today = getTodayDate();
     (async () => {
       try {
         const { data } = await api.get("/invoices", {
@@ -967,7 +968,7 @@ export default function DashboardPage() {
     setLoadingCash(true);
     (async () => {
       try {
-        const today = new Date().toISOString().split("T")[0];
+        const today = getTodayDate();
         const [inRes, outRes] = await Promise.all([
           api.get("/cash-in", { params: { branch_id: branchId } }),
           api.get("/cash/out", {

@@ -204,8 +204,8 @@ export default function CashSummaryPage() {
 
   const handlePrint = (landscape = false) => {
     const params = new URLSearchParams({
-      from: new Date(fromDate + "T00:00:00").toISOString(),
-      to: new Date(toDate + "T00:00:00").toISOString(),
+      from: fromDate,
+      to: toDate,
       includeOpeningBalance: includeOpeningBalance ? "1" : "0",
       ...(landscape ? { orientation: "landscape" } : {}),
     });

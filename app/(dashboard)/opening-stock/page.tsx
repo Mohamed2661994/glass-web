@@ -24,6 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { PageContainer } from "@/components/layout/page-container";
 import api from "@/services/api";
+import { getTodayDate } from "@/lib/constants";
 import {
   Upload,
   FileSpreadsheet,
@@ -81,9 +82,7 @@ export default function OpeningStockPage() {
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [totalBatches, setTotalBatches] = useState(0);
-  const [invoiceDate, setInvoiceDate] = useState(
-    new Date().toISOString().split("T")[0],
-  );
+  const [invoiceDate, setInvoiceDate] = useState(getTodayDate());
   const [branchId, setBranchId] = useState(1);
   const [results, setResults] = useState<InvoiceResult[]>([]);
   const [errors, setErrors] = useState<string[]>([]);

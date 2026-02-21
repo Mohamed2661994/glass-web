@@ -33,6 +33,7 @@ import { CustomerLookupModal } from "@/components/customer-lookup-modal";
 import { QuickTransferModal } from "@/components/quick-transfer-modal";
 import { highlightText } from "@/lib/highlight-text";
 import { multiWordMatch, multiWordScore } from "@/lib/utils";
+import { getTodayDate } from "@/lib/constants";
 import { BarcodeDetector } from "barcode-detector";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -79,9 +80,7 @@ export default function CreateRetailInvoicePage() {
      ========================================================= */
 
   const [movementType, setMovementType] = useState<"sale" | "purchase">("sale");
-  const [invoiceDate, setInvoiceDate] = useState(
-    new Date().toISOString().substring(0, 10),
-  );
+  const [invoiceDate, setInvoiceDate] = useState(getTodayDate());
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -343,7 +342,7 @@ export default function CreateRetailInvoicePage() {
     setPaidAmount("0");
     setApplyItemsDiscount(true);
     setMovementType("sale");
-    setInvoiceDate(new Date().toISOString().substring(0, 10));
+    setInvoiceDate(getTodayDate());
     clearDraft();
     toast.success("تم مسح الفاتورة — ابدأ فاتورة جديدة");
   };

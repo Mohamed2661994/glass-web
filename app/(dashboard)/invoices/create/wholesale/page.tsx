@@ -32,6 +32,7 @@ import { QuickTransferModal } from "@/components/quick-transfer-modal";
 import { useCachedProducts } from "@/hooks/use-cached-products";
 import { highlightText } from "@/lib/highlight-text";
 import { multiWordMatch, multiWordScore } from "@/lib/utils";
+import { getTodayDate } from "@/lib/constants";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -79,9 +80,7 @@ export default function CreateWholesaleInvoicePage() {
      ========================================================= */
 
   const [movementType, setMovementType] = useState<"sale" | "purchase">("sale");
-  const [invoiceDate, setInvoiceDate] = useState(
-    new Date().toISOString().substring(0, 10),
-  );
+  const [invoiceDate, setInvoiceDate] = useState(getTodayDate());
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -251,7 +250,7 @@ export default function CreateWholesaleInvoicePage() {
     setExtraDiscount("0");
     setPaidAmount("0");
     setMovementType("sale");
-    setInvoiceDate(new Date().toISOString().substring(0, 10));
+    setInvoiceDate(getTodayDate());
     clearDraft();
     toast.success("تم مسح الفاتورة — ابدأ فاتورة جديدة");
   };
