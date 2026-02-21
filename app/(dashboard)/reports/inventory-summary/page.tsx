@@ -10,6 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -17,13 +23,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Search, AlertTriangle } from "lucide-react";
 
 /* ========== Types ========== */
 type InventoryItem = {
   product_id: number;
   product_name: string;
   manufacturer_name?: string | null;
+  barcode?: string | null;
   warehouse_name: string | null;
   total_in: number;
   total_out: number;
@@ -42,6 +49,7 @@ export default function InventorySummaryPage() {
   const [data, setData] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
+  const [discrepancyOpen, setDiscrepancyOpen] = useState(false);
   const [selectedWarehouse, setSelectedWarehouse] = useState<WarehouseFilter>(
     isShowroomUser
       ? "مخزن المعرض"
@@ -97,6 +105,7 @@ export default function InventorySummaryPage() {
           searchText,
           item.product_name,
           item.manufacturer_name || "",
+          item.barcode || "",
         ),
       );
     }
@@ -105,12 +114,16 @@ export default function InventorySummaryPage() {
   }, [data, selectedWarehouse, searchText, isShowroomUser, isWarehouseUser]);
 
   /* ========== Problem count ========== */
-  const problemCount = filteredData.filter((item) => {
-    const diff =
-      Number(item.current_stock || 0) -
-      (Number(item.total_in || 0) - Number(item.total_out || 0));
-    return diff !== 0;
-  }).length;
+  const discrepancyItems = useMemo(() => {
+    return filteredData.filter((item) => {
+      const diff =
+        Number(item.current_stock || 0) -
+        (Number(item.total_in || 0) - Number(item.total_out || 0));
+      return diff !== 0;
+    });
+  }, [filteredData]);
+
+  const problemCount = discrepancyItems.length;
 
   /* ========== Warehouse buttons (only if not locked) ========== */
   const warehouseOptions: WarehouseFilter[] =
@@ -127,7 +140,7 @@ export default function InventorySummaryPage() {
         <div className="relative max-w-md mx-auto">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="بحث بالاسم أو المصنع..."
+            placeholder="بحث بالاسم أو المصنع أو الباركود..."
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             className="pr-9"
@@ -152,9 +165,12 @@ export default function InventorySummaryPage() {
 
         {/* Problem badge */}
         {!loading && problemCount > 0 && (
-          <p className="text-center text-red-500 font-bold text-sm">
+          <button
+            className="mx-auto block text-center text-red-500 font-bold text-sm hover:underline cursor-pointer"
+            onClick={() => setDiscrepancyOpen(true)}
+          >
             ⚠️ يوجد {problemCount} صنف به فرق في الرصيد
-          </p>
+          </button>
         )}
 
         {/* Loading */}
@@ -200,10 +216,13 @@ export default function InventorySummaryPage() {
                           <TableCell className="text-right">
                             <div className="font-medium">
                               {item.product_name}
+                              {item.manufacturer_name && (
+                                <span className="text-muted-foreground font-normal"> - {item.manufacturer_name}</span>
+                              )}
                             </div>
-                            {item.manufacturer_name && (
-                              <div className="text-xs text-muted-foreground">
-                                {item.manufacturer_name}
+                            {item.barcode && (
+                              <div className="text-xs text-muted-foreground font-mono">
+                                {item.barcode}
                               </div>
                             )}
                           </TableCell>
@@ -248,6 +267,69 @@ export default function InventorySummaryPage() {
         {!loading && filteredData.length > 0 && (
           <div className="text-center">
             <Badge variant="secondary">{filteredData.length} صنف</Badge>
+          </div>
+        )}
+
+        {/* Discrepancy Modal */}
+        <Dialog open={discrepancyOpen} onOpenChange={setDiscrepancyOpen}>
+          <DialogContent dir="rtl" className="sm:max-w-4xl max-h-[85vh] flex flex-col p-0">
+            <DialogHeader className="p-4 border-b shrink-0">
+              <DialogTitle className="flex items-center gap-2 text-red-600">
+                <AlertTriangle className="h-5 w-5" />
+                أصناف بها فرق في الرصيد ({discrepancyItems.length})
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {discrepancyItems.length === 0 ? (
+                <p className="text-center py-12 text-muted-foreground">لا توجد أصناف بها فرق</p>
+              ) : (
+                <Table className="text-xs sm:text-sm">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-right">الصنف</TableHead>
+                      <TableHead className="text-center">المخزن</TableHead>
+                      <TableHead className="text-center">وارد</TableHead>
+                      <TableHead className="text-center">صادر</TableHead>
+                      <TableHead className="text-center">الرصيد</TableHead>
+                      <TableHead className="text-center">المتوقع</TableHead>
+                      <TableHead className="text-center">الفرق</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {discrepancyItems.map((item, idx) => {
+                      const totalIn = Number(item.total_in || 0);
+                      const totalOut = Number(item.total_out || 0);
+                      const currentStock = Number(item.current_stock || 0);
+                      const expectedStock = totalIn - totalOut;
+                      const difference = currentStock - expectedStock;
+                      return (
+                        <TableRow key={`disc-${item.product_id}-${item.warehouse_name}-${idx}`} className="bg-red-50 dark:bg-red-950/20">
+                          <TableCell className="text-right">
+                            <div className="font-medium">
+                              {item.product_name}
+                              {item.manufacturer_name && (
+                                <span className="text-muted-foreground font-normal"> - {item.manufacturer_name}</span>
+                              )}
+                            </div>
+                            {item.barcode && (
+                              <div className="text-xs text-muted-foreground font-mono">{item.barcode}</div>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center text-xs">{item.warehouse_name}</TableCell>
+                          <TableCell className="text-center">{totalIn}</TableCell>
+                          <TableCell className="text-center">{totalOut}</TableCell>
+                          <TableCell className="text-center font-bold">{currentStock}</TableCell>
+                          <TableCell className="text-center">{expectedStock}</TableCell>
+                          <TableCell className="text-center font-bold text-red-600">{difference}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
           </div>
         )}
       </div>

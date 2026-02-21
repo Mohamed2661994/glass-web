@@ -2043,7 +2043,10 @@ export default function CreateRetailInvoicePage() {
 
         {/* Previous Invoices Modal */}
         <Dialog open={prevInvoicesOpen} onOpenChange={setPrevInvoicesOpen}>
-          <DialogContent dir="rtl" className="sm:max-w-4xl max-h-[85vh] flex flex-col p-0">
+          <DialogContent
+            dir="rtl"
+            className="sm:max-w-4xl max-h-[85vh] flex flex-col p-0"
+          >
             <DialogHeader className="p-4 border-b shrink-0">
               <DialogTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
@@ -2056,7 +2059,9 @@ export default function CreateRetailInvoicePage() {
                   <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
               ) : prevInvoices.length === 0 ? (
-                <p className="text-center py-12 text-muted-foreground">لا توجد فواتير سابقة</p>
+                <p className="text-center py-12 text-muted-foreground">
+                  لا توجد فواتير سابقة
+                </p>
               ) : (
                 <Table className="text-xs sm:text-sm">
                   <TableHeader>
@@ -2078,17 +2083,31 @@ export default function CreateRetailInvoicePage() {
                         <TableRow
                           key={inv.id}
                           className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => window.open(`/invoices/${inv.id}`, "_blank")}
+                          onClick={() =>
+                            window.open(`/invoices/${inv.id}`, "_blank")
+                          }
                         >
-                          <TableCell className="font-medium">{inv.id}</TableCell>
+                          <TableCell className="font-medium">
+                            {inv.id}
+                          </TableCell>
                           <TableCell>
-                            {inv.movement_type === "sale" ? "بيع" : inv.movement_type === "purchase" ? "شراء" : inv.movement_type}
+                            {inv.movement_type === "sale"
+                              ? "بيع"
+                              : inv.movement_type === "purchase"
+                                ? "شراء"
+                                : inv.movement_type}
                           </TableCell>
                           <TableCell className="whitespace-nowrap">
-                            {Math.round(Number(inv.total || 0)).toLocaleString()} ج
+                            {Math.round(
+                              Number(inv.total || 0),
+                            ).toLocaleString()}{" "}
+                            ج
                           </TableCell>
                           <TableCell className="whitespace-nowrap text-green-600 dark:text-green-400">
-                            {Math.round(Number(inv.paid_amount || 0)).toLocaleString()} ج
+                            {Math.round(
+                              Number(inv.paid_amount || 0),
+                            ).toLocaleString()}{" "}
+                            ج
                           </TableCell>
                           <TableCell className="whitespace-nowrap text-red-600 dark:text-red-400">
                             {Math.round(remaining).toLocaleString()} ج
@@ -2104,11 +2123,17 @@ export default function CreateRetailInvoicePage() {
                                     : "border-red-300 text-red-700 dark:border-red-700 dark:text-red-400"
                               }`}
                             >
-                              {status === "paid" ? "مدفوعة" : status === "partial" ? "جزئي" : "غير مدفوعة"}
+                              {status === "paid"
+                                ? "مدفوعة"
+                                : status === "partial"
+                                  ? "جزئي"
+                                  : "غير مدفوعة"}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-muted-foreground text-xs">
-                            {new Date(inv.invoice_date || inv.created_at).toLocaleDateString("ar-EG")}
+                            {new Date(
+                              inv.invoice_date || inv.created_at,
+                            ).toLocaleDateString("ar-EG")}
                           </TableCell>
                         </TableRow>
                       );
@@ -2120,7 +2145,19 @@ export default function CreateRetailInvoicePage() {
             {prevInvoices.length > 0 && (
               <div className="p-3 border-t text-xs text-muted-foreground flex justify-between shrink-0">
                 <span>إجمالي: {prevInvoices.length} فاتورة</span>
-                <span>الباقي الكلي: <span className="text-red-600 dark:text-red-400 font-semibold">{Math.round(prevInvoices.reduce((s: number, i: any) => s + Number(i.remaining_amount || 0), 0)).toLocaleString()} ج</span></span>
+                <span>
+                  الباقي الكلي:{" "}
+                  <span className="text-red-600 dark:text-red-400 font-semibold">
+                    {Math.round(
+                      prevInvoices.reduce(
+                        (s: number, i: any) =>
+                          s + Number(i.remaining_amount || 0),
+                        0,
+                      ),
+                    ).toLocaleString()}{" "}
+                    ج
+                  </span>
+                </span>
               </div>
             )}
           </DialogContent>
