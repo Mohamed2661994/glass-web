@@ -7,6 +7,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 interface InvoiceItem {
@@ -26,6 +32,7 @@ export default function InvoiceDetailsPage() {
   const router = useRouter();
   const [invoice, setInvoice] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const fetchInvoice = async () => {
     try {
@@ -237,7 +244,7 @@ export default function InvoiceDetailsPage() {
         </Button>
         <Button
           variant="outline"
-          onClick={() => window.open(`/invoices/${invoice.id}/print?preview=1`, "_blank")}
+          onClick={() => setPreviewOpen(true)}
         >
           معاينة
         </Button>
@@ -247,6 +254,24 @@ export default function InvoiceDetailsPage() {
           طباعة
         </Button>
       </div>
+
+      {/* Preview Modal */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent dir="rtl" className="sm:max-w-4xl h-[85vh] p-0 flex flex-col overflow-hidden">
+          <DialogHeader className="p-4 pb-2 shrink-0">
+            <DialogTitle>معاينة الفاتورة</DialogTitle>
+          </DialogHeader>
+          <iframe
+            src={`/invoices/${invoice?.id}/print?preview=1`}
+            className="flex-1 w-full border-0"
+            style={{ minHeight: 0 }}
+          />
+          <div className="flex gap-3 p-4 pt-2 border-t shrink-0">
+            <Button className="flex-1" onClick={() => { window.open(`/invoices/${invoice?.id}/print`, "_blank"); setPreviewOpen(false); }}>طباعة</Button>
+            <Button variant="outline" className="flex-1" onClick={() => setPreviewOpen(false)}>إغلاق</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

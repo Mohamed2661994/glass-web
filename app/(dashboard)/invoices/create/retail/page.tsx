@@ -82,6 +82,7 @@ export default function CreateRetailInvoicePage() {
   const [savedInvoiceId, setSavedInvoiceId] = useState<number | null>(null);
   const [showSavedModal, setShowSavedModal] = useState(false);
   const [journalPosted, setJournalPosted] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   /* =========================================================
      2️⃣ Customer Search States
@@ -1659,7 +1660,8 @@ export default function CreateRetailInvoicePage() {
                 variant="secondary"
                 className="flex-1"
                 onClick={() => {
-                  window.open(`/invoices/${savedInvoiceId}/print?preview=1`, "_blank");
+                  setShowSavedModal(false);
+                  setPreviewOpen(true);
                 }}
               >
                 معاينة
@@ -1671,6 +1673,24 @@ export default function CreateRetailInvoicePage() {
               >
                 إلغاء
               </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* ===== مودل المعاينة ===== */}
+        <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+          <DialogContent dir="rtl" className="sm:max-w-4xl h-[85vh] p-0 flex flex-col overflow-hidden">
+            <DialogHeader className="p-4 pb-2 shrink-0">
+              <DialogTitle>معاينة الفاتورة</DialogTitle>
+            </DialogHeader>
+            <iframe
+              src={`/invoices/${savedInvoiceId}/print?preview=1`}
+              className="flex-1 w-full border-0"
+              style={{ minHeight: 0 }}
+            />
+            <div className="flex gap-3 p-4 pt-2 border-t shrink-0">
+              <Button className="flex-1" onClick={() => { window.open(`/invoices/${savedInvoiceId}/print`, "_blank"); setPreviewOpen(false); window.location.reload(); }}>طباعة</Button>
+              <Button variant="outline" className="flex-1" onClick={() => { setPreviewOpen(false); window.location.reload(); }}>إغلاق</Button>
             </div>
           </DialogContent>
         </Dialog>

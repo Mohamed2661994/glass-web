@@ -49,7 +49,13 @@ interface InvoiceData {
 
 export default function InvoicePrintPageWrapper() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><p>جاري التحميل...</p></div>}>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-screen">
+          <p>جاري التحميل...</p>
+        </div>
+      }
+    >
       <InvoicePrintPage />
     </Suspense>
   );

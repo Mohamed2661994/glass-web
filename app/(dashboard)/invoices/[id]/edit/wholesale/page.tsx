@@ -345,6 +345,7 @@ export default function EditWholesaleInvoicePage() {
      ========================================================= */
 
   const [saving, setSaving] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const updateInvoice = async () => {
     if (items.length === 0) {
@@ -1018,12 +1019,30 @@ export default function EditWholesaleInvoicePage() {
               variant="outline"
               className="w-full mt-2"
               size="lg"
-              onClick={() => window.open(`/invoices/${id}/print?preview=1`, "_blank")}
+              onClick={() => setPreviewOpen(true)}
             >
               معاينة قبل الطباعة
             </Button>
           </Card>
         )}
+
+        {/* ================= Preview Modal ================= */}
+        <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+          <DialogContent dir="rtl" className="sm:max-w-4xl h-[85vh] p-0 flex flex-col overflow-hidden">
+            <DialogHeader className="p-4 pb-2 shrink-0">
+              <DialogTitle>معاينة الفاتورة</DialogTitle>
+            </DialogHeader>
+            <iframe
+              src={`/invoices/${id}/print?preview=1`}
+              className="flex-1 w-full border-0"
+              style={{ minHeight: 0 }}
+            />
+            <div className="flex gap-3 p-4 pt-2 border-t shrink-0">
+              <Button className="flex-1" onClick={() => { window.open(`/invoices/${id}/print`, "_blank"); setPreviewOpen(false); }}>طباعة</Button>
+              <Button variant="outline" className="flex-1" onClick={() => setPreviewOpen(false)}>إغلاق</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* ================= Product Modal ================= */}
         <Dialog open={showProductModal} onOpenChange={setShowProductModal}>
