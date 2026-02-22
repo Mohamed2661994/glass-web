@@ -68,6 +68,8 @@ function CashInPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
   const [cashInNumber, setCashInNumber] = useState<number | null>(null);
+  const [customerDebt, setCustomerDebt] = useState<number | null>(null);
+  const [debtLoading, setDebtLoading] = useState(false);
 
   /* ========== Transactions Modal State ========== */
   interface CashInItem {
@@ -170,10 +172,29 @@ function CashInPage() {
     } catch {}
   };
 
+  const fetchCustomerDebt = async (name: string) => {
+    try {
+      setDebtLoading(true);
+      const res = await api.get("/reports/customer-balances", {
+        params: { customer_name: name },
+      });
+      const balances = Array.isArray(res.data) ? res.data : [];
+      const match = balances.find(
+        (b: any) => b.customer_name === name,
+      );
+      setCustomerDebt(match ? Number(match.balance_due) : 0);
+    } catch {
+      setCustomerDebt(null);
+    } finally {
+      setDebtLoading(false);
+    }
+  };
+
   const selectCustomer = (c: any) => {
     setSourceName(c.name);
     setShowDropdown(false);
     setCustomerSuggestions([]);
+    fetchCustomerDebt(c.name);
   };
 
   useEffect(() => {
@@ -228,6 +249,7 @@ function CashInPage() {
       setSourceName("");
       setAmount("");
       setDescription("");
+      setCustomerDebt(null);
       setDate(() => {
         const now = new Date();
         return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -339,7 +361,7 @@ function CashInPage() {
                 type="button"
                 variant={entryType === "manual" ? "default" : "outline"}
                 className={`flex-1 ${entryType === "manual" ? "bg-blue-600 hover:bg-blue-700" : ""}`}
-                onClick={() => setEntryType("manual")}
+                onClick={() => { setEntryType("manual"); setCustomerDebt(null); }}
               >
                 وارد عادي
               </Button>
@@ -365,8 +387,35 @@ function CashInPage() {
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0"
               className="mt-2 text-center font-semibold"
+              onFocus={(e) => e.target.select()}
             />
           </div>
+
+          {/* المديونية والمتبقي */}
+          {entryType === "customer_payment" && customerDebt !== null && customerDebt > 0 && (
+            <Card className="border-dashed bg-muted/30">
+              <CardContent className="p-3 space-y-1.5 text-sm text-center">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">المديونية الحالية</span>
+                  <span className="font-bold text-red-500">{customerDebt.toLocaleString()} ج.م</span>
+                </div>
+                {Number(amount) > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">المتبقي بعد الدفع</span>
+                    <span className={`font-black text-lg ${customerDebt - Number(amount) > 0 ? "text-red-500" : "text-green-600"}`}>
+                      {(customerDebt - Number(amount)).toLocaleString()} ج.م
+                    </span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+          {entryType === "customer_payment" && debtLoading && (
+            <p className="text-xs text-muted-foreground text-center">جاري تحميل المديونية...</p>
+          )}
+          {entryType === "customer_payment" && customerDebt !== null && customerDebt === 0 && sourceName.trim() && (
+            <p className="text-xs text-green-600 text-center font-medium">✓ لا توجد مديونية على هذا العميل</p>
+          )}
 
           {/* التاريخ */}
           <div>
@@ -586,9 +635,14 @@ function CashInPage() {
               }, 0);
               // المدفوع = فواتير + سندات دفع
               const totalPaid = filteredModal.reduce((s, i) => {
-                if (i.source_type === "invoice" || i.source_type === "customer_payment") {
+                if (
+                  i.source_type === "invoice" ||
+                  i.source_type === "customer_payment"
+                ) {
                   const meta = parseMetadata(i.notes || i.description);
-                  return s + (meta ? meta.paid : Number(i.paid_amount || i.amount));
+                  return (
+                    s + (meta ? meta.paid : Number(i.paid_amount || i.amount))
+                  );
                 }
                 return s;
               }, 0);
