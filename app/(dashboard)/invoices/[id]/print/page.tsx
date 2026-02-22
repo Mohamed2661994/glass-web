@@ -97,6 +97,8 @@ function InvoicePrintPage() {
   const [showLogo, setShowLogo] = useState(true);
   const [showPhone, setShowPhone] = useState(true);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [showSilentTip, setShowSilentTip] = useState(false);
+  const [silentCopied, setSilentCopied] = useState(false);
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const invoiceRef = useRef<HTMLDivElement>(null);
@@ -132,7 +134,17 @@ function InvoicePrintPage() {
       try {
         const raw = localStorage.getItem("printSettings");
         const prev = raw ? JSON.parse(raw) : {};
-        const next = { ...prev, copies, paperSize, orientation, margins, fontSize, showLogo, showPhone, ...patch };
+        const next = {
+          ...prev,
+          copies,
+          paperSize,
+          orientation,
+          margins,
+          fontSize,
+          showLogo,
+          showPhone,
+          ...patch,
+        };
         localStorage.setItem("printSettings", JSON.stringify(next));
       } catch {}
     },
@@ -202,7 +214,18 @@ function InvoicePrintPage() {
       pages += `<div class="invoice-wrap" ${c > 0 ? 'style="page-break-before:always;"' : ""}>${html}</div>`;
     }
     return `<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8">${css}</head><body>${pages}</body></html>`;
-  }, [copies, paperSize, orientation, margins, printBold, printColor, fontSize, pageW, pageH, marginMM]);
+  }, [
+    copies,
+    paperSize,
+    orientation,
+    margins,
+    printBold,
+    printColor,
+    fontSize,
+    pageW,
+    pageH,
+    marginMM,
+  ]);
 
   /* ──── طباعة عبر iframe مخفي ──── */
   const handlePrint = useCallback(() => {
@@ -211,10 +234,16 @@ function InvoicePrintPage() {
 
     const fullHtml = buildPrintHTML();
     const iframe = iframeRef.current;
-    if (!iframe || !fullHtml) { setIsPrinting(false); return; }
+    if (!iframe || !fullHtml) {
+      setIsPrinting(false);
+      return;
+    }
 
     const doc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!doc) { setIsPrinting(false); return; }
+    if (!doc) {
+      setIsPrinting(false);
+      return;
+    }
 
     doc.open();
     doc.write(fullHtml);
@@ -222,13 +251,19 @@ function InvoicePrintPage() {
 
     iframe.onload = () => {
       setTimeout(() => {
-        try { iframe.contentWindow?.print(); } catch { window.print(); }
+        try {
+          iframe.contentWindow?.print();
+        } catch {
+          window.print();
+        }
         setIsPrinting(false);
       }, 300);
     };
 
     setTimeout(() => {
-      try { iframe.contentWindow?.print(); } catch {}
+      try {
+        iframe.contentWindow?.print();
+      } catch {}
       setIsPrinting(false);
     }, 2500);
   }, [isPrinting, buildPrintHTML]);
@@ -249,7 +284,15 @@ function InvoicePrintPage() {
 
   if (loading) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", fontFamily: "Tahoma,Arial" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "100vh",
+          fontFamily: "Tahoma,Arial",
+        }}
+      >
         <p>جاري التحميل...</p>
       </div>
     );
@@ -257,7 +300,15 @@ function InvoicePrintPage() {
 
   if (error || !invoice) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", fontFamily: "Tahoma,Arial" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "100vh",
+          fontFamily: "Tahoma,Arial",
+        }}
+      >
         <p>{error || "الفاتورة غير موجودة"}</p>
       </div>
     );
@@ -276,11 +327,16 @@ function InvoicePrintPage() {
     calcUnitPrice(it) * Number(it.quantity || 0);
 
   const itemsSubtotal = items.reduce(
-    (sum, it) => it.is_return ? sum - Math.abs(calcItemTotal(it)) : sum + calcItemTotal(it),
+    (sum, it) =>
+      it.is_return
+        ? sum - Math.abs(calcItemTotal(it))
+        : sum + calcItemTotal(it),
     0,
   );
 
-  const extraDiscount = Number(invoice.manual_discount ?? invoice.extra_discount ?? 0);
+  const extraDiscount = Number(
+    invoice.manual_discount ?? invoice.extra_discount ?? 0,
+  );
   const previousBalance = Number(invoice.previous_balance) || 0;
   const paidAmount = Number(invoice.paid_amount) || 0;
   const netTotal = itemsSubtotal + previousBalance - extraDiscount;
@@ -491,7 +547,9 @@ th,td { padding:3px 4px; text-align:center; }
         <div className="settings-panel">
           <div className="settings-header">
             <h2>🖨️ إعدادات الطباعة</h2>
-            <span style={{ fontSize: 12, color: "#94a3b8" }}>فاتورة #{invoice.id}</span>
+            <span style={{ fontSize: 12, color: "#94a3b8" }}>
+              فاتورة #{invoice.id}
+            </span>
           </div>
 
           <div className="settings-body">
@@ -505,7 +563,10 @@ th,td { padding:3px 4px; text-align:center; }
                 max={20}
                 value={copies}
                 onChange={(e) => {
-                  const v = Math.max(1, Math.min(20, Number(e.target.value) || 1));
+                  const v = Math.max(
+                    1,
+                    Math.min(20, Number(e.target.value) || 1),
+                  );
                   setCopies(v);
                   savePrintSettings({ copies: v });
                 }}
@@ -537,12 +598,18 @@ th,td { padding:3px 4px; text-align:center; }
                 {(["portrait", "landscape"] as Orientation[]).map((o) => (
                   <button
                     key={o}
-                    onClick={() => { setOrientation(o); savePrintSettings({ orientation: o }); }}
+                    onClick={() => {
+                      setOrientation(o);
+                      savePrintSettings({ orientation: o });
+                    }}
                     style={{
                       flex: 1,
                       padding: "8px 10px",
                       borderRadius: 8,
-                      border: orientation === o ? "2px solid #3b82f6" : "1px solid #d1d5db",
+                      border:
+                        orientation === o
+                          ? "2px solid #3b82f6"
+                          : "1px solid #d1d5db",
                       background: orientation === o ? "#eff6ff" : "#fff",
                       color: orientation === o ? "#1d4ed8" : "#475569",
                       fontWeight: orientation === o ? 600 : 400,
@@ -555,13 +622,15 @@ th,td { padding:3px 4px; text-align:center; }
                       fontFamily: "inherit",
                     }}
                   >
-                    <span style={{
-                      display: "inline-block",
-                      width: o === "portrait" ? 14 : 20,
-                      height: o === "portrait" ? 20 : 14,
-                      border: "2px solid currentColor",
-                      borderRadius: 2,
-                    }} />
+                    <span
+                      style={{
+                        display: "inline-block",
+                        width: o === "portrait" ? 14 : 20,
+                        height: o === "portrait" ? 20 : 14,
+                        border: "2px solid currentColor",
+                        borderRadius: 2,
+                      }}
+                    />
                     {o === "portrait" ? "طولي" : "عرضي"}
                   </button>
                 ))}
@@ -586,7 +655,13 @@ th,td { padding:3px 4px; text-align:center; }
               </select>
             </div>
 
-            <hr style={{ border: "none", borderTop: "1px solid #e2e8f0", margin: "12px 0" }} />
+            <hr
+              style={{
+                border: "none",
+                borderTop: "1px solid #e2e8f0",
+                margin: "12px 0",
+              }}
+            />
 
             {/* حجم الخط */}
             <div className="setting-group">
@@ -603,7 +678,14 @@ th,td { padding:3px 4px; text-align:center; }
                 }}
                 style={{ width: "100%", accentColor: "#3b82f6" }}
               />
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#94a3b8" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: 10,
+                  color: "#94a3b8",
+                }}
+              >
                 <span>7</span>
                 <span>16</span>
               </div>
@@ -652,7 +734,16 @@ th,td { padding:3px 4px; text-align:center; }
                     }}
                   >
                     {printColor === c.value && (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#fff"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                     )}
@@ -661,8 +752,10 @@ th,td { padding:3px 4px; text-align:center; }
                 <label
                   className="color-dot"
                   style={{
-                    backgroundColor: "conic-gradient(red,yellow,lime,aqua,blue,magenta,red)",
-                    background: "conic-gradient(red,yellow,lime,aqua,blue,magenta,red)",
+                    backgroundColor:
+                      "conic-gradient(red,yellow,lime,aqua,blue,magenta,red)",
+                    background:
+                      "conic-gradient(red,yellow,lime,aqua,blue,magenta,red)",
                     position: "relative",
                     overflow: "hidden",
                   }}
@@ -680,13 +773,25 @@ th,td { padding:3px 4px; text-align:center; }
                         localStorage.setItem("appSettings", JSON.stringify(s));
                       } catch {}
                     }}
-                    style={{ position: "absolute", opacity: 0, width: "100%", height: "100%", cursor: "pointer" }}
+                    style={{
+                      position: "absolute",
+                      opacity: 0,
+                      width: "100%",
+                      height: "100%",
+                      cursor: "pointer",
+                    }}
                   />
                 </label>
               </div>
             </div>
 
-            <hr style={{ border: "none", borderTop: "1px solid #e2e8f0", margin: "12px 0" }} />
+            <hr
+              style={{
+                border: "none",
+                borderTop: "1px solid #e2e8f0",
+                margin: "12px 0",
+              }}
+            />
 
             {/* إظهار/إخفاء اللوجو */}
             <div className="setting-group">
@@ -694,7 +799,10 @@ th,td { padding:3px 4px; text-align:center; }
                 <span className="setting-row-label">إظهار اللوجو</span>
                 <div
                   className={`toggle-track ${showLogo ? "active" : ""}`}
-                  onClick={() => { setShowLogo(!showLogo); savePrintSettings({ showLogo: !showLogo }); }}
+                  onClick={() => {
+                    setShowLogo(!showLogo);
+                    savePrintSettings({ showLogo: !showLogo });
+                  }}
                 >
                   <div className="toggle-thumb" />
                 </div>
@@ -708,26 +816,107 @@ th,td { padding:3px 4px; text-align:center; }
                   <span className="setting-row-label">إظهار رقم التليفون</span>
                   <div
                     className={`toggle-track ${showPhone ? "active" : ""}`}
-                    onClick={() => { setShowPhone(!showPhone); savePrintSettings({ showPhone: !showPhone }); }}
+                    onClick={() => {
+                      setShowPhone(!showPhone);
+                      savePrintSettings({ showPhone: !showPhone });
+                    }}
                   >
                     <div className="toggle-thumb" />
                   </div>
                 </div>
               </div>
             )}
+
+            <hr style={{ border: "none", borderTop: "1px solid #e2e8f0", margin: "12px 0" }} />
+
+            {/* طباعة مباشرة */}
+            <div className="setting-group">
+              <div
+                onClick={() => setShowSilentTip(!showSilentTip)}
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  cursor: "pointer", padding: "8px 10px", borderRadius: 8,
+                  background: "#fef3c7", border: "1px solid #fbbf24",
+                }}
+              >
+                <span style={{ fontSize: 13, color: "#92400e", fontWeight: 600 }}>
+                  💡 طباعة مباشرة بدون dialog
+                </span>
+                <span style={{ fontSize: 18, color: "#92400e", transform: showSilentTip ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</span>
+              </div>
+              {showSilentTip && (
+                <div style={{
+                  marginTop: 8, padding: 12, borderRadius: 8,
+                  background: "#fffbeb", border: "1px solid #fde68a",
+                  fontSize: 12, lineHeight: 1.6, color: "#78350f",
+                }}>
+                  <p style={{ margin: "0 0 8px", fontWeight: 600 }}>لتفعيل الطباعة المباشرة بدون نافذة Windows:</p>
+                  <ol style={{ margin: "0 0 8px", paddingRight: 18 }}>
+                    <li>اعمل shortcut جديد لـ Chrome على سطح المكتب</li>
+                    <li>كليك يمين عليه → خصائص</li>
+                    <li>في خانة Target، ضيف في الآخر:</li>
+                  </ol>
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    background: "#1e293b", color: "#e2e8f0", padding: "6px 10px",
+                    borderRadius: 6, fontSize: 11, fontFamily: "monospace",
+                    direction: "ltr", marginBottom: 8,
+                  }}>
+                    <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      --kiosk-printing
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigator.clipboard.writeText('--kiosk-printing');
+                        setSilentCopied(true);
+                        setTimeout(() => setSilentCopied(false), 2000);
+                      }}
+                      style={{
+                        background: "#475569", color: "#fff", border: "none",
+                        borderRadius: 4, padding: "3px 8px", fontSize: 11,
+                        cursor: "pointer", whiteSpace: "nowrap",
+                      }}
+                    >
+                      {silentCopied ? "✓ تم النسخ" : "نسخ"}
+                    </button>
+                  </div>
+                  <p style={{ margin: "0 0 4px" }}>4. افتح الموقع من الـ shortcut الجديد</p>
+                  <p style={{ margin: 0, fontSize: 11, color: "#a16207" }}>⚠️ كده أي طباعة هتروح مباشرة للطابعة الافتراضية</p>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* أزرار */}
           <div className="settings-footer">
-            <button className="btn-print" onClick={handlePrint} disabled={isPrinting}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <button
+              className="btn-print"
+              onClick={handlePrint}
+              disabled={isPrinting}
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <polyline points="6 9 6 2 18 2 18 9" />
                 <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
                 <rect x="6" y="14" width="12" height="8" />
               </svg>
-              {isPrinting ? "جاري الطباعة..." : `طباعة${copies > 1 ? ` (${copies} نسخ)` : ""}`}
+              {isPrinting
+                ? "جاري الطباعة..."
+                : `طباعة${copies > 1 ? ` (${copies} نسخ)` : ""}`}
             </button>
-            <button className="btn-cancel" onClick={() => window.history.back()}>
+            <button
+              className="btn-cancel"
+              onClick={() => window.history.back()}
+            >
               إلغاء
             </button>
           </div>
@@ -753,12 +942,23 @@ th,td { padding:3px 4px; text-align:center; }
             >
               {/* HEADER */}
               <div className="invoice-header">
-                <div className="invoice-info" style={{ fontSize: `${fontSize}px` }}>
-                  <div><b>رقم الفاتورة:</b> {invoice.id}</div>
-                  <div><b>التاريخ:</b> {formattedDate}</div>
-                  <div><b>العميل:</b> {invoice.customer_name || "نقدي"}</div>
+                <div
+                  className="invoice-info"
+                  style={{ fontSize: `${fontSize}px` }}
+                >
+                  <div>
+                    <b>رقم الفاتورة:</b> {invoice.id}
+                  </div>
+                  <div>
+                    <b>التاريخ:</b> {formattedDate}
+                  </div>
+                  <div>
+                    <b>العميل:</b> {invoice.customer_name || "نقدي"}
+                  </div>
                   {invoice.customer_phone && showPhone && (
-                    <div><b>تليفون:</b> {invoice.customer_phone}</div>
+                    <div>
+                      <b>تليفون:</b> {invoice.customer_phone}
+                    </div>
                   )}
                 </div>
                 {showLogo && (
@@ -766,12 +966,20 @@ th,td { padding:3px 4px; text-align:center; }
                     src="/logo-dark.png"
                     alt="Logo"
                     style={{ width: 65 }}
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
                   />
                 )}
               </div>
 
-              <hr style={{ border: "none", borderTop: "2px solid #000", marginBottom: 10 }} />
+              <hr
+                style={{
+                  border: "none",
+                  borderTop: "2px solid #000",
+                  marginBottom: 10,
+                }}
+              />
 
               {/* جدول الأصناف */}
               <table style={{ fontSize: `${fontSize}px` }}>
@@ -787,29 +995,45 @@ th,td { padding:3px 4px; text-align:center; }
                 </thead>
                 <tbody>
                   {items.map((it, i) => {
-                    const displayQty = it.is_return ? -Math.abs(it.quantity) : it.quantity;
+                    const displayQty = it.is_return
+                      ? -Math.abs(it.quantity)
+                      : it.quantity;
                     const displayTotal = it.is_return
                       ? -Math.abs(Math.round(calcItemTotal(it)))
                       : Math.round(calcItemTotal(it));
                     return (
                       <tr
                         key={i}
-                        style={it.is_return ? { color: "red !important", background: "#fff5f5" } : undefined}
+                        style={
+                          it.is_return
+                            ? { color: "red !important", background: "#fff5f5" }
+                            : undefined
+                        }
                       >
                         <td>{i + 1}</td>
                         <td>
                           {it.product_name}
                           {it.manufacturer ? ` - ${it.manufacturer}` : ""}
                           {it.is_return && (
-                            <span style={{ color: "red", fontSize: fontSize - 1, marginRight: 4 }}>
+                            <span
+                              style={{
+                                color: "red",
+                                fontSize: fontSize - 1,
+                                marginRight: 4,
+                              }}
+                            >
                               (مرتجع)
                             </span>
                           )}
                         </td>
                         <td>{formatPackage(it)}</td>
-                        <td style={it.is_return ? { color: "red" } : undefined}>{displayQty}</td>
+                        <td style={it.is_return ? { color: "red" } : undefined}>
+                          {displayQty}
+                        </td>
                         <td>{Math.round(calcUnitPrice(it))}</td>
-                        <td style={it.is_return ? { color: "red" } : undefined}>{displayTotal}</td>
+                        <td style={it.is_return ? { color: "red" } : undefined}>
+                          {displayTotal}
+                        </td>
                       </tr>
                     );
                   })}
@@ -827,13 +1051,27 @@ th,td { padding:3px 4px; text-align:center; }
               </table>
 
               {/* التوتالز */}
-              <div className="totals-section" style={{ fontSize: `${fontSize + 1}px` }}>
-                {previousBalance !== 0 && <div>حساب سابق: {previousBalance.toFixed(2)}</div>}
-                {extraDiscount > 0 && <div>خصم : {extraDiscount.toFixed(2)}</div>}
-                <div><b>الصافي: {netTotal.toFixed(2)}</b></div>
-                {paidAmount !== 0 && <div>المدفوع: {paidAmount.toFixed(2)}</div>}
+              <div
+                className="totals-section"
+                style={{ fontSize: `${fontSize + 1}px` }}
+              >
+                {previousBalance !== 0 && (
+                  <div>حساب سابق: {previousBalance.toFixed(2)}</div>
+                )}
+                {extraDiscount > 0 && (
+                  <div>خصم : {extraDiscount.toFixed(2)}</div>
+                )}
+                <div>
+                  <b>الصافي: {netTotal.toFixed(2)}</b>
+                </div>
+                {paidAmount !== 0 && (
+                  <div>المدفوع: {paidAmount.toFixed(2)}</div>
+                )}
                 {remaining !== 0 && (
-                  <div className="totals-remaining" style={{ fontSize: `${fontSize + 3}px` }}>
+                  <div
+                    className="totals-remaining"
+                    style={{ fontSize: `${fontSize + 3}px` }}
+                  >
                     <b>المتبقي: {remaining.toFixed(2)}</b>
                   </div>
                 )}
