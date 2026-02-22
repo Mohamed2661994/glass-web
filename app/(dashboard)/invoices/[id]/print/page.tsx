@@ -355,7 +355,9 @@ function InvoicePrintPage() {
   /** يعرض الرقم بكسور لو فيه، وبدون لو عدد صحيح */
   const fmt = (n: number) => {
     const val = Number(n);
-    return val % 1 === 0 ? val.toString() : parseFloat(val.toFixed(2)).toString();
+    return val % 1 === 0
+      ? val.toString()
+      : parseFloat(val.toFixed(2)).toString();
   };
 
   const formatPackage = (it: InvoiceItem) => {
@@ -555,320 +557,330 @@ th,td { padding:3px 4px; text-align:center; }
 
       <div className="print-modal">
         {/* ═══════ لوحة الإعدادات ═══════ */}
-        {!isPreview && <div className="settings-panel">
-          <div className="settings-header">
-            <h2>🖨️ إعدادات الطباعة</h2>
-            <span style={{ fontSize: 12, color: "#94a3b8" }}>
-              فاتورة #{invoice.id}
-            </span>
-          </div>
-
-          <div className="settings-body">
-            {/* عدد النسخ */}
-            <div className="setting-group">
-              <label className="setting-label">عدد النسخ</label>
-              <input
-                className="s-input-sm"
-                type="number"
-                min={1}
-                max={20}
-                value={copies}
-                onChange={(e) => {
-                  const v = Math.max(
-                    1,
-                    Math.min(20, Number(e.target.value) || 1),
-                  );
-                  setCopies(v);
-                  savePrintSettings({ copies: v });
-                }}
-              />
+        {!isPreview && (
+          <div className="settings-panel">
+            <div className="settings-header">
+              <h2>🖨️ إعدادات الطباعة</h2>
+              <span style={{ fontSize: 12, color: "#94a3b8" }}>
+                فاتورة #{invoice.id}
+              </span>
             </div>
 
-            {/* حجم الورق */}
-            <div className="setting-group">
-              <label className="setting-label">حجم الورق</label>
-              <select
-                className="s-select"
-                value={paperSize}
-                onChange={(e) => {
-                  const v = e.target.value as PaperSize;
-                  setPaperSize(v);
-                  savePrintSettings({ paperSize: v });
-                }}
-              >
-                <option value="A5">A5 (148 × 210 مم)</option>
-                <option value="A4">A4 (210 × 297 مم)</option>
-                <option value="A6">A6 (105 × 148 مم)</option>
-              </select>
-            </div>
+            <div className="settings-body">
+              {/* عدد النسخ */}
+              <div className="setting-group">
+                <label className="setting-label">عدد النسخ</label>
+                <input
+                  className="s-input-sm"
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={copies}
+                  onChange={(e) => {
+                    const v = Math.max(
+                      1,
+                      Math.min(20, Number(e.target.value) || 1),
+                    );
+                    setCopies(v);
+                    savePrintSettings({ copies: v });
+                  }}
+                />
+              </div>
 
-            {/* اتجاه الورقة */}
-            <div className="setting-group">
-              <label className="setting-label">اتجاه الورقة</label>
-              <div style={{ display: "flex", gap: 8 }}>
-                {(["portrait", "landscape"] as Orientation[]).map((o) => (
-                  <button
-                    key={o}
-                    onClick={() => {
-                      setOrientation(o);
-                      savePrintSettings({ orientation: o });
-                    }}
-                    style={{
-                      flex: 1,
-                      padding: "8px 10px",
-                      borderRadius: 8,
-                      border:
-                        orientation === o
-                          ? "2px solid #3b82f6"
-                          : "1px solid #d1d5db",
-                      background: orientation === o ? "#eff6ff" : "#fff",
-                      color: orientation === o ? "#1d4ed8" : "#475569",
-                      fontWeight: orientation === o ? 600 : 400,
-                      fontSize: 13,
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 6,
-                      fontFamily: "inherit",
-                    }}
-                  >
-                    <span
-                      style={{
-                        display: "inline-block",
-                        width: o === "portrait" ? 14 : 20,
-                        height: o === "portrait" ? 20 : 14,
-                        border: "2px solid currentColor",
-                        borderRadius: 2,
+              {/* حجم الورق */}
+              <div className="setting-group">
+                <label className="setting-label">حجم الورق</label>
+                <select
+                  className="s-select"
+                  value={paperSize}
+                  onChange={(e) => {
+                    const v = e.target.value as PaperSize;
+                    setPaperSize(v);
+                    savePrintSettings({ paperSize: v });
+                  }}
+                >
+                  <option value="A5">A5 (148 × 210 مم)</option>
+                  <option value="A4">A4 (210 × 297 مم)</option>
+                  <option value="A6">A6 (105 × 148 مم)</option>
+                </select>
+              </div>
+
+              {/* اتجاه الورقة */}
+              <div className="setting-group">
+                <label className="setting-label">اتجاه الورقة</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {(["portrait", "landscape"] as Orientation[]).map((o) => (
+                    <button
+                      key={o}
+                      onClick={() => {
+                        setOrientation(o);
+                        savePrintSettings({ orientation: o });
                       }}
-                    />
-                    {o === "portrait" ? "طولي" : "عرضي"}
-                  </button>
-                ))}
+                      style={{
+                        flex: 1,
+                        padding: "8px 10px",
+                        borderRadius: 8,
+                        border:
+                          orientation === o
+                            ? "2px solid #3b82f6"
+                            : "1px solid #d1d5db",
+                        background: orientation === o ? "#eff6ff" : "#fff",
+                        color: orientation === o ? "#1d4ed8" : "#475569",
+                        fontWeight: orientation === o ? 600 : 400,
+                        fontSize: 13,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 6,
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      <span
+                        style={{
+                          display: "inline-block",
+                          width: o === "portrait" ? 14 : 20,
+                          height: o === "portrait" ? 20 : 14,
+                          border: "2px solid currentColor",
+                          borderRadius: 2,
+                        }}
+                      />
+                      {o === "portrait" ? "طولي" : "عرضي"}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* الهوامش */}
-            <div className="setting-group">
-              <label className="setting-label">الهوامش</label>
-              <select
-                className="s-select"
-                value={margins}
-                onChange={(e) => {
-                  const v = e.target.value as MarginSize;
-                  setMargins(v);
-                  savePrintSettings({ margins: v });
-                }}
-              >
-                <option value="normal">عادية (10مم)</option>
-                <option value="narrow">ضيقة (5مم)</option>
-                <option value="none">بدون هوامش</option>
-              </select>
-            </div>
+              {/* الهوامش */}
+              <div className="setting-group">
+                <label className="setting-label">الهوامش</label>
+                <select
+                  className="s-select"
+                  value={margins}
+                  onChange={(e) => {
+                    const v = e.target.value as MarginSize;
+                    setMargins(v);
+                    savePrintSettings({ margins: v });
+                  }}
+                >
+                  <option value="normal">عادية (10مم)</option>
+                  <option value="narrow">ضيقة (5مم)</option>
+                  <option value="none">بدون هوامش</option>
+                </select>
+              </div>
 
-            <hr
-              style={{
-                border: "none",
-                borderTop: "1px solid #e2e8f0",
-                margin: "12px 0",
-              }}
-            />
-
-            {/* حجم الخط */}
-            <div className="setting-group">
-              <label className="setting-label">حجم الخط: {fontSize}px</label>
-              <input
-                type="range"
-                min={7}
-                max={16}
-                value={fontSize}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  setFontSize(v);
-                  savePrintSettings({ fontSize: v });
-                }}
-                style={{ width: "100%", accentColor: "#3b82f6" }}
-              />
-              <div
+              <hr
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontSize: 10,
-                  color: "#94a3b8",
+                  border: "none",
+                  borderTop: "1px solid #e2e8f0",
+                  margin: "12px 0",
                 }}
-              >
-                <span>7</span>
-                <span>16</span>
-              </div>
-            </div>
+              />
 
-            {/* خط عريض */}
-            <div className="setting-group">
-              <div className="setting-row">
-                <span className="setting-row-label">خط عريض</span>
-                <div
-                  className={`toggle-track ${printBold ? "active" : ""}`}
-                  onClick={() => {
-                    setPrintBold(!printBold);
-                    // Also save to appSettings for consistency
-                    try {
-                      const raw = localStorage.getItem("appSettings");
-                      const s = raw ? JSON.parse(raw) : {};
-                      s.printBold = !printBold;
-                      localStorage.setItem("appSettings", JSON.stringify(s));
-                    } catch {}
+              {/* حجم الخط */}
+              <div className="setting-group">
+                <label className="setting-label">حجم الخط: {fontSize}px</label>
+                <input
+                  type="range"
+                  min={7}
+                  max={16}
+                  value={fontSize}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    setFontSize(v);
+                    savePrintSettings({ fontSize: v });
                   }}
-                >
-                  <div className="toggle-thumb" />
-                </div>
-              </div>
-            </div>
-
-            {/* لون الخط */}
-            <div className="setting-group">
-              <label className="setting-label">لون الخط</label>
-              <div className="color-grid">
-                {COLOR_PRESETS.map((c) => (
-                  <div
-                    key={c.value}
-                    className={`color-dot ${printColor === c.value ? "selected" : ""}`}
-                    style={{ backgroundColor: c.value }}
-                    title={c.label}
-                    onClick={() => {
-                      setPrintColor(c.value);
-                      try {
-                        const raw = localStorage.getItem("appSettings");
-                        const s = raw ? JSON.parse(raw) : {};
-                        s.printColor = c.value;
-                        localStorage.setItem("appSettings", JSON.stringify(s));
-                      } catch {}
-                    }}
-                  >
-                    {printColor === c.value && (
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#fff"
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    )}
-                  </div>
-                ))}
-                <label
-                  className="color-dot"
+                  style={{ width: "100%", accentColor: "#3b82f6" }}
+                />
+                <div
                   style={{
-                    backgroundColor:
-                      "conic-gradient(red,yellow,lime,aqua,blue,magenta,red)",
-                    background:
-                      "conic-gradient(red,yellow,lime,aqua,blue,magenta,red)",
-                    position: "relative",
-                    overflow: "hidden",
-                  }}
-                  title="لون مخصص"
-                >
-                  <input
-                    type="color"
-                    value={printColor}
-                    onChange={(e) => {
-                      setPrintColor(e.target.value);
-                      try {
-                        const raw = localStorage.getItem("appSettings");
-                        const s = raw ? JSON.parse(raw) : {};
-                        s.printColor = e.target.value;
-                        localStorage.setItem("appSettings", JSON.stringify(s));
-                      } catch {}
-                    }}
-                    style={{
-                      position: "absolute",
-                      opacity: 0,
-                      width: "100%",
-                      height: "100%",
-                      cursor: "pointer",
-                    }}
-                  />
-                </label>
-              </div>
-            </div>
-
-            <hr
-              style={{
-                border: "none",
-                borderTop: "1px solid #e2e8f0",
-                margin: "12px 0",
-              }}
-            />
-
-            {/* إظهار/إخفاء اللوجو */}
-            <div className="setting-group">
-              <div className="setting-row">
-                <span className="setting-row-label">إظهار اللوجو</span>
-                <div
-                  className={`toggle-track ${showLogo ? "active" : ""}`}
-                  onClick={() => {
-                    setShowLogo(!showLogo);
-                    savePrintSettings({ showLogo: !showLogo });
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: 10,
+                    color: "#94a3b8",
                   }}
                 >
-                  <div className="toggle-thumb" />
+                  <span>7</span>
+                  <span>16</span>
                 </div>
               </div>
-            </div>
 
-            {/* إظهار/إخفاء التليفون */}
-            {invoice.customer_phone && (
+              {/* خط عريض */}
               <div className="setting-group">
                 <div className="setting-row">
-                  <span className="setting-row-label">إظهار رقم التليفون</span>
+                  <span className="setting-row-label">خط عريض</span>
                   <div
-                    className={`toggle-track ${showPhone ? "active" : ""}`}
+                    className={`toggle-track ${printBold ? "active" : ""}`}
                     onClick={() => {
-                      setShowPhone(!showPhone);
-                      savePrintSettings({ showPhone: !showPhone });
+                      setPrintBold(!printBold);
+                      // Also save to appSettings for consistency
+                      try {
+                        const raw = localStorage.getItem("appSettings");
+                        const s = raw ? JSON.parse(raw) : {};
+                        s.printBold = !printBold;
+                        localStorage.setItem("appSettings", JSON.stringify(s));
+                      } catch {}
                     }}
                   >
                     <div className="toggle-thumb" />
                   </div>
                 </div>
               </div>
-            )}
-          </div>
 
-          {/* أزرار */}
-          <div className="settings-footer">
-            <button
-              className="btn-print"
-              onClick={handlePrint}
-              disabled={isPrinting}
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+              {/* لون الخط */}
+              <div className="setting-group">
+                <label className="setting-label">لون الخط</label>
+                <div className="color-grid">
+                  {COLOR_PRESETS.map((c) => (
+                    <div
+                      key={c.value}
+                      className={`color-dot ${printColor === c.value ? "selected" : ""}`}
+                      style={{ backgroundColor: c.value }}
+                      title={c.label}
+                      onClick={() => {
+                        setPrintColor(c.value);
+                        try {
+                          const raw = localStorage.getItem("appSettings");
+                          const s = raw ? JSON.parse(raw) : {};
+                          s.printColor = c.value;
+                          localStorage.setItem(
+                            "appSettings",
+                            JSON.stringify(s),
+                          );
+                        } catch {}
+                      }}
+                    >
+                      {printColor === c.value && (
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#fff"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
+                    </div>
+                  ))}
+                  <label
+                    className="color-dot"
+                    style={{
+                      backgroundColor:
+                        "conic-gradient(red,yellow,lime,aqua,blue,magenta,red)",
+                      background:
+                        "conic-gradient(red,yellow,lime,aqua,blue,magenta,red)",
+                      position: "relative",
+                      overflow: "hidden",
+                    }}
+                    title="لون مخصص"
+                  >
+                    <input
+                      type="color"
+                      value={printColor}
+                      onChange={(e) => {
+                        setPrintColor(e.target.value);
+                        try {
+                          const raw = localStorage.getItem("appSettings");
+                          const s = raw ? JSON.parse(raw) : {};
+                          s.printColor = e.target.value;
+                          localStorage.setItem(
+                            "appSettings",
+                            JSON.stringify(s),
+                          );
+                        } catch {}
+                      }}
+                      style={{
+                        position: "absolute",
+                        opacity: 0,
+                        width: "100%",
+                        height: "100%",
+                        cursor: "pointer",
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <hr
+                style={{
+                  border: "none",
+                  borderTop: "1px solid #e2e8f0",
+                  margin: "12px 0",
+                }}
+              />
+
+              {/* إظهار/إخفاء اللوجو */}
+              <div className="setting-group">
+                <div className="setting-row">
+                  <span className="setting-row-label">إظهار اللوجو</span>
+                  <div
+                    className={`toggle-track ${showLogo ? "active" : ""}`}
+                    onClick={() => {
+                      setShowLogo(!showLogo);
+                      savePrintSettings({ showLogo: !showLogo });
+                    }}
+                  >
+                    <div className="toggle-thumb" />
+                  </div>
+                </div>
+              </div>
+
+              {/* إظهار/إخفاء التليفون */}
+              {invoice.customer_phone && (
+                <div className="setting-group">
+                  <div className="setting-row">
+                    <span className="setting-row-label">
+                      إظهار رقم التليفون
+                    </span>
+                    <div
+                      className={`toggle-track ${showPhone ? "active" : ""}`}
+                      onClick={() => {
+                        setShowPhone(!showPhone);
+                        savePrintSettings({ showPhone: !showPhone });
+                      }}
+                    >
+                      <div className="toggle-thumb" />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* أزرار */}
+            <div className="settings-footer">
+              <button
+                className="btn-print"
+                onClick={handlePrint}
+                disabled={isPrinting}
               >
-                <polyline points="6 9 6 2 18 2 18 9" />
-                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-                <rect x="6" y="14" width="12" height="8" />
-              </svg>
-              {isPrinting
-                ? "جاري الطباعة..."
-                : `طباعة${copies > 1 ? ` (${copies} نسخ)` : ""}`}
-            </button>
-            <button className="btn-cancel" onClick={() => window.close()}>
-              إلغاء
-            </button>
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="6 9 6 2 18 2 18 9" />
+                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                  <rect x="6" y="14" width="12" height="8" />
+                </svg>
+                {isPrinting
+                  ? "جاري الطباعة..."
+                  : `طباعة${copies > 1 ? ` (${copies} نسخ)` : ""}`}
+              </button>
+              <button className="btn-cancel" onClick={() => window.close()}>
+                إلغاء
+              </button>
+            </div>
           </div>
-        </div>}
+        )}
 
         {/* ═══════ منطقة المعاينة ═══════ */}
         <div className="preview-panel">
@@ -1006,15 +1018,11 @@ th,td { padding:3px 4px; text-align:center; }
                 {previousBalance !== 0 && (
                   <div>حساب سابق: {fmt(previousBalance)}</div>
                 )}
-                {extraDiscount > 0 && (
-                  <div>خصم : {fmt(extraDiscount)}</div>
-                )}
+                {extraDiscount > 0 && <div>خصم : {fmt(extraDiscount)}</div>}
                 <div>
                   <b>الصافي: {fmt(netTotal)}</b>
                 </div>
-                {paidAmount !== 0 && (
-                  <div>المدفوع: {fmt(paidAmount)}</div>
-                )}
+                {paidAmount !== 0 && <div>المدفوع: {fmt(paidAmount)}</div>}
                 {remaining !== 0 && (
                   <div
                     className="totals-remaining"

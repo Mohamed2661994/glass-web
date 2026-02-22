@@ -2,10 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Printer, X } from "lucide-react";
 
 /* ─────────── Types ─────────── */
@@ -393,10 +390,10 @@ export function InvoicePreviewDialog({
                         {formatPackage(it.package ?? "")}
                       </td>
                       <td style={tdStyle(!!it.is_return)}>{displayQty}</td>
+                      <td style={tdStyle(!!it.is_return)}>{fmt(unitPrice)}</td>
                       <td style={tdStyle(!!it.is_return)}>
-                        {fmt(unitPrice)}
+                        {fmt(displayTotal)}
                       </td>
-                      <td style={tdStyle(!!it.is_return)}>{fmt(displayTotal)}</td>
                     </tr>
                   );
                 })}
@@ -489,10 +486,7 @@ export function InvoicePreviewDialog({
             <Printer className="h-4 w-4 ml-2" />
             طباعة
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
             <X className="h-4 w-4" />
           </Button>
         </div>

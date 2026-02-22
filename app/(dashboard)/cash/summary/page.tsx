@@ -410,7 +410,9 @@ export default function CashSummaryPage() {
           </div>
           <div className="flex items-center gap-3">
             <div className="flex-1">
-              <Label className="text-xs text-muted-foreground">المبلغ الفعلي في الخزنة</Label>
+              <Label className="text-xs text-muted-foreground">
+                المبلغ الفعلي في الخزنة
+              </Label>
               <Input
                 type="number"
                 inputMode="decimal"
@@ -439,13 +441,26 @@ export default function CashSummaryPage() {
                               : "text-red-500"
                         }`}
                       >
-                        {isZero ? "0" : `${diff > 0 ? "+" : ""}${diff % 1 === 0 ? diff : parseFloat(diff.toFixed(2))}`} ج.م
+                        {isZero
+                          ? "0"
+                          : `${diff > 0 ? "+" : ""}${diff % 1 === 0 ? diff : parseFloat(diff.toFixed(2))}`}{" "}
+                        ج.م
                       </p>
                       <Badge
-                        variant={isZero ? "default" : isSurplus ? "secondary" : "destructive"}
+                        variant={
+                          isZero
+                            ? "default"
+                            : isSurplus
+                              ? "secondary"
+                              : "destructive"
+                        }
                         className="mt-1 text-[11px]"
                       >
-                        {isZero ? "✓ مطابق" : isSurplus ? "زيادة في الخزنة" : "عجز في الخزنة"}
+                        {isZero
+                          ? "✓ مطابق"
+                          : isSurplus
+                            ? "زيادة في الخزنة"
+                            : "عجز في الخزنة"}
                       </Badge>
                     </div>
                   );

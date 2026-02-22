@@ -422,7 +422,7 @@ export default function CustomerDebtDetailsPage() {
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent
           dir="rtl"
-          className="max-w-lg max-h-[85vh] overflow-y-auto"
+          className="max-w-2xl max-h-[85vh] overflow-y-auto"
         >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">

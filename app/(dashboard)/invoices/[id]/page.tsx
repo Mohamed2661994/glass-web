@@ -7,10 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Dialog,
-  DialogContent,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -272,10 +269,7 @@ export default function InvoiceDetailsPage() {
             >
               طباعة
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => setPreviewOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setPreviewOpen(false)}>
               <X className="h-4 w-4" />
             </Button>
           </div>
