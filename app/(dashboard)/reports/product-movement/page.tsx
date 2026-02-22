@@ -108,10 +108,6 @@ export default function ProductMovementPage() {
         },
       });
       setData(Array.isArray(res.data) ? res.data : []);
-      if (Array.isArray(res.data) && res.data.length > 0) {
-        console.log("🔍 Movement sample keys:", Object.keys(res.data[0]));
-        console.log("🔍 Movement sample row:", JSON.stringify(res.data[0]));
-      }
     } catch {
       setData([]);
     } finally {
@@ -304,7 +300,7 @@ export default function ProductMovementPage() {
                       <TableHead className="text-center">التاريخ</TableHead>
                       <TableHead className="text-center">المخزن</TableHead>
                       <TableHead className="text-center">النوع</TableHead>
-                      <TableHead className="text-center">رقم الفاتورة</TableHead>
+                      <TableHead className="text-center">نوع الفاتورة</TableHead>
                       <TableHead className="text-center">الكمية</TableHead>
                       <TableHead className="text-center">العبوة</TableHead>
                       <TableHead className="text-center">الطرف</TableHead>
@@ -336,16 +332,13 @@ export default function ProductMovementPage() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-center text-xs">
-                            {item.invoice_id ? (
-                              <a
-                                href={`/invoices/${item.invoice_id}`}
-                                className="text-blue-600 hover:underline font-medium"
-                              >
-                                #{item.invoice_id}
-                              </a>
-                            ) : (
-                              "—"
-                            )}
+                            {item.invoice_type
+                              ? item.invoice_type === "retail"
+                                ? "تجزئة"
+                                : item.invoice_type === "wholesale"
+                                  ? "جملة"
+                                  : item.invoice_type
+                              : "—"}
                           </TableCell>
                           <TableCell
                             className={`text-center font-bold ${isIn ? "text-green-600" : "text-red-600"}`}
