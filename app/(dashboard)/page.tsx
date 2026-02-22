@@ -709,6 +709,20 @@ export default function DashboardPage() {
   const branchId = user?.branch_id;
   const invoiceType = branchId === 1 ? "retail" : "wholesale";
 
+  // Trap "back" button on dashboard — prevent navigating away
+  useEffect(() => {
+    // Push a dummy state so pressing back stays on dashboard
+    window.history.pushState({ dashboard: true }, "", "/");
+
+    const handlePopState = () => {
+      // User pressed back — push state again to stay on dashboard
+      window.history.pushState({ dashboard: true }, "", "/");
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
