@@ -173,6 +173,19 @@ export default function ProductMovementPage() {
     return d ? new Date(d).toLocaleDateString("ar-EG") : "—";
   };
 
+  /* ========== Totals ========== */
+  const { totalIn, totalOut } = useMemo(() => {
+    let inQty = 0;
+    let outQty = 0;
+    for (const item of filteredData) {
+      const mt = item.movement_type || item.invoice_movement_type || "";
+      const isIn = ["purchase", "transfer_in", "replace_in", "in"].includes(mt);
+      if (isIn) inQty += Number(item.quantity);
+      else outQty += Number(item.quantity);
+    }
+    return { totalIn: inQty, totalOut: outQty };
+  }, [filteredData]);
+
   return (
     <PageContainer size="xl">
       <div dir="rtl" className="space-y-4 py-6">
@@ -357,6 +370,23 @@ export default function ProductMovementPage() {
         {!loading && filteredData.length > 0 && (
           <div className="text-center">
             <Badge variant="secondary">{filteredData.length} حركة</Badge>
+          </div>
+        )}
+
+        {/* Summary totals */}
+        {!loading && filteredData.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-4 text-sm font-semibold">
+            <span className="text-green-600">
+              إجمالي الوارد: {totalIn.toLocaleString()}
+            </span>
+            <span className="text-muted-foreground">—</span>
+            <span className="text-red-600">
+              إجمالي الصادر: {totalOut.toLocaleString()}
+            </span>
+            <span className="text-muted-foreground">—</span>
+            <span className={totalIn - totalOut >= 0 ? "text-green-600" : "text-red-600"}>
+              الرصيد الفعلي: {(totalIn - totalOut).toLocaleString()}
+            </span>
           </div>
         )}
       </div>
