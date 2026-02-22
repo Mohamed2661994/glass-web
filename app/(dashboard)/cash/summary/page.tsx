@@ -20,6 +20,7 @@ import {
   ArrowDownCircle,
   ArrowUpCircle,
   ExternalLink,
+  Scale,
 } from "lucide-react";
 import api from "@/services/api";
 import { useAuth } from "@/app/context/auth-context";
@@ -89,6 +90,7 @@ export default function CashSummaryPage() {
   const [cashOut, setCashOut] = useState<CashOutItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [includeOpeningBalance, setIncludeOpeningBalance] = useState(true);
+  const [actualCash, setActualCash] = useState<string>("");
 
   const today = formatLocalDate(new Date());
   const [fromDate, setFromDate] = useState(today);
@@ -398,6 +400,61 @@ export default function CashSummaryPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Cash Audit */}
+      <Card className="border-2 border-dashed">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Scale className="h-4 w-4 text-muted-foreground" />
+            <p className="font-bold text-sm">مراجعة الخزنة</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <Label className="text-xs text-muted-foreground">المبلغ الفعلي في الخزنة</Label>
+              <Input
+                type="number"
+                inputMode="decimal"
+                placeholder="اكتب المبلغ الفعلي..."
+                value={actualCash}
+                onChange={(e) => setActualCash(e.target.value)}
+                className="mt-1.5 text-lg font-bold"
+                onFocus={(e) => e.target.select()}
+              />
+            </div>
+            {actualCash !== "" && !isNaN(Number(actualCash)) && (
+              <div className="text-center min-w-[140px]">
+                <p className="text-xs text-muted-foreground mb-1">الفرق</p>
+                {(() => {
+                  const diff = Number(actualCash) - summary.balance;
+                  const isZero = Math.abs(diff) < 0.01;
+                  const isSurplus = diff > 0;
+                  return (
+                    <div>
+                      <p
+                        className={`text-2xl font-black ${
+                          isZero
+                            ? "text-emerald-500"
+                            : isSurplus
+                              ? "text-blue-500"
+                              : "text-red-500"
+                        }`}
+                      >
+                        {isZero ? "0" : `${diff > 0 ? "+" : ""}${diff % 1 === 0 ? diff : parseFloat(diff.toFixed(2))}`} ج.م
+                      </p>
+                      <Badge
+                        variant={isZero ? "default" : isSurplus ? "secondary" : "destructive"}
+                        className="mt-1 text-[11px]"
+                      >
+                        {isZero ? "✓ مطابق" : isSurplus ? "زيادة في الخزنة" : "عجز في الخزنة"}
+                      </Badge>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Lists */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
