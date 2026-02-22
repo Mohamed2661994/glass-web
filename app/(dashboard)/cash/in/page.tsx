@@ -175,12 +175,31 @@ function CashInPage() {
   const fetchCustomerDebt = async (name: string) => {
     try {
       setDebtLoading(true);
-      const res = await api.get("/reports/customer-balances", {
+      const res = await api.get("/reports/customer-debt-details", {
         params: { customer_name: name },
       });
-      const balances = Array.isArray(res.data) ? res.data : [];
-      const match = balances.find((b: any) => b.customer_name === name);
-      setCustomerDebt(match ? Number(match.balance_due) : 0);
+      const rows: any[] = Array.isArray(res.data) ? res.data : [];
+      if (rows.length === 0) {
+        setCustomerDebt(0);
+        return;
+      }
+      // حساب الرصيد الافتتاحي من أول فاتورة
+      const firstInvoice = rows.find((r: any) => r.record_type === "invoice");
+      let openingBalance = 0;
+      if (firstInvoice) {
+        const embedded =
+          Number(firstInvoice.remaining_amount) -
+          (Number(firstInvoice.total) - Number(firstInvoice.paid_amount));
+        openingBalance = embedded > 0 ? embedded : 0;
+      }
+      const totalInvoices = rows
+        .filter((r: any) => r.record_type === "invoice")
+        .reduce((s: number, r: any) => s + Number(r.total), 0);
+      const totalPaid = rows.reduce(
+        (s: number, r: any) => s + Number(r.paid_amount),
+        0,
+      );
+      setCustomerDebt(totalInvoices + openingBalance - totalPaid);
     } catch {
       setCustomerDebt(null);
     } finally {

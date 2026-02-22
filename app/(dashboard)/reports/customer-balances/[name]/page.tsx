@@ -400,7 +400,9 @@ export default function CustomerDebtDetailsPage() {
                 {openingBalance > 0 && (
                   <div className="text-center">
                     <p className="text-muted-foreground">رصيد سابق مُرحَّل</p>
-                    <p className="font-bold text-orange-500">{openingBalance.toLocaleString()}</p>
+                    <p className="font-bold text-orange-500">
+                      {openingBalance.toLocaleString()}
+                    </p>
                   </div>
                 )}
                 <div className="text-center">
