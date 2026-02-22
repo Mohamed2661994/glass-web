@@ -10,6 +10,13 @@ export function normalizeArabic(s: string): string {
   return s.replace(/ى/g, "ي").replace(/[أإآ]/g, "ا");
 }
 
+/** Convert Arabic-Indic digits (٠-٩) and extended (۰-۹) to Western digits (0-9) */
+export function toEnDigits(s: string): string {
+  return s
+    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
+}
+
 /** Remove all whitespace from a string (for space-insensitive search) */
 export function noSpaces(s: string): string {
   return s.replace(/\s/g, "");

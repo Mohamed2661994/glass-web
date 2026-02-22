@@ -1313,57 +1313,91 @@ export default function CreateRetailInvoicePage() {
 
         {items.length > 0 && (
           <>
-          <Card className="p-6 hidden md:block">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted">
-                  <tr>
-                    <th className="p-3 text-center w-10">#</th>
-                    <th className="p-3 text-right">الصنف</th>
-                    <th className="p-3 text-center">السعر</th>
-                    <th className="p-3 text-center">الكمية</th>
-                    <th className="p-3 text-center">الخصم</th>
-                    <th className="p-3 text-center">الإجمالي</th>
-                    <th className="p-3 text-center">مرتجع</th>
-                    <th className="p-3 text-center">إجراءات</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((item, index) => (
-                    <tr key={item.uid} className="border-b">
-                      <td className="p-3 text-center text-muted-foreground">
-                        {index + 1}
-                      </td>
-                      <td className="p-3">
-                        <div>
-                          {item.product_name} - {item.manufacturer}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {item.package}
-                          {" - باركود: "}
-                          {item.barcode ||
-                            products.find((p: any) => p.id === item.product_id)
-                              ?.barcode ||
-                            item.product_id}
-                        </div>
-                      </td>
-                      <td className="p-3 text-center">
-                        {editingItemUid === item.uid ? (
+            <Card className="p-6 hidden md:block">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted">
+                    <tr>
+                      <th className="p-3 text-center w-10">#</th>
+                      <th className="p-3 text-right">الصنف</th>
+                      <th className="p-3 text-center">السعر</th>
+                      <th className="p-3 text-center">الكمية</th>
+                      <th className="p-3 text-center">الخصم</th>
+                      <th className="p-3 text-center">الإجمالي</th>
+                      <th className="p-3 text-center">مرتجع</th>
+                      <th className="p-3 text-center">إجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((item, index) => (
+                      <tr key={item.uid} className="border-b">
+                        <td className="p-3 text-center text-muted-foreground">
+                          {index + 1}
+                        </td>
+                        <td className="p-3">
+                          <div>
+                            {item.product_name} - {item.manufacturer}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {item.package}
+                            {" - باركود: "}
+                            {item.barcode ||
+                              products.find(
+                                (p: any) => p.id === item.product_id,
+                              )?.barcode ||
+                              item.product_id}
+                          </div>
+                        </td>
+                        <td className="p-3 text-center">
+                          {editingItemUid === item.uid ? (
+                            <Input
+                              type="number"
+                              autoFocus
+                              data-price-id={item.uid}
+                              className="w-24 mx-auto text-center"
+                              value={item.price}
+                              onFocus={(e) => e.target.select()}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  const discountInput = document.querySelector(
+                                    `input[data-discount-id="${item.uid}"]`,
+                                  ) as HTMLInputElement | null;
+                                  discountInput?.focus();
+                                  discountInput?.select();
+                                }
+                              }}
+                              onChange={(e) =>
+                                setItems((prev) =>
+                                  prev.map((i) =>
+                                    i.uid === item.uid
+                                      ? {
+                                          ...i,
+                                          price:
+                                            e.target.value === ""
+                                              ? ""
+                                              : Number(e.target.value),
+                                        }
+                                      : i,
+                                  ),
+                                )
+                              }
+                            />
+                          ) : (
+                            item.price
+                          )}
+                        </td>
+                        <td className="p-3 text-center">
                           <Input
                             type="number"
-                            autoFocus
-                            data-price-id={item.uid}
-                            className="w-24 mx-auto text-center"
-                            value={item.price}
-                            onFocus={(e) => e.target.select()}
+                            data-quantity-id={item.uid}
+                            className="w-20 mx-auto text-center"
+                            value={item.quantity}
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
                                 e.preventDefault();
-                                const discountInput = document.querySelector(
-                                  `input[data-discount-id="${item.uid}"]`,
-                                ) as HTMLInputElement | null;
-                                discountInput?.focus();
-                                discountInput?.select();
+                                barcodeRef.current?.focus();
+                                barcodeRef.current?.select();
                               }
                             }}
                             onChange={(e) =>
@@ -1372,7 +1406,7 @@ export default function CreateRetailInvoicePage() {
                                   i.uid === item.uid
                                     ? {
                                         ...i,
-                                        price:
+                                        quantity:
                                           e.target.value === ""
                                             ? ""
                                             : Number(e.target.value),
@@ -1382,21 +1416,292 @@ export default function CreateRetailInvoicePage() {
                               )
                             }
                           />
-                        ) : (
-                          item.price
-                        )}
-                      </td>
-                      <td className="p-3 text-center">
+                          {(() => {
+                            const prod = products.find(
+                              (pr: any) => pr.id === item.product_id,
+                            );
+                            const avail = prod
+                              ? Number(prod.available_quantity)
+                              : null;
+                            return avail !== null &&
+                              Number(item.quantity) > avail ? (
+                              <div className="text-[11px] text-red-500 mt-1">
+                                الرصيد المتاح: {avail}
+                              </div>
+                            ) : null;
+                          })()}
+                        </td>
+                        <td className="p-3 text-center">
+                          {editingItemUid === item.uid ? (
+                            <Input
+                              type="number"
+                              data-discount-id={item.uid}
+                              className="w-20 mx-auto text-center"
+                              value={item.discount || 0}
+                              onFocus={(e) => e.target.select()}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  setEditingItemUid(null);
+                                  barcodeRef.current?.focus();
+                                  barcodeRef.current?.select();
+                                }
+                              }}
+                              onChange={(e) =>
+                                setItems((prev) =>
+                                  prev.map((i) =>
+                                    i.uid === item.uid
+                                      ? {
+                                          ...i,
+                                          discount:
+                                            e.target.value === ""
+                                              ? 0
+                                              : Number(e.target.value),
+                                        }
+                                      : i,
+                                  ),
+                                )
+                              }
+                            />
+                          ) : (
+                            <span className="font-medium">
+                              {item.discount || 0}
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3 text-center font-semibold">
+                          {(() => {
+                            const raw =
+                              Number(item.price) *
+                                (Number(item.quantity) || 0) -
+                              (applyItemsDiscount
+                                ? (Number(item.discount) || 0) *
+                                  (Number(item.quantity) || 0)
+                                : 0);
+                            return item.is_return ? -raw : raw;
+                          })()}
+                        </td>
+                        <td className="p-3 text-center">
+                          <Checkbox
+                            checked={item.is_return || false}
+                            onCheckedChange={(checked) =>
+                              setItems((prev) =>
+                                prev.map((i) =>
+                                  i.uid === item.uid
+                                    ? { ...i, is_return: !!checked }
+                                    : i,
+                                ),
+                              )
+                            }
+                          />
+                        </td>
+                        <td className="p-3 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              onClick={() =>
+                                setEditingItemUid((prev) =>
+                                  prev === item.uid ? null : item.uid,
+                                )
+                              }
+                            >
+                              <Pencil
+                                className={`size-4 ${editingItemUid === item.uid ? "text-green-600" : "text-blue-600"}`}
+                              />
+                            </Button>
+                            {confirmDeleteId === item.uid ? (
+                              <Button
+                                variant="destructive"
+                                size="icon-xs"
+                                onClick={() => {
+                                  removeItem(item.uid);
+                                  setConfirmDeleteId(null);
+                                }}
+                              >
+                                متأكد؟
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                onClick={() => {
+                                  setConfirmDeleteId(item.uid);
+                                  setTimeout(
+                                    () =>
+                                      setConfirmDeleteId((prev) =>
+                                        prev === item.uid ? null : prev,
+                                      ),
+                                    2000,
+                                  );
+                                }}
+                              >
+                                <Trash2 className="size-4 text-destructive" />
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
+            {/* Mobile item cards */}
+            <div className="md:hidden space-y-3">
+              {items.map((item, index) => {
+                const itemTotal = (() => {
+                  const raw =
+                    Number(item.price) * (Number(item.quantity) || 0) -
+                    (applyItemsDiscount
+                      ? (Number(item.discount) || 0) *
+                        (Number(item.quantity) || 0)
+                      : 0);
+                  return item.is_return ? -raw : raw;
+                })();
+                const itemBarcode =
+                  item.barcode ||
+                  products.find((p: any) => p.id === item.product_id)
+                    ?.barcode ||
+                  item.product_id;
+                const isExpanded = expandedItemUid === item.uid;
+
+                if (!isExpanded) {
+                  return (
+                    <div
+                      key={item.uid}
+                      className="border rounded-xl p-3 cursor-pointer active:bg-muted/50 transition-colors"
+                      onClick={() => setExpandedItemUid(item.uid)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="text-xs text-muted-foreground font-mono w-5 text-center shrink-0">
+                            {index + 1}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm truncate">
+                              {item.product_name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {item.package} × {item.quantity}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="font-semibold text-sm">
+                            {itemTotal} ج.م
+                          </span>
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div
+                    key={item.uid}
+                    className="border rounded-xl p-4 space-y-3 shadow-sm ring-1 ring-primary/20"
+                  >
+                    {/* Header */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm">
+                          {item.product_name} - {item.manufacturer}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {item.package} — باركود: {itemBarcode}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0 h-8 w-8"
+                        onClick={() => setExpandedItemUid(null)}
+                      >
+                        <ChevronDown className="h-4 w-4 rotate-180" />
+                      </Button>
+                    </div>
+
+                    {/* Price */}
+                    <div className="flex items-center justify-between bg-muted/50 rounded-lg px-3 py-2">
+                      <span className="text-xs text-muted-foreground">
+                        السعر
+                      </span>
+                      {editingItemUid === item.uid ? (
                         <Input
                           type="number"
-                          data-quantity-id={item.uid}
-                          className="w-20 mx-auto text-center"
-                          value={item.quantity}
+                          autoFocus
+                          className="w-28 text-center h-8"
+                          value={item.price}
+                          onFocus={(e) => e.target.select()}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
-                              barcodeRef.current?.focus();
-                              barcodeRef.current?.select();
+                              setEditingItemUid(null);
+                              const el = document.querySelector(
+                                `[data-mobile-quantity-id="${item.uid}"]`,
+                              ) as HTMLInputElement;
+                              el?.focus();
+                              el?.select();
+                            }
+                          }}
+                          onChange={(e) =>
+                            setItems((prev) =>
+                              prev.map((i) =>
+                                i.uid === item.uid
+                                  ? {
+                                      ...i,
+                                      price:
+                                        e.target.value === ""
+                                          ? ""
+                                          : Number(e.target.value),
+                                    }
+                                  : i,
+                              ),
+                            )
+                          }
+                        />
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium">{item.price} ج.م</span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() =>
+                              setEditingItemUid((prev) =>
+                                prev === item.uid ? null : item.uid,
+                              )
+                            }
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Quantity + Discount */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">
+                          الكمية
+                        </label>
+                        <Input
+                          type="number"
+                          data-mobile-quantity-id={item.uid}
+                          className="text-center"
+                          value={item.quantity}
+                          onFocus={(e) => e.target.select()}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              const el = document.querySelector(
+                                `[data-mobile-discount-id="${item.uid}"]`,
+                              ) as HTMLInputElement;
+                              el?.focus();
+                              el?.select();
                             }
                           }}
                           onChange={(e) =>
@@ -1424,62 +1729,59 @@ export default function CreateRetailInvoicePage() {
                             : null;
                           return avail !== null &&
                             Number(item.quantity) > avail ? (
-                            <div className="text-[11px] text-red-500 mt-1">
-                              الرصيد المتاح: {avail}
+                            <div className="text-[11px] text-red-500">
+                              الرصيد: {avail}
                             </div>
                           ) : null;
                         })()}
-                      </td>
-                      <td className="p-3 text-center">
-                        {editingItemUid === item.uid ? (
-                          <Input
-                            type="number"
-                            data-discount-id={item.uid}
-                            className="w-20 mx-auto text-center"
-                            value={item.discount || 0}
-                            onFocus={(e) => e.target.select()}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                setEditingItemUid(null);
-                                barcodeRef.current?.focus();
-                                barcodeRef.current?.select();
-                              }
-                            }}
-                            onChange={(e) =>
-                              setItems((prev) =>
-                                prev.map((i) =>
-                                  i.uid === item.uid
-                                    ? {
-                                        ...i,
-                                        discount:
-                                          e.target.value === ""
-                                            ? 0
-                                            : Number(e.target.value),
-                                      }
-                                    : i,
-                                ),
-                              )
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">
+                          الخصم
+                        </label>
+                        <Input
+                          type="number"
+                          data-mobile-discount-id={item.uid}
+                          className="text-center"
+                          value={item.discount || 0}
+                          onFocus={(e) => e.target.select()}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              setExpandedItemUid(null);
+                              setShowProductModal(true);
                             }
-                          />
-                        ) : (
-                          <span className="font-medium">
-                            {item.discount || 0}
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-3 text-center font-semibold">
-                        {(() => {
-                          const raw =
-                            Number(item.price) * (Number(item.quantity) || 0) -
-                            (applyItemsDiscount
-                              ? (Number(item.discount) || 0) *
-                                (Number(item.quantity) || 0)
-                              : 0);
-                          return item.is_return ? -raw : raw;
-                        })()}
-                      </td>
-                      <td className="p-3 text-center">
+                          }}
+                          onChange={(e) =>
+                            setItems((prev) =>
+                              prev.map((i) =>
+                                i.uid === item.uid
+                                  ? {
+                                      ...i,
+                                      discount:
+                                        e.target.value === ""
+                                          ? 0
+                                          : Number(e.target.value),
+                                    }
+                                  : i,
+                              ),
+                            )
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    {/* Total */}
+                    <div className="flex items-center justify-between border-t pt-2">
+                      <span className="text-sm text-muted-foreground">
+                        الإجمالي
+                      </span>
+                      <span className="font-bold text-lg">{itemTotal} ج.م</span>
+                    </div>
+
+                    {/* Footer: Return + Delete */}
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center gap-2 text-sm">
                         <Checkbox
                           checked={item.is_return || false}
                           onCheckedChange={(checked) =>
@@ -1492,341 +1794,43 @@ export default function CreateRetailInvoicePage() {
                             )
                           }
                         />
-                      </td>
-                      <td className="p-3 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            onClick={() =>
-                              setEditingItemUid((prev) =>
-                                prev === item.uid ? null : item.uid,
-                              )
-                            }
-                          >
-                            <Pencil
-                              className={`size-4 ${editingItemUid === item.uid ? "text-green-600" : "text-blue-600"}`}
-                            />
-                          </Button>
-                          {confirmDeleteId === item.uid ? (
-                            <Button
-                              variant="destructive"
-                              size="icon-xs"
-                              onClick={() => {
-                                removeItem(item.uid);
-                                setConfirmDeleteId(null);
-                              }}
-                            >
-                              متأكد؟
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="icon-xs"
-                              onClick={() => {
-                                setConfirmDeleteId(item.uid);
-                                setTimeout(
-                                  () =>
-                                    setConfirmDeleteId((prev) =>
-                                      prev === item.uid ? null : prev,
-                                    ),
-                                  2000,
-                                );
-                              }}
-                            >
-                              <Trash2 className="size-4 text-destructive" />
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-
-          {/* Mobile item cards */}
-          <div className="md:hidden space-y-3">
-            {items.map((item, index) => {
-              const itemTotal = (() => {
-                const raw =
-                  Number(item.price) * (Number(item.quantity) || 0) -
-                  (applyItemsDiscount
-                    ? (Number(item.discount) || 0) *
-                      (Number(item.quantity) || 0)
-                    : 0);
-                return item.is_return ? -raw : raw;
-              })();
-              const itemBarcode =
-                item.barcode ||
-                products.find((p: any) => p.id === item.product_id)
-                  ?.barcode ||
-                item.product_id;
-              const isExpanded = expandedItemUid === item.uid;
-
-              if (!isExpanded) {
-                return (
-                  <div
-                    key={item.uid}
-                    className="border rounded-xl p-3 cursor-pointer active:bg-muted/50 transition-colors"
-                    onClick={() => setExpandedItemUid(item.uid)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="text-xs text-muted-foreground font-mono w-5 text-center shrink-0">
-                          {index + 1}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="font-medium text-sm truncate">
-                            {item.product_name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {item.package} × {item.quantity}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="font-semibold text-sm">
-                          {itemTotal} ج.م
-                        </span>
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
-
-              return (
-                <div
-                  key={item.uid}
-                  className="border rounded-xl p-4 space-y-3 shadow-sm ring-1 ring-primary/20"
-                >
-                  {/* Header */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm">
-                        {item.product_name} - {item.manufacturer}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {item.package} — باركود: {itemBarcode}
-                      </p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="shrink-0 h-8 w-8"
-                      onClick={() => setExpandedItemUid(null)}
-                    >
-                      <ChevronDown className="h-4 w-4 rotate-180" />
-                    </Button>
-                  </div>
-
-                  {/* Price */}
-                  <div className="flex items-center justify-between bg-muted/50 rounded-lg px-3 py-2">
-                    <span className="text-xs text-muted-foreground">السعر</span>
-                    {editingItemUid === item.uid ? (
-                      <Input
-                        type="number"
-                        autoFocus
-                        className="w-28 text-center h-8"
-                        value={item.price}
-                        onFocus={(e) => e.target.select()}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            setEditingItemUid(null);
-                            const el = document.querySelector(
-                              `[data-mobile-quantity-id="${item.uid}"]`,
-                            ) as HTMLInputElement;
-                            el?.focus();
-                            el?.select();
-                          }
-                        }}
-                        onChange={(e) =>
-                          setItems((prev) =>
-                            prev.map((i) =>
-                              i.uid === item.uid
-                                ? {
-                                    ...i,
-                                    price:
-                                      e.target.value === ""
-                                        ? ""
-                                        : Number(e.target.value),
-                                  }
-                                : i,
-                            ),
-                          )
-                        }
-                      />
-                    ) : (
-                      <div className="flex items-center gap-1">
-                        <span className="font-medium">{item.price} ج.م</span>
+                        مرتجع
+                      </label>
+                      {confirmDeleteId === item.uid ? (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            removeItem(item.uid);
+                            setConfirmDeleteId(null);
+                          }}
+                        >
+                          متأكد؟
+                        </Button>
+                      ) : (
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6"
-                          onClick={() =>
-                            setEditingItemUid((prev) =>
-                              prev === item.uid ? null : item.uid,
-                            )
-                          }
+                          className="h-8 w-8"
+                          onClick={() => {
+                            setConfirmDeleteId(item.uid);
+                            setTimeout(
+                              () =>
+                                setConfirmDeleteId((prev) =>
+                                  prev === item.uid ? null : prev,
+                                ),
+                              2000,
+                            );
+                          }}
                         >
-                          <Pencil className="h-3 w-3" />
+                          <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Quantity + Discount */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">
-                        الكمية
-                      </label>
-                      <Input
-                        type="number"
-                        data-mobile-quantity-id={item.uid}
-                        className="text-center"
-                        value={item.quantity}
-                        onFocus={(e) => e.target.select()}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            const el = document.querySelector(
-                              `[data-mobile-discount-id="${item.uid}"]`,
-                            ) as HTMLInputElement;
-                            el?.focus();
-                            el?.select();
-                          }
-                        }}
-                        onChange={(e) =>
-                          setItems((prev) =>
-                            prev.map((i) =>
-                              i.uid === item.uid
-                                ? {
-                                    ...i,
-                                    quantity:
-                                      e.target.value === ""
-                                        ? ""
-                                        : Number(e.target.value),
-                                  }
-                                : i,
-                            ),
-                          )
-                        }
-                      />
-                      {(() => {
-                        const prod = products.find(
-                          (pr: any) => pr.id === item.product_id,
-                        );
-                        const avail = prod
-                          ? Number(prod.available_quantity)
-                          : null;
-                        return avail !== null &&
-                          Number(item.quantity) > avail ? (
-                          <div className="text-[11px] text-red-500">
-                            الرصيد: {avail}
-                          </div>
-                        ) : null;
-                      })()}
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">
-                        الخصم
-                      </label>
-                      <Input
-                        type="number"
-                        data-mobile-discount-id={item.uid}
-                        className="text-center"
-                        value={item.discount || 0}
-                        onFocus={(e) => e.target.select()}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            setExpandedItemUid(null);
-                            setShowProductModal(true);
-                          }
-                        }}
-                        onChange={(e) =>
-                          setItems((prev) =>
-                            prev.map((i) =>
-                              i.uid === item.uid
-                                ? {
-                                    ...i,
-                                    discount:
-                                      e.target.value === ""
-                                        ? 0
-                                        : Number(e.target.value),
-                                  }
-                                : i,
-                            ),
-                          )
-                        }
-                      />
+                      )}
                     </div>
                   </div>
-
-                  {/* Total */}
-                  <div className="flex items-center justify-between border-t pt-2">
-                    <span className="text-sm text-muted-foreground">
-                      الإجمالي
-                    </span>
-                    <span className="font-bold text-lg">{itemTotal} ج.م</span>
-                  </div>
-
-                  {/* Footer: Return + Delete */}
-                  <div className="flex items-center justify-between">
-                    <label className="flex items-center gap-2 text-sm">
-                      <Checkbox
-                        checked={item.is_return || false}
-                        onCheckedChange={(checked) =>
-                          setItems((prev) =>
-                            prev.map((i) =>
-                              i.uid === item.uid
-                                ? { ...i, is_return: !!checked }
-                                : i,
-                            ),
-                          )
-                        }
-                      />
-                      مرتجع
-                    </label>
-                    {confirmDeleteId === item.uid ? (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => {
-                          removeItem(item.uid);
-                          setConfirmDeleteId(null);
-                        }}
-                      >
-                        متأكد؟
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => {
-                          setConfirmDeleteId(item.uid);
-                          setTimeout(
-                            () =>
-                              setConfirmDeleteId((prev) =>
-                                prev === item.uid ? null : prev,
-                              ),
-                            2000,
-                          );
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
           </>
         )}
 
