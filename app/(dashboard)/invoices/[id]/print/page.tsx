@@ -89,6 +89,13 @@ function InvoicePrintPage() {
 
   useEffect(() => {
     if (invoice && !loading && !isPreview) {
+      try {
+        const raw = localStorage.getItem("appSettings");
+        if (raw) {
+          const s = JSON.parse(raw);
+          if (s.autoPrint === false) return;
+        }
+      } catch {}
       setTimeout(() => window.print(), 500);
     }
   }, [invoice, loading, isPreview]);
