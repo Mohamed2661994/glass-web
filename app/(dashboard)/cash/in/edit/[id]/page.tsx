@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -18,14 +19,25 @@ import { toast } from "sonner";
 import api from "@/services/api";
 import { useParams, useRouter } from "next/navigation";
 
+const sourceLabel = (s: string) => {
+  switch (s) {
+    case "manual": return "وارد عادي";
+    case "invoice": return "فاتورة";
+    case "customer_payment": return "سند دفع";
+    default: return s;
+  }
+};
+
 export default function EditCashInPage() {
   const { id } = useParams();
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [sourceType, setSourceType] = useState("");
   const [sourceName, setSourceName] = useState("");
   const [amount, setAmount] = useState("");
+  const [paidAmount, setPaidAmount] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -36,15 +48,19 @@ export default function EditCashInPage() {
         const res = await api.get(`/cash-in/${id}`);
         const item = res.data.data;
 
-        if (!item || item.source_type !== "manual") {
+        if (!item) {
           toast.error("لا يمكن تعديل هذا القيد");
           router.back();
           return;
         }
 
+        setSourceType(item.source_type || "manual");
         setSourceName(item.customer_name || "");
-        setAmount(String(item.amount));
-        setDescription(item.notes || item.description || "");
+        setAmount(String(item.amount || 0));
+        setPaidAmount(String(item.paid_amount || 0));
+        // Clean metadata from notes
+        const rawNotes = item.notes || item.description || "";
+        setDescription(rawNotes.replace(/\{\{[-\d.|]+\}\}/, "").trim());
         if (item.transaction_date) {
           setDate(item.transaction_date.substring(0, 10));
         }
@@ -60,12 +76,18 @@ export default function EditCashInPage() {
   const submitEdit = async () => {
     try {
       setSaving(true);
-      await api.put(`/cash-in/${id}`, {
+      const payload: any = {
         customer_name: sourceName,
         description,
-        amount: Number(amount),
         transaction_date: date,
-      });
+      };
+      if (sourceType === "manual") {
+        payload.amount = Number(amount);
+      } else {
+        payload.paid_amount = Number(paidAmount);
+        payload.amount = Number(amount);
+      }
+      await api.put(`/cash-in/${id}`, payload);
       toast.success("تم حفظ التعديل");
       router.back();
     } catch {
@@ -96,6 +118,15 @@ export default function EditCashInPage() {
 
       <Card>
         <CardContent className="p-5 space-y-4">
+          {/* نوع القيد */}
+          {sourceType && (
+            <div className="flex justify-center">
+              <Badge variant="secondary" className="text-sm">
+                {sourceLabel(sourceType)}
+              </Badge>
+            </div>
+          )}
+
           <div>
             <Label>الاسم</Label>
             <Input
@@ -105,15 +136,47 @@ export default function EditCashInPage() {
             />
           </div>
 
-          <div>
-            <Label>المبلغ</Label>
-            <Input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="mt-1 text-center font-semibold"
-            />
-          </div>
+          {sourceType === "manual" ? (
+            <div>
+              <Label>المبلغ</Label>
+              <Input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="mt-1 text-center font-semibold"
+                onFocus={(e) => e.target.select()}
+              />
+            </div>
+          ) : (
+            <>
+              <div>
+                <Label>إجمالي الفاتورة</Label>
+                <Input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="mt-1 text-center font-semibold"
+                  onFocus={(e) => e.target.select()}
+                />
+              </div>
+              <div>
+                <Label>المدفوع</Label>
+                <Input
+                  type="number"
+                  value={paidAmount}
+                  onChange={(e) => setPaidAmount(e.target.value)}
+                  className="mt-1 text-center font-semibold text-green-600"
+                  onFocus={(e) => e.target.select()}
+                />
+              </div>
+              <div className="text-center text-sm">
+                <span className="text-muted-foreground">المتبقي: </span>
+                <span className={`font-bold ${Number(amount) - Number(paidAmount) > 0 ? "text-red-500" : "text-green-600"}`}>
+                  {(Number(amount) - Number(paidAmount)).toLocaleString()} ج.م
+                </span>
+              </div>
+            </>
+          )}
 
           <div>
             <Label>تاريخ العملية</Label>
@@ -126,7 +189,7 @@ export default function EditCashInPage() {
           </div>
 
           <div>
-            <Label>البيان</Label>
+            <Label>ملاحظات</Label>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
