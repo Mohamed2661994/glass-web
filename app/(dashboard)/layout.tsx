@@ -259,14 +259,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         : "النظام";
 
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="h-dvh flex bg-background overflow-hidden print:h-auto print:overflow-visible">
       {/* Sidebar */}
       <div className="print:hidden">
         <Sidebar onExpandChange={setSidebarOpen} />
       </div>
 
       {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0">
         {/* ===== HEADER FULL WIDTH ===== */}
         <header className="h-16 border-b bg-background/80 relative print:hidden">
           <div className="absolute inset-0 backdrop-blur-md pointer-events-none" />
@@ -308,7 +308,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </header>
 
         {/* ===== CONTENT ONLY ===== */}
-        <main className="flex-1 overflow-hidden print:py-0">
+        <main className="flex-1 min-h-0 overflow-hidden print:py-0">
           <PullToRefresh className="h-full overflow-y-auto scrollbar-hide">
             <div className="w-full px-4 py-6 print:px-0 print:py-0">
               {children}

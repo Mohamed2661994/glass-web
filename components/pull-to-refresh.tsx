@@ -19,8 +19,6 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
   const startYRef = useRef(0);
   const isPullingRef = useRef(false);
   const pullDistanceRef = useRef(0);
-  // Only allow pull if the PREVIOUS touch ended while already at top
-  const readyRef = useRef(false);
 
   const THRESHOLD = 80;
   const MAX_PULL = 120;
@@ -53,8 +51,8 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
 
     const handleTouchStart = (e: TouchEvent) => {
       if (refreshing) return;
-      // Only allow pull if at top AND the previous touch ended at top
-      if (container.scrollTop <= 0 && readyRef.current) {
+      // Only allow pull if already scrolled to the very top
+      if (container.scrollTop <= 0) {
         startYRef.current = e.touches[0].clientY;
         isPullingRef.current = true;
       }
@@ -62,6 +60,14 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
 
     const handleTouchMove = (e: TouchEvent) => {
       if (!isPullingRef.current || refreshing) return;
+
+      // If user scrolled away from top during this gesture, cancel pull
+      if (container.scrollTop > 0) {
+        isPullingRef.current = false;
+        pullDistanceRef.current = 0;
+        updateVisuals(0);
+        return;
+      }
 
       const diff = e.touches[0].clientY - startYRef.current;
 
@@ -81,10 +87,6 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
     };
 
     const handleTouchEnd = () => {
-      // Only mark ready if finger lifted while at top
-      // This prevents momentum-scroll-to-top from enabling pull
-      readyRef.current = container.scrollTop <= 0;
-
       if (!isPullingRef.current) return;
       isPullingRef.current = false;
 
@@ -116,9 +118,6 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
       passive: false,
     });
     container.addEventListener("touchend", handleTouchEnd, { passive: true });
-
-    // Initialize: if page starts at top, pull is ready
-    readyRef.current = container.scrollTop <= 0;
 
     return () => {
       container.removeEventListener("touchstart", handleTouchStart);
