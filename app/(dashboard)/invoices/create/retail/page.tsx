@@ -747,7 +747,10 @@ export default function CreateRetailInvoicePage() {
         ) as HTMLInputElement;
         if (el) {
           el.scrollIntoView({ behavior: "smooth", block: "center" });
-          setTimeout(() => { el.focus(); el.select(); }, 300);
+          setTimeout(() => {
+            el.focus();
+            el.select();
+          }, 300);
         }
         setLastAddedId(null);
       }, 200);
