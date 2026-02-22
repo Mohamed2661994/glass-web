@@ -84,12 +84,14 @@ export default function EditCashInPage() {
         customer_name: sourceName,
         description,
         transaction_date: date,
+        source_type: sourceType,
       };
       if (sourceType === "manual") {
         payload.amount = Number(amount);
       } else {
         payload.paid_amount = Number(paidAmount);
         payload.amount = Number(amount);
+        payload.remaining_amount = Number(amount) - Number(paidAmount);
       }
       await api.put(`/cash-in/${id}`, payload);
       toast.success("تم حفظ التعديل");
