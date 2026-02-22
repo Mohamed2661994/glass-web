@@ -7,17 +7,17 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "../context/auth-context";
-import { useTheme } from "next-themes";
 
 export default function LoginPage() {
   const router = useRouter();
   const { setUser } = useAuth();
-  const { resolvedTheme } = useTheme();
-
+  const [mounted, setMounted] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => setMounted(true), []);
 
   // ✅ لو مسجل دخول قبل كده → يدخل تلقائي فوراً
   useEffect(() => {
@@ -57,10 +57,20 @@ export default function LoginPage() {
       <Card className="w-full max-w-[420px] mx-auto p-10 shadow-2xl rounded-2xl">
         {/* 🔥 اللوجو */}
         <div className="flex justify-center mb-6">
+          {/* Show both logos, CSS hides wrong one — avoids flash */}
           <img
-            src={resolvedTheme === "dark" ? "/logo-light.png" : "/logo-dark.png"}
+            src="/logo-light.png"
             alt="Logo"
-            className="h-20 object-contain transition-all"
+            className={`h-20 object-contain transition-all ${
+              mounted ? "hidden dark:block" : "hidden"
+            }`}
+          />
+          <img
+            src="/logo-dark.png"
+            alt="Logo"
+            className={`h-20 object-contain transition-all ${
+              mounted ? "block dark:hidden" : "hidden"
+            }`}
           />
         </div>
 
