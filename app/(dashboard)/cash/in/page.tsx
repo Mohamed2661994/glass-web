@@ -179,9 +179,7 @@ function CashInPage() {
         params: { customer_name: name },
       });
       const balances = Array.isArray(res.data) ? res.data : [];
-      const match = balances.find(
-        (b: any) => b.customer_name === name,
-      );
+      const match = balances.find((b: any) => b.customer_name === name);
       setCustomerDebt(match ? Number(match.balance_due) : 0);
     } catch {
       setCustomerDebt(null);
@@ -361,7 +359,10 @@ function CashInPage() {
                 type="button"
                 variant={entryType === "manual" ? "default" : "outline"}
                 className={`flex-1 ${entryType === "manual" ? "bg-blue-600 hover:bg-blue-700" : ""}`}
-                onClick={() => { setEntryType("manual"); setCustomerDebt(null); }}
+                onClick={() => {
+                  setEntryType("manual");
+                  setCustomerDebt(null);
+                }}
               >
                 وارد عادي
               </Button>
@@ -392,30 +393,47 @@ function CashInPage() {
           </div>
 
           {/* المديونية والمتبقي */}
-          {entryType === "customer_payment" && customerDebt !== null && customerDebt > 0 && (
-            <Card className="border-dashed bg-muted/30">
-              <CardContent className="p-3 space-y-1.5 text-sm text-center">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">المديونية الحالية</span>
-                  <span className="font-bold text-red-500">{customerDebt.toLocaleString()} ج.م</span>
-                </div>
-                {Number(amount) > 0 && (
+          {entryType === "customer_payment" &&
+            customerDebt !== null &&
+            customerDebt > 0 && (
+              <Card className="border-dashed bg-muted/30">
+                <CardContent className="p-3 space-y-1.5 text-sm text-center">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">المتبقي بعد الدفع</span>
-                    <span className={`font-black text-lg ${customerDebt - Number(amount) > 0 ? "text-red-500" : "text-green-600"}`}>
-                      {(customerDebt - Number(amount)).toLocaleString()} ج.م
+                    <span className="text-muted-foreground">
+                      المديونية الحالية
+                    </span>
+                    <span className="font-bold text-red-500">
+                      {customerDebt.toLocaleString()} ج.م
                     </span>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                  {Number(amount) > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        المتبقي بعد الدفع
+                      </span>
+                      <span
+                        className={`font-black text-lg ${customerDebt - Number(amount) > 0 ? "text-red-500" : "text-green-600"}`}
+                      >
+                        {(customerDebt - Number(amount)).toLocaleString()} ج.م
+                      </span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           {entryType === "customer_payment" && debtLoading && (
-            <p className="text-xs text-muted-foreground text-center">جاري تحميل المديونية...</p>
+            <p className="text-xs text-muted-foreground text-center">
+              جاري تحميل المديونية...
+            </p>
           )}
-          {entryType === "customer_payment" && customerDebt !== null && customerDebt === 0 && sourceName.trim() && (
-            <p className="text-xs text-green-600 text-center font-medium">✓ لا توجد مديونية على هذا العميل</p>
-          )}
+          {entryType === "customer_payment" &&
+            customerDebt !== null &&
+            customerDebt === 0 &&
+            sourceName.trim() && (
+              <p className="text-xs text-green-600 text-center font-medium">
+                ✓ لا توجد مديونية على هذا العميل
+              </p>
+            )}
 
           {/* التاريخ */}
           <div>

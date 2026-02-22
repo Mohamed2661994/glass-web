@@ -103,25 +103,34 @@ export default function CustomerDebtDetailsPage() {
   );
 
   /* ========== Running Balance (الحساب السابق) ========== */
+  // نحسب الرصيد الافتتاحي من أول فاتورة (الحساب السابق المُضمَّن فيها)
+  const openingBalance = useMemo(() => {
+    const firstInvoice = data.find((r) => r.record_type === "invoice");
+    if (!firstInvoice) return 0;
+    // الحساب السابق = المتبقي - (الإجمالي - المدفوع)
+    const embedded =
+      Number(firstInvoice.remaining_amount) -
+      (Number(firstInvoice.total) - Number(firstInvoice.paid_amount));
+    return embedded > 0 ? embedded : 0;
+  }, [data]);
+
   const runningBalances = useMemo(() => {
     const balances: number[] = [];
-    let balance = 0;
+    let balance = openingBalance;
     for (let i = 0; i < data.length; i++) {
       balances.push(balance);
       const row = data[i];
       if (row.record_type === "invoice") {
-        // نستخدم total - paid بدل remaining
-        // لأن remaining بتشمل الحساب السابق المرحّل
         balance += Number(row.total) - Number(row.paid_amount);
       } else {
         balance -= Number(row.paid_amount);
       }
     }
     return balances;
-  }, [data]);
+  }, [data, openingBalance]);
 
-  // صافي المديونية = الرصيد النهائي بعد آخر حركة
-  const netDebt = totalAll - totalPaid;
+  // صافي المديونية = الإجمالي + الرصيد الافتتاحي - المدفوع
+  const netDebt = totalAll + openingBalance - totalPaid;
 
   return (
     <PageContainer size="xl">
@@ -388,6 +397,12 @@ export default function CustomerDebtDetailsPage() {
           <Card>
             <CardContent className="p-4">
               <div className="flex flex-wrap gap-4 justify-center text-sm">
+                {openingBalance > 0 && (
+                  <div className="text-center">
+                    <p className="text-muted-foreground">رصيد سابق مُرحَّل</p>
+                    <p className="font-bold text-orange-500">{openingBalance.toLocaleString()}</p>
+                  </div>
+                )}
                 <div className="text-center">
                   <p className="text-muted-foreground">إجمالي الفواتير</p>
                   <p className="font-bold">{totalAll.toLocaleString()}</p>
