@@ -5,8 +5,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
 import { Printer, X } from "lucide-react";
 
@@ -223,20 +221,11 @@ export function InvoicePreviewDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         dir="rtl"
-        className="sm:max-w-4xl h-[90vh] p-0 flex flex-col overflow-hidden"
+        className="sm:max-w-[180mm] h-[92vh] p-0 flex flex-col overflow-hidden gap-0"
       >
-        <DialogHeader className="p-4 pb-2 shrink-0 border-b">
-          <DialogTitle className="flex items-center gap-2">
-            معاينة الفاتورة
-            <span className="text-xs font-normal text-muted-foreground border border-dashed rounded px-2 py-0.5">
-              مسودة — لم يتم الحفظ بعد
-            </span>
-          </DialogTitle>
-        </DialogHeader>
-
-        {/* ===== Scrollable invoice preview ===== */}
+        {/* ===== الفاتورة فقط ===== */}
         <div
-          className="flex-1 overflow-auto bg-neutral-100 dark:bg-neutral-900 p-4"
+          className="flex-1 overflow-auto bg-neutral-200 dark:bg-neutral-800"
           style={{ minHeight: 0 }}
         >
           <div
@@ -482,8 +471,8 @@ export function InvoicePreviewDialog({
           </div>
         </div>
 
-        {/* ===== Action buttons ===== */}
-        <div className="flex gap-3 p-4 pt-2 border-t shrink-0">
+        {/* ===== أزرار ===== */}
+        <div className="flex gap-2 p-3 border-t shrink-0 bg-white dark:bg-neutral-950">
           {onSave && (
             <Button
               className="flex-1"
@@ -498,15 +487,13 @@ export function InvoicePreviewDialog({
           )}
           <Button variant="secondary" className="flex-1" onClick={handlePrint}>
             <Printer className="h-4 w-4 ml-2" />
-            طباعة المعاينة
+            طباعة
           </Button>
           <Button
             variant="outline"
-            className="flex-1"
             onClick={() => onOpenChange(false)}
           >
-            <X className="h-4 w-4 ml-2" />
-            رجوع للتعديل
+            <X className="h-4 w-4" />
           </Button>
         </div>
       </DialogContent>
