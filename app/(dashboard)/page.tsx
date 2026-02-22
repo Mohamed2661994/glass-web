@@ -974,8 +974,9 @@ export default function DashboardPage() {
     setLoadingTr(true);
     (async () => {
       try {
+        const today = getTodayDate();
         const { data } = await api.get("/stock-transfers", {
-          params: { limit: 10, _t: Date.now() },
+          params: { date_from: today, date_to: today, limit: 50, _t: Date.now() },
         });
         setTransfers(data?.data ?? []);
       } catch {
@@ -1413,7 +1414,7 @@ export default function DashboardPage() {
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Truck className="h-5 w-5 text-violet-600 dark:text-violet-400" />
-                آخر التحويلات
+                تحويلات اليوم
               </CardTitle>
               <div className="flex items-center gap-2">
                 <div className="flex items-center border rounded-md overflow-hidden">
