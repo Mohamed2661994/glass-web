@@ -746,8 +746,8 @@ export default function CreateRetailInvoicePage() {
           `[${attr}="${lastAddedId}"]`,
         ) as HTMLInputElement;
         if (el) {
-          el.focus();
-          el.select();
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          setTimeout(() => { el.focus(); el.select(); }, 300);
         }
         setLastAddedId(null);
       }, 200);
@@ -2155,8 +2155,8 @@ export default function CreateRetailInvoicePage() {
         <Dialog open={showProductModal} onOpenChange={setShowProductModal}>
           <DialogContent
             dir="rtl"
-            className="max-w-xl p-0 flex flex-col"
-            style={{ height: 420, maxHeight: "75vh" }}
+            className="max-w-xl p-0 flex flex-col max-md:top-[1rem] max-md:translate-y-0"
+            style={{ height: 420, maxHeight: "min(75vh, 75dvh)" }}
           >
             {/* ===== Header ===== */}
             <DialogHeader className="p-4 border-b shrink-0">
