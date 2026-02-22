@@ -10,9 +10,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
+import { X } from "lucide-react";
 import { toast } from "sonner";
 
 interface InvoiceItem {
@@ -256,17 +255,14 @@ export default function InvoiceDetailsPage() {
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent
           dir="rtl"
-          className="sm:max-w-4xl h-[85vh] p-0 flex flex-col overflow-hidden"
+          className="sm:max-w-4xl h-[90vh] p-0 flex flex-col overflow-hidden gap-0"
         >
-          <DialogHeader className="p-4 pb-2 shrink-0">
-            <DialogTitle>معاينة الفاتورة</DialogTitle>
-          </DialogHeader>
           <iframe
             src={`/invoices/${invoice?.id}/print?preview=1`}
             className="flex-1 w-full border-0"
             style={{ minHeight: 0 }}
           />
-          <div className="flex gap-3 p-4 pt-2 border-t shrink-0">
+          <div className="flex gap-2 p-3 border-t shrink-0 bg-white dark:bg-neutral-950">
             <Button
               className="flex-1"
               onClick={() => {
@@ -278,10 +274,9 @@ export default function InvoiceDetailsPage() {
             </Button>
             <Button
               variant="outline"
-              className="flex-1"
               onClick={() => setPreviewOpen(false)}
             >
-              إغلاق
+              <X className="h-4 w-4" />
             </Button>
           </div>
         </DialogContent>

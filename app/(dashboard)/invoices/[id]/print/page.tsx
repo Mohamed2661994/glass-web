@@ -555,7 +555,7 @@ th,td { padding:3px 4px; text-align:center; }
 
       <div className="print-modal">
         {/* ═══════ لوحة الإعدادات ═══════ */}
-        <div className="settings-panel">
+        {!isPreview && <div className="settings-panel">
           <div className="settings-header">
             <h2>🖨️ إعدادات الطباعة</h2>
             <span style={{ fontSize: 12, color: "#94a3b8" }}>
@@ -868,7 +868,7 @@ th,td { padding:3px 4px; text-align:center; }
               إلغاء
             </button>
           </div>
-        </div>
+        </div>}
 
         {/* ═══════ منطقة المعاينة ═══════ */}
         <div className="preview-panel">
