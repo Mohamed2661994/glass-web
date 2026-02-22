@@ -376,17 +376,13 @@ th, td { padding: 3px 4px; text-align: center; }
             <div>حساب سابق: {previousBalance.toFixed(2)}</div>
           )}
 
-          {extraDiscount > 0 && (
-            <div>خصم : {extraDiscount.toFixed(2)}</div>
-          )}
+          {extraDiscount > 0 && <div>خصم : {extraDiscount.toFixed(2)}</div>}
 
           <div>
             <b>الصافي: {netTotal.toFixed(2)}</b>
           </div>
 
-          {paidAmount !== 0 && (
-            <div>المدفوع: {paidAmount.toFixed(2)}</div>
-          )}
+          {paidAmount !== 0 && <div>المدفوع: {paidAmount.toFixed(2)}</div>}
 
           {remaining !== 0 && (
             <div className="totals-remaining">

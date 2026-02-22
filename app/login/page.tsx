@@ -12,24 +12,12 @@ import { useTheme } from "next-themes";
 export default function LoginPage() {
   const router = useRouter();
   const { setUser } = useAuth();
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme } = useTheme();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  // ✅ فرض الوضع الفاتح في صفحة تسجيل الدخول
-  useEffect(() => {
-    const previousTheme = theme;
-    setTheme("light");
-    return () => {
-      if (previousTheme && previousTheme !== "light") {
-        setTheme(previousTheme);
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // ✅ لو مسجل دخول قبل كده → يدخل تلقائي فوراً
   useEffect(() => {
@@ -70,7 +58,7 @@ export default function LoginPage() {
         {/* 🔥 اللوجو */}
         <div className="flex justify-center mb-6">
           <img
-            src="/logo-dark.png"
+            src={resolvedTheme === "dark" ? "/logo-light.png" : "/logo-dark.png"}
             alt="Logo"
             className="h-20 object-contain transition-all"
           />
