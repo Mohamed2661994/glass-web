@@ -48,7 +48,7 @@ export default function EditCashInPage() {
         const res = await api.get(`/cash-in/${id}`);
         const item = res.data.data;
 
-        if (!item) {
+        if (!item || item.source_type === "invoice") {
           toast.error("لا يمكن تعديل هذا القيد");
           router.back();
           return;
