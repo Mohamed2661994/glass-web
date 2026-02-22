@@ -351,9 +351,9 @@ export default function EditWholesaleInvoicePage() {
     return totalBeforeDiscount - (Number(extraDiscount) || 0);
   }, [totalBeforeDiscount, extraDiscount]);
 
-  const totalWithPrevious = finalTotal + Number(previousBalance || 0);
+  const totalWithPrevious = Math.round((finalTotal + Number(previousBalance || 0)) * 100) / 100;
 
-  const remaining = totalWithPrevious - (Number(paidAmount) || 0);
+  const remaining = Math.round((totalWithPrevious - (Number(paidAmount) || 0)) * 100) / 100;
 
   /* =========================================================
      1️⃣3️⃣ Update Invoice
@@ -418,82 +418,7 @@ export default function EditWholesaleInvoicePage() {
         updated_by_name: user?.username,
       });
 
-      /* -------------------------------------------------------
-         Sync cash entry (اليومية) after invoice update
-         ------------------------------------------------------- */
-      try {
-        const paidNum = Number(paidAmount) || 0;
-
-        // Fetch ALL cash-in entries and search by invoice_id or by notes
-        const cashRes = await api.get("/cash-in");
-        const entries: any[] = cashRes.data?.data || cashRes.data || [];
-        const invoiceIdStr = String(id);
-        const existing = entries.find(
-          (e: any) =>
-            (String(e.invoice_id) === invoiceIdStr &&
-              e.source_type === "invoice") ||
-            (e.notes &&
-              e.notes.includes(`#${invoiceIdStr}`) &&
-              e.source_type === "invoice"),
-        );
-
-        console.log(
-          "🔍 Cash entries count:",
-          entries.length,
-          "Found existing:",
-          existing?.id,
-          "invoice_id:",
-          id,
-        );
-
-        if (existing && paidNum > 0) {
-          // Backend blocks PUT on invoice entries → DELETE then re-create
-          await api.delete(`/cash-in/${existing.id}`);
-          const remainingAmount = totalWithPrevious - paidNum;
-          const recreateRes = await api.post("/cash/in", {
-            transaction_date: invoiceDate,
-            customer_name: customerName,
-            description: `فاتورة جملة رقم #${id}{{${totalWithPrevious}|${paidNum}|${remainingAmount}}}`,
-            amount: totalWithPrevious,
-            paid_amount: paidNum,
-            remaining_amount: remainingAmount,
-            source_type: "invoice",
-            invoice_id: Number(id),
-          });
-          console.log(
-            "♻️ DELETE+CREATE cash-in response:",
-            JSON.stringify(recreateRes.data),
-          );
-          toast.info(`تم تحديث قيد اليومية`);
-        } else if (existing && paidNum === 0) {
-          await api.delete(`/cash-in/${existing.id}`);
-          toast.info("تم حذف قيد اليومية");
-        } else if (!existing && paidNum > 0) {
-          const remainingAmount = totalWithPrevious - paidNum;
-          const createRes = await api.post("/cash/in", {
-            transaction_date: invoiceDate,
-            customer_name: customerName,
-            description: `فاتورة جملة رقم #${id}{{${totalWithPrevious}|${paidNum}|${remainingAmount}}}`,
-            amount: totalWithPrevious,
-            paid_amount: paidNum,
-            remaining_amount: remainingAmount,
-            source_type: "invoice",
-            invoice_id: Number(id),
-          });
-          console.log(
-            "📝 POST cash-in response:",
-            JSON.stringify(createRes.data),
-          );
-          const newEntryId = createRes.data?.cash_in_id || createRes.data?.id;
-          toast.info(`تم إنشاء قيد يومية جديد #${newEntryId}`);
-        }
-      } catch (cashErr: any) {
-        console.error(
-          "Cash sync error:",
-          cashErr.response?.data || cashErr.message,
-        );
-        toast.warning("تعذّر تحديث قيد اليومية");
-      }
+      // Backend handles cash_in sync in the PUT transaction
 
       toast.success("تم تعديل الفاتورة بنجاح");
       invalidateCache();
