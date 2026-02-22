@@ -990,9 +990,14 @@ export default function DashboardPage() {
       try {
         const today = getTodayDate();
         const { data } = await api.get("/stock-transfers", {
-          params: { date_from: today, date_to: today, limit: 50, _t: Date.now() },
+          params: { limit: 100, _t: Date.now() },
         });
-        setTransfers(data?.data ?? []);
+        const all: Transfer[] = data?.data ?? [];
+        // Filter to today's transfers only
+        const todayTransfers = all.filter(
+          (t) => t.created_at?.substring(0, 10) === today,
+        );
+        setTransfers(todayTransfers);
       } catch {
         /* silent */
       } finally {
