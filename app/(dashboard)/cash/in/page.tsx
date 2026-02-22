@@ -99,6 +99,7 @@ function CashInPage() {
     notes?.replace(/\{\{[-\d.|]+\}\}/, "").trim() || null;
 
   const openModal = useCallback(async () => {
+    setModalSearch(sourceName.trim());
     setModalOpen(true);
     setModalLoading(true);
     try {
@@ -109,7 +110,7 @@ function CashInPage() {
     } finally {
       setModalLoading(false);
     }
-  }, []);
+  }, [sourceName]);
 
   const filteredModal = useMemo(() => {
     if (!modalSearch.trim()) return modalData;
