@@ -266,7 +266,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       </div>
 
       {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 print:block print:min-h-auto print:overflow-visible">
         {/* ===== HEADER FULL WIDTH ===== */}
         <header className="h-16 border-b bg-background/80 relative print:hidden">
           <div className="absolute inset-0 backdrop-blur-md pointer-events-none" />
@@ -308,8 +308,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </header>
 
         {/* ===== CONTENT ONLY ===== */}
-        <main className="flex-1 min-h-0 overflow-hidden print:py-0">
-          <PullToRefresh className="h-full overflow-y-auto scrollbar-hide">
+        <main className="flex-1 min-h-0 overflow-hidden print:py-0 print:overflow-visible print:block print:min-h-auto print:h-auto">
+          <PullToRefresh className="h-full overflow-y-auto scrollbar-hide print:!h-auto print:!overflow-visible">
             <div className="w-full px-4 py-6 print:px-0 print:py-0">
               {children}
             </div>
