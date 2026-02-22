@@ -245,7 +245,7 @@ th, td { padding: 3px 4px; text-align: center; }
   table { page-break-inside: auto; break-inside: auto; }
   tr    { page-break-inside: avoid; break-inside: avoid; }
   thead { display: table-header-group; }
-  tfoot { display: table-footer-group; }
+  tfoot { display: table-row-group; }
 
   .totals-section { break-inside: avoid; }
 }
