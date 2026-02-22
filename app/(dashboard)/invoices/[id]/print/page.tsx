@@ -209,8 +209,8 @@ body { background: #e5e5e5; font-family: Tahoma, Arial; }
 }
 
 .invoice-info {
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: 10px;
+  line-height: 1.4;
   text-align: right;
   min-width: 170px;
 }
@@ -218,7 +218,7 @@ body { background: #e5e5e5; font-family: Tahoma, Arial; }
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 10px;
 }
 
 th {
@@ -229,7 +229,7 @@ th {
 
 td { border-bottom: 1px solid #ddd; }
 
-th, td { padding: 6px; text-align: center; }
+th, td { padding: 3px 4px; text-align: center; }
 
 /* ===== إعدادات الورق ===== */
 @page { size: A5 portrait; margin: 0; }
@@ -411,14 +411,14 @@ th, td { padding: 6px; text-align: center; }
               {isLastPage && (
                 <div
                   style={{
-                    marginTop: 6,
-                    paddingTop: 6,
+                    marginTop: 4,
+                    paddingTop: 4,
                     borderTop: "2px solid #000",
                     width: "55%",
                     marginLeft: 0,
                     marginRight: "auto",
-                    fontSize: 13,
-                    lineHeight: 1.9,
+                    fontSize: 11,
+                    lineHeight: 1.5,
                     textAlign: "left",
                   }}
                 >
@@ -439,7 +439,7 @@ th, td { padding: 6px; text-align: center; }
                   )}
 
                   {remaining !== 0 && (
-                    <div style={{ fontSize: 15 }}>
+                    <div style={{ fontSize: 13 }}>
                       <b>المتبقي: {remaining.toFixed(2)}</b>
                     </div>
                   )}
