@@ -860,7 +860,7 @@ th,td { padding:3px 4px; text-align:center; }
             </button>
             <button
               className="btn-cancel"
-              onClick={() => window.history.back()}
+              onClick={() => window.close()}
             >
               إلغاء
             </button>
