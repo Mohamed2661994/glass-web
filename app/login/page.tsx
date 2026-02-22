@@ -56,7 +56,7 @@ export default function LoginPage() {
 
       setUser(res.data.user);
 
-      router.push("/");
+      router.replace("/");
     } catch (err: any) {
       setError(err.response?.data?.error || "حدث خطأ أثناء تسجيل الدخول");
     } finally {

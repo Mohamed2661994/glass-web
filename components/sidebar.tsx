@@ -388,6 +388,7 @@ export function Sidebar({
             <Link
               key={entry.href}
               href={entry.href}
+              replace={entry.href === "/"}
               onClick={onNavigate}
               className={cn(
                 "flex items-center gap-3 rounded-xl px-2 py-2 text-sm transition-colors",

@@ -280,7 +280,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             {/* CENTER - Name + Branch */}
             <div
               className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center cursor-pointer select-none max-w-[45%]"
-              onClick={() => router.push("/")}
+              onClick={() => router.replace("/")}
               title="الرجوع للوحة التحكم"
             >
               <span className="text-sm sm:text-base font-bold truncate max-w-full">
