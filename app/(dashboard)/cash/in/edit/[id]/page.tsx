@@ -21,10 +21,14 @@ import { useParams, useRouter } from "next/navigation";
 
 const sourceLabel = (s: string) => {
   switch (s) {
-    case "manual": return "وارد عادي";
-    case "invoice": return "فاتورة";
-    case "customer_payment": return "سند دفع";
-    default: return s;
+    case "manual":
+      return "وارد عادي";
+    case "invoice":
+      return "فاتورة";
+    case "customer_payment":
+      return "سند دفع";
+    default:
+      return s;
   }
 };
 
@@ -171,7 +175,9 @@ export default function EditCashInPage() {
               </div>
               <div className="text-center text-sm">
                 <span className="text-muted-foreground">المتبقي: </span>
-                <span className={`font-bold ${Number(amount) - Number(paidAmount) > 0 ? "text-red-500" : "text-green-600"}`}>
+                <span
+                  className={`font-bold ${Number(amount) - Number(paidAmount) > 0 ? "text-red-500" : "text-green-600"}`}
+                >
                   {(Number(amount) - Number(paidAmount)).toLocaleString()} ج.م
                 </span>
               </div>

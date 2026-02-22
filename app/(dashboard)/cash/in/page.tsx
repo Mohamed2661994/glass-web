@@ -584,18 +584,39 @@ function CashInPage() {
                 const meta = parseMetadata(i.notes || i.description);
                 return s + (meta ? meta.total : Number(i.amount || 0));
               }, 0);
-              const totalPaid = invoices.reduce((s, i) => {
-                const meta = parseMetadata(i.notes || i.description);
-                return s + (meta ? meta.paid : Number(i.paid_amount || 0));
+              // المدفوع = فواتير + سندات دفع
+              const totalPaid = filteredModal.reduce((s, i) => {
+                if (i.source_type === "invoice" || i.source_type === "customer_payment") {
+                  const meta = parseMetadata(i.notes || i.description);
+                  return s + (meta ? meta.paid : Number(i.paid_amount || i.amount));
+                }
+                return s;
               }, 0);
               const remaining = totalInvoices - totalPaid;
               return (
                 <div className="text-sm pt-1">
-                  <span>إجمالي الفواتير: <b>{Math.round(totalInvoices).toLocaleString()} ج</b></span>
+                  <span>
+                    إجمالي الفواتير:{" "}
+                    <b>{Math.round(totalInvoices).toLocaleString()} ج</b>
+                  </span>
                   {" — "}
-                  <span>المدفوع: <b className="text-green-600">{Math.round(totalPaid).toLocaleString()} ج</b></span>
+                  <span>
+                    المدفوع:{" "}
+                    <b className="text-green-600">
+                      {Math.round(totalPaid).toLocaleString()} ج
+                    </b>
+                  </span>
                   {" — "}
-                  <span>المتبقي: <b className={remaining > 0 ? "text-red-500" : "text-green-600"}>{Math.round(remaining).toLocaleString()} ج</b></span>
+                  <span>
+                    المتبقي:{" "}
+                    <b
+                      className={
+                        remaining > 0 ? "text-red-500" : "text-green-600"
+                      }
+                    >
+                      {Math.round(remaining).toLocaleString()} ج
+                    </b>
+                  </span>
                 </div>
               );
             })()}
