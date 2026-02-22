@@ -291,7 +291,8 @@ export default function CreateRetailInvoicePage() {
       if (draft.customerName) setCustomerName(draft.customerName);
       if (draft.customerPhone) setCustomerPhone(draft.customerPhone);
       if (draft.customerId) setCustomerId(draft.customerId);
-      if (draft.previousBalance != null) setPreviousBalance(draft.previousBalance);
+      if (draft.previousBalance != null)
+        setPreviousBalance(draft.previousBalance);
       if (draft.extraDiscount) setExtraDiscount(draft.extraDiscount);
       if (draft.paidAmount) setPaidAmount(draft.paidAmount);
       if (draft.applyItemsDiscount !== undefined)

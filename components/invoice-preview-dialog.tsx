@@ -156,7 +156,7 @@ export function InvoicePreviewDialog({
       box-sizing: border-box;
       direction: rtl;
       color: ${printColor};
-      ${printBold ? 'font-weight: bold;' : ''}
+      ${printBold ? "font-weight: bold;" : ""}
     }
     .invoice-wrap * { color: ${printColor}; }
     .invoice-header {
@@ -459,17 +459,13 @@ export function InvoicePreviewDialog({
                 <div>حساب سابق: {previousBalance.toFixed(2)}</div>
               )}
 
-              {extraDiscount > 0 && (
-                <div>خصم : {extraDiscount.toFixed(2)}</div>
-              )}
+              {extraDiscount > 0 && <div>خصم : {extraDiscount.toFixed(2)}</div>}
 
               <div>
                 <b>الصافي: {netTotal.toFixed(2)}</b>
               </div>
 
-              {paidAmount !== 0 && (
-                <div>المدفوع: {paidAmount.toFixed(2)}</div>
-              )}
+              {paidAmount !== 0 && <div>المدفوع: {paidAmount.toFixed(2)}</div>}
 
               {remaining !== 0 && (
                 <div style={{ fontSize: 13 }}>

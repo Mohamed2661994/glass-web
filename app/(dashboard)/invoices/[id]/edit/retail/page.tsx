@@ -7,7 +7,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/services/api";
-import { Trash2, Loader2, Pencil, RefreshCw, ChevronDown, ArrowLeftRight } from "lucide-react";
+import {
+  Trash2,
+  Loader2,
+  Pencil,
+  RefreshCw,
+  ChevronDown,
+  ArrowLeftRight,
+} from "lucide-react";
 import { QuickTransferModal } from "@/components/quick-transfer-modal";
 import { useCachedProducts } from "@/hooks/use-cached-products";
 import { highlightText } from "@/lib/highlight-text";

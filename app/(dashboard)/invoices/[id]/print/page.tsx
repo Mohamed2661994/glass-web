@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import api from "@/services/api";
 
@@ -60,6 +60,10 @@ function InvoicePrintPage() {
   const [error, setError] = useState("");
   const [printBold, setPrintBold] = useState(false);
   const [printColor, setPrintColor] = useState("#000000");
+  const [copies, setCopies] = useState(1);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const invoiceRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     try {
@@ -87,6 +91,82 @@ function InvoicePrintPage() {
     if (id) fetchInvoice();
   }, [id]);
 
+  /* ──── طباعة عبر iframe مخفي ──── */
+  const handlePrint = useCallback(() => {
+    if (!invoiceRef.current || isPrinting) return;
+    setIsPrinting(true);
+
+    const html = invoiceRef.current.innerHTML;
+    const printCSS = `
+      <style>
+        body { margin: 0; padding: 0; background: white; font-family: Tahoma, Arial; direction: rtl; }
+        * { color: ${printColor} !important; }
+        .invoice-wrap {
+          width: 100%; margin: 0; padding: 8mm; box-sizing: border-box;
+          direction: rtl; ${printBold ? "font-weight: bold;" : ""}
+          color: ${printColor} !important;
+        }
+        .invoice-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+        .invoice-info { font-size: 10px; line-height: 1.4; text-align: right; min-width: 170px; }
+        table { width: 100%; border-collapse: collapse; font-size: 10px; }
+        th { background: #f3f3f3; font-weight: bold; border-bottom: 2px solid ${printColor}; }
+        td { border-bottom: 1px solid #ddd; }
+        th, td { padding: 3px 4px; text-align: center; }
+        .totals-section {
+          margin-top: 4px; padding-top: 4px;
+          border-top: 2px solid ${printColor};
+          width: 55%; margin-left: 0; margin-right: auto;
+          font-size: 11px; line-height: 1.5; text-align: left;
+        }
+        .totals-remaining { font-size: 13px; }
+        hr { border: none; border-top: 2px solid #000; margin-bottom: 10px; }
+        @page { size: A5 portrait; margin: 8mm; }
+        table { page-break-inside: auto; break-inside: auto; }
+        tr { page-break-inside: avoid; break-inside: avoid; }
+        thead { display: table-header-group; }
+        tfoot { display: table-row-group; }
+        .totals-section { break-inside: avoid; }
+      </style>
+    `;
+
+    // Build pages for copies
+    let pagesHtml = "";
+    for (let c = 0; c < copies; c++) {
+      pagesHtml += `<div class="invoice-wrap" ${c > 0 ? 'style="page-break-before: always;"' : ""}>${html}</div>`;
+    }
+
+    const fullHtml = `<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8">${printCSS}</head><body>${pagesHtml}</body></html>`;
+
+    const iframe = iframeRef.current;
+    if (!iframe) { setIsPrinting(false); return; }
+
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) { setIsPrinting(false); return; }
+
+    doc.open();
+    doc.write(fullHtml);
+    doc.close();
+
+    // Wait for images to load then print
+    iframe.onload = () => {
+      setTimeout(() => {
+        try {
+          iframe.contentWindow?.print();
+        } catch {
+          window.print();
+        }
+        setIsPrinting(false);
+      }, 300);
+    };
+
+    // Fallback timeout
+    setTimeout(() => {
+      try { iframe.contentWindow?.print(); } catch {}
+      setIsPrinting(false);
+    }, 2000);
+  }, [copies, isPrinting, printBold, printColor]);
+
+  /* ──── Auto-print if setting enabled ──── */
   useEffect(() => {
     if (invoice && !loading && !isPreview) {
       try {
@@ -96,9 +176,9 @@ function InvoicePrintPage() {
           if (s.autoPrint === false) return;
         }
       } catch {}
-      setTimeout(() => window.print(), 500);
+      setTimeout(() => handlePrint(), 600);
     }
-  }, [invoice, loading, isPreview]);
+  }, [invoice, loading, isPreview, handlePrint]);
 
   if (loading) {
     return (
@@ -173,31 +253,105 @@ function InvoicePrintPage() {
     <>
       {/* eslint-disable-next-line react/no-unknown-property */}
       <style>{`
-/* ===== عرض عادي (على الشاشة) ===== */
-body { background: #e5e5e5; font-family: Tahoma, Arial; }
+/* ===== الخلفية ===== */
+body { background: #f0f0f0; font-family: Tahoma, Arial; margin: 0; }
 
-.no-print { text-align: center; margin: 16px; }
-.no-print button {
-  padding: 8px 24px;
-  margin: 0 6px;
+/* ===== شريط التحكم ===== */
+.print-toolbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 1000;
+  background: #1e293b;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 10px 20px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+  direction: rtl;
+  flex-wrap: wrap;
+}
+
+.print-toolbar label {
+  color: #94a3b8;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.print-toolbar input[type="number"] {
+  width: 56px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid #475569;
+  background: #334155;
+  color: #fff;
+  font-size: 14px;
+  text-align: center;
+  outline: none;
+}
+.print-toolbar input[type="number"]:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 2px rgba(96,165,250,0.3);
+}
+
+.toolbar-btn {
+  padding: 8px 28px;
   border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
-  border: 1px solid #ccc;
-  background: #fff;
+  font-weight: 600;
+  border: none;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
-.no-print button.primary { background: #000; color: #fff; border: none; }
+.toolbar-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.toolbar-btn.primary {
+  background: #3b82f6;
+  color: #fff;
+}
+.toolbar-btn.primary:hover:not(:disabled) {
+  background: #2563eb;
+}
+.toolbar-btn.secondary {
+  background: #475569;
+  color: #fff;
+}
+.toolbar-btn.secondary:hover {
+  background: #64748b;
+}
+
+.toolbar-separator {
+  width: 1px;
+  height: 28px;
+  background: #475569;
+}
+
+/* ===== منطقة المعاينة ===== */
+.preview-area {
+  padding-top: 70px;
+  padding-bottom: 30px;
+  display: flex;
+  justify-content: center;
+}
 
 .invoice-wrap {
   width: 148mm;
-  margin: 20px auto;
   background: white;
   color: ${printColor} !important;
   padding: 10mm;
-  box-shadow: 0 0 15px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
   box-sizing: border-box;
   direction: rtl;
-  ${printBold ? 'font-weight: bold;' : ''}
+  border-radius: 2px;
+  ${printBold ? "font-weight: bold;" : ""}
 }
 
 .invoice-wrap * { color: ${printColor} !important; }
@@ -246,170 +400,204 @@ th, td { padding: 3px 4px; text-align: center; }
 
 .totals-remaining { font-size: 13px; }
 
-/* ===== إعدادات الورق ===== */
+/* ===== iframe مخفي ===== */
+.print-iframe {
+  position: fixed;
+  top: -9999px;
+  left: -9999px;
+  width: 0;
+  height: 0;
+  border: none;
+}
+
+/* ===== الطباعة – إخفاء كل شيء ما عدا الفاتورة ===== */
 @page { size: A5 portrait; margin: 8mm; }
 
-/* ===== الطباعة ===== */
 @media print {
   body { margin: 0; padding: 0; background: white; }
-
-  .no-print { display: none !important; }
-
+  .print-toolbar { display: none !important; }
+  .preview-area { padding-top: 0; padding-bottom: 0; }
   .invoice-wrap {
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    box-shadow: none;
+    width: 100%; margin: 0; padding: 0;
+    box-shadow: none; border-radius: 0;
   }
-
-  /* Let the browser auto-paginate */
   table { page-break-inside: auto; break-inside: auto; }
   tr    { page-break-inside: avoid; break-inside: avoid; }
   thead { display: table-header-group; }
   tfoot { display: table-row-group; }
-
   .totals-section { break-inside: avoid; }
 }
       `}</style>
 
-      {/* ===== أزرار الطباعة ===== */}
-      <div className="no-print">
-        <button className="primary" onClick={() => window.print()}>
-          طباعة
+      {/* ===== iframe مخفي للطباعة ===== */}
+      <iframe ref={iframeRef} className="print-iframe" title="print-frame" />
+
+      {/* ===== شريط التحكم بالطباعة ===== */}
+      <div className="print-toolbar">
+        <button
+          className="toolbar-btn primary"
+          onClick={handlePrint}
+          disabled={isPrinting}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          {isPrinting ? "جاري الطباعة..." : "طباعة"}
         </button>
-        <button onClick={() => window.close()}>إغلاق</button>
+
+        <div className="toolbar-separator" />
+
+        <label>
+          عدد النسخ:
+          <input
+            type="number"
+            min={1}
+            max={10}
+            value={copies}
+            onChange={(e) => setCopies(Math.max(1, Math.min(10, Number(e.target.value) || 1)))}
+          />
+        </label>
+
+        <div className="toolbar-separator" />
+
+        <button
+          className="toolbar-btn secondary"
+          onClick={() => window.history.back()}
+        >
+          رجوع
+        </button>
       </div>
 
-      {/* ===== الفاتورة ===== */}
-      <div className="invoice-wrap">
-        {/* ✅ HEADER */}
-        <div className="invoice-header">
-          {/* بيانات الفاتورة يمين */}
-          <div className="invoice-info">
-            <div>
-              <b>رقم الفاتورة:</b> {invoice.id}
-            </div>
-            <div>
-              <b>التاريخ:</b> {formattedDate}
-            </div>
-            <div>
-              <b>العميل:</b> {invoice.customer_name || "نقدي"}
-            </div>
-            {invoice.customer_phone && (
+      {/* ===== منطقة المعاينة ===== */}
+      <div className="preview-area">
+        <div className="invoice-wrap" ref={invoiceRef}>
+          {/* ✅ HEADER */}
+          <div className="invoice-header">
+            {/* بيانات الفاتورة يمين */}
+            <div className="invoice-info">
               <div>
-                <b>تليفون:</b> {invoice.customer_phone}
+                <b>رقم الفاتورة:</b> {invoice.id}
+              </div>
+              <div>
+                <b>التاريخ:</b> {formattedDate}
+              </div>
+              <div>
+                <b>العميل:</b> {invoice.customer_name || "نقدي"}
+              </div>
+              {invoice.customer_phone && (
+                <div>
+                  <b>تليفون:</b> {invoice.customer_phone}
+                </div>
+              )}
+            </div>
+
+            {/* اللوجو شمال */}
+            <img
+              src="/logo-dark.png"
+              alt="Logo"
+              style={{ width: 65 }}
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
+          </div>
+
+          <hr
+            style={{
+              border: "none",
+              borderTop: "2px solid #000",
+              marginBottom: 10,
+            }}
+          />
+
+          {/* ===== جدول الأصناف ===== */}
+          <table>
+            <thead>
+              <tr>
+                <th>م</th>
+                <th>الصنف</th>
+                <th>العبوة</th>
+                <th>الكمية</th>
+                <th>السعر</th>
+                <th>الإجمالي</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((it, i) => {
+                const displayQty = it.is_return
+                  ? -Math.abs(it.quantity)
+                  : it.quantity;
+                const displayTotal = it.is_return
+                  ? -Math.abs(Math.round(calcItemTotal(it)))
+                  : Math.round(calcItemTotal(it));
+
+                return (
+                  <tr
+                    key={i}
+                    style={
+                      it.is_return
+                        ? { color: "red !important", background: "#fff5f5" }
+                        : undefined
+                    }
+                  >
+                    <td>{i + 1}</td>
+                    <td>
+                      {it.product_name}
+                      {it.manufacturer ? ` - ${it.manufacturer}` : ""}
+                      {it.is_return && (
+                        <span
+                          style={{
+                            color: "red",
+                            fontSize: 10,
+                            marginRight: 4,
+                          }}
+                        >
+                          (مرتجع)
+                        </span>
+                      )}
+                    </td>
+                    <td>{formatPackage(it)}</td>
+                    <td style={it.is_return ? { color: "red" } : undefined}>
+                      {displayQty}
+                    </td>
+                    <td>{Math.round(calcUnitPrice(it))}</td>
+                    <td style={it.is_return ? { color: "red" } : undefined}>
+                      {displayTotal}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr style={{ fontWeight: "bold", background: "#fafafa" }}>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td>{totalQty}</td>
+                <td></td>
+                <td>{Math.round(itemsSubtotal)}</td>
+              </tr>
+            </tfoot>
+          </table>
+
+          {/* ===== التوتالز ===== */}
+          <div className="totals-section">
+            {previousBalance !== 0 && (
+              <div>حساب سابق: {previousBalance.toFixed(2)}</div>
+            )}
+
+            {extraDiscount > 0 && <div>خصم : {extraDiscount.toFixed(2)}</div>}
+
+            <div>
+              <b>الصافي: {netTotal.toFixed(2)}</b>
+            </div>
+
+            {paidAmount !== 0 && <div>المدفوع: {paidAmount.toFixed(2)}</div>}
+
+            {remaining !== 0 && (
+              <div className="totals-remaining">
+                <b>المتبقي: {remaining.toFixed(2)}</b>
               </div>
             )}
           </div>
-
-          {/* اللوجو شمال */}
-          <img
-            src="/logo-dark.png"
-            alt="Logo"
-            style={{ width: 65 }}
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
-            }}
-          />
-        </div>
-
-        <hr
-          style={{
-            border: "none",
-            borderTop: "2px solid #000",
-            marginBottom: 10,
-          }}
-        />
-
-        {/* ===== جدول الأصناف – جدول واحد، المتصفح يقسم تلقائي ===== */}
-        <table>
-          <thead>
-            <tr>
-              <th>م</th>
-              <th>الصنف</th>
-              <th>العبوة</th>
-              <th>الكمية</th>
-              <th>السعر</th>
-              <th>الإجمالي</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((it, i) => {
-              const displayQty = it.is_return
-                ? -Math.abs(it.quantity)
-                : it.quantity;
-              const displayTotal = it.is_return
-                ? -Math.abs(Math.round(calcItemTotal(it)))
-                : Math.round(calcItemTotal(it));
-
-              return (
-                <tr
-                  key={i}
-                  style={
-                    it.is_return
-                      ? { color: "red !important", background: "#fff5f5" }
-                      : undefined
-                  }
-                >
-                  <td>{i + 1}</td>
-                  <td>
-                    {it.product_name}
-                    {it.manufacturer ? ` - ${it.manufacturer}` : ""}
-                    {it.is_return && (
-                      <span
-                        style={{
-                          color: "red",
-                          fontSize: 10,
-                          marginRight: 4,
-                        }}
-                      >
-                        (مرتجع)
-                      </span>
-                    )}
-                  </td>
-                  <td>{formatPackage(it)}</td>
-                  <td style={it.is_return ? { color: "red" } : undefined}>
-                    {displayQty}
-                  </td>
-                  <td>{Math.round(calcUnitPrice(it))}</td>
-                  <td style={it.is_return ? { color: "red" } : undefined}>
-                    {displayTotal}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-          <tfoot>
-            <tr style={{ fontWeight: "bold", background: "#fafafa" }}>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td>{totalQty}</td>
-              <td></td>
-              <td>{Math.round(itemsSubtotal)}</td>
-            </tr>
-          </tfoot>
-        </table>
-
-        {/* ===== التوتالز ===== */}
-        <div className="totals-section">
-          {previousBalance !== 0 && (
-            <div>حساب سابق: {previousBalance.toFixed(2)}</div>
-          )}
-
-          {extraDiscount > 0 && <div>خصم : {extraDiscount.toFixed(2)}</div>}
-
-          <div>
-            <b>الصافي: {netTotal.toFixed(2)}</b>
-          </div>
-
-          {paidAmount !== 0 && <div>المدفوع: {paidAmount.toFixed(2)}</div>}
-
-          {remaining !== 0 && (
-            <div className="totals-remaining">
-              <b>المتبقي: {remaining.toFixed(2)}</b>
-            </div>
-          )}
         </div>
       </div>
     </>

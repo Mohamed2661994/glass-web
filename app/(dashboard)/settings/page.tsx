@@ -222,12 +222,15 @@ export default function SettingsPage() {
   }, []);
 
   /* ---- Save settings to localStorage ---- */
-  const saveSettings = useCallback((partial: Record<string, boolean | string>) => {
-    const current = localStorage.getItem("appSettings");
-    const existing = current ? JSON.parse(current) : {};
-    const updated = { ...existing, ...partial };
-    localStorage.setItem("appSettings", JSON.stringify(updated));
-  }, []);
+  const saveSettings = useCallback(
+    (partial: Record<string, boolean | string>) => {
+      const current = localStorage.getItem("appSettings");
+      const existing = current ? JSON.parse(current) : {};
+      const updated = { ...existing, ...partial };
+      localStorage.setItem("appSettings", JSON.stringify(updated));
+    },
+    [],
+  );
 
   /* ========== Handlers ========== */
 
