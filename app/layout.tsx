@@ -17,7 +17,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0ea5e9",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+  ],
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -65,6 +68,18 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
+              // Sync theme-color meta with class-based theme
+              (function() {
+                var light = '#ffffff', dark = '#0a0a0a';
+                function sync() {
+                  var isDark = document.documentElement.classList.contains('dark');
+                  var meta = document.querySelector('meta[name="theme-color"]');
+                  if (meta) meta.setAttribute('content', isDark ? dark : light);
+                }
+                sync();
+                new MutationObserver(sync).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+              })();
+
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
                   navigator.serviceWorker.register('/sw.js')
