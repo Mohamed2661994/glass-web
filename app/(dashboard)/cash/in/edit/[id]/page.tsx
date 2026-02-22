@@ -93,7 +93,9 @@ export default function EditCashInPage() {
         payload.amount = Number(amount);
         payload.remaining_amount = Number(amount) - Number(paidAmount);
       }
-      await api.put(`/cash-in/${id}`, payload);
+      // Backend doesn't support PUT → DELETE then re-create
+      await api.delete(`/cash-in/${id}`);
+      await api.post("/cash/in", payload);
       toast.success("تم حفظ التعديل");
       router.back();
     } catch {
