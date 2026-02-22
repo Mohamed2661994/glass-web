@@ -108,6 +108,10 @@ export default function ProductMovementPage() {
         },
       });
       setData(Array.isArray(res.data) ? res.data : []);
+      if (Array.isArray(res.data) && res.data.length > 0) {
+        console.log("🔍 Movement sample keys:", Object.keys(res.data[0]));
+        console.log("🔍 Movement sample row:", JSON.stringify(res.data[0]));
+      }
     } catch {
       setData([]);
     } finally {
