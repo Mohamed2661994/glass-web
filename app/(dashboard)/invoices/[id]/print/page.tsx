@@ -352,6 +352,12 @@ function InvoicePrintPage() {
     0,
   );
 
+  /** يعرض الرقم بكسور لو فيه، وبدون لو عدد صحيح */
+  const fmt = (n: number) => {
+    const val = Number(n);
+    return val % 1 === 0 ? val.toString() : parseFloat(val.toFixed(2)).toString();
+  };
+
   const formatPackage = (it: InvoiceItem) => {
     const raw = it.package ?? "";
     if (!raw) return "-";
@@ -858,10 +864,7 @@ th,td { padding:3px 4px; text-align:center; }
                 ? "جاري الطباعة..."
                 : `طباعة${copies > 1 ? ` (${copies} نسخ)` : ""}`}
             </button>
-            <button
-              className="btn-cancel"
-              onClick={() => window.close()}
-            >
+            <button className="btn-cancel" onClick={() => window.close()}>
               إلغاء
             </button>
           </div>
@@ -944,8 +947,8 @@ th,td { padding:3px 4px; text-align:center; }
                       ? -Math.abs(it.quantity)
                       : it.quantity;
                     const displayTotal = it.is_return
-                      ? -Math.abs(Math.round(calcItemTotal(it)))
-                      : Math.round(calcItemTotal(it));
+                      ? -Math.abs(calcItemTotal(it))
+                      : calcItemTotal(it);
                     return (
                       <tr
                         key={i}
@@ -975,9 +978,9 @@ th,td { padding:3px 4px; text-align:center; }
                         <td style={it.is_return ? { color: "red" } : undefined}>
                           {displayQty}
                         </td>
-                        <td>{Math.round(calcUnitPrice(it))}</td>
+                        <td>{fmt(calcUnitPrice(it))}</td>
                         <td style={it.is_return ? { color: "red" } : undefined}>
-                          {displayTotal}
+                          {fmt(displayTotal)}
                         </td>
                       </tr>
                     );
@@ -990,7 +993,7 @@ th,td { padding:3px 4px; text-align:center; }
                     <td></td>
                     <td>{totalQty}</td>
                     <td></td>
-                    <td>{Math.round(itemsSubtotal)}</td>
+                    <td>{fmt(itemsSubtotal)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -1001,23 +1004,23 @@ th,td { padding:3px 4px; text-align:center; }
                 style={{ fontSize: `${fontSize + 1}px` }}
               >
                 {previousBalance !== 0 && (
-                  <div>حساب سابق: {previousBalance.toFixed(2)}</div>
+                  <div>حساب سابق: {fmt(previousBalance)}</div>
                 )}
                 {extraDiscount > 0 && (
-                  <div>خصم : {extraDiscount.toFixed(2)}</div>
+                  <div>خصم : {fmt(extraDiscount)}</div>
                 )}
                 <div>
-                  <b>الصافي: {netTotal.toFixed(2)}</b>
+                  <b>الصافي: {fmt(netTotal)}</b>
                 </div>
                 {paidAmount !== 0 && (
-                  <div>المدفوع: {paidAmount.toFixed(2)}</div>
+                  <div>المدفوع: {fmt(paidAmount)}</div>
                 )}
                 {remaining !== 0 && (
                   <div
                     className="totals-remaining"
                     style={{ fontSize: `${fontSize + 3}px` }}
                   >
-                    <b>المتبقي: {remaining.toFixed(2)}</b>
+                    <b>المتبقي: {fmt(remaining)}</b>
                   </div>
                 )}
               </div>

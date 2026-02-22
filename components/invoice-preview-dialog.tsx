@@ -74,6 +74,12 @@ const formatPackage = (raw: string) => {
   return text;
 };
 
+/** يعرض الرقم بكسور لو فيه، وبدون لو عدد صحيح */
+const fmt = (n: number) => {
+  const val = Number(n);
+  return val % 1 === 0 ? val.toString() : parseFloat(val.toFixed(2)).toString();
+};
+
 /* ─────────── Component ─────────── */
 
 export function InvoicePreviewDialog({
@@ -347,7 +353,7 @@ export function InvoicePreviewDialog({
                 {items.map((it, i) => {
                   const unitPrice = isWholesale
                     ? Number(it.price)
-                    : Math.round(calcUnitPrice(it, false, applyDiscount));
+                    : calcUnitPrice(it, false, applyDiscount);
                   const itemTotal = calcItemTotal(
                     it,
                     isWholesale,
@@ -357,8 +363,8 @@ export function InvoicePreviewDialog({
                     ? -Math.abs(it.quantity)
                     : it.quantity;
                   const displayTotal = it.is_return
-                    ? -Math.abs(Math.round(itemTotal))
-                    : Math.round(itemTotal);
+                    ? -Math.abs(itemTotal)
+                    : itemTotal;
 
                   const tdStyle = (isReturn: boolean) => ({
                     borderBottom: "1px solid #ddd",
@@ -399,9 +405,9 @@ export function InvoicePreviewDialog({
                       </td>
                       <td style={tdStyle(!!it.is_return)}>{displayQty}</td>
                       <td style={tdStyle(!!it.is_return)}>
-                        {Math.round(unitPrice)}
+                        {fmt(unitPrice)}
                       </td>
-                      <td style={tdStyle(!!it.is_return)}>{displayTotal}</td>
+                      <td style={tdStyle(!!it.is_return)}>{fmt(displayTotal)}</td>
                     </tr>
                   );
                 })}
@@ -434,7 +440,7 @@ export function InvoicePreviewDialog({
                       color: printColor,
                     }}
                   >
-                    {Math.round(itemsSubtotal)}
+                    {fmt(itemsSubtotal)}
                   </td>
                 </tr>
               </tfoot>
@@ -456,20 +462,20 @@ export function InvoicePreviewDialog({
               }}
             >
               {previousBalance !== 0 && (
-                <div>حساب سابق: {previousBalance.toFixed(2)}</div>
+                <div>حساب سابق: {fmt(previousBalance)}</div>
               )}
 
-              {extraDiscount > 0 && <div>خصم : {extraDiscount.toFixed(2)}</div>}
+              {extraDiscount > 0 && <div>خصم : {fmt(extraDiscount)}</div>}
 
               <div>
-                <b>الصافي: {netTotal.toFixed(2)}</b>
+                <b>الصافي: {fmt(netTotal)}</b>
               </div>
 
-              {paidAmount !== 0 && <div>المدفوع: {paidAmount.toFixed(2)}</div>}
+              {paidAmount !== 0 && <div>المدفوع: {fmt(paidAmount)}</div>}
 
               {remaining !== 0 && (
                 <div style={{ fontSize: 13 }}>
-                  <b>المتبقي: {remaining.toFixed(2)}</b>
+                  <b>المتبقي: {fmt(remaining)}</b>
                 </div>
               )}
             </div>
