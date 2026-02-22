@@ -1154,6 +1154,7 @@ export default function CreateRetailInvoicePage() {
               <label className="text-sm mb-2 block">رقم الهاتف</label>
               <Input
                 value={customerPhone}
+                inputMode="tel"
                 placeholder="اكتب رقم التليفون..."
                 onChange={(e) => {
                   const v = e.target.value;
@@ -1236,6 +1237,7 @@ export default function CreateRetailInvoicePage() {
             </label>
             <Input
               ref={barcodeRef}
+              inputMode="numeric"
               placeholder="امسح الباركود أو اكتبه..."
               value={barcode}
               onChange={(e) => setBarcode(e.target.value)}

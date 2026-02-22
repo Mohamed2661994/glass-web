@@ -225,6 +225,7 @@ function VariantFormDialog({
           <div className="space-y-1">
             <div className="relative">
               <Input
+                inputMode="numeric"
                 placeholder="الباركود (اختياري)"
                 value={form.barcode}
                 onChange={(e) => setForm({ ...form, barcode: e.target.value })}

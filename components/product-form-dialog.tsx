@@ -407,6 +407,7 @@ export function ProductFormDialog({
           <div className="space-y-1">
             <div className="relative">
               <Input
+                inputMode="numeric"
                 placeholder="الباركود (اختياري)"
                 value={form.barcode}
                 onChange={(e) => setForm({ ...form, barcode: e.target.value })}
@@ -785,6 +786,7 @@ export function ProductFormDialog({
                   <div className="space-y-3">
                     {/* Barcode */}
                     <Input
+                      inputMode="numeric"
                       placeholder="باركود العبوة"
                       value={vf.barcode}
                       onChange={(e) =>

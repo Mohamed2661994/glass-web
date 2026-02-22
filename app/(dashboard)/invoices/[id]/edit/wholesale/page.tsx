@@ -718,6 +718,7 @@ export default function EditWholesaleInvoicePage() {
               <label className="text-sm mb-2 block">رقم الهاتف</label>
               <Input
                 value={customerPhone}
+                inputMode="tel"
                 onChange={(e) => setCustomerPhone(e.target.value)}
               />
             </div>

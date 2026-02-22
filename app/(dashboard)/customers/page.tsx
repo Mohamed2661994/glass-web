@@ -318,6 +318,7 @@ export default function CustomersPage() {
                   <div className="flex gap-2 mt-1">
                     <Input
                       value={newPhone}
+                      inputMode="tel"
                       onChange={(e) => setNewPhone(e.target.value)}
                       placeholder="رقم هاتف جديد..."
                       className="flex-1"

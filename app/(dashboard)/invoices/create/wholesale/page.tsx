@@ -902,6 +902,7 @@ export default function CreateWholesaleInvoicePage() {
               <label className="text-sm mb-2 block">رقم الهاتف</label>
               <Input
                 value={customerPhone}
+                inputMode="tel"
                 placeholder="اكتب رقم التليفون..."
                 onChange={(e) => {
                   const v = e.target.value;

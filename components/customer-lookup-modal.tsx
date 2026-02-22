@@ -384,6 +384,7 @@ export function CustomerLookupModal({ open, onOpenChange, onSelect }: Props) {
                   <div className="flex gap-2">
                     <Input
                       value={newPhone}
+                      inputMode="tel"
                       onChange={(e) => setNewPhone(e.target.value)}
                       placeholder="رقم هاتف جديد..."
                       className="flex-1"

@@ -791,6 +791,7 @@ export default function EditRetailInvoicePage() {
               <label className="text-sm mb-2 block">رقم الهاتف</label>
               <Input
                 value={customerPhone}
+                inputMode="tel"
                 onChange={(e) => setCustomerPhone(e.target.value)}
               />
             </div>
@@ -805,6 +806,7 @@ export default function EditRetailInvoicePage() {
             </label>
             <Input
               ref={barcodeRef}
+              inputMode="numeric"
               placeholder="امسح الباركود أو اكتبه..."
               value={barcode}
               onChange={(e) => setBarcode(e.target.value)}
