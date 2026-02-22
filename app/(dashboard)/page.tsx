@@ -709,18 +709,21 @@ export default function DashboardPage() {
   const branchId = user?.branch_id;
   const invoiceType = branchId === 1 ? "retail" : "wholesale";
 
-  // Trap "back" button on dashboard — prevent navigating away
+  // Trap "back" button on dashboard — prevent navigating away completely
   useEffect(() => {
-    // Push a dummy state so pressing back stays on dashboard
+    // Push a dummy state so pressing back hits our handler first
     window.history.pushState({ dashboard: true }, "", "/");
 
-    const handlePopState = () => {
-      // User pressed back — push state again to stay on dashboard
+    const handlePopState = (e: PopStateEvent) => {
+      // Stop Next.js router from processing this back navigation
+      e.stopImmediatePropagation();
+      // Push dashboard state back immediately before anything renders
       window.history.pushState({ dashboard: true }, "", "/");
     };
 
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
+    // Use capture phase to intercept BEFORE Next.js router handles it
+    window.addEventListener("popstate", handlePopState, true);
+    return () => window.removeEventListener("popstate", handlePopState, true);
   }, []);
 
   const [invoices, setInvoices] = useState<Invoice[]>([]);
