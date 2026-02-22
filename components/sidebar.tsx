@@ -283,9 +283,9 @@ export function Sidebar({
     <aside
       ref={sidebarRef}
       className={cn(
-        "h-screen flex-col border-l bg-background transition-all duration-300 sticky top-0",
-        isMobile ? "flex w-64" : "hidden lg:flex",
-        open ? "w-60" : "w-[72px]",
+        "flex-col bg-background transition-all duration-300",
+        isMobile ? "flex w-full h-full border-0" : "hidden lg:flex h-screen border-l sticky top-0",
+        !isMobile && (open ? "w-60" : "w-[72px]"),
       )}
     >
       {/* Header */}

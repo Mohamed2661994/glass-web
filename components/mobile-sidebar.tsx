@@ -23,7 +23,7 @@ export function MobileSidebar() {
         </Button>
       </SheetTrigger>
 
-      <SheetContent side="right" className="p-0 w-64">
+      <SheetContent side="right" className="p-0 w-64 border-l-0">
         <SheetHeader className="sr-only">
           <SheetTitle>Navigation Menu</SheetTitle>
         </SheetHeader>
