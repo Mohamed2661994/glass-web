@@ -16,6 +16,7 @@ import {
   Save,
   ArrowLeftRight,
   FileText,
+  ChevronDown,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -144,6 +145,7 @@ export default function CreateWholesaleInvoicePage() {
   const [refreshingProducts, setRefreshingProducts] = useState(false);
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [expandedItemUid, setExpandedItemUid] = useState<string | null>(null);
   const [editProduct, setEditProduct] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [pendingDuplicate, setPendingDuplicate] = useState<{
@@ -491,16 +493,19 @@ export default function CreateWholesaleInvoicePage() {
   /* Focus quantity input of last added item */
   useEffect(() => {
     if (lastAddedId !== null) {
+      setExpandedItemUid(lastAddedId);
       setTimeout(() => {
+        const isMobile = window.innerWidth < 768;
+        const attr = isMobile ? "data-mobile-quantity-id" : "data-quantity-id";
         const el = document.querySelector(
-          `[data-quantity-id="${lastAddedId}"]`,
+          `[${attr}="${lastAddedId}"]`,
         ) as HTMLInputElement;
         if (el) {
           el.focus();
           el.select();
         }
         setLastAddedId(null);
-      }, 100);
+      }, 200);
     }
   }, [lastAddedId]);
 
@@ -988,7 +993,8 @@ export default function CreateWholesaleInvoicePage() {
         </div>
 
         {items.length > 0 && (
-          <Card className="p-6">
+          <>
+          <Card className="p-6 hidden md:block">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-muted">
@@ -1169,6 +1175,248 @@ export default function CreateWholesaleInvoicePage() {
               </table>
             </div>
           </Card>
+
+          {/* Mobile item cards */}
+          <div className="md:hidden space-y-3">
+            {items.map((item, index) => {
+              const itemTotal = (() => {
+                const raw =
+                  Number(item.price) * (Number(item.quantity) || 0) -
+                  (Number(item.discount) || 0);
+                return item.is_return ? -raw : raw;
+              })();
+              const isExpanded = expandedItemUid === item.uid;
+
+              if (!isExpanded) {
+                return (
+                  <div
+                    key={item.uid}
+                    className="border rounded-xl p-3 cursor-pointer active:bg-muted/50 transition-colors"
+                    onClick={() => setExpandedItemUid(item.uid)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-xs text-muted-foreground font-mono w-5 text-center shrink-0">
+                          {index + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm truncate">
+                            {item.product_name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {item.package} × {item.quantity}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="font-semibold text-sm">
+                          {itemTotal} ج.م
+                        </span>
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <div
+                  key={item.uid}
+                  className="border rounded-xl p-4 space-y-3 shadow-sm ring-1 ring-primary/20"
+                >
+                  {/* Header */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm">
+                        {item.product_name} - {item.manufacturer}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.package} — كود: {item.product_id}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0 h-8 w-8"
+                      onClick={() => setExpandedItemUid(null)}
+                    >
+                      <ChevronDown className="h-4 w-4 rotate-180" />
+                    </Button>
+                  </div>
+
+                  {/* Price */}
+                  <div className="flex items-center justify-between bg-muted/50 rounded-lg px-3 py-2">
+                    <span className="text-xs text-muted-foreground">السعر</span>
+                    <span className="font-medium">{item.price} ج.م</span>
+                  </div>
+
+                  {/* Quantity + Discount */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">
+                        الكمية
+                      </label>
+                      <Input
+                        type="number"
+                        data-mobile-quantity-id={item.uid}
+                        className="text-center"
+                        value={item.quantity}
+                        onFocus={(e) => e.target.select()}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            const el = document.querySelector(
+                              `[data-mobile-discount-id="${item.uid}"]`,
+                            ) as HTMLInputElement;
+                            el?.focus();
+                            el?.select();
+                          }
+                        }}
+                        onChange={(e) =>
+                          setItems((prev) =>
+                            prev.map((i) =>
+                              i.uid === item.uid
+                                ? {
+                                    ...i,
+                                    quantity:
+                                      e.target.value === ""
+                                        ? ""
+                                        : Number(e.target.value),
+                                  }
+                                : i,
+                            ),
+                          )
+                        }
+                      />
+                      {(() => {
+                        const prod = products.find(
+                          (pr: any) => pr.id === item.product_id,
+                        );
+                        const avail = prod
+                          ? Number(prod.available_quantity)
+                          : null;
+                        return avail !== null &&
+                          Number(item.quantity) > avail ? (
+                          <div className="text-[11px] text-red-500">
+                            الرصيد: {avail}
+                          </div>
+                        ) : null;
+                      })()}
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">
+                        الخصم
+                      </label>
+                      <Input
+                        type="number"
+                        data-mobile-discount-id={item.uid}
+                        className="text-center"
+                        value={item.discount || 0}
+                        onFocus={(e) => e.target.select()}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            setExpandedItemUid(null);
+                            setShowProductModal(true);
+                          }
+                        }}
+                        onChange={(e) =>
+                          setItems((prev) =>
+                            prev.map((i) =>
+                              i.uid === item.uid
+                                ? {
+                                    ...i,
+                                    discount:
+                                      e.target.value === ""
+                                        ? 0
+                                        : Number(e.target.value),
+                                  }
+                                : i,
+                            ),
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  {/* Total */}
+                  <div className="flex items-center justify-between border-t pt-2">
+                    <span className="text-sm text-muted-foreground">
+                      الإجمالي
+                    </span>
+                    <span className="font-bold text-lg">{itemTotal} ج.م</span>
+                  </div>
+
+                  {/* Footer: Return + Delete */}
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={item.is_return || false}
+                        onCheckedChange={(checked) =>
+                          setItems((prev) =>
+                            prev.map((i) =>
+                              i.uid === item.uid
+                                ? { ...i, is_return: !!checked }
+                                : i,
+                            ),
+                          )
+                        }
+                      />
+                      مرتجع
+                    </label>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => {
+                          const prod = products.find(
+                            (p) => p.id === item.product_id,
+                          );
+                          if (prod) {
+                            setEditProduct(prod);
+                          }
+                        }}
+                      >
+                        <Pencil className="h-4 w-4 text-blue-600" />
+                      </Button>
+                      {confirmDeleteId === item.uid ? (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            removeItem(item.uid);
+                            setConfirmDeleteId(null);
+                          }}
+                        >
+                          متأكد؟
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => {
+                            setConfirmDeleteId(item.uid);
+                            setTimeout(
+                              () =>
+                                setConfirmDeleteId((prev) =>
+                                  prev === item.uid ? null : prev,
+                                ),
+                              2000,
+                            );
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          </>
         )}
 
         {items.length > 0 && (
