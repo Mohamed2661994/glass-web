@@ -97,8 +97,6 @@ function InvoicePrintPage() {
   const [showLogo, setShowLogo] = useState(true);
   const [showPhone, setShowPhone] = useState(true);
   const [isPrinting, setIsPrinting] = useState(false);
-  const [showSilentTip, setShowSilentTip] = useState(false);
-  const [silentCopied, setSilentCopied] = useState(false);
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const invoiceRef = useRef<HTMLDivElement>(null);
@@ -245,11 +243,15 @@ function InvoicePrintPage() {
       return;
     }
 
+    let printed = false;
+
     doc.open();
     doc.write(fullHtml);
     doc.close();
 
     iframe.onload = () => {
+      if (printed) return;
+      printed = true;
       setTimeout(() => {
         try {
           iframe.contentWindow?.print();
@@ -260,7 +262,10 @@ function InvoicePrintPage() {
       }, 300);
     };
 
+    // Fallback only if onload never fired
     setTimeout(() => {
+      if (printed) return;
+      printed = true;
       try {
         iframe.contentWindow?.print();
       } catch {}
@@ -826,66 +831,6 @@ th,td { padding:3px 4px; text-align:center; }
                 </div>
               </div>
             )}
-
-            <hr style={{ border: "none", borderTop: "1px solid #e2e8f0", margin: "12px 0" }} />
-
-            {/* طباعة مباشرة */}
-            <div className="setting-group">
-              <div
-                onClick={() => setShowSilentTip(!showSilentTip)}
-                style={{
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
-                  cursor: "pointer", padding: "8px 10px", borderRadius: 8,
-                  background: "#fef3c7", border: "1px solid #fbbf24",
-                }}
-              >
-                <span style={{ fontSize: 13, color: "#92400e", fontWeight: 600 }}>
-                  💡 طباعة مباشرة بدون dialog
-                </span>
-                <span style={{ fontSize: 18, color: "#92400e", transform: showSilentTip ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</span>
-              </div>
-              {showSilentTip && (
-                <div style={{
-                  marginTop: 8, padding: 12, borderRadius: 8,
-                  background: "#fffbeb", border: "1px solid #fde68a",
-                  fontSize: 12, lineHeight: 1.6, color: "#78350f",
-                }}>
-                  <p style={{ margin: "0 0 8px", fontWeight: 600 }}>لتفعيل الطباعة المباشرة بدون نافذة Windows:</p>
-                  <ol style={{ margin: "0 0 8px", paddingRight: 18 }}>
-                    <li>اعمل shortcut جديد لـ Chrome على سطح المكتب</li>
-                    <li>كليك يمين عليه → خصائص</li>
-                    <li>في خانة Target، ضيف في الآخر:</li>
-                  </ol>
-                  <div style={{
-                    display: "flex", alignItems: "center", gap: 6,
-                    background: "#1e293b", color: "#e2e8f0", padding: "6px 10px",
-                    borderRadius: 6, fontSize: 11, fontFamily: "monospace",
-                    direction: "ltr", marginBottom: 8,
-                  }}>
-                    <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      --kiosk-printing
-                    </span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigator.clipboard.writeText('--kiosk-printing');
-                        setSilentCopied(true);
-                        setTimeout(() => setSilentCopied(false), 2000);
-                      }}
-                      style={{
-                        background: "#475569", color: "#fff", border: "none",
-                        borderRadius: 4, padding: "3px 8px", fontSize: 11,
-                        cursor: "pointer", whiteSpace: "nowrap",
-                      }}
-                    >
-                      {silentCopied ? "✓ تم النسخ" : "نسخ"}
-                    </button>
-                  </div>
-                  <p style={{ margin: "0 0 4px" }}>4. افتح الموقع من الـ shortcut الجديد</p>
-                  <p style={{ margin: 0, fontSize: 11, color: "#a16207" }}>⚠️ كده أي طباعة هتروح مباشرة للطابعة الافتراضية</p>
-                </div>
-              )}
-            </div>
           </div>
 
           {/* أزرار */}
