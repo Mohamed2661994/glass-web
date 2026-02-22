@@ -82,7 +82,7 @@ export function Sidebar({
     if (savedSidebar) {
       if (savedSidebar.pinned !== undefined)
         setPinnedLocal(savedSidebar.pinned);
-      if (savedSidebar.openGroups) setOpenGroupsLocal(savedSidebar.openGroups);
+      // Groups always start closed — user opens them manually
     }
   }, [savedSidebar]);
 
@@ -139,18 +139,7 @@ export function Sidebar({
 
   // User data now comes from useAuth() context — no localStorage read needed
 
-  // Auto-open groups if current path is inside them (only if not already set by user prefs)
-  const autoOpenDone = useRef(false);
-  useEffect(() => {
-    if (autoOpenDone.current) return;
-    autoOpenDone.current = true;
-    if (pathname.startsWith("/cash")) {
-      setOpenGroupsLocal((prev) => ({ ...prev, الخزنة: true }));
-    }
-    if (pathname.startsWith("/reports")) {
-      setOpenGroupsLocal((prev) => ({ ...prev, التقارير: true }));
-    }
-  }, [pathname]);
+  // Groups always start closed — no auto-open
 
   const cashGroup: RouteGroup = {
     label: "الخزنة",
@@ -284,7 +273,9 @@ export function Sidebar({
       ref={sidebarRef}
       className={cn(
         "flex-col bg-background transition-all duration-300",
-        isMobile ? "flex w-full h-full border-0" : "hidden lg:flex h-screen border-l sticky top-0",
+        isMobile
+          ? "flex w-full h-full border-0"
+          : "hidden lg:flex h-screen border-l sticky top-0",
         !isMobile && (open ? "w-60" : "w-[72px]"),
       )}
     >
