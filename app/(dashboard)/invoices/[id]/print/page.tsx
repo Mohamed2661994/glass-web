@@ -4,16 +4,6 @@ import { Suspense, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import api from "@/services/api";
 
-const ROWS_PER_PAGE = 20;
-
-const chunkItems = <T,>(arr: T[], size: number): T[][] => {
-  const chunks: T[][] = [];
-  for (let i = 0; i < arr.length; i += size) {
-    chunks.push(arr.slice(i, i + size));
-  }
-  return chunks;
-};
-
 interface InvoiceItem {
   product_id: number;
   product_name: string;
@@ -109,8 +99,6 @@ function InvoicePrintPage() {
   /* ──────────── حسابات ──────────── */
 
   const items = invoice.items || [];
-  const pages = chunkItems(items, ROWS_PER_PAGE);
-  const totalPages = pages.length;
 
   const isWholesale = invoice.invoice_type === "wholesale";
 
@@ -180,17 +168,9 @@ body { background: #e5e5e5; font-family: Tahoma, Arial; }
 }
 .no-print button.primary { background: #000; color: #fff; border: none; }
 
-.spread {
-  display: flex;
-  gap: 20px;
-  justify-content: center;
-  align-items: flex-start;
-  margin: 20px;
-}
-
-.page {
+.invoice-wrap {
   width: 148mm;
-  min-height: 210mm;
+  margin: 20px auto;
   background: white;
   color: #000 !important;
   padding: 10mm;
@@ -199,7 +179,7 @@ body { background: #e5e5e5; font-family: Tahoma, Arial; }
   direction: rtl;
 }
 
-.page * { color: #000 !important; }
+.invoice-wrap * { color: #000 !important; }
 
 .invoice-header {
   display: flex;
@@ -231,48 +211,43 @@ td { border-bottom: 1px solid #ddd; }
 
 th, td { padding: 3px 4px; text-align: center; }
 
+.totals-section {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 2px solid #000;
+  width: 55%;
+  margin-left: 0;
+  margin-right: auto;
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.totals-remaining { font-size: 13px; }
+
 /* ===== إعدادات الورق ===== */
-@page { size: A5 portrait; margin: 0; }
+@page { size: A5 portrait; margin: 8mm; }
 
 /* ===== الطباعة ===== */
 @media print {
-  body * { visibility: hidden; }
-
-  .spread, .spread * { visibility: visible; }
-
   body { margin: 0; padding: 0; background: white; }
 
   .no-print { display: none !important; }
 
-  .spread {
-    display: block !important;
-    position: absolute;
-    top: 0;
-    left: 0;
+  .invoice-wrap {
     width: 100%;
     margin: 0;
     padding: 0;
-    gap: 0 !important;
-  }
-
-  .page {
-    display: block;
-    width: 148mm;
-    height: 210mm;
-    margin: 0 auto;
     box-shadow: none;
-    page-break-after: always;
-    break-after: page;
-    overflow: visible;
   }
 
-  .page:first-child { page-break-before: auto; break-before: auto; }
-  .page:last-child  { page-break-after: auto;  break-after: auto;  }
-
+  /* Let the browser auto-paginate */
   table { page-break-inside: auto; break-inside: auto; }
   tr    { page-break-inside: avoid; break-inside: avoid; }
   thead { display: table-header-group; }
   tfoot { display: table-footer-group; }
+
+  .totals-section { break-inside: avoid; }
 }
       `}</style>
 
@@ -284,170 +259,141 @@ th, td { padding: 3px 4px; text-align: center; }
         <button onClick={() => window.close()}>إغلاق</button>
       </div>
 
-      {/* ===== الصفحات ===== */}
-      <div className="spread">
-        {pages.map((pageItems, pageIndex) => {
-          const isLastPage = pageIndex === totalPages - 1;
-
-          return (
-            <div className="page" key={pageIndex}>
-              {/* ✅ HEADER – أول صفحة فقط */}
-              {pageIndex === 0 && (
-                <>
-                  <div className="invoice-header">
-                    {/* بيانات الفاتورة يمين */}
-                    <div className="invoice-info">
-                      <div>
-                        <b>رقم الفاتورة:</b> {invoice.id}
-                      </div>
-                      <div>
-                        <b>التاريخ:</b> {formattedDate}
-                      </div>
-                      <div>
-                        <b>العميل:</b> {invoice.customer_name || "نقدي"}
-                      </div>
-                      {invoice.customer_phone && (
-                        <div>
-                          <b>تليفون:</b> {invoice.customer_phone}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* اللوجو شمال */}
-                    <img
-                      src="/logo-dark.png"
-                      alt="Logo"
-                      style={{ width: 65 }}
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
-                    />
-                  </div>
-
-                  <hr
-                    style={{
-                      border: "none",
-                      borderTop: "2px solid #000",
-                      marginBottom: 10,
-                    }}
-                  />
-                </>
-              )}
-
-              {/* ===== جدول الأصناف ===== */}
-              <table>
-                <thead>
-                  <tr>
-                    <th>م</th>
-                    <th>الصنف</th>
-                    <th>العبوة</th>
-                    <th>الكمية</th>
-                    <th>السعر</th>
-                    <th>الإجمالي</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pageItems.map((it, i) => {
-                    const displayQty = it.is_return
-                      ? -Math.abs(it.quantity)
-                      : it.quantity;
-                    const displayTotal = it.is_return
-                      ? -Math.abs(Math.round(calcItemTotal(it)))
-                      : Math.round(calcItemTotal(it));
-
-                    return (
-                      <tr
-                        key={i}
-                        style={
-                          it.is_return
-                            ? { color: "red !important", background: "#fff5f5" }
-                            : undefined
-                        }
-                      >
-                        <td>{pageIndex * ROWS_PER_PAGE + i + 1}</td>
-                        <td>
-                          {it.product_name}
-                          {it.manufacturer ? ` - ${it.manufacturer}` : ""}
-                          {it.is_return && (
-                            <span
-                              style={{
-                                color: "red",
-                                fontSize: 10,
-                                marginRight: 4,
-                              }}
-                            >
-                              (مرتجع)
-                            </span>
-                          )}
-                        </td>
-                        <td>{formatPackage(it)}</td>
-                        <td style={it.is_return ? { color: "red" } : undefined}>
-                          {displayQty}
-                        </td>
-                        <td>{Math.round(calcUnitPrice(it))}</td>
-                        <td style={it.is_return ? { color: "red" } : undefined}>
-                          {displayTotal}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-
-                {isLastPage && (
-                  <tfoot>
-                    <tr style={{ fontWeight: "bold", background: "#fafafa" }}>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td>{totalQty}</td>
-                      <td></td>
-                      <td>{Math.round(itemsSubtotal)}</td>
-                    </tr>
-                  </tfoot>
-                )}
-              </table>
-
-              {/* ===== التوتالز – آخر صفحة فقط ===== */}
-              {isLastPage && (
-                <div
-                  style={{
-                    marginTop: 4,
-                    paddingTop: 4,
-                    borderTop: "2px solid #000",
-                    width: "55%",
-                    marginLeft: 0,
-                    marginRight: "auto",
-                    fontSize: 11,
-                    lineHeight: 1.5,
-                    textAlign: "left",
-                  }}
-                >
-                  {previousBalance !== 0 && (
-                    <div>حساب سابق: {previousBalance.toFixed(2)}</div>
-                  )}
-
-                  {extraDiscount > 0 && (
-                    <div>خصم : {extraDiscount.toFixed(2)}</div>
-                  )}
-
-                  <div>
-                    <b>الصافي: {netTotal.toFixed(2)}</b>
-                  </div>
-
-                  {paidAmount !== 0 && (
-                    <div>المدفوع: {paidAmount.toFixed(2)}</div>
-                  )}
-
-                  {remaining !== 0 && (
-                    <div style={{ fontSize: 13 }}>
-                      <b>المتبقي: {remaining.toFixed(2)}</b>
-                    </div>
-                  )}
-                </div>
-              )}
+      {/* ===== الفاتورة ===== */}
+      <div className="invoice-wrap">
+        {/* ✅ HEADER */}
+        <div className="invoice-header">
+          {/* بيانات الفاتورة يمين */}
+          <div className="invoice-info">
+            <div>
+              <b>رقم الفاتورة:</b> {invoice.id}
             </div>
-          );
-        })}
+            <div>
+              <b>التاريخ:</b> {formattedDate}
+            </div>
+            <div>
+              <b>العميل:</b> {invoice.customer_name || "نقدي"}
+            </div>
+            {invoice.customer_phone && (
+              <div>
+                <b>تليفون:</b> {invoice.customer_phone}
+              </div>
+            )}
+          </div>
+
+          {/* اللوجو شمال */}
+          <img
+            src="/logo-dark.png"
+            alt="Logo"
+            style={{ width: 65 }}
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+          />
+        </div>
+
+        <hr
+          style={{
+            border: "none",
+            borderTop: "2px solid #000",
+            marginBottom: 10,
+          }}
+        />
+
+        {/* ===== جدول الأصناف – جدول واحد، المتصفح يقسم تلقائي ===== */}
+        <table>
+          <thead>
+            <tr>
+              <th>م</th>
+              <th>الصنف</th>
+              <th>العبوة</th>
+              <th>الكمية</th>
+              <th>السعر</th>
+              <th>الإجمالي</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((it, i) => {
+              const displayQty = it.is_return
+                ? -Math.abs(it.quantity)
+                : it.quantity;
+              const displayTotal = it.is_return
+                ? -Math.abs(Math.round(calcItemTotal(it)))
+                : Math.round(calcItemTotal(it));
+
+              return (
+                <tr
+                  key={i}
+                  style={
+                    it.is_return
+                      ? { color: "red !important", background: "#fff5f5" }
+                      : undefined
+                  }
+                >
+                  <td>{i + 1}</td>
+                  <td>
+                    {it.product_name}
+                    {it.manufacturer ? ` - ${it.manufacturer}` : ""}
+                    {it.is_return && (
+                      <span
+                        style={{
+                          color: "red",
+                          fontSize: 10,
+                          marginRight: 4,
+                        }}
+                      >
+                        (مرتجع)
+                      </span>
+                    )}
+                  </td>
+                  <td>{formatPackage(it)}</td>
+                  <td style={it.is_return ? { color: "red" } : undefined}>
+                    {displayQty}
+                  </td>
+                  <td>{Math.round(calcUnitPrice(it))}</td>
+                  <td style={it.is_return ? { color: "red" } : undefined}>
+                    {displayTotal}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr style={{ fontWeight: "bold", background: "#fafafa" }}>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td>{totalQty}</td>
+              <td></td>
+              <td>{Math.round(itemsSubtotal)}</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        {/* ===== التوتالز ===== */}
+        <div className="totals-section">
+          {previousBalance !== 0 && (
+            <div>حساب سابق: {previousBalance.toFixed(2)}</div>
+          )}
+
+          {extraDiscount > 0 && (
+            <div>خصم : {extraDiscount.toFixed(2)}</div>
+          )}
+
+          <div>
+            <b>الصافي: {netTotal.toFixed(2)}</b>
+          </div>
+
+          {paidAmount !== 0 && (
+            <div>المدفوع: {paidAmount.toFixed(2)}</div>
+          )}
+
+          {remaining !== 0 && (
+            <div className="totals-remaining">
+              <b>المتبقي: {remaining.toFixed(2)}</b>
+            </div>
+          )}
+        </div>
       </div>
     </>
   );
