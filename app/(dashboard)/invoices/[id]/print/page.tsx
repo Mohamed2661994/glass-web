@@ -58,6 +58,19 @@ function InvoicePrintPage() {
   const [invoice, setInvoice] = useState<InvoiceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [printBold, setPrintBold] = useState(false);
+  const [printColor, setPrintColor] = useState("#000000");
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("appSettings");
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s.printBold !== undefined) setPrintBold(s.printBold);
+        if (s.printColor) setPrintColor(s.printColor);
+      }
+    } catch {}
+  }, []);
 
   useEffect(() => {
     const fetchInvoice = async () => {
@@ -172,14 +185,15 @@ body { background: #e5e5e5; font-family: Tahoma, Arial; }
   width: 148mm;
   margin: 20px auto;
   background: white;
-  color: #000 !important;
+  color: ${printColor} !important;
   padding: 10mm;
   box-shadow: 0 0 15px rgba(0,0,0,0.15);
   box-sizing: border-box;
   direction: rtl;
+  ${printBold ? 'font-weight: bold;' : ''}
 }
 
-.invoice-wrap * { color: #000 !important; }
+.invoice-wrap * { color: ${printColor} !important; }
 
 .invoice-header {
   display: flex;
@@ -204,7 +218,7 @@ table {
 th {
   background: #f3f3f3;
   font-weight: bold;
-  border-bottom: 2px solid #000;
+  border-bottom: 2px solid ${printColor};
 }
 
 td { border-bottom: 1px solid #ddd; }
@@ -214,7 +228,7 @@ th, td { padding: 3px 4px; text-align: center; }
 .totals-section {
   margin-top: 4px;
   padding-top: 4px;
-  border-top: 2px solid #000;
+  border-top: 2px solid ${printColor};
   width: 55%;
   margin-left: 0;
   margin-right: auto;

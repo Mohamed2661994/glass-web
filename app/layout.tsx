@@ -68,6 +68,16 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
+              // Select all text on focus for input/textarea fields
+              document.addEventListener('focusin', function(e) {
+                var t = e.target;
+                if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) {
+                  var type = (t.getAttribute('type') || '').toLowerCase();
+                  if (type === 'checkbox' || type === 'radio' || type === 'file' || type === 'range' || type === 'color') return;
+                  setTimeout(function() { try { t.select(); } catch(e) {} }, 0);
+                }
+              });
+
               // Sync theme-color meta with class-based theme
               (function() {
                 var light = '#ffffff', dark = '#0a0a0a';

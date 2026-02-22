@@ -19,6 +19,7 @@ import {
   ArrowLeftRight,
   FileText,
   ChevronDown,
+  Eye,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -66,6 +67,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { InvoicePreviewDialog } from "@/components/invoice-preview-dialog";
 
 /* =========================================================
    Main Component
@@ -93,6 +95,7 @@ export default function CreateRetailInvoicePage() {
   const [showSavedModal, setShowSavedModal] = useState(false);
   const [journalPosted, setJournalPosted] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewBeforeSaveOpen, setPreviewBeforeSaveOpen] = useState(false);
 
   /* previous invoices modal */
   const [prevInvoicesOpen, setPrevInvoicesOpen] = useState(false);
@@ -288,7 +291,7 @@ export default function CreateRetailInvoicePage() {
       if (draft.customerName) setCustomerName(draft.customerName);
       if (draft.customerPhone) setCustomerPhone(draft.customerPhone);
       if (draft.customerId) setCustomerId(draft.customerId);
-      if (draft.previousBalance) setPreviousBalance(draft.previousBalance);
+      if (draft.previousBalance != null) setPreviousBalance(draft.previousBalance);
       if (draft.extraDiscount) setExtraDiscount(draft.extraDiscount);
       if (draft.paidAmount) setPaidAmount(draft.paidAmount);
       if (draft.applyItemsDiscount !== undefined)
@@ -588,7 +591,8 @@ export default function CreateRetailInvoicePage() {
         params: { invoice_type: "retail" },
       });
 
-      setPreviousBalance(String(res.data.balance || 0));
+      const bal = res.data?.balance;
+      setPreviousBalance(String(bal != null ? bal : 0));
     } catch {
       setPreviousBalance("0");
     }
@@ -841,7 +845,7 @@ export default function CreateRetailInvoicePage() {
         final_total: finalTotal,
         items,
         paid_amount: Number(paidAmount) || 0,
-        previous_balance: Number(previousBalance) || 0,
+        previous_balance: Number(previousBalance) ?? 0,
         apply_items_discount: applyItemsDiscount,
         created_by: user?.id,
         created_by_name: user?.username,
@@ -1948,23 +1952,62 @@ export default function CreateRetailInvoicePage() {
               <span />
             </div>
 
-            <Button
-              onClick={saveInvoice}
-              className="w-full"
-              size="lg"
-              disabled={saving}
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="h-4 w-4 ml-2 animate-spin" /> جارٍ
-                  الحفظ...
-                </>
-              ) : (
-                "حفظ الفاتورة"
-              )}
-            </Button>
+            <div className="flex gap-2 w-full">
+              <Button
+                onClick={saveInvoice}
+                className="flex-1"
+                size="lg"
+                disabled={saving}
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 ml-2 animate-spin" /> جارٍ
+                    الحفظ...
+                  </>
+                ) : (
+                  "حفظ الفاتورة"
+                )}
+              </Button>
+              <Button
+                variant="secondary"
+                size="lg"
+                disabled={saving || items.length === 0}
+                onClick={() => setPreviewBeforeSaveOpen(true)}
+              >
+                <Eye className="h-4 w-4 ml-1" />
+                معاينة
+              </Button>
+            </div>
           </Card>
         )}
+
+        {/* ===== مودل المعاينة قبل الحفظ ===== */}
+        <InvoicePreviewDialog
+          open={previewBeforeSaveOpen}
+          onOpenChange={setPreviewBeforeSaveOpen}
+          data={{
+            invoiceType: "retail",
+            movementType,
+            invoiceDate,
+            customerName: customerName || "نقدي",
+            customerPhone,
+            items: items.map((it: any) => ({
+              product_name: it.product_name,
+              manufacturer: it.manufacturer,
+              package: it.package,
+              price: Number(it.price),
+              quantity: Number(it.quantity),
+              discount: Number(it.discount) || 0,
+              is_return: it.is_return,
+            })),
+            applyItemsDiscount: applyItemsDiscount,
+            extraDiscount: Number(extraDiscount) || 0,
+            previousBalance: Number(previousBalance) ?? 0,
+            paidAmount: Number(paidAmount) || 0,
+          }}
+          onSave={saveInvoice}
+          saving={saving}
+        />
 
         {/* ===== مودل تم الحفظ ===== */}
         <Dialog open={showSavedModal} onOpenChange={setShowSavedModal}>

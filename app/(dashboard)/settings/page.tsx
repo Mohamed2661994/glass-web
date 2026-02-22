@@ -168,6 +168,8 @@ export default function SettingsPage() {
   /* ---- Print settings state ---- */
   const [autoPrint, setAutoPrint] = useState(true);
   const [showCompanyHeader, setShowCompanyHeader] = useState(true);
+  const [printBold, setPrintBold] = useState(false);
+  const [printColor, setPrintColor] = useState("#000000");
 
   /* ---- Notifications state ---- */
   const [notifSound, setNotifSound] = useState(true);
@@ -209,6 +211,8 @@ export default function SettingsPage() {
         if (s.autoPrint !== undefined) setAutoPrint(s.autoPrint);
         if (s.showCompanyHeader !== undefined)
           setShowCompanyHeader(s.showCompanyHeader);
+        if (s.printBold !== undefined) setPrintBold(s.printBold);
+        if (s.printColor !== undefined) setPrintColor(s.printColor);
         if (s.notifSound !== undefined) setNotifSound(s.notifSound);
         if (s.notifTransfers !== undefined) setNotifTransfers(s.notifTransfers);
       } catch {
@@ -218,7 +222,7 @@ export default function SettingsPage() {
   }, []);
 
   /* ---- Save settings to localStorage ---- */
-  const saveSettings = useCallback((partial: Record<string, boolean>) => {
+  const saveSettings = useCallback((partial: Record<string, boolean | string>) => {
     const current = localStorage.getItem("appSettings");
     const existing = current ? JSON.parse(current) : {};
     const updated = { ...existing, ...partial };
@@ -504,6 +508,79 @@ export default function SettingsPage() {
                   saveSettings({ showCompanyHeader: v });
                 }}
               />
+            </div>
+            <Separator />
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">خط عريض (Bold)</p>
+                <p className="text-xs text-muted-foreground">
+                  جعل نص الفاتورة بخط عريض عند الطباعة
+                </p>
+              </div>
+              <Switch
+                checked={printBold}
+                onCheckedChange={(v) => {
+                  setPrintBold(v);
+                  saveSettings({ printBold: v });
+                }}
+              />
+            </div>
+            <Separator />
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <p className="text-sm font-medium">لون الخط</p>
+                  <p className="text-xs text-muted-foreground">
+                    تغيير لون النص في الفاتورة المطبوعة
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-8 h-8 rounded-lg border-2 border-border"
+                    style={{ backgroundColor: printColor }}
+                  />
+                  <input
+                    type="color"
+                    value={printColor}
+                    onChange={(e) => {
+                      setPrintColor(e.target.value);
+                      saveSettings({ printColor: e.target.value });
+                    }}
+                    className="w-8 h-8 cursor-pointer rounded border-0 p-0 bg-transparent"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {[
+                  { color: "#000000", label: "أسود" },
+                  { color: "#1a1a2e", label: "كحلي غامق" },
+                  { color: "#2563eb", label: "أزرق" },
+                  { color: "#16a34a", label: "أخضر" },
+                  { color: "#dc2626", label: "أحمر" },
+                  { color: "#7c3aed", label: "بنفسجي" },
+                  { color: "#b45309", label: "بني" },
+                  { color: "#475569", label: "رمادي" },
+                ].map((c) => (
+                  <button
+                    key={c.color}
+                    title={c.label}
+                    onClick={() => {
+                      setPrintColor(c.color);
+                      saveSettings({ printColor: c.color });
+                    }}
+                    className={`w-8 h-8 rounded-full border-2 transition-all ${
+                      printColor === c.color
+                        ? "border-primary scale-110 ring-2 ring-primary/30"
+                        : "border-transparent hover:border-muted-foreground/40"
+                    }`}
+                    style={{ backgroundColor: c.color }}
+                  >
+                    {printColor === c.color && (
+                      <Check className="h-4 w-4 mx-auto text-white" />
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </SectionCard>

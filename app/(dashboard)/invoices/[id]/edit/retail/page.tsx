@@ -7,7 +7,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/services/api";
-import { Trash2, Loader2, Pencil, RefreshCw, ChevronDown } from "lucide-react";
+import { Trash2, Loader2, Pencil, RefreshCw, ChevronDown, ArrowLeftRight } from "lucide-react";
+import { QuickTransferModal } from "@/components/quick-transfer-modal";
 import { useCachedProducts } from "@/hooks/use-cached-products";
 import { highlightText } from "@/lib/highlight-text";
 import { multiWordMatch, multiWordScore } from "@/lib/utils";
@@ -79,6 +80,7 @@ export default function EditRetailInvoicePage() {
   const [items, setItems] = useState<any[]>([]);
   const [originalItems, setOriginalItems] = useState<any[]>([]);
   const [showProductModal, setShowProductModal] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
   const [search, setSearch] = useState("");
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [refreshingProducts, setRefreshingProducts] = useState(false);
@@ -298,7 +300,8 @@ export default function EditRetailInvoicePage() {
         params: { invoice_type: "retail" },
       });
 
-      setPreviousBalance(String(res.data.balance || 0));
+      const bal = res.data?.balance;
+      setPreviousBalance(String(bal != null ? bal : 0));
     } catch {
       setPreviousBalance("0");
     }
@@ -475,7 +478,7 @@ export default function EditRetailInvoicePage() {
         final_total: finalTotal,
         items,
         paid_amount: Number(paidAmount) || 0,
-        previous_balance: Number(previousBalance) || 0,
+        previous_balance: Number(previousBalance) ?? 0,
         apply_items_discount: applyItemsDiscount,
         updated_by: user?.id,
         updated_by_name: user?.username,
@@ -835,9 +838,21 @@ export default function EditRetailInvoicePage() {
           </div>
         </Card>
 
-        <Button onClick={() => setShowProductModal(true)} className="w-full">
-          + إضافة صنف
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setShowProductModal(true)} className="flex-1">
+            + إضافة صنف
+          </Button>
+          {user?.branch_id === 1 && (
+            <Button
+              variant="outline"
+              className="gap-1.5 shrink-0"
+              onClick={() => setShowTransferModal(true)}
+            >
+              <ArrowLeftRight className="h-4 w-4" />
+              تحويل للمعرض
+            </Button>
+          )}
+        </div>
 
         {items.length > 0 && (
           <>
@@ -1657,6 +1672,14 @@ export default function EditRetailInvoicePage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        {/* Quick Transfer Modal */}
+        <QuickTransferModal
+          open={showTransferModal}
+          onOpenChange={setShowTransferModal}
+          onTransferComplete={() => {
+            refreshProducts();
+          }}
+        />
       </div>
     </div>
   );
