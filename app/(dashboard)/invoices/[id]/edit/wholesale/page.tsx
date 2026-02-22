@@ -351,9 +351,11 @@ export default function EditWholesaleInvoicePage() {
     return totalBeforeDiscount - (Number(extraDiscount) || 0);
   }, [totalBeforeDiscount, extraDiscount]);
 
-  const totalWithPrevious = Math.round((finalTotal + Number(previousBalance || 0)) * 100) / 100;
+  const totalWithPrevious =
+    Math.round((finalTotal + Number(previousBalance || 0)) * 100) / 100;
 
-  const remaining = Math.round((totalWithPrevious - (Number(paidAmount) || 0)) * 100) / 100;
+  const remaining =
+    Math.round((totalWithPrevious - (Number(paidAmount) || 0)) * 100) / 100;
 
   /* =========================================================
      1️⃣3️⃣ Update Invoice

@@ -300,7 +300,9 @@ export default function ProductMovementPage() {
                       <TableHead className="text-center">التاريخ</TableHead>
                       <TableHead className="text-center">المخزن</TableHead>
                       <TableHead className="text-center">النوع</TableHead>
-                      <TableHead className="text-center">رقم الفاتورة</TableHead>
+                      <TableHead className="text-center">
+                        رقم الفاتورة
+                      </TableHead>
                       <TableHead className="text-center">الكمية</TableHead>
                       <TableHead className="text-center">العبوة</TableHead>
                       <TableHead className="text-center">الطرف</TableHead>
@@ -398,7 +400,11 @@ export default function ProductMovementPage() {
               إجمالي الصادر: {totalOut.toLocaleString()}
             </span>
             <span className="text-muted-foreground">—</span>
-            <span className={totalIn - totalOut >= 0 ? "text-green-600" : "text-red-600"}>
+            <span
+              className={
+                totalIn - totalOut >= 0 ? "text-green-600" : "text-red-600"
+              }
+            >
               الرصيد الفعلي: {(totalIn - totalOut).toLocaleString()}
             </span>
           </div>

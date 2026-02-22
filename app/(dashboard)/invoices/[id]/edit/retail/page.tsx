@@ -428,9 +428,11 @@ export default function EditRetailInvoicePage() {
     return totalBeforeDiscount - (Number(extraDiscount) || 0);
   }, [totalBeforeDiscount, extraDiscount]);
 
-  const totalWithPrevious = Math.round((finalTotal + Number(previousBalance || 0)) * 100) / 100;
+  const totalWithPrevious =
+    Math.round((finalTotal + Number(previousBalance || 0)) * 100) / 100;
 
-  const remaining = Math.round((totalWithPrevious - (Number(paidAmount) || 0)) * 100) / 100;
+  const remaining =
+    Math.round((totalWithPrevious - (Number(paidAmount) || 0)) * 100) / 100;
 
   /* =========================================================
      1️⃣3️⃣ Update Invoice
@@ -497,6 +499,7 @@ export default function EditRetailInvoicePage() {
       invalidateCache();
       window.location.reload();
     } catch (err: any) {
+      console.error("❌ Invoice update error:", err.response?.status, err.response?.data);
       toast.error(err.response?.data?.error || "فشل التعديل");
     } finally {
       setSaving(false);
