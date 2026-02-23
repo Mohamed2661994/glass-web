@@ -1234,7 +1234,10 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                   }
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
+                  // On mobile/touch devices, Enter = new line. On desktop, Enter = send, Shift+Enter = new line.
+                  const isMobile =
+                    "ontouchstart" in window || navigator.maxTouchPoints > 0;
+                  if (e.key === "Enter" && !e.shiftKey && !isMobile) {
                     e.preventDefault();
                     handleSend();
                   }

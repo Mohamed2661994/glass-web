@@ -161,7 +161,16 @@ function InvoicePrintPage() {
         localStorage.setItem("printSettings", JSON.stringify(next));
       } catch {}
     },
-    [copies, paperSize, orientation, margins, fontSize, showLogo, showPhone, fontFamily],
+    [
+      copies,
+      paperSize,
+      orientation,
+      margins,
+      fontSize,
+      showLogo,
+      showPhone,
+      fontFamily,
+    ],
   );
 
   /* ──── تحميل الفاتورة ──── */
@@ -729,7 +738,11 @@ th,td { padding:3px 4px; text-align:center; }
                   }}
                 >
                   {FONT_OPTIONS.map((f) => (
-                    <option key={f.value} value={f.value} style={{ fontFamily: f.value }}>
+                    <option
+                      key={f.value}
+                      value={f.value}
+                      style={{ fontFamily: f.value }}
+                    >
                       {f.label}
                     </option>
                   ))}
