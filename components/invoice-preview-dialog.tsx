@@ -50,8 +50,7 @@ const calcItemTotal = (
   isWholesale: boolean,
   applyItemsDiscount: boolean,
 ) => {
-  if (!applyItemsDiscount)
-    return Number(it.price) * Number(it.quantity || 0);
+  if (!applyItemsDiscount) return Number(it.price) * Number(it.quantity || 0);
   if (isWholesale) {
     return (
       Number(it.price) * Number(it.quantity || 0) - Number(it.discount || 0)
@@ -340,7 +339,11 @@ export function InvoicePreviewDialog({
               </thead>
               <tbody>
                 {items.map((it, i) => {
-                  const unitPrice = calcUnitPrice(it, isWholesale, applyDiscount);
+                  const unitPrice = calcUnitPrice(
+                    it,
+                    isWholesale,
+                    applyDiscount,
+                  );
                   const itemTotal = calcItemTotal(
                     it,
                     isWholesale,

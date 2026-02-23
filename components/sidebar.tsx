@@ -27,6 +27,7 @@ import {
   PackagePlus,
   Factory,
   ShieldOff,
+  Store,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -186,6 +187,7 @@ export function Sidebar({
     { label: "الاصناف", icon: Package, href: "/products" },
     { label: "المصانع", icon: Factory, href: "/manufacturers" },
     { label: "العملاء", icon: Users, href: "/customers" },
+    { label: "الموردين", icon: Store, href: "/suppliers" },
     { label: "قائمة الفواتير", icon: ClipboardList, href: "/invoices" },
     ...(branchId === 1
       ? [

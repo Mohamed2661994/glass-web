@@ -71,6 +71,14 @@ export default function EditRetailInvoicePage() {
   const [customerId, setCustomerId] = useState<number | null>(null);
   const [previousBalance, setPreviousBalance] = useState("0");
 
+  /* Supplier fields (purchase only) */
+  const [supplierName, setSupplierName] = useState("");
+  const [supplierPhone, setSupplierPhone] = useState("");
+  const [supplierSuggestions, setSupplierSuggestions] = useState<any[]>([]);
+  const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
+  const [highlightedSupplierIndex, setHighlightedSupplierIndex] = useState(-1);
+  const supplierDropdownRef = useRef<HTMLDivElement>(null);
+
   /* =========================================================
      2️⃣ Customer Search States
      ========================================================= */
@@ -140,6 +148,8 @@ export default function EditRetailInvoicePage() {
         );
         setCustomerName(inv.customer_name || "");
         setCustomerPhone(inv.customer_phone || "");
+        setSupplierName(inv.supplier_name || "");
+        setSupplierPhone(inv.supplier_phone || "");
         setPreviousBalance(String(inv.previous_balance || 0));
         setExtraDiscount(String(inv.extra_discount || 0));
         setPaidAmount(String(inv.paid_amount || 0));
@@ -283,6 +293,23 @@ export default function EditRetailInvoicePage() {
     }
   };
 
+  /* Supplier search & select */
+  const searchSuppliers = async (q: string) => {
+    if (q.trim().length < 2) { setSupplierSuggestions([]); setShowSupplierDropdown(false); return; }
+    try {
+      const { data } = await api.get("/suppliers/search", { params: { q: q.trim() } });
+      setSupplierSuggestions(Array.isArray(data) ? data : []);
+      setShowSupplierDropdown(data.length > 0);
+      setHighlightedSupplierIndex(-1);
+    } catch { setSupplierSuggestions([]); setShowSupplierDropdown(false); }
+  };
+  const selectSupplier = (s: any) => {
+    setSupplierName(s.name);
+    setSupplierPhone(s.phone || "");
+    setShowSupplierDropdown(false);
+    setSupplierSuggestions([]);
+  };
+
   /* Close dropdowns on outside click */
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -291,6 +318,12 @@ export default function EditRetailInvoicePage() {
         !nameDropdownRef.current.contains(e.target as Node)
       ) {
         setShowNameDropdown(false);
+      }
+      if (
+        supplierDropdownRef.current &&
+        !supplierDropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowSupplierDropdown(false);
       }
     };
     document.addEventListener("mousedown", handleClick);
@@ -491,6 +524,7 @@ export default function EditRetailInvoicePage() {
         apply_items_discount: applyItemsDiscount,
         updated_by: user?.id,
         updated_by_name: user?.username,
+        ...(movementType === "purchase" && supplierName ? { supplier_name: supplierName, supplier_phone: supplierPhone || null } : {}),
       });
 
       // Backend handles cash_in sync in the PUT transaction
@@ -748,6 +782,80 @@ export default function EditRetailInvoicePage() {
             </div>
           </div>
         </Card>
+
+        {movementType === "purchase" && (
+          <Card className="p-4">
+            <h3 className="font-semibold mb-3 text-sm">بيانات المورد</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="relative" ref={supplierDropdownRef}>
+                <label className="text-sm mb-2 block">اسم المورد</label>
+                <Input
+                  value={supplierName}
+                  placeholder="اكتب اسم المورد..."
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setSupplierName(v);
+                    if (v.trim().length >= 2) {
+                      searchSuppliers(v);
+                    } else {
+                      setSupplierSuggestions([]);
+                      setShowSupplierDropdown(false);
+                    }
+                  }}
+                  onFocus={() => {
+                    if (supplierSuggestions.length > 0) setShowSupplierDropdown(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (!showSupplierDropdown || supplierSuggestions.length === 0) return;
+                    if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      setHighlightedSupplierIndex((prev) =>
+                        prev < supplierSuggestions.length - 1 ? prev + 1 : 0
+                      );
+                    } else if (e.key === "ArrowUp") {
+                      e.preventDefault();
+                      setHighlightedSupplierIndex((prev) =>
+                        prev > 0 ? prev - 1 : supplierSuggestions.length - 1
+                      );
+                    } else if (e.key === "Enter" && highlightedSupplierIndex >= 0) {
+                      e.preventDefault();
+                      selectSupplier(supplierSuggestions[highlightedSupplierIndex]);
+                      setHighlightedSupplierIndex(-1);
+                    } else if (e.key === "Escape") {
+                      setShowSupplierDropdown(false);
+                      setHighlightedSupplierIndex(-1);
+                    }
+                  }}
+                />
+                {showSupplierDropdown && supplierSuggestions.length > 0 && (
+                  <div className="absolute z-50 top-full mt-1 w-full bg-popover border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {supplierSuggestions.map((s: any, idx: number) => (
+                      <div
+                        key={s.id}
+                        className={`px-3 py-2 cursor-pointer text-sm ${idx === highlightedSupplierIndex ? "bg-muted" : "hover:bg-muted"}`}
+                        onClick={() => selectSupplier(s)}
+                      >
+                        <span className="font-medium">{s.name}</span>
+                        {s.phone && (
+                          <span className="text-muted-foreground mr-2">({s.phone})</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="text-sm mb-2 block">رقم هاتف المورد</label>
+                <Input
+                  value={supplierPhone}
+                  inputMode="tel"
+                  placeholder="رقم هاتف المورد..."
+                  onChange={(e) => setSupplierPhone(e.target.value)}
+                />
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* ===== Barcode Scanner ===== */}
         <Card className="p-4">

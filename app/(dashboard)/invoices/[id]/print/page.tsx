@@ -337,11 +337,12 @@ function InvoicePrintPage() {
   };
 
   const calcItemTotal = (it: InvoiceItem) => {
-    if (!applyDiscount)
-      return Number(it.price) * Number(it.quantity || 0);
+    if (!applyDiscount) return Number(it.price) * Number(it.quantity || 0);
     if (isWholesale) {
       // wholesale: total = price * qty - discount (flat)
-      return Number(it.price) * Number(it.quantity || 0) - Number(it.discount || 0);
+      return (
+        Number(it.price) * Number(it.quantity || 0) - Number(it.discount || 0)
+      );
     }
     // retail: total = (price - discount) * qty
     return calcUnitPrice(it) * Number(it.quantity || 0);
