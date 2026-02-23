@@ -553,7 +553,7 @@ export default function CreateWholesaleInvoicePage() {
     return items.reduce((sum, item) => {
       const raw =
         Number(item.price) * (Number(item.quantity) || 0) -
-        (applyItemsDiscount ? (Number(item.discount) || 0) : 0);
+        (applyItemsDiscount ? Number(item.discount) || 0 : 0);
       return sum + (item.is_return ? -raw : raw);
     }, 0);
   }, [items, applyItemsDiscount]);
@@ -601,11 +601,7 @@ export default function CreateWholesaleInvoicePage() {
     setSaving(true);
     try {
       const itemsDiscount = applyItemsDiscount
-        ? items.reduce(
-            (sum, item) =>
-              sum + (Number(item.discount) || 0),
-            0,
-          )
+        ? items.reduce((sum, item) => sum + (Number(item.discount) || 0), 0)
         : 0;
 
       const res = await api.post("/invoices", {
@@ -1145,7 +1141,9 @@ export default function CreateWholesaleInvoicePage() {
                             const raw =
                               Number(item.price) *
                                 (Number(item.quantity) || 0) -
-                              (applyItemsDiscount ? (Number(item.discount) || 0) : 0);
+                              (applyItemsDiscount
+                                ? Number(item.discount) || 0
+                                : 0);
                             return item.is_return ? -raw : raw;
                           })()}
                         </td>
@@ -1223,7 +1221,7 @@ export default function CreateWholesaleInvoicePage() {
                 const itemTotal = (() => {
                   const raw =
                     Number(item.price) * (Number(item.quantity) || 0) -
-                    (applyItemsDiscount ? (Number(item.discount) || 0) : 0);
+                    (applyItemsDiscount ? Number(item.discount) || 0 : 0);
                   return item.is_return ? -raw : raw;
                 })();
                 const isExpanded = expandedItemUid === item.uid;

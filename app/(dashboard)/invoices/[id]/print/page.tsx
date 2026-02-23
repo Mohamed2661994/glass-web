@@ -323,13 +323,27 @@ function InvoicePrintPage() {
   const items = invoice.items || [];
   const isWholesale = invoice.invoice_type === "wholesale";
 
-  const calcUnitPrice = (it: InvoiceItem) =>
-    isWholesale || invoice.apply_items_discount
-      ? Number(it.price) - Number(it.discount || 0)
-      : Number(it.price);
+  const calcUnitPrice = (it: InvoiceItem) => {
+    if (!invoice.apply_items_discount) return Number(it.price);
+    if (isWholesale) {
+      // wholesale: discount is total flat → unit price = (price*qty - discount) / qty
+      const qty = Number(it.quantity || 0) || 1;
+      return (Number(it.price) * qty - Number(it.discount || 0)) / qty;
+    }
+    // retail: discount is per-unit
+    return Number(it.price) - Number(it.discount || 0);
+  };
 
-  const calcItemTotal = (it: InvoiceItem) =>
-    calcUnitPrice(it) * Number(it.quantity || 0);
+  const calcItemTotal = (it: InvoiceItem) => {
+    if (!invoice.apply_items_discount)
+      return Number(it.price) * Number(it.quantity || 0);
+    if (isWholesale) {
+      // wholesale: total = price * qty - discount (flat)
+      return Number(it.price) * Number(it.quantity || 0) - Number(it.discount || 0);
+    }
+    // retail: total = (price - discount) * qty
+    return calcUnitPrice(it) * Number(it.quantity || 0);
+  };
 
   const itemsSubtotal = items.reduce(
     (sum, it) =>

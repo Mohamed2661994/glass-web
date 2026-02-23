@@ -37,9 +37,12 @@ const calcUnitPrice = (
   isWholesale: boolean,
   applyItemsDiscount: boolean,
 ) => {
-  if (isWholesale || applyItemsDiscount)
-    return Number(it.price) - Number(it.discount || 0);
-  return Number(it.price);
+  if (!applyItemsDiscount) return Number(it.price);
+  if (isWholesale) {
+    const qty = Number(it.quantity || 0) || 1;
+    return (Number(it.price) * qty - Number(it.discount || 0)) / qty;
+  }
+  return Number(it.price) - Number(it.discount || 0);
 };
 
 const calcItemTotal = (
@@ -47,13 +50,13 @@ const calcItemTotal = (
   isWholesale: boolean,
   applyItemsDiscount: boolean,
 ) => {
+  if (!applyItemsDiscount)
+    return Number(it.price) * Number(it.quantity || 0);
   if (isWholesale) {
-    // wholesale: total = price * qty - discount (total discount)
     return (
       Number(it.price) * Number(it.quantity || 0) - Number(it.discount || 0)
     );
   }
-  // retail
   return (
     calcUnitPrice(it, false, applyItemsDiscount) * Number(it.quantity || 0)
   );
