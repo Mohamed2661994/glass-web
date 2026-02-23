@@ -34,6 +34,12 @@ import {
   LayoutGrid,
   Table2,
   Grid3X3,
+  Columns2,
+  X,
+  Copy,
+  Pencil,
+  Printer,
+  Check,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -47,6 +53,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { useRealtime } from "@/hooks/use-realtime";
+import { highlightText } from "@/lib/highlight-text";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Product {
   id: number;
@@ -76,7 +85,7 @@ export default function ProductsPage() {
     loaded: prefsLoaded,
     setProductsView: saveProductsView,
   } = useUserPreferences();
-  const [viewMode, setViewMode] = useState<"cards" | "compact" | "table">(
+  const [viewMode, setViewMode] = useState<"cards" | "compact" | "table" | "split">(
     "cards",
   );
 
@@ -105,6 +114,9 @@ export default function ProductsPage() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  // Split view selection
+  const [splitSelectedId, setSplitSelectedId] = useState<number | null>(null);
 
   // Barcode print modal
   const [barcodePrintProduct, setBarcodePrintProduct] =
@@ -468,6 +480,20 @@ export default function ProductsPage() {
               >
                 <Table2 className="h-4 w-4" />
               </button>
+              <button
+                onClick={() => {
+                  setViewMode("split");
+                  saveProductsView("split");
+                }}
+                className={`p-1.5 rounded-md transition-all ${
+                  viewMode === "split"
+                    ? "bg-background shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title="عرض مقسم"
+              >
+                <Columns2 className="h-4 w-4" />
+              </button>
             </div>
           </div>
         </CardContent>
@@ -612,6 +638,243 @@ export default function ProductsPage() {
                 </table>
               </div>
             </Card>
+          )}
+
+          {/* === Split View === */}
+          {viewMode === "split" && (
+            <div className="flex gap-4 max-w-7xl mx-auto" style={{ height: "calc(100vh - 280px)" }}>
+              {/* Product List (Right side in RTL) */}
+              <Card className="w-80 shrink-0 flex flex-col overflow-hidden">
+                <ScrollArea className="flex-1">
+                  <div className="divide-y">
+                    {currentProducts.map((product) => (
+                      <button
+                        key={product.id}
+                        onClick={() => setSplitSelectedId(product.id)}
+                        className={`w-full text-right p-3 transition-colors hover:bg-muted/50 ${
+                          splitSelectedId === product.id
+                            ? "bg-primary/10 border-r-2 border-primary"
+                            : ""
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className={`text-sm font-medium truncate ${!product.is_active ? "text-muted-foreground line-through" : ""}`}>
+                              {highlightText(product.name, search)}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">
+                              {product.manufacturer || "—"} · {product.barcode || "بدون باركود"}
+                            </p>
+                          </div>
+                          {!product.is_active && (
+                            <Badge variant="secondary" className="text-[10px] shrink-0">
+                              معطل
+                            </Badge>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </Card>
+
+              {/* Product Detail (Left side in RTL) */}
+              <Card className="flex-1 overflow-hidden">
+                {(() => {
+                  const splitProduct = allProducts.find(p => p.id === splitSelectedId);
+                  if (!splitProduct) {
+                    return (
+                      <div className="h-full flex items-center justify-center text-muted-foreground">
+                        <div className="text-center space-y-2">
+                          <Columns2 className="h-12 w-12 mx-auto opacity-20" />
+                          <p>اختر صنف من القائمة لعرض التفاصيل</p>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  const variants = variantsMap[splitProduct.id] || [];
+                  const packages = [
+                    {
+                      label: "أساسي",
+                      wholesale_package: splitProduct.wholesale_package,
+                      retail_package: splitProduct.retail_package,
+                      purchase_price: splitProduct.purchase_price,
+                      retail_purchase_price: splitProduct.retail_purchase_price,
+                      wholesale_price: splitProduct.wholesale_price,
+                      retail_price: splitProduct.retail_price,
+                      barcode: splitProduct.barcode,
+                      discount_amount: splitProduct.discount_amount || 0,
+                    },
+                    ...variants.map((v: any) => ({
+                      label: v.label || "فرعي",
+                      wholesale_package: v.wholesale_package,
+                      retail_package: v.retail_package,
+                      purchase_price: v.purchase_price,
+                      retail_purchase_price: v.retail_purchase_price,
+                      wholesale_price: v.wholesale_price,
+                      retail_price: v.retail_price,
+                      barcode: v.barcode,
+                      discount_amount: v.discount_amount || 0,
+                    })),
+                  ];
+                  const fmt = (v: number) =>
+                    Number(v || 0).toLocaleString("en-US", { minimumFractionDigits: 2 });
+
+                  return (
+                    <ScrollArea className="h-full">
+                      <div className="p-6 space-y-6">
+                        {/* Header */}
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0 flex-1">
+                            <h3 className="text-xl font-bold">
+                              {highlightText(splitProduct.name, search)}
+                            </h3>
+                            {splitProduct.manufacturer && (
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {highlightText(splitProduct.manufacturer, search)}
+                              </p>
+                            )}
+                            {splitProduct.description && (
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {splitProduct.description}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedProduct(splitProduct);
+                                setDialogOpen(true);
+                              }}
+                            >
+                              <Pencil className="h-3.5 w-3.5 ml-1" />
+                              تعديل
+                            </Button>
+                            {isAdmin && (
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => setDeleteTarget(splitProduct)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5 ml-1" />
+                                حذف
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Status + Barcode */}
+                        <div className="flex items-center gap-4 flex-wrap">
+                          <Badge variant={splitProduct.is_active ? "default" : "secondary"}>
+                            {splitProduct.is_active ? "مفعل" : "معطل"}
+                          </Badge>
+                          {splitProduct.barcode && (
+                            <div className="flex items-center gap-1.5 text-sm font-mono text-muted-foreground">
+                              <span>{splitProduct.barcode}</span>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(splitProduct.barcode);
+                                  toast.success("تم نسخ الباركود");
+                                }}
+                                className="p-0.5 rounded hover:bg-muted"
+                              >
+                                <Copy className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setBarcodePrintProduct(splitProduct);
+                                  setBarcodePrintCount("1");
+                                  setShowBarcodePrintModal(true);
+                                }}
+                                className="p-0.5 rounded hover:bg-muted"
+                              >
+                                <Printer className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Pricing Table */}
+                        {packages.map((pkg, idx) => (
+                          <div key={idx} className="space-y-2">
+                            {packages.length > 1 && (
+                              <h4 className="text-sm font-semibold text-muted-foreground">
+                                {pkg.label} {pkg.barcode && pkg.barcode !== splitProduct.barcode ? `(${pkg.barcode})` : ""}
+                              </h4>
+                            )}
+                            <div className="grid grid-cols-2 gap-3">
+                              {/* Wholesale Column */}
+                              <div className="border rounded-lg p-3 bg-sky-500/5">
+                                <p className="text-xs font-semibold text-sky-600 dark:text-sky-400 mb-2">جملة</p>
+                                <div className="space-y-1.5 text-sm">
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">العبوة</span>
+                                    <span className="font-medium">{pkg.wholesale_package || "—"}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">شراء</span>
+                                    <span className="font-medium">{fmt(pkg.purchase_price)}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">بيع</span>
+                                    <span className="font-bold text-sky-600 dark:text-sky-400">{fmt(pkg.wholesale_price)}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Retail Column */}
+                              <div className="border rounded-lg p-3 bg-amber-500/5">
+                                <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 mb-2">قطاعي</p>
+                                <div className="space-y-1.5 text-sm">
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">العبوة</span>
+                                    <span className="font-medium">{pkg.retail_package || "—"}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">شراء</span>
+                                    <span className="font-medium">{fmt(pkg.retail_purchase_price)}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">بيع</span>
+                                    <span className="font-bold text-amber-600 dark:text-amber-400">{fmt(pkg.retail_price)}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {pkg.discount_amount > 0 && (
+                              <div className="text-sm text-center text-green-600 dark:text-green-400 font-medium">
+                                خصم: {fmt(pkg.discount_amount)}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+
+                        {/* Toggle Active */}
+                        <div className="flex items-center justify-between border rounded-lg p-3">
+                          <span className="text-sm font-medium">حالة الصنف</span>
+                          <button
+                            onClick={() => handleToggle(splitProduct.id, !splitProduct.is_active)}
+                            className={`relative h-6 w-12 rounded-full transition-all duration-300 ${
+                              splitProduct.is_active ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
+                            }`}
+                          >
+                            <span
+                              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all duration-300 ${
+                                splitProduct.is_active ? "right-0.5" : "left-0.5"
+                              }`}
+                            />
+                          </button>
+                        </div>
+                      </div>
+                    </ScrollArea>
+                  );
+                })()}
+              </Card>
+            </div>
           )}
 
           {/* Pagination */}

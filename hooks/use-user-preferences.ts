@@ -62,7 +62,7 @@ export interface UserPreferences {
   customColors?: { light?: CustomColors; dark?: CustomColors };
   dash_invoice_view?: "table" | "compact" | "cards";
   dash_transfer_view?: "table" | "cards";
-  products_view?: "cards" | "compact" | "table";
+  products_view?: "cards" | "compact" | "table" | "split";
   /** Any future per-user preferences can be added here */
   [key: string]: unknown;
 }
@@ -213,7 +213,7 @@ export function useUserPreferences() {
   );
 
   const setProductsView = useCallback(
-    (products_view: "cards" | "compact" | "table") => {
+    (products_view: "cards" | "compact" | "table" | "split") => {
       setPrefs((prev) => ({ ...prev, products_view }));
     },
     [setPrefs],
@@ -278,7 +278,7 @@ function migrateOldKeys(
     }
     const oldProductsView = localStorage.getItem("products_view");
     if (oldProductsView) {
-      updates.products_view = oldProductsView as "cards" | "compact" | "table";
+      updates.products_view = oldProductsView as "cards" | "compact" | "table" | "split";
       migrated = true;
     }
 

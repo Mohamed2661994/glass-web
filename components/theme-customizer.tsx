@@ -787,9 +787,7 @@ export function ThemeCustomizer() {
               onClick={() => focusColorPicker("primary")}
               title="اضغط لتعديل اللون الرئيسي"
             >
-              <div
-                className="pointer-events-none block h-5 w-5 rounded-full bg-white shadow-lg translate-x-5"
-              />
+              <div className="pointer-events-none block h-5 w-5 rounded-full bg-white shadow-lg translate-x-5" />
             </div>
             <div
               className="inline-flex h-6 w-11 shrink-0 items-center rounded-full cursor-pointer hover:opacity-80 transition-opacity"
@@ -799,9 +797,7 @@ export function ThemeCustomizer() {
               onClick={() => focusColorPicker("muted")}
               title="اضغط لتعديل لون العناصر المعتمة"
             >
-              <div
-                className="pointer-events-none block h-5 w-5 rounded-full bg-white shadow-lg translate-x-0"
-              />
+              <div className="pointer-events-none block h-5 w-5 rounded-full bg-white shadow-lg translate-x-0" />
             </div>
             <div
               className="flex items-center justify-center h-5 w-5 rounded-sm border-2 cursor-pointer hover:opacity-80 transition-opacity"
@@ -812,7 +808,14 @@ export function ThemeCustomizer() {
               onClick={() => focusColorPicker("primary")}
               title="اضغط لتعديل اللون الرئيسي"
             >
-              <svg width="12" height="12" viewBox="0 0 15 15" fill="none"><path d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3354 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.5553 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z" fill="white" fillRule="evenodd" clipRule="evenodd"></path></svg>
+              <svg width="12" height="12" viewBox="0 0 15 15" fill="none">
+                <path
+                  d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3354 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.5553 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z"
+                  fill="white"
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                ></path>
+              </svg>
             </div>
             <div
               className="h-5 w-5 rounded-sm border-2 cursor-pointer hover:opacity-80 transition-opacity"
