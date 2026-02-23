@@ -38,6 +38,7 @@ import {
   GalleryHorizontalEnd,
   ChevronLeft,
   ChevronRight,
+  Kanban,
   X,
   Copy,
   Pencil,
@@ -89,12 +90,15 @@ export default function ProductsPage() {
     setProductsView: saveProductsView,
   } = useUserPreferences();
   const [viewMode, setViewMode] = useState<
-    "cards" | "compact" | "table" | "split" | "swipe"
+    "cards" | "compact" | "table" | "split" | "swipe" | "kanban"
   >("cards");
 
   // Swipe view
   const swipeRef = useRef<HTMLDivElement>(null);
   const [swipeIndex, setSwipeIndex] = useState(0);
+
+  // Kanban view
+  const [kanbanGroupBy, setKanbanGroupBy] = useState<"manufacturer" | "status">("manufacturer");
 
   // Sync from prefs when loaded
   useEffect(() => {
@@ -515,6 +519,20 @@ export default function ProductsPage() {
                 title="عرض أفقي بالسحب"
               >
                 <GalleryHorizontalEnd className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => {
+                  setViewMode("kanban");
+                  saveProductsView("kanban");
+                }}
+                className={`p-1.5 rounded-md transition-all ${
+                  viewMode === "kanban"
+                    ? "bg-background shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title="أعمدة (كانبان)"
+              >
+                <Kanban className="h-4 w-4" />
               </button>
             </div>
           </div>
@@ -970,7 +988,8 @@ export default function ProductsPage() {
               {/* Navigation header */}
               <div className="flex items-center justify-between px-1">
                 <span className="text-sm text-muted-foreground font-medium">
-                  {Math.min(swipeIndex + 1, currentProducts.length)} / {currentProducts.length}
+                  {Math.min(swipeIndex + 1, currentProducts.length)} /{" "}
+                  {currentProducts.length}
                 </span>
                 <div className="flex items-center gap-1">
                   <Button
@@ -981,7 +1000,11 @@ export default function ProductsPage() {
                     onClick={() => {
                       const next = Math.max(0, swipeIndex - 1);
                       setSwipeIndex(next);
-                      swipeRef.current?.children[next]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+                      swipeRef.current?.children[next]?.scrollIntoView({
+                        behavior: "smooth",
+                        block: "nearest",
+                        inline: "center",
+                      });
                     }}
                   >
                     <ChevronRight className="h-4 w-4" />
@@ -992,9 +1015,16 @@ export default function ProductsPage() {
                     className="h-8 w-8"
                     disabled={swipeIndex >= currentProducts.length - 1}
                     onClick={() => {
-                      const next = Math.min(currentProducts.length - 1, swipeIndex + 1);
+                      const next = Math.min(
+                        currentProducts.length - 1,
+                        swipeIndex + 1,
+                      );
                       setSwipeIndex(next);
-                      swipeRef.current?.children[next]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+                      swipeRef.current?.children[next]?.scrollIntoView({
+                        behavior: "smooth",
+                        block: "nearest",
+                        inline: "center",
+                      });
                     }}
                   >
                     <ChevronLeft className="h-4 w-4" />
@@ -1043,7 +1073,9 @@ export default function ProductsPage() {
                     })),
                   ];
                   const fmt = (v: number) =>
-                    Number(v || 0).toLocaleString("en-US", { minimumFractionDigits: 2 });
+                    Number(v || 0).toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                    });
 
                   return (
                     <Card
@@ -1096,7 +1128,9 @@ export default function ProductsPage() {
                                 <span>{product.barcode}</span>
                                 <button
                                   onClick={() => {
-                                    navigator.clipboard.writeText(product.barcode);
+                                    navigator.clipboard.writeText(
+                                      product.barcode,
+                                    );
                                     toast.success("تم نسخ الباركود");
                                   }}
                                   className="p-0.5 rounded hover:bg-muted"
@@ -1119,9 +1153,13 @@ export default function ProductsPage() {
                             )}
                           </div>
                           <button
-                            onClick={() => handleToggle(product.id, !product.is_active)}
+                            onClick={() =>
+                              handleToggle(product.id, !product.is_active)
+                            }
                             className={`relative h-5 w-10 rounded-full transition-all duration-300 shrink-0 ${
-                              product.is_active ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
+                              product.is_active
+                                ? "bg-green-500"
+                                : "bg-gray-300 dark:bg-gray-600"
                             }`}
                           >
                             <span
@@ -1137,41 +1175,70 @@ export default function ProductsPage() {
                           <div key={pkgIdx} className="space-y-2">
                             {packages.length > 1 && (
                               <p className="text-xs font-semibold text-muted-foreground border-b pb-1">
-                                {pkg.label} {pkg.barcode && pkg.barcode !== product.barcode ? `(${pkg.barcode})` : ""}
+                                {pkg.label}{" "}
+                                {pkg.barcode && pkg.barcode !== product.barcode
+                                  ? `(${pkg.barcode})`
+                                  : ""}
                               </p>
                             )}
                             <div className="grid grid-cols-2 gap-3">
                               <div className="rounded-lg p-2.5 bg-sky-500/5 border border-sky-200/30 dark:border-sky-800/30">
-                                <p className="text-[11px] font-semibold text-sky-600 dark:text-sky-400 mb-1.5">جملة</p>
+                                <p className="text-[11px] font-semibold text-sky-600 dark:text-sky-400 mb-1.5">
+                                  جملة
+                                </p>
                                 <div className="space-y-1 text-xs">
                                   <div className="flex justify-between">
-                                    <span className="text-muted-foreground">العبوة</span>
-                                    <span className="font-medium">{pkg.wholesale_package || "—"}</span>
+                                    <span className="text-muted-foreground">
+                                      العبوة
+                                    </span>
+                                    <span className="font-medium">
+                                      {pkg.wholesale_package || "—"}
+                                    </span>
                                   </div>
                                   <div className="flex justify-between">
-                                    <span className="text-muted-foreground">شراء</span>
+                                    <span className="text-muted-foreground">
+                                      شراء
+                                    </span>
                                     <span>{fmt(pkg.purchase_price)}</span>
                                   </div>
                                   <div className="flex justify-between">
-                                    <span className="text-muted-foreground">بيع</span>
-                                    <span className="font-bold text-sky-600 dark:text-sky-400">{fmt(pkg.wholesale_price)}</span>
+                                    <span className="text-muted-foreground">
+                                      بيع
+                                    </span>
+                                    <span className="font-bold text-sky-600 dark:text-sky-400">
+                                      {fmt(pkg.wholesale_price)}
+                                    </span>
                                   </div>
                                 </div>
                               </div>
                               <div className="rounded-lg p-2.5 bg-amber-500/5 border border-amber-200/30 dark:border-amber-800/30">
-                                <p className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 mb-1.5">قطاعي</p>
+                                <p className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 mb-1.5">
+                                  قطاعي
+                                </p>
                                 <div className="space-y-1 text-xs">
                                   <div className="flex justify-between">
-                                    <span className="text-muted-foreground">العبوة</span>
-                                    <span className="font-medium">{pkg.retail_package || "—"}</span>
+                                    <span className="text-muted-foreground">
+                                      العبوة
+                                    </span>
+                                    <span className="font-medium">
+                                      {pkg.retail_package || "—"}
+                                    </span>
                                   </div>
                                   <div className="flex justify-between">
-                                    <span className="text-muted-foreground">شراء</span>
-                                    <span>{fmt(pkg.retail_purchase_price)}</span>
+                                    <span className="text-muted-foreground">
+                                      شراء
+                                    </span>
+                                    <span>
+                                      {fmt(pkg.retail_purchase_price)}
+                                    </span>
                                   </div>
                                   <div className="flex justify-between">
-                                    <span className="text-muted-foreground">بيع</span>
-                                    <span className="font-bold text-amber-600 dark:text-amber-400">{fmt(pkg.retail_price)}</span>
+                                    <span className="text-muted-foreground">
+                                      بيع
+                                    </span>
+                                    <span className="font-bold text-amber-600 dark:text-amber-400">
+                                      {fmt(pkg.retail_price)}
+                                    </span>
                                   </div>
                                 </div>
                               </div>
@@ -1197,7 +1264,11 @@ export default function ProductsPage() {
                       key={idx}
                       onClick={() => {
                         setSwipeIndex(idx);
-                        swipeRef.current?.children[idx]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+                        swipeRef.current?.children[idx]?.scrollIntoView({
+                          behavior: "smooth",
+                          block: "nearest",
+                          inline: "center",
+                        });
                       }}
                       className={`h-2 rounded-full transition-all duration-300 ${
                         idx === swipeIndex
@@ -1210,6 +1281,203 @@ export default function ProductsPage() {
               )}
             </div>
           )}
+
+          {/* === Kanban Board View === */}
+          {viewMode === "kanban" && (() => {
+            // Group products into columns
+            const groups: Record<string, Product[]> = {};
+            if (kanbanGroupBy === "manufacturer") {
+              for (const p of filteredProducts) {
+                const key = p.manufacturer || "بدون مصنّع";
+                if (!groups[key]) groups[key] = [];
+                groups[key].push(p);
+              }
+            } else {
+              groups["مفعل"] = filteredProducts.filter(p => p.is_active);
+              groups["معطل"] = filteredProducts.filter(p => !p.is_active);
+            }
+            const columns = Object.entries(groups);
+
+            return (
+              <div className="space-y-3">
+                {/* Group-by toggle */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">تجميع حسب:</span>
+                  <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+                    <button
+                      onClick={() => setKanbanGroupBy("manufacturer")}
+                      className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                        kanbanGroupBy === "manufacturer"
+                          ? "bg-background shadow-sm text-foreground"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      المصنّع
+                    </button>
+                    <button
+                      onClick={() => setKanbanGroupBy("status")}
+                      className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                        kanbanGroupBy === "status"
+                          ? "bg-background shadow-sm text-foreground"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      الحالة
+                    </button>
+                  </div>
+                </div>
+
+                {/* Board */}
+                <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide" style={{ WebkitOverflowScrolling: "touch" }}>
+                  {columns.map(([groupName, products]) => (
+                    <div
+                      key={groupName}
+                      className="shrink-0 w-72 sm:w-80 flex flex-col bg-muted/40 rounded-xl border max-h-[calc(100vh-300px)]"
+                    >
+                      {/* Column Header */}
+                      <div className="p-3 border-b bg-muted/60 rounded-t-xl sticky top-0 z-10">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-semibold text-sm truncate">{groupName}</h4>
+                          <Badge variant="secondary" className="text-[10px] shrink-0">
+                            {products.length}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {/* Column Cards - Scrollable */}
+                      <div className="flex-1 overflow-y-auto p-2 space-y-2 scrollbar-hide">
+                        {products.map((product) => {
+                          const fmt = (v: number) =>
+                            Number(v || 0).toLocaleString("en-US", { minimumFractionDigits: 2 });
+
+                          return (
+                            <Card
+                              key={product.id}
+                              className={`overflow-hidden transition-all hover:shadow-md cursor-pointer ${
+                                !product.is_active ? "opacity-50 grayscale" : ""
+                              }`}
+                              onClick={() => {
+                                setSelectedProduct(product);
+                                setDialogOpen(true);
+                              }}
+                            >
+                              <CardContent className="p-3 space-y-2">
+                                {/* Name + Toggle */}
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-semibold truncate">
+                                      {highlightText(product.name, search)}
+                                    </p>
+                                    {kanbanGroupBy !== "manufacturer" && product.manufacturer && (
+                                      <p className="text-[11px] text-muted-foreground truncate">
+                                        {product.manufacturer}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleToggle(product.id, !product.is_active);
+                                    }}
+                                    className={`relative h-4 w-8 rounded-full transition-all duration-300 shrink-0 mt-0.5 ${
+                                      product.is_active ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
+                                    }`}
+                                  >
+                                    <span
+                                      className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-all duration-300 ${
+                                        product.is_active ? "right-0.5" : "left-0.5"
+                                      }`}
+                                    />
+                                  </button>
+                                </div>
+
+                                {/* Barcode */}
+                                {product.barcode && (
+                                  <p className="text-[10px] font-mono text-muted-foreground truncate">
+                                    {product.barcode}
+                                  </p>
+                                )}
+
+                                {/* Quick Prices */}
+                                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                                  <div className="bg-sky-500/5 rounded px-2 py-1">
+                                    <span className="text-muted-foreground">جملة: </span>
+                                    <span className="font-bold text-sky-600 dark:text-sky-400">
+                                      {fmt(product.wholesale_price)}
+                                    </span>
+                                  </div>
+                                  <div className="bg-amber-500/5 rounded px-2 py-1">
+                                    <span className="text-muted-foreground">قطاعي: </span>
+                                    <span className="font-bold text-amber-600 dark:text-amber-400">
+                                      {fmt(product.retail_price)}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex items-center gap-1 pt-1 border-t">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedProduct(product);
+                                      setDialogOpen(true);
+                                    }}
+                                    className="p-1 rounded hover:bg-muted transition-colors"
+                                    title="تعديل"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                                  </button>
+                                  {product.barcode && (
+                                    <>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          navigator.clipboard.writeText(product.barcode);
+                                          toast.success("تم نسخ الباركود");
+                                        }}
+                                        className="p-1 rounded hover:bg-muted transition-colors"
+                                        title="نسخ الباركود"
+                                      >
+                                        <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setBarcodePrintProduct(product);
+                                          setBarcodePrintCount("1");
+                                          setShowBarcodePrintModal(true);
+                                        }}
+                                        className="p-1 rounded hover:bg-muted transition-colors"
+                                        title="طباعة الباركود"
+                                      >
+                                        <Printer className="h-3.5 w-3.5 text-muted-foreground" />
+                                      </button>
+                                    </>
+                                  )}
+                                  {isAdmin && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setDeleteTarget(product);
+                                      }}
+                                      className="p-1 rounded hover:bg-destructive/10 transition-colors mr-auto"
+                                      title="حذف"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                    </button>
+                                  )}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Pagination */}
           {totalPages > 1 && (

@@ -62,7 +62,7 @@ export interface UserPreferences {
   customColors?: { light?: CustomColors; dark?: CustomColors };
   dash_invoice_view?: "table" | "compact" | "cards";
   dash_transfer_view?: "table" | "cards";
-  products_view?: "cards" | "compact" | "table" | "split" | "swipe";
+  products_view?: "cards" | "compact" | "table" | "split" | "swipe" | "kanban";
   /** Any future per-user preferences can be added here */
   [key: string]: unknown;
 }
@@ -213,7 +213,7 @@ export function useUserPreferences() {
   );
 
   const setProductsView = useCallback(
-    (products_view: "cards" | "compact" | "table" | "split" | "swipe") => {
+    (products_view: "cards" | "compact" | "table" | "split" | "swipe" | "kanban") => {
       setPrefs((prev) => ({ ...prev, products_view }));
     },
     [setPrefs],
@@ -283,7 +283,8 @@ function migrateOldKeys(
         | "compact"
         | "table"
         | "split"
-        | "swipe";
+        | "swipe"
+        | "kanban";
       migrated = true;
     }
 
