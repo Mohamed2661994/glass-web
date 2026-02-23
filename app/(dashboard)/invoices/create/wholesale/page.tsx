@@ -649,9 +649,9 @@ export default function CreateWholesaleInvoicePage() {
         invoice_type: "wholesale",
         movement_type: movementType,
         invoice_date: invoiceDate,
-        customer_id: customerId,
-        customer_name: customerName,
-        customer_phone: customerPhone || null,
+        customer_id: movementType === "purchase" ? null : customerId,
+        customer_name: movementType === "purchase" ? null : customerName,
+        customer_phone: movementType === "purchase" ? null : (customerPhone || null),
         supplier_name:
           movementType === "purchase" ? supplierName || null : null,
         supplier_phone:

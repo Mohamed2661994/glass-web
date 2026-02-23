@@ -96,9 +96,24 @@ export default function InvoiceDetailsPage() {
       {/* Invoice Info */}
       <Card>
         <CardContent className="p-4 space-y-2">
-          <p>
-            <strong>العميل:</strong> {invoice.customer_name || "نقدي"}
-          </p>
+          {invoice.movement_type === "purchase" ? (
+            <>
+              {invoice.supplier_name && (
+                <p>
+                  <strong>المورد:</strong> {invoice.supplier_name}
+                </p>
+              )}
+              {invoice.supplier_phone && (
+                <p>
+                  <strong>هاتف المورد:</strong> {invoice.supplier_phone}
+                </p>
+              )}
+            </>
+          ) : (
+            <p>
+              <strong>العميل:</strong> {invoice.customer_name || "نقدي"}
+            </p>
+          )}
           <p>
             <strong>الإجمالي:</strong> {Number(invoice.total).toFixed(2)}
           </p>

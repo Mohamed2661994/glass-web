@@ -415,8 +415,13 @@ export default function EditWholesaleInvoicePage() {
       return;
     }
 
-    if (!customerName.trim()) {
+    if (movementType !== "purchase" && !customerName.trim()) {
       toast.error("برجاء إدخال اسم العميل");
+      return;
+    }
+
+    if (movementType === "purchase" && !supplierName?.trim()) {
+      toast.error("برجاء إدخال اسم المورد");
       return;
     }
 
@@ -454,8 +459,8 @@ export default function EditWholesaleInvoicePage() {
     setSaving(true);
     try {
       await api.put(`/invoices/${id}`, {
-        customer_name: customerName,
-        customer_phone: customerPhone || null,
+        customer_name: movementType === "purchase" ? null : customerName,
+        customer_phone: movementType === "purchase" ? null : (customerPhone || null),
         manual_discount: Number(extraDiscount) || 0,
         items,
         paid_amount: Number(paidAmount) || 0,
@@ -654,6 +659,8 @@ export default function EditWholesaleInvoicePage() {
               <Input type="date" value={invoiceDate} disabled />
             </div>
 
+            {movementType !== "purchase" && (
+            <>
             <div className="relative" ref={nameDropdownRef}>
               <label className="text-sm mb-2 block">اسم العميل</label>
               <Input
@@ -723,6 +730,8 @@ export default function EditWholesaleInvoicePage() {
                 onChange={(e) => setCustomerPhone(e.target.value)}
               />
             </div>
+            </>
+            )}
           </div>
         </Card>
 

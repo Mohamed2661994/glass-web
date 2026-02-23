@@ -525,8 +525,8 @@ export default function EditRetailInvoicePage() {
     setSaving(true);
     try {
       await api.put(`/invoices/retail/${id}`, {
-        customer_name: customerName || "نقدي",
-        customer_phone: customerPhone || null,
+        customer_name: movementType === "purchase" ? null : (customerName || "نقدي"),
+        customer_phone: movementType === "purchase" ? null : (customerPhone || null),
         total_before_discount: totalBeforeDiscount,
         extra_discount: Number(extraDiscount) || 0,
         final_total: finalTotal,
@@ -738,6 +738,8 @@ export default function EditRetailInvoicePage() {
               <Input type="date" value={invoiceDate} disabled />
             </div>
 
+            {movementType !== "purchase" && (
+            <>
             <div className="relative" ref={nameDropdownRef}>
               <label className="text-sm mb-2 block">اسم العميل</label>
               <Input
@@ -807,6 +809,8 @@ export default function EditRetailInvoicePage() {
                 onChange={(e) => setCustomerPhone(e.target.value)}
               />
             </div>
+            </>
+            )}
           </div>
         </Card>
 
