@@ -184,6 +184,7 @@ export default function CreateWholesaleInvoicePage() {
 
   const [extraDiscount, setExtraDiscount] = useState("0");
   const [paidAmount, setPaidAmount] = useState("0");
+  const [applyItemsDiscount, setApplyItemsDiscount] = useState(true);
 
   /* =========================================================
      4.5 Draft Auto-Save & Restore
@@ -207,6 +208,8 @@ export default function CreateWholesaleInvoicePage() {
         setPreviousBalance(draft.previousBalance);
       if (draft.extraDiscount) setExtraDiscount(draft.extraDiscount);
       if (draft.paidAmount) setPaidAmount(draft.paidAmount);
+      if (draft.applyItemsDiscount !== undefined)
+        setApplyItemsDiscount(draft.applyItemsDiscount);
       if (draft.items?.length) setItems(draft.items);
       draftRestoredRef.current = true;
       toast.info("تم استعادة بيانات الفاتورة السابقة");
@@ -228,6 +231,7 @@ export default function CreateWholesaleInvoicePage() {
       previousBalance,
       extraDiscount,
       paidAmount,
+      applyItemsDiscount,
       items,
     };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
@@ -240,6 +244,7 @@ export default function CreateWholesaleInvoicePage() {
     previousBalance,
     extraDiscount,
     paidAmount,
+    applyItemsDiscount,
     items,
   ]);
 
@@ -255,6 +260,7 @@ export default function CreateWholesaleInvoicePage() {
     setPreviousBalance("0");
     setExtraDiscount("0");
     setPaidAmount("0");
+    setApplyItemsDiscount(true);
     setMovementType("sale");
     setInvoiceDate(getTodayDate());
     clearDraft();
@@ -325,6 +331,13 @@ export default function CreateWholesaleInvoicePage() {
     setShowNameDropdown(false);
     setCustomerSuggestions([]);
     fetchCustomerBalance(customer.id);
+
+    if (
+      customer.apply_items_discount !== undefined &&
+      customer.apply_items_discount !== null
+    ) {
+      setApplyItemsDiscount(customer.apply_items_discount);
+    }
   };
 
   const saveNewPhone = async () => {
@@ -374,6 +387,13 @@ export default function CreateWholesaleInvoicePage() {
     setShowPhoneDropdown(false);
     setPhoneSuggestions([]);
     fetchCustomerBalance(customer.id);
+
+    if (
+      customer.apply_items_discount !== undefined &&
+      customer.apply_items_discount !== null
+    ) {
+      setApplyItemsDiscount(customer.apply_items_discount);
+    }
   };
 
   /* Close dropdowns on outside click */
@@ -533,10 +553,10 @@ export default function CreateWholesaleInvoicePage() {
     return items.reduce((sum, item) => {
       const raw =
         Number(item.price) * (Number(item.quantity) || 0) -
-        (Number(item.discount) || 0);
+        (applyItemsDiscount ? (Number(item.discount) || 0) : 0);
       return sum + (item.is_return ? -raw : raw);
     }, 0);
-  }, [items]);
+  }, [items, applyItemsDiscount]);
 
   const finalTotal = useMemo(() => {
     return totalBeforeDiscount - (Number(extraDiscount) || 0);
@@ -580,6 +600,14 @@ export default function CreateWholesaleInvoicePage() {
 
     setSaving(true);
     try {
+      const itemsDiscount = applyItemsDiscount
+        ? items.reduce(
+            (sum, item) =>
+              sum + (Number(item.discount) || 0),
+            0,
+          )
+        : 0;
+
       const res = await api.post("/invoices", {
         invoice_type: "wholesale",
         movement_type: movementType,
@@ -588,6 +616,9 @@ export default function CreateWholesaleInvoicePage() {
         customer_name: customerName,
         customer_phone: customerPhone || null,
         manual_discount: extraDiscount,
+        items_discount: itemsDiscount,
+        total_before_discount: totalBeforeDiscount,
+        apply_items_discount: applyItemsDiscount,
         items,
         paid_amount: Number(paidAmount) || 0,
         previous_balance: Number(previousBalance) ?? 0,
@@ -1114,7 +1145,7 @@ export default function CreateWholesaleInvoicePage() {
                             const raw =
                               Number(item.price) *
                                 (Number(item.quantity) || 0) -
-                              (Number(item.discount) || 0);
+                              (applyItemsDiscount ? (Number(item.discount) || 0) : 0);
                             return item.is_return ? -raw : raw;
                           })()}
                         </td>
@@ -1192,7 +1223,7 @@ export default function CreateWholesaleInvoicePage() {
                 const itemTotal = (() => {
                   const raw =
                     Number(item.price) * (Number(item.quantity) || 0) -
-                    (Number(item.discount) || 0);
+                    (applyItemsDiscount ? (Number(item.discount) || 0) : 0);
                   return item.is_return ? -raw : raw;
                 })();
                 const isExpanded = expandedItemUid === item.uid;
@@ -1433,6 +1464,21 @@ export default function CreateWholesaleInvoicePage() {
 
         {items.length > 0 && (
           <Card className="p-6 space-y-4">
+            {/* تطبيق خصم الأصناف */}
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="apply-discount"
+                checked={applyItemsDiscount}
+                onCheckedChange={(v) => setApplyItemsDiscount(!!v)}
+              />
+              <label
+                htmlFor="apply-discount"
+                className="text-sm cursor-pointer"
+              >
+                خصم الأصناف
+              </label>
+            </div>
+
             {/* الإجمالي */}
             <div className="grid grid-cols-3 items-center py-2 border-b">
               <span className="text-muted-foreground text-sm">
