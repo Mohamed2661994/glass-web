@@ -917,20 +917,6 @@ export default function DashboardPage() {
     [widgets],
   );
 
-  /* re-fetch when page becomes visible (user navigates back) */
-  useEffect(() => {
-    const onFocus = () => setRefreshKey((k) => k + 1);
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") onFocus();
-    };
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => {
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  }, []);
-
   /* fetch invoices */
   useEffect(() => {
     if (!branchId) return;
