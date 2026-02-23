@@ -652,8 +652,10 @@ export default function CreateWholesaleInvoicePage() {
         customer_id: customerId,
         customer_name: customerName,
         customer_phone: customerPhone || null,
-        supplier_name: movementType === "purchase" ? supplierName || null : null,
-        supplier_phone: movementType === "purchase" ? supplierPhone || null : null,
+        supplier_name:
+          movementType === "purchase" ? supplierName || null : null,
+        supplier_phone:
+          movementType === "purchase" ? supplierPhone || null : null,
         manual_discount: extraDiscount,
         items_discount: itemsDiscount,
         total_before_discount: totalBeforeDiscount,
@@ -1077,23 +1079,33 @@ export default function CreateWholesaleInvoicePage() {
                     }
                   }}
                   onFocus={() => {
-                    if (supplierSuggestions.length > 0) setShowSupplierDropdown(true);
+                    if (supplierSuggestions.length > 0)
+                      setShowSupplierDropdown(true);
                   }}
                   onKeyDown={(e) => {
-                    if (!showSupplierDropdown || supplierSuggestions.length === 0) return;
+                    if (
+                      !showSupplierDropdown ||
+                      supplierSuggestions.length === 0
+                    )
+                      return;
                     if (e.key === "ArrowDown") {
                       e.preventDefault();
                       setHighlightedSupplierIndex((prev) =>
-                        prev < supplierSuggestions.length - 1 ? prev + 1 : 0
+                        prev < supplierSuggestions.length - 1 ? prev + 1 : 0,
                       );
                     } else if (e.key === "ArrowUp") {
                       e.preventDefault();
                       setHighlightedSupplierIndex((prev) =>
-                        prev > 0 ? prev - 1 : supplierSuggestions.length - 1
+                        prev > 0 ? prev - 1 : supplierSuggestions.length - 1,
                       );
-                    } else if (e.key === "Enter" && highlightedSupplierIndex >= 0) {
+                    } else if (
+                      e.key === "Enter" &&
+                      highlightedSupplierIndex >= 0
+                    ) {
                       e.preventDefault();
-                      selectSupplier(supplierSuggestions[highlightedSupplierIndex]);
+                      selectSupplier(
+                        supplierSuggestions[highlightedSupplierIndex],
+                      );
                       setHighlightedSupplierIndex(-1);
                     } else if (e.key === "Escape") {
                       setShowSupplierDropdown(false);
@@ -1111,7 +1123,9 @@ export default function CreateWholesaleInvoicePage() {
                       >
                         <span className="font-medium">{s.name}</span>
                         {s.phone && (
-                          <span className="text-muted-foreground mr-2">({s.phone})</span>
+                          <span className="text-muted-foreground mr-2">
+                            ({s.phone})
+                          </span>
                         )}
                       </div>
                     ))}
@@ -1697,6 +1711,11 @@ export default function CreateWholesaleInvoicePage() {
               <span />
             </div>
 
+          </Card>
+        )}
+
+        {items.length > 0 && (
+          <div className="sticky bottom-0 z-30 bg-background border-t shadow-[0_-2px_10px_rgba(0,0,0,0.1)] p-3 -mx-4 px-4">
             <div className="flex gap-2 w-full">
               <Button
                 onClick={saveInvoice}
@@ -1723,7 +1742,7 @@ export default function CreateWholesaleInvoicePage() {
                 معاينة
               </Button>
             </div>
-          </Card>
+          </div>
         )}
 
         {/* ================= Product Modal ================= */}

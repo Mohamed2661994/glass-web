@@ -572,13 +572,22 @@ export default function CreateRetailInvoicePage() {
 
   /* Supplier search & select */
   const searchSuppliers = async (q: string) => {
-    if (q.trim().length < 2) { setSupplierSuggestions([]); setShowSupplierDropdown(false); return; }
+    if (q.trim().length < 2) {
+      setSupplierSuggestions([]);
+      setShowSupplierDropdown(false);
+      return;
+    }
     try {
-      const { data } = await api.get("/suppliers/search", { params: { q: q.trim() } });
+      const { data } = await api.get("/suppliers/search", {
+        params: { q: q.trim() },
+      });
       setSupplierSuggestions(Array.isArray(data) ? data : []);
       setShowSupplierDropdown(data.length > 0);
       setHighlightedSupplierIndex(-1);
-    } catch { setSupplierSuggestions([]); setShowSupplierDropdown(false); }
+    } catch {
+      setSupplierSuggestions([]);
+      setShowSupplierDropdown(false);
+    }
   };
   const selectSupplier = (s: any) => {
     setSupplierName(s.name);
@@ -881,7 +890,12 @@ export default function CreateRetailInvoicePage() {
         apply_items_discount: applyItemsDiscount,
         created_by: user?.id,
         created_by_name: user?.username,
-        ...(movementType === "purchase" && supplierName ? { supplier_name: supplierName, supplier_phone: supplierPhone || null } : {}),
+        ...(movementType === "purchase" && supplierName
+          ? {
+              supplier_name: supplierName,
+              supplier_phone: supplierPhone || null,
+            }
+          : {}),
       });
 
       const newId = res.data?.id || res.data?.invoice_id;
@@ -1291,23 +1305,33 @@ export default function CreateRetailInvoicePage() {
                     }
                   }}
                   onFocus={() => {
-                    if (supplierSuggestions.length > 0) setShowSupplierDropdown(true);
+                    if (supplierSuggestions.length > 0)
+                      setShowSupplierDropdown(true);
                   }}
                   onKeyDown={(e) => {
-                    if (!showSupplierDropdown || supplierSuggestions.length === 0) return;
+                    if (
+                      !showSupplierDropdown ||
+                      supplierSuggestions.length === 0
+                    )
+                      return;
                     if (e.key === "ArrowDown") {
                       e.preventDefault();
                       setHighlightedSupplierIndex((prev) =>
-                        prev < supplierSuggestions.length - 1 ? prev + 1 : 0
+                        prev < supplierSuggestions.length - 1 ? prev + 1 : 0,
                       );
                     } else if (e.key === "ArrowUp") {
                       e.preventDefault();
                       setHighlightedSupplierIndex((prev) =>
-                        prev > 0 ? prev - 1 : supplierSuggestions.length - 1
+                        prev > 0 ? prev - 1 : supplierSuggestions.length - 1,
                       );
-                    } else if (e.key === "Enter" && highlightedSupplierIndex >= 0) {
+                    } else if (
+                      e.key === "Enter" &&
+                      highlightedSupplierIndex >= 0
+                    ) {
                       e.preventDefault();
-                      selectSupplier(supplierSuggestions[highlightedSupplierIndex]);
+                      selectSupplier(
+                        supplierSuggestions[highlightedSupplierIndex],
+                      );
                       setHighlightedSupplierIndex(-1);
                     } else if (e.key === "Escape") {
                       setShowSupplierDropdown(false);
@@ -1325,7 +1349,9 @@ export default function CreateRetailInvoicePage() {
                       >
                         <span className="font-medium">{s.name}</span>
                         {s.phone && (
-                          <span className="text-muted-foreground mr-2">({s.phone})</span>
+                          <span className="text-muted-foreground mr-2">
+                            ({s.phone})
+                          </span>
                         )}
                       </div>
                     ))}
@@ -2070,6 +2096,11 @@ export default function CreateRetailInvoicePage() {
               <span />
             </div>
 
+          </Card>
+        )}
+
+        {items.length > 0 && (
+          <div className="sticky bottom-0 z-30 bg-background border-t shadow-[0_-2px_10px_rgba(0,0,0,0.1)] p-3 -mx-4 px-4">
             <div className="flex gap-2 w-full">
               <Button
                 onClick={saveInvoice}
@@ -2096,7 +2127,7 @@ export default function CreateRetailInvoicePage() {
                 معاينة
               </Button>
             </div>
-          </Card>
+          </div>
         )}
 
         {/* ===== مودل المعاينة قبل الحفظ ===== */}
