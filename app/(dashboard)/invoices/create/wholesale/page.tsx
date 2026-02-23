@@ -1628,6 +1628,7 @@ export default function CreateWholesaleInvoicePage() {
               discount: Number(it.discount) || 0,
               is_return: it.is_return,
             })),
+            applyItemsDiscount,
             extraDiscount: Number(extraDiscount) || 0,
             previousBalance: Number(previousBalance) ?? 0,
             paidAmount: Number(paidAmount) || 0,

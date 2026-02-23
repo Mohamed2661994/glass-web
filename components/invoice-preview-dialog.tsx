@@ -24,7 +24,7 @@ export interface InvoicePreviewData {
   customerName: string;
   customerPhone?: string;
   items: PreviewItem[];
-  applyItemsDiscount?: boolean; // retail only
+  applyItemsDiscount?: boolean;
   extraDiscount: number;
   previousBalance: number;
   paidAmount: number;
@@ -340,9 +340,7 @@ export function InvoicePreviewDialog({
               </thead>
               <tbody>
                 {items.map((it, i) => {
-                  const unitPrice = isWholesale
-                    ? Number(it.price)
-                    : calcUnitPrice(it, false, applyDiscount);
+                  const unitPrice = calcUnitPrice(it, isWholesale, applyDiscount);
                   const itemTotal = calcItemTotal(
                     it,
                     isWholesale,
