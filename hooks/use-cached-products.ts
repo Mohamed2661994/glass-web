@@ -274,7 +274,12 @@ export function useCachedProducts({
   // Auto-refresh when invoices/transfers are created or updated
   useEffect(() => {
     const cleanup = onUpdate(
-      ["invoice_created", "invoice_updated", "invoice_deleted", "transfer_created"],
+      [
+        "invoice_created",
+        "invoice_updated",
+        "invoice_deleted",
+        "transfer_created",
+      ],
       () => {
         fetchProducts(true, true);
       },

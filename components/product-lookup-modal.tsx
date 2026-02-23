@@ -69,11 +69,14 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
   const [refreshing, setRefreshing] = useState(false);
 
-  // Reset search when modal opens (data loads from cache instantly)
+  // Force refresh every time the modal opens so data is always fresh
   useEffect(() => {
     if (!open) return;
     setSearch("");
     setFocusedIndex(-1);
+    // Silent refresh — checks cache validity (invalidation key) and refetches if needed
+    refresh();
+    refreshOther();
   }, [open]);
 
   const handleRefresh = async () => {

@@ -944,6 +944,15 @@ export default function CreateRetailInvoicePage() {
   }, [items.length]);
 
   /* =========================================================
+     Refresh products when search modal opens
+     ========================================================= */
+  useEffect(() => {
+    if (showProductModal) {
+      refreshProductsSilently();
+    }
+  }, [showProductModal]);
+
+  /* =========================================================
      Spacebar shortcut to open product dialog
      ========================================================= */
 

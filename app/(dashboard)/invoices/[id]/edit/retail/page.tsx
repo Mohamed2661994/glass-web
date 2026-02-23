@@ -190,6 +190,7 @@ export default function EditRetailInvoicePage() {
     products,
     loading: loadingProducts,
     refresh: refreshProducts,
+    refreshSilently: refreshProductsSilently,
     invalidateCache,
   } = useCachedProducts({
     endpoint: "/products",
@@ -566,6 +567,15 @@ export default function EditRetailInvoicePage() {
       setSaving(false);
     }
   };
+
+  /* =========================================================
+     Refresh products when search modal opens
+     ========================================================= */
+  useEffect(() => {
+    if (showProductModal) {
+      refreshProductsSilently();
+    }
+  }, [showProductModal]);
 
   /* =========================================================
      Spacebar shortcut to open product dialog
