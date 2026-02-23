@@ -917,6 +917,7 @@ export default function CreateWholesaleInvoicePage() {
             </div>
 
             {movementType !== "purchase" && (
+            <>
             <div className="relative" ref={nameDropdownRef}>
               <label className="text-sm mb-2 block">اسم العميل</label>
               <Input
@@ -1066,6 +1067,7 @@ export default function CreateWholesaleInvoicePage() {
                   </Button>
                 )}
             </div>
+            </>
             )}
           </div>
         </Card>

@@ -1143,6 +1143,7 @@ export default function CreateRetailInvoicePage() {
             </div>
 
             {movementType !== "purchase" && (
+            <>
             <div className="relative" ref={nameDropdownRef}>
               <label className="text-sm mb-2 block">اسم العميل</label>
               <Input
@@ -1292,6 +1293,7 @@ export default function CreateRetailInvoicePage() {
                   </Button>
                 )}
             </div>
+            </>
             )}
           </div>
         </Card>
