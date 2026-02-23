@@ -559,6 +559,20 @@ export function ThemeCustomizer() {
 
   const hasDraft = Object.keys(draft).length > 0;
 
+  /** Scroll to and highlight the color picker for the given key */
+  const focusColorPicker = useCallback((colorKey: string) => {
+    const el = document.querySelector(`[data-color-key="${colorKey}"]`) as HTMLElement | null;
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("ring-2", "ring-primary", "shadow-lg");
+    setTimeout(() => {
+      el.classList.remove("ring-2", "ring-primary", "shadow-lg");
+    }, 1500);
+    // Open the color picker
+    const input = el.querySelector('input[type="color"]') as HTMLInputElement | null;
+    if (input) setTimeout(() => input.click(), 400);
+  }, []);
+
   return (
     <div className="space-y-5">
       {/* Preset themes */}
@@ -608,7 +622,8 @@ export function ThemeCustomizer() {
             return (
               <div
                 key={def.key}
-                className="flex items-center gap-3 rounded-lg border p-3"
+                data-color-key={def.key}
+                className="flex items-center gap-3 rounded-lg border p-3 transition-all"
               >
                 <label className="relative shrink-0 cursor-pointer">
                   <input
@@ -655,7 +670,8 @@ export function ThemeCustomizer() {
             return (
               <div
                 key={def.key}
-                className="flex items-center gap-3 rounded-lg border p-3"
+                data-color-key={def.key}
+                className="flex items-center gap-3 rounded-lg border p-3 transition-all"
               >
                 <label className="relative shrink-0 cursor-pointer">
                   <input
@@ -693,23 +709,27 @@ export function ThemeCustomizer() {
           {/* Mini dashboard preview */}
           <div className="flex gap-2">
             <div
-              className="flex-1 rounded-lg p-3 border"
+              className="flex-1 rounded-lg p-3 border cursor-pointer hover:opacity-80 transition-opacity"
               style={{
                 backgroundColor: draft.card || currentHexValues.card,
                 color: draft.cardForeground || currentHexValues.cardForeground,
                 borderColor: draft.border || currentHexValues.border,
               }}
+              onClick={() => focusColorPicker("card")}
+              title="اضغط لتعديل لون الكروت"
             >
               <p className="text-xs opacity-60">إجمالي المبيعات</p>
               <p className="text-lg font-bold">٣,٥٠٠ ج</p>
             </div>
             <div
-              className="flex-1 rounded-lg p-3 border"
+              className="flex-1 rounded-lg p-3 border cursor-pointer hover:opacity-80 transition-opacity"
               style={{
                 backgroundColor: draft.card || currentHexValues.card,
                 color: draft.cardForeground || currentHexValues.cardForeground,
                 borderColor: draft.border || currentHexValues.border,
               }}
+              onClick={() => focusColorPicker("cardForeground")}
+              title="اضغط لتعديل لون نص الكروت"
             >
               <p className="text-xs opacity-60">عدد الفواتير</p>
               <p className="text-lg font-bold">١٢</p>
@@ -717,42 +737,50 @@ export function ThemeCustomizer() {
           </div>
           <div className="flex gap-2">
             <button
-              className="flex-1 rounded-lg px-4 py-2 text-sm font-medium"
+              className="flex-1 rounded-lg px-4 py-2 text-sm font-medium cursor-pointer hover:opacity-80 transition-opacity"
               style={{
                 backgroundColor: draft.primary || currentHexValues.primary,
                 color:
                   draft.primaryForeground || currentHexValues.primaryForeground,
               }}
+              onClick={() => focusColorPicker("primary")}
+              title="اضغط لتعديل اللون الرئيسي"
             >
               زر رئيسي
             </button>
             <button
-              className="flex-1 rounded-lg px-4 py-2 text-sm font-medium border"
+              className="flex-1 rounded-lg px-4 py-2 text-sm font-medium border cursor-pointer hover:opacity-80 transition-opacity"
               style={{
                 backgroundColor: draft.secondary || currentHexValues.secondary,
                 color: draft.foreground || currentHexValues.foreground,
                 borderColor: draft.border || currentHexValues.border,
               }}
+              onClick={() => focusColorPicker("secondary")}
+              title="اضغط لتعديل اللون الثانوي"
             >
               زر ثانوي
             </button>
             <button
-              className="flex-1 rounded-lg px-4 py-2 text-sm font-medium"
+              className="flex-1 rounded-lg px-4 py-2 text-sm font-medium cursor-pointer hover:opacity-80 transition-opacity"
               style={{
                 backgroundColor:
                   draft.destructive || currentHexValues.destructive,
                 color: "#fff",
               }}
+              onClick={() => focusColorPicker("destructive")}
+              title="اضغط لتعديل لون التحذير"
             >
               حذف
             </button>
           </div>
           <div
-            className="rounded-lg p-2 text-xs"
+            className="rounded-lg p-2 text-xs cursor-pointer hover:opacity-80 transition-opacity"
             style={{
               backgroundColor: draft.muted || currentHexValues.muted,
               color: draft.mutedForeground || currentHexValues.mutedForeground,
             }}
+            onClick={() => focusColorPicker("muted")}
+            title="اضغط لتعديل لون العناصر المعتمة"
           >
             هذا نص ثانوي لاختبار الألوان المعتمة
           </div>
@@ -764,7 +792,11 @@ export function ThemeCustomizer() {
               borderColor: draft.border || currentHexValues.border,
             }}
           >
-            <div>
+            <div
+              className="cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => focusColorPicker("success")}
+              title="اضغط لتعديل لون الأرقام الإيجابية"
+            >
               <p className="text-xs opacity-60 mb-1">ربح</p>
               <p
                 className="text-base font-bold"
@@ -775,7 +807,11 @@ export function ThemeCustomizer() {
                 +٢,٤٠٠
               </p>
             </div>
-            <div>
+            <div
+              className="cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => focusColorPicker("danger")}
+              title="اضغط لتعديل لون الأرقام السلبية"
+            >
               <p className="text-xs opacity-60 mb-1">خسارة</p>
               <p
                 className="text-base font-bold"
@@ -786,7 +822,11 @@ export function ThemeCustomizer() {
                 -٨٥٠
               </p>
             </div>
-            <div>
+            <div
+              className="cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => focusColorPicker("info")}
+              title="اضغط لتعديل لون المعلومات"
+            >
               <p className="text-xs opacity-60 mb-1">كمية</p>
               <p
                 className="text-base font-bold"
@@ -797,7 +837,11 @@ export function ThemeCustomizer() {
                 ١٥٠
               </p>
             </div>
-            <div>
+            <div
+              className="cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => focusColorPicker("warning")}
+              title="اضغط لتعديل لون التنبيهات"
+            >
               <p className="text-xs opacity-60 mb-1">سعر</p>
               <p
                 className="text-base font-bold"
