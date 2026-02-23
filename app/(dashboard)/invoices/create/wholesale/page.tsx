@@ -651,7 +651,8 @@ export default function CreateWholesaleInvoicePage() {
         invoice_date: invoiceDate,
         customer_id: movementType === "purchase" ? null : customerId,
         customer_name: movementType === "purchase" ? null : customerName,
-        customer_phone: movementType === "purchase" ? null : (customerPhone || null),
+        customer_phone:
+          movementType === "purchase" ? null : customerPhone || null,
         supplier_name:
           movementType === "purchase" ? supplierName || null : null,
         supplier_phone:
@@ -917,157 +918,165 @@ export default function CreateWholesaleInvoicePage() {
             </div>
 
             {movementType !== "purchase" && (
-            <>
-            <div className="relative" ref={nameDropdownRef}>
-              <label className="text-sm mb-2 block">اسم العميل</label>
-              <Input
-                value={customerName}
-                placeholder="اكتب الاسم أو رقم التليفون..."
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setCustomerName(v);
-                  setCustomerId(null);
-                  if (nameTimerRef.current) clearTimeout(nameTimerRef.current);
-                  nameTimerRef.current = setTimeout(
-                    () => searchCustomers(v),
-                    300,
-                  );
-                }}
-                onFocus={() => {
-                  if (customerSuggestions.length > 0) setShowNameDropdown(true);
-                }}
-                onKeyDown={(e) => {
-                  if (!showNameDropdown || customerSuggestions.length === 0)
-                    return;
-                  if (e.key === "ArrowDown") {
-                    e.preventDefault();
-                    setHighlightedIndex((prev) =>
-                      prev < customerSuggestions.length - 1 ? prev + 1 : 0,
-                    );
-                  } else if (e.key === "ArrowUp") {
-                    e.preventDefault();
-                    setHighlightedIndex((prev) =>
-                      prev > 0 ? prev - 1 : customerSuggestions.length - 1,
-                    );
-                  } else if (e.key === "Enter" && highlightedIndex >= 0) {
-                    e.preventDefault();
-                    selectCustomer(customerSuggestions[highlightedIndex]);
-                    setHighlightedIndex(-1);
-                  } else if (e.key === "Escape") {
-                    setShowNameDropdown(false);
-                    setHighlightedIndex(-1);
-                  }
-                }}
-              />
-              {showNameDropdown && customerSuggestions.length > 0 && (
-                <div className="absolute z-50 top-full mt-1 w-full bg-popover border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                  {customerSuggestions.map((c: any, idx: number) => (
-                    <div
-                      key={c.id}
-                      className={`px-3 py-2 cursor-pointer text-sm ${idx === highlightedIndex ? "bg-muted" : "hover:bg-muted"}`}
-                      onClick={() => selectCustomer(c)}
-                    >
-                      <span className="font-medium">{c.name}</span>
-                      {c.phone && (
-                        <span className="text-muted-foreground mr-2">
-                          ({c.phone})
-                        </span>
-                      )}
+              <>
+                <div className="relative" ref={nameDropdownRef}>
+                  <label className="text-sm mb-2 block">اسم العميل</label>
+                  <Input
+                    value={customerName}
+                    placeholder="اكتب الاسم أو رقم التليفون..."
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setCustomerName(v);
+                      setCustomerId(null);
+                      if (nameTimerRef.current)
+                        clearTimeout(nameTimerRef.current);
+                      nameTimerRef.current = setTimeout(
+                        () => searchCustomers(v),
+                        300,
+                      );
+                    }}
+                    onFocus={() => {
+                      if (customerSuggestions.length > 0)
+                        setShowNameDropdown(true);
+                    }}
+                    onKeyDown={(e) => {
+                      if (!showNameDropdown || customerSuggestions.length === 0)
+                        return;
+                      if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        setHighlightedIndex((prev) =>
+                          prev < customerSuggestions.length - 1 ? prev + 1 : 0,
+                        );
+                      } else if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        setHighlightedIndex((prev) =>
+                          prev > 0 ? prev - 1 : customerSuggestions.length - 1,
+                        );
+                      } else if (e.key === "Enter" && highlightedIndex >= 0) {
+                        e.preventDefault();
+                        selectCustomer(customerSuggestions[highlightedIndex]);
+                        setHighlightedIndex(-1);
+                      } else if (e.key === "Escape") {
+                        setShowNameDropdown(false);
+                        setHighlightedIndex(-1);
+                      }
+                    }}
+                  />
+                  {showNameDropdown && customerSuggestions.length > 0 && (
+                    <div className="absolute z-50 top-full mt-1 w-full bg-popover border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {customerSuggestions.map((c: any, idx: number) => (
+                        <div
+                          key={c.id}
+                          className={`px-3 py-2 cursor-pointer text-sm ${idx === highlightedIndex ? "bg-muted" : "hover:bg-muted"}`}
+                          onClick={() => selectCustomer(c)}
+                        >
+                          <span className="font-medium">{c.name}</span>
+                          {c.phone && (
+                            <span className="text-muted-foreground mr-2">
+                              ({c.phone})
+                            </span>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
+                  {customerId && customerName && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-2 text-xs gap-1"
+                      onClick={() => fetchPrevInvoices(customerName)}
+                    >
+                      <FileText className="h-3 w-3" />
+                      الفواتير السابقة
+                    </Button>
+                  )}
                 </div>
-              )}
-              {customerId && customerName && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="mt-2 text-xs gap-1"
-                  onClick={() => fetchPrevInvoices(customerName)}
-                >
-                  <FileText className="h-3 w-3" />
-                  الفواتير السابقة
-                </Button>
-              )}
-            </div>
 
-            <div className="relative" ref={phoneDropdownRef}>
-              <label className="text-sm mb-2 block">رقم الهاتف</label>
-              <Input
-                value={customerPhone}
-                inputMode="tel"
-                placeholder="اكتب رقم التليفون..."
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setCustomerPhone(v);
-                  if (phoneTimerRef.current)
-                    clearTimeout(phoneTimerRef.current);
-                  phoneTimerRef.current = setTimeout(
-                    () => searchByPhone(v),
-                    300,
-                  );
-                }}
-                onFocus={() => {
-                  if (phoneSuggestions.length > 0) setShowPhoneDropdown(true);
-                }}
-                onKeyDown={(e) => {
-                  if (!showPhoneDropdown || phoneSuggestions.length === 0)
-                    return;
-                  if (e.key === "ArrowDown") {
-                    e.preventDefault();
-                    setHighlightedPhoneIndex((prev) =>
-                      prev < phoneSuggestions.length - 1 ? prev + 1 : 0,
-                    );
-                  } else if (e.key === "ArrowUp") {
-                    e.preventDefault();
-                    setHighlightedPhoneIndex((prev) =>
-                      prev > 0 ? prev - 1 : phoneSuggestions.length - 1,
-                    );
-                  } else if (e.key === "Enter" && highlightedPhoneIndex >= 0) {
-                    e.preventDefault();
-                    selectFromPhone(phoneSuggestions[highlightedPhoneIndex]);
-                    setHighlightedPhoneIndex(-1);
-                  } else if (e.key === "Escape") {
-                    setShowPhoneDropdown(false);
-                    setHighlightedPhoneIndex(-1);
-                  }
-                }}
-              />
-              {showPhoneDropdown && phoneSuggestions.length > 0 && (
-                <div className="absolute z-50 top-full mt-1 w-full bg-popover border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                  {phoneSuggestions.map((c: any, idx: number) => (
-                    <div
-                      key={c.id}
-                      className={`px-3 py-2 cursor-pointer text-sm ${idx === highlightedPhoneIndex ? "bg-muted" : "hover:bg-muted"}`}
-                      onClick={() => selectFromPhone(c)}
-                    >
-                      <span className="font-medium">{c.name}</span>
-                      {c.phone && (
-                        <span className="text-muted-foreground mr-2">
-                          ({c.phone})
-                        </span>
-                      )}
+                <div className="relative" ref={phoneDropdownRef}>
+                  <label className="text-sm mb-2 block">رقم الهاتف</label>
+                  <Input
+                    value={customerPhone}
+                    inputMode="tel"
+                    placeholder="اكتب رقم التليفون..."
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setCustomerPhone(v);
+                      if (phoneTimerRef.current)
+                        clearTimeout(phoneTimerRef.current);
+                      phoneTimerRef.current = setTimeout(
+                        () => searchByPhone(v),
+                        300,
+                      );
+                    }}
+                    onFocus={() => {
+                      if (phoneSuggestions.length > 0)
+                        setShowPhoneDropdown(true);
+                    }}
+                    onKeyDown={(e) => {
+                      if (!showPhoneDropdown || phoneSuggestions.length === 0)
+                        return;
+                      if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        setHighlightedPhoneIndex((prev) =>
+                          prev < phoneSuggestions.length - 1 ? prev + 1 : 0,
+                        );
+                      } else if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        setHighlightedPhoneIndex((prev) =>
+                          prev > 0 ? prev - 1 : phoneSuggestions.length - 1,
+                        );
+                      } else if (
+                        e.key === "Enter" &&
+                        highlightedPhoneIndex >= 0
+                      ) {
+                        e.preventDefault();
+                        selectFromPhone(
+                          phoneSuggestions[highlightedPhoneIndex],
+                        );
+                        setHighlightedPhoneIndex(-1);
+                      } else if (e.key === "Escape") {
+                        setShowPhoneDropdown(false);
+                        setHighlightedPhoneIndex(-1);
+                      }
+                    }}
+                  />
+                  {showPhoneDropdown && phoneSuggestions.length > 0 && (
+                    <div className="absolute z-50 top-full mt-1 w-full bg-popover border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {phoneSuggestions.map((c: any, idx: number) => (
+                        <div
+                          key={c.id}
+                          className={`px-3 py-2 cursor-pointer text-sm ${idx === highlightedPhoneIndex ? "bg-muted" : "hover:bg-muted"}`}
+                          onClick={() => selectFromPhone(c)}
+                        >
+                          <span className="font-medium">{c.name}</span>
+                          {c.phone && (
+                            <span className="text-muted-foreground mr-2">
+                              ({c.phone})
+                            </span>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
+                  {customerId &&
+                    customerPhone.trim() &&
+                    customerPhone.trim() !== originalPhone && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="mt-2 text-xs gap-1"
+                        disabled={savingPhone}
+                        onClick={saveNewPhone}
+                      >
+                        <Save className="h-3 w-3" />
+                        {savingPhone ? "جاري الحفظ..." : "حفظ الرقم الجديد"}
+                      </Button>
+                    )}
                 </div>
-              )}
-              {customerId &&
-                customerPhone.trim() &&
-                customerPhone.trim() !== originalPhone && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="mt-2 text-xs gap-1"
-                    disabled={savingPhone}
-                    onClick={saveNewPhone}
-                  >
-                    <Save className="h-3 w-3" />
-                    {savingPhone ? "جاري الحفظ..." : "حفظ الرقم الجديد"}
-                  </Button>
-                )}
-            </div>
-            </>
+              </>
             )}
           </div>
         </Card>

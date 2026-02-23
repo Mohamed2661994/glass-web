@@ -1220,7 +1220,7 @@ export default function DashboardPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="text-right">#</TableHead>
-                      <TableHead className="text-right">العميل</TableHead>
+                      <TableHead className="text-right">العميل/المورد</TableHead>
                       <TableHead className="text-right hidden sm:table-cell">
                         النوع
                       </TableHead>
@@ -1256,7 +1256,9 @@ export default function DashboardPage() {
                             {inv.id}
                           </TableCell>
                           <TableCell className="max-w-[80px] truncate">
-                            {inv.movement_type === "purchase" ? (inv.supplier_name || "—") : (inv.customer_name || "—")}
+                            {inv.movement_type === "purchase"
+                              ? inv.supplier_name || "—"
+                              : inv.customer_name || "—"}
                           </TableCell>
                           <TableCell className="hidden sm:table-cell">
                             {movementLabel(inv.movement_type)}
@@ -1297,7 +1299,7 @@ export default function DashboardPage() {
                   <TableHeader>
                     <TableRow className="h-7">
                       <TableHead className="text-right py-1">#</TableHead>
-                      <TableHead className="text-right py-1">العميل</TableHead>
+                      <TableHead className="text-right py-1">العميل/المورد</TableHead>
                       <TableHead className="text-right py-1">
                         الإجمالي
                       </TableHead>
@@ -1328,7 +1330,9 @@ export default function DashboardPage() {
                             {inv.id}
                           </TableCell>
                           <TableCell className="max-w-[90px] truncate py-1">
-                            {inv.movement_type === "purchase" ? (inv.supplier_name || "—") : (inv.customer_name || "—")}
+                            {inv.movement_type === "purchase"
+                              ? inv.supplier_name || "—"
+                              : inv.customer_name || "—"}
                           </TableCell>
                           <TableCell className="whitespace-nowrap py-1">
                             {Math.round(inv.total).toLocaleString()} ج
@@ -1377,7 +1381,9 @@ export default function DashboardPage() {
                           {paymentBadge(inv.payment_status)}
                         </div>
                         <p className="text-xs font-medium truncate">
-                          {inv.movement_type === "purchase" ? (inv.supplier_name || "—") : (inv.customer_name || "—")}
+                          {inv.movement_type === "purchase"
+                            ? inv.supplier_name || "—"
+                            : inv.customer_name || "—"}
                         </p>
                         <div className="flex items-center justify-between text-[11px]">
                           <span className="font-semibold">
