@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Loader2, Printer, Eye } from "lucide-react";
+import { useRealtime } from "@/hooks/use-realtime";
 
 /* ========== Types ========== */
 type Invoice = {
@@ -87,6 +88,8 @@ export default function CustomerDebtDetailsPage() {
   useEffect(() => {
     fetchDetails();
   }, [fetchDetails]);
+
+  useRealtime(["data:invoices", "data:cash"], fetchDetails);
 
   /* ========== Totals ========== */
   const totalAll = useMemo(

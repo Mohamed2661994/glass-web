@@ -20,6 +20,7 @@ import { Loader2, Printer, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useRealtime } from "@/hooks/use-realtime";
 
 /* ========== Types ========== */
 type CustomerBalanceItem = {
@@ -77,6 +78,8 @@ export default function CustomerBalancesPage() {
     }, 400);
     return () => clearTimeout(timer);
   }, [fetchReport]);
+
+  useRealtime(["data:invoices", "data:cash"], fetchReport);
 
   /* ========== Totals ========== */
   const totalBalance = useMemo(

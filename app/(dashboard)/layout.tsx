@@ -14,6 +14,7 @@ import { ProductFormDialog } from "@/components/product-form-dialog";
 import { ProductLookupModal } from "@/components/product-lookup-modal";
 import { ChatDrawer } from "@/components/chat-drawer";
 import { PullToRefresh } from "@/components/pull-to-refresh";
+import { SocketProvider } from "@/app/context/socket-context";
 import api, { API_URL } from "@/services/api";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -259,6 +260,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         : "النظام";
 
   return (
+    <SocketProvider>
     <div className="h-dvh flex bg-background overflow-hidden print:h-auto print:overflow-visible">
       {/* Sidebar */}
       <div className="print:hidden">
@@ -331,5 +333,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         branchId={user?.branch_id || 1}
       />
     </div>
+    </SocketProvider>
   );
 }

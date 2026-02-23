@@ -24,6 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Loader2, Search, AlertTriangle } from "lucide-react";
+import { useRealtime } from "@/hooks/use-realtime";
 
 /* ========== Types ========== */
 type InventoryItem = {
@@ -96,6 +97,8 @@ export default function InventorySummaryPage() {
   useEffect(() => {
     fetchReport();
   }, [fetchReport]);
+
+  useRealtime(["data:products", "data:stock", "data:invoices"], fetchReport);
 
   /* ========== Filter ========== */
   const filteredData = useMemo(() => {

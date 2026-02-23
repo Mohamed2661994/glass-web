@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Loader2, Search } from "lucide-react";
+import { useRealtime } from "@/hooks/use-realtime";
 
 interface Product {
   id: number;
@@ -70,6 +71,8 @@ export default function ReplacePage() {
   useEffect(() => {
     loadProducts();
   }, []);
+
+  useRealtime(["data:products", "data:stock"], loadProducts);
 
   /* ========== Live Quantity ========== */
   const fetchLiveQty = async (

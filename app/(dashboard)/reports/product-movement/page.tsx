@@ -25,6 +25,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Loader2, Search } from "lucide-react";
+import { useRealtime } from "@/hooks/use-realtime";
 
 /* ========== Types ========== */
 type MovementItem = {
@@ -118,6 +119,8 @@ export default function ProductMovementPage() {
   useEffect(() => {
     if (selectedProduct) fetchMovement();
   }, [fetchMovement, selectedProduct]);
+
+  useRealtime(["data:invoices", "data:stock"], fetchMovement);
 
   /* ========== Filter ========== */
   const filteredData = useMemo(() => {

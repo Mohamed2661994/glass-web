@@ -33,6 +33,7 @@ import {
   User,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useRealtime } from "@/hooks/use-realtime";
 
 /* ========== Admin check uses backend role ========== */
 
@@ -166,6 +167,8 @@ export default function UsersPage() {
   useEffect(() => {
     if (isAdmin) fetchUsers();
   }, [isAdmin, fetchUsers]);
+
+  useRealtime("data:users", fetchUsers);
 
   /* ========== Handlers ========== */
 

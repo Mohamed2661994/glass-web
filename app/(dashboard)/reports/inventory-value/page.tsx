@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
+import { useRealtime } from "@/hooks/use-realtime";
 
 /* ========== Types ========== */
 type InventoryItem = {
@@ -121,6 +122,8 @@ export default function InventoryValuePage() {
   useEffect(() => {
     fetchReport();
   }, [fetchReport]);
+
+  useRealtime(["data:products", "data:stock"], fetchReport);
 
   /* ========== Product package map ========== */
   const packageMap = useMemo(() => {

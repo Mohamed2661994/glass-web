@@ -26,6 +26,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/auth-context";
+import { useRealtime } from "@/hooks/use-realtime";
 
 interface TransferRow {
   id: number;
@@ -78,6 +79,8 @@ export default function TransfersByDatePage() {
       setLoading(false);
     }
   }, [date]);
+
+  useRealtime("data:stock", fetchTransfers);
 
   useEffect(() => {
     fetchTransfers();

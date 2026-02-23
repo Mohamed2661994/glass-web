@@ -37,6 +37,7 @@ import { toast } from "sonner";
 import { Pencil, Trash2 } from "lucide-react";
 import api from "@/services/api";
 import { useRouter } from "next/navigation";
+import { useRealtime } from "@/hooks/use-realtime";
 
 interface CashInItem {
   id: number;
@@ -76,6 +77,8 @@ export default function CashInListPage() {
       setLoading(false);
     }
   }, []);
+
+  useRealtime("data:cash", fetchData);
 
   useEffect(() => {
     fetchData();

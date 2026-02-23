@@ -26,6 +26,7 @@ import {
 import { toast } from "sonner";
 import { Search, Phone, Plus, Trash2, Pencil, X, Loader2 } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
+import { useRealtime } from "@/hooks/use-realtime";
 
 type CustomerPhone = { id: number; phone: string };
 type Customer = {
@@ -73,6 +74,8 @@ export default function CustomersPage() {
   useEffect(() => {
     fetchCustomers();
   }, []);
+
+  useRealtime("data:customers", fetchCustomers);
 
   const handleSearch = (val: string) => {
     setSearch(val);

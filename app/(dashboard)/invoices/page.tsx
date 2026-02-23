@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import axios from "@/services/api";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/auth-context";
+import { useRealtime } from "@/hooks/use-realtime";
 import { onUpdate, broadcastUpdate } from "@/lib/broadcast";
 import {
   AlertDialog,
@@ -126,6 +127,8 @@ export default function InvoicesPage() {
     dateFrom,
     dateTo,
   ]);
+
+  useRealtime("data:invoices", fetchInvoices);
 
   // تحديث لحظي: استمع لإشعارات الفواتير والتحويلات الجديدة
   useEffect(() => {

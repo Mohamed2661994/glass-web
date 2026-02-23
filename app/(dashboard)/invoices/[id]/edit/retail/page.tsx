@@ -499,8 +499,17 @@ export default function EditRetailInvoicePage() {
       invalidateCache();
       window.location.reload();
     } catch (err: any) {
-      console.error("❌ Invoice update error:", err.response?.status, err.response?.data, err.message);
-      const msg = err.response?.data?.error || (err.code === "ECONNABORTED" ? "انتهت مهلة الاتصال بالسيرفر" : err.message || "فشل التعديل");
+      console.error(
+        "❌ Invoice update error:",
+        err.response?.status,
+        err.response?.data,
+        err.message,
+      );
+      const msg =
+        err.response?.data?.error ||
+        (err.code === "ECONNABORTED"
+          ? "انتهت مهلة الاتصال بالسيرفر"
+          : err.message || "فشل التعديل");
       toast.error(msg);
     } finally {
       setSaving(false);

@@ -46,6 +46,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { useRealtime } from "@/hooks/use-realtime";
 
 interface Product {
   id: number;
@@ -129,6 +130,8 @@ export default function ProductsPage() {
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  useRealtime(["data:products", "data:invoices", "data:stock"], fetchProducts);
 
   const fetchProducts = async () => {
     try {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRealtime } from "@/hooks/use-realtime";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -716,6 +717,13 @@ export default function DashboardPage() {
   const [loadingTr, setLoadingTr] = useState(true);
   const [loadingStats, setLoadingStats] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Real-time: refresh dashboard when any data changes
+  useRealtime(
+    ["data:invoices", "data:cash", "data:stock", "data:products"],
+    () => setRefreshKey((k) => k + 1),
+    1000,
+  );
 
   /* cash summary */
   const [cashInTotal, setCashInTotal] = useState(0);

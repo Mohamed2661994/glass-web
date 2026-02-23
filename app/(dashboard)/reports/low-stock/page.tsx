@@ -18,6 +18,7 @@ import {
 import { Loader2, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { multiWordMatch, multiWordScore } from "@/lib/utils";
+import { useRealtime } from "@/hooks/use-realtime";
 
 /* ========== Types ========== */
 type LowStockItem = {
@@ -64,6 +65,8 @@ export default function LowStockReportPage() {
   useEffect(() => {
     fetchReport();
   }, [fetchReport]);
+
+  useRealtime(["data:products", "data:stock", "data:invoices"], fetchReport);
 
   /* ========== Filter ========== */
   const filteredData = useMemo(() => {

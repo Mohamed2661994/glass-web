@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRealtime } from "@/hooks/use-realtime";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -91,6 +92,9 @@ export default function CashSummaryPage() {
   const [loading, setLoading] = useState(true);
   const [includeOpeningBalance, setIncludeOpeningBalance] = useState(true);
   const [actualCash, setActualCash] = useState<string>("");
+  const [cashRefreshKey, setCashRefreshKey] = useState(0);
+
+  useRealtime("data:cash", () => setCashRefreshKey((k) => k + 1), 1000);
 
   const today = formatLocalDate(new Date());
   const [fromDate, setFromDate] = useState(today);
@@ -122,7 +126,7 @@ export default function CashSummaryPage() {
         setLoading(false);
       }
     })();
-  }, [user?.branch_id]);
+  }, [user?.branch_id, cashRefreshKey]);
 
   /* ================= FILTER ================= */
 

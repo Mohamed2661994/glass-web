@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Factory, Pencil, Trash2, Plus, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
+import { useRealtime } from "@/hooks/use-realtime";
 
 interface Manufacturer {
   id: number;
@@ -64,6 +65,8 @@ export default function ManufacturersPage() {
   useEffect(() => {
     fetchManufacturers();
   }, [fetchManufacturers]);
+
+  useRealtime("data:products", fetchManufacturers);
 
   const filtered = manufacturers.filter((m) => multiWordMatch(search, m.name));
 
