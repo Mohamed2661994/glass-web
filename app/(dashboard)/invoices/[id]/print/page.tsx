@@ -323,8 +323,10 @@ function InvoicePrintPage() {
   const items = invoice.items || [];
   const isWholesale = invoice.invoice_type === "wholesale";
 
+  const applyDiscount = invoice.apply_items_discount !== false;
+
   const calcUnitPrice = (it: InvoiceItem) => {
-    if (!invoice.apply_items_discount) return Number(it.price);
+    if (!applyDiscount) return Number(it.price);
     if (isWholesale) {
       // wholesale: discount is total flat → unit price = (price*qty - discount) / qty
       const qty = Number(it.quantity || 0) || 1;
@@ -335,7 +337,7 @@ function InvoicePrintPage() {
   };
 
   const calcItemTotal = (it: InvoiceItem) => {
-    if (!invoice.apply_items_discount)
+    if (!applyDiscount)
       return Number(it.price) * Number(it.quantity || 0);
     if (isWholesale) {
       // wholesale: total = price * qty - discount (flat)

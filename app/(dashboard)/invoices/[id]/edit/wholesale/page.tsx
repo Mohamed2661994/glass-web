@@ -108,7 +108,7 @@ export default function EditWholesaleInvoicePage() {
 
   const [extraDiscount, setExtraDiscount] = useState("0");
   const [paidAmount, setPaidAmount] = useState("0");
-  const [applyItemsDiscount, setApplyItemsDiscount] = useState(false);
+  const [applyItemsDiscount, setApplyItemsDiscount] = useState(true);
 
   /* =========================================================
      5️⃣ Fetch Invoice Data
@@ -136,7 +136,7 @@ export default function EditWholesaleInvoicePage() {
         setPreviousBalance(String(inv.previous_balance || 0));
         setExtraDiscount(String(inv.extra_discount || 0));
         setPaidAmount(String(inv.paid_amount || 0));
-        setApplyItemsDiscount(inv.apply_items_discount ?? false);
+        setApplyItemsDiscount(inv.apply_items_discount ?? true);
 
         const loadedItems = (inv.items || []).map((item: any, idx: number) => ({
           uid: `${item.product_id}_${idx}_${Date.now()}`,
@@ -342,10 +342,10 @@ export default function EditWholesaleInvoicePage() {
     return items.reduce((sum, item) => {
       const raw =
         Number(item.price) * (Number(item.quantity) || 0) -
-        (Number(item.discount) || 0);
+        (applyItemsDiscount ? Number(item.discount) || 0 : 0);
       return sum + (item.is_return ? -raw : raw);
     }, 0);
-  }, [items]);
+  }, [items, applyItemsDiscount]);
 
   const finalTotal = useMemo(() => {
     return totalBeforeDiscount - (Number(extraDiscount) || 0);
@@ -794,7 +794,9 @@ export default function EditWholesaleInvoicePage() {
                             const raw =
                               Number(item.price) *
                                 (Number(item.quantity) || 0) -
-                              (Number(item.discount) || 0);
+                              (applyItemsDiscount
+                                ? Number(item.discount) || 0
+                                : 0);
                             return item.is_return ? -raw : raw;
                           })()}
                         </td>
@@ -872,7 +874,7 @@ export default function EditWholesaleInvoicePage() {
                 const itemTotal = (() => {
                   const raw =
                     Number(item.price) * (Number(item.quantity) || 0) -
-                    (Number(item.discount) || 0);
+                    (applyItemsDiscount ? Number(item.discount) || 0 : 0);
                   return item.is_return ? -raw : raw;
                 })();
                 const isExpanded = expandedItemUid === item.uid;
@@ -1113,6 +1115,21 @@ export default function EditWholesaleInvoicePage() {
 
         {items.length > 0 && (
           <Card className="p-6 space-y-4">
+            {/* تطبيق خصم الأصناف */}
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="apply-discount"
+                checked={applyItemsDiscount}
+                onCheckedChange={(v) => setApplyItemsDiscount(!!v)}
+              />
+              <label
+                htmlFor="apply-discount"
+                className="text-sm cursor-pointer"
+              >
+                خصم الأصناف
+              </label>
+            </div>
+
             {/* الإجمالي */}
             <div className="grid grid-cols-3 items-center py-2 border-b">
               <span className="text-muted-foreground text-sm">
