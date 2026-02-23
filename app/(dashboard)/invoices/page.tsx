@@ -154,26 +154,6 @@ export default function InvoicesPage() {
     dateTo,
   ]);
 
-  // تحديث عند العودة للصفحة (visibility change)
-  useEffect(() => {
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        fetchInvoices();
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () =>
-      document.removeEventListener("visibilitychange", handleVisibility);
-  }, [
-    invoiceType,
-    page,
-    movementType,
-    debouncedSearch,
-    invoiceIdSearch,
-    dateFrom,
-    dateTo,
-  ]);
-
   const getStatusBadge = (status: string) => {
     if (status === "paid")
       return <Badge className="bg-green-600">مدفوعة</Badge>;
