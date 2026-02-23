@@ -617,7 +617,7 @@ export default function CreateWholesaleInvoicePage() {
       return;
     }
 
-    if (!customerName.trim()) {
+    if (movementType !== "purchase" && !customerName.trim()) {
       toast.error("برجاء إدخال اسم العميل");
       return;
     }
@@ -916,6 +916,7 @@ export default function CreateWholesaleInvoicePage() {
               />
             </div>
 
+            {movementType !== "purchase" && (
             <div className="relative" ref={nameDropdownRef}>
               <label className="text-sm mb-2 block">اسم العميل</label>
               <Input
@@ -1065,6 +1066,7 @@ export default function CreateWholesaleInvoicePage() {
                   </Button>
                 )}
             </div>
+            )}
           </div>
         </Card>
 
