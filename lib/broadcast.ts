@@ -33,6 +33,13 @@ export function broadcastUpdate(event: UpdateEvent) {
     window.dispatchEvent(
       new CustomEvent("glass_update", { detail: { type: event } }),
     );
+    // Invalidate product caches so they refetch on next mount
+    try {
+      localStorage.setItem(
+        "products_cache_invalidated_at",
+        Date.now().toString(),
+      );
+    } catch {}
   }
 }
 

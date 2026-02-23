@@ -141,6 +141,14 @@ export function useCachedProducts({
 
   const fetchProducts = useCallback(
     async (forceRefresh = false, silent = false) => {
+      // When force-refreshing, mark ALL product caches as stale
+      // so other components with different cache keys will also refetch
+      if (forceRefresh) {
+        try {
+          localStorage.setItem(INVALIDATION_KEY, Date.now().toString());
+        } catch {}
+      }
+
       // 1. Try cache first (unless force refresh)
       if (!forceRefresh) {
         const cached = getFromCache<any[]>(
