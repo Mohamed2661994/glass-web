@@ -1406,7 +1406,16 @@ export default function EditRetailInvoicePage() {
                 value={paidAmount}
                 onChange={(e) => setPaidAmount(e.target.value)}
               />
-              <span />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                onClick={() => setPaidAmount(String(totalWithPrevious))}
+                title="دفع المتبقي بالكامل"
+              >
+                دفع الكل
+              </Button>
             </div>
 
             {/* المتبقي */}

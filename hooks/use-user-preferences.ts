@@ -213,7 +213,15 @@ export function useUserPreferences() {
   );
 
   const setProductsView = useCallback(
-    (products_view: "cards" | "compact" | "table" | "split" | "swipe" | "kanban") => {
+    (
+      products_view:
+        | "cards"
+        | "compact"
+        | "table"
+        | "split"
+        | "swipe"
+        | "kanban",
+    ) => {
       setPrefs((prev) => ({ ...prev, products_view }));
     },
     [setPrefs],

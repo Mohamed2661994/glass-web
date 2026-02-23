@@ -98,7 +98,9 @@ export default function ProductsPage() {
   const [swipeIndex, setSwipeIndex] = useState(0);
 
   // Kanban view
-  const [kanbanGroupBy, setKanbanGroupBy] = useState<"manufacturer" | "status">("manufacturer");
+  const [kanbanGroupBy, setKanbanGroupBy] = useState<"manufacturer" | "status">(
+    "manufacturer",
+  );
 
   // Sync from prefs when loaded
   useEffect(() => {
@@ -1283,201 +1285,230 @@ export default function ProductsPage() {
           )}
 
           {/* === Kanban Board View === */}
-          {viewMode === "kanban" && (() => {
-            // Group products into columns
-            const groups: Record<string, Product[]> = {};
-            if (kanbanGroupBy === "manufacturer") {
-              for (const p of filteredProducts) {
-                const key = p.manufacturer || "بدون مصنّع";
-                if (!groups[key]) groups[key] = [];
-                groups[key].push(p);
+          {viewMode === "kanban" &&
+            (() => {
+              // Group products into columns
+              const groups: Record<string, Product[]> = {};
+              if (kanbanGroupBy === "manufacturer") {
+                for (const p of filteredProducts) {
+                  const key = p.manufacturer || "بدون مصنّع";
+                  if (!groups[key]) groups[key] = [];
+                  groups[key].push(p);
+                }
+              } else {
+                groups["مفعل"] = filteredProducts.filter((p) => p.is_active);
+                groups["معطل"] = filteredProducts.filter((p) => !p.is_active);
               }
-            } else {
-              groups["مفعل"] = filteredProducts.filter(p => p.is_active);
-              groups["معطل"] = filteredProducts.filter(p => !p.is_active);
-            }
-            const columns = Object.entries(groups);
+              const columns = Object.entries(groups);
 
-            return (
-              <div className="space-y-3">
-                {/* Group-by toggle */}
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">تجميع حسب:</span>
-                  <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
-                    <button
-                      onClick={() => setKanbanGroupBy("manufacturer")}
-                      className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
-                        kanbanGroupBy === "manufacturer"
-                          ? "bg-background shadow-sm text-foreground"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      المصنّع
-                    </button>
-                    <button
-                      onClick={() => setKanbanGroupBy("status")}
-                      className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
-                        kanbanGroupBy === "status"
-                          ? "bg-background shadow-sm text-foreground"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      الحالة
-                    </button>
+              return (
+                <div className="space-y-3">
+                  {/* Group-by toggle */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">
+                      تجميع حسب:
+                    </span>
+                    <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+                      <button
+                        onClick={() => setKanbanGroupBy("manufacturer")}
+                        className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                          kanbanGroupBy === "manufacturer"
+                            ? "bg-background shadow-sm text-foreground"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        المصنّع
+                      </button>
+                      <button
+                        onClick={() => setKanbanGroupBy("status")}
+                        className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                          kanbanGroupBy === "status"
+                            ? "bg-background shadow-sm text-foreground"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        الحالة
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                {/* Board */}
-                <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide" style={{ WebkitOverflowScrolling: "touch" }}>
-                  {columns.map(([groupName, products]) => (
-                    <div
-                      key={groupName}
-                      className="shrink-0 w-72 sm:w-80 flex flex-col bg-muted/40 rounded-xl border max-h-[calc(100vh-300px)]"
-                    >
-                      {/* Column Header */}
-                      <div className="p-3 border-b bg-muted/60 rounded-t-xl sticky top-0 z-10">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-semibold text-sm truncate">{groupName}</h4>
-                          <Badge variant="secondary" className="text-[10px] shrink-0">
-                            {products.length}
-                          </Badge>
-                        </div>
-                      </div>
-
-                      {/* Column Cards - Scrollable */}
-                      <div className="flex-1 overflow-y-auto p-2 space-y-2 scrollbar-hide">
-                        {products.map((product) => {
-                          const fmt = (v: number) =>
-                            Number(v || 0).toLocaleString("en-US", { minimumFractionDigits: 2 });
-
-                          return (
-                            <Card
-                              key={product.id}
-                              className={`overflow-hidden transition-all hover:shadow-md cursor-pointer ${
-                                !product.is_active ? "opacity-50 grayscale" : ""
-                              }`}
-                              onClick={() => {
-                                setSelectedProduct(product);
-                                setDialogOpen(true);
-                              }}
+                  {/* Board */}
+                  <div
+                    className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide"
+                    style={{ WebkitOverflowScrolling: "touch" }}
+                  >
+                    {columns.map(([groupName, products]) => (
+                      <div
+                        key={groupName}
+                        className="shrink-0 w-72 sm:w-80 flex flex-col bg-muted/40 rounded-xl border max-h-[calc(100vh-300px)]"
+                      >
+                        {/* Column Header */}
+                        <div className="p-3 border-b bg-muted/60 rounded-t-xl sticky top-0 z-10">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-semibold text-sm truncate">
+                              {groupName}
+                            </h4>
+                            <Badge
+                              variant="secondary"
+                              className="text-[10px] shrink-0"
                             >
-                              <CardContent className="p-3 space-y-2">
-                                {/* Name + Toggle */}
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="min-w-0 flex-1">
-                                    <p className="text-sm font-semibold truncate">
-                                      {highlightText(product.name, search)}
-                                    </p>
-                                    {kanbanGroupBy !== "manufacturer" && product.manufacturer && (
-                                      <p className="text-[11px] text-muted-foreground truncate">
-                                        {product.manufacturer}
+                              {products.length}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        {/* Column Cards - Scrollable */}
+                        <div className="flex-1 overflow-y-auto p-2 space-y-2 scrollbar-hide">
+                          {products.map((product) => {
+                            const fmt = (v: number) =>
+                              Number(v || 0).toLocaleString("en-US", {
+                                minimumFractionDigits: 2,
+                              });
+
+                            return (
+                              <Card
+                                key={product.id}
+                                className={`overflow-hidden transition-all hover:shadow-md cursor-pointer ${
+                                  !product.is_active
+                                    ? "opacity-50 grayscale"
+                                    : ""
+                                }`}
+                                onClick={() => {
+                                  setSelectedProduct(product);
+                                  setDialogOpen(true);
+                                }}
+                              >
+                                <CardContent className="p-3 space-y-2">
+                                  {/* Name + Toggle */}
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-sm font-semibold truncate">
+                                        {highlightText(product.name, search)}
                                       </p>
-                                    )}
-                                  </div>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleToggle(product.id, !product.is_active);
-                                    }}
-                                    className={`relative h-4 w-8 rounded-full transition-all duration-300 shrink-0 mt-0.5 ${
-                                      product.is_active ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
-                                    }`}
-                                  >
-                                    <span
-                                      className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-all duration-300 ${
-                                        product.is_active ? "right-0.5" : "left-0.5"
-                                      }`}
-                                    />
-                                  </button>
-                                </div>
-
-                                {/* Barcode */}
-                                {product.barcode && (
-                                  <p className="text-[10px] font-mono text-muted-foreground truncate">
-                                    {product.barcode}
-                                  </p>
-                                )}
-
-                                {/* Quick Prices */}
-                                <div className="grid grid-cols-2 gap-2 text-[11px]">
-                                  <div className="bg-sky-500/5 rounded px-2 py-1">
-                                    <span className="text-muted-foreground">جملة: </span>
-                                    <span className="font-bold text-sky-600 dark:text-sky-400">
-                                      {fmt(product.wholesale_price)}
-                                    </span>
-                                  </div>
-                                  <div className="bg-amber-500/5 rounded px-2 py-1">
-                                    <span className="text-muted-foreground">قطاعي: </span>
-                                    <span className="font-bold text-amber-600 dark:text-amber-400">
-                                      {fmt(product.retail_price)}
-                                    </span>
-                                  </div>
-                                </div>
-
-                                {/* Actions */}
-                                <div className="flex items-center gap-1 pt-1 border-t">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedProduct(product);
-                                      setDialogOpen(true);
-                                    }}
-                                    className="p-1 rounded hover:bg-muted transition-colors"
-                                    title="تعديل"
-                                  >
-                                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                                  </button>
-                                  {product.barcode && (
-                                    <>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          navigator.clipboard.writeText(product.barcode);
-                                          toast.success("تم نسخ الباركود");
-                                        }}
-                                        className="p-1 rounded hover:bg-muted transition-colors"
-                                        title="نسخ الباركود"
-                                      >
-                                        <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-                                      </button>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setBarcodePrintProduct(product);
-                                          setBarcodePrintCount("1");
-                                          setShowBarcodePrintModal(true);
-                                        }}
-                                        className="p-1 rounded hover:bg-muted transition-colors"
-                                        title="طباعة الباركود"
-                                      >
-                                        <Printer className="h-3.5 w-3.5 text-muted-foreground" />
-                                      </button>
-                                    </>
-                                  )}
-                                  {isAdmin && (
+                                      {kanbanGroupBy !== "manufacturer" &&
+                                        product.manufacturer && (
+                                          <p className="text-[11px] text-muted-foreground truncate">
+                                            {product.manufacturer}
+                                          </p>
+                                        )}
+                                    </div>
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        setDeleteTarget(product);
+                                        handleToggle(
+                                          product.id,
+                                          !product.is_active,
+                                        );
                                       }}
-                                      className="p-1 rounded hover:bg-destructive/10 transition-colors mr-auto"
-                                      title="حذف"
+                                      className={`relative h-4 w-8 rounded-full transition-all duration-300 shrink-0 mt-0.5 ${
+                                        product.is_active
+                                          ? "bg-green-500"
+                                          : "bg-gray-300 dark:bg-gray-600"
+                                      }`}
                                     >
-                                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                      <span
+                                        className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-all duration-300 ${
+                                          product.is_active
+                                            ? "right-0.5"
+                                            : "left-0.5"
+                                        }`}
+                                      />
                                     </button>
+                                  </div>
+
+                                  {/* Barcode */}
+                                  {product.barcode && (
+                                    <p className="text-[10px] font-mono text-muted-foreground truncate">
+                                      {product.barcode}
+                                    </p>
                                   )}
-                                </div>
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
+
+                                  {/* Quick Prices */}
+                                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                                    <div className="bg-sky-500/5 rounded px-2 py-1">
+                                      <span className="text-muted-foreground">
+                                        جملة:{" "}
+                                      </span>
+                                      <span className="font-bold text-sky-600 dark:text-sky-400">
+                                        {fmt(product.wholesale_price)}
+                                      </span>
+                                    </div>
+                                    <div className="bg-amber-500/5 rounded px-2 py-1">
+                                      <span className="text-muted-foreground">
+                                        قطاعي:{" "}
+                                      </span>
+                                      <span className="font-bold text-amber-600 dark:text-amber-400">
+                                        {fmt(product.retail_price)}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {/* Actions */}
+                                  <div className="flex items-center gap-1 pt-1 border-t">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedProduct(product);
+                                        setDialogOpen(true);
+                                      }}
+                                      className="p-1 rounded hover:bg-muted transition-colors"
+                                      title="تعديل"
+                                    >
+                                      <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                                    </button>
+                                    {product.barcode && (
+                                      <>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            navigator.clipboard.writeText(
+                                              product.barcode,
+                                            );
+                                            toast.success("تم نسخ الباركود");
+                                          }}
+                                          className="p-1 rounded hover:bg-muted transition-colors"
+                                          title="نسخ الباركود"
+                                        >
+                                          <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                                        </button>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setBarcodePrintProduct(product);
+                                            setBarcodePrintCount("1");
+                                            setShowBarcodePrintModal(true);
+                                          }}
+                                          className="p-1 rounded hover:bg-muted transition-colors"
+                                          title="طباعة الباركود"
+                                        >
+                                          <Printer className="h-3.5 w-3.5 text-muted-foreground" />
+                                        </button>
+                                      </>
+                                    )}
+                                    {isAdmin && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setDeleteTarget(product);
+                                        }}
+                                        className="p-1 rounded hover:bg-destructive/10 transition-colors mr-auto"
+                                        title="حذف"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                      </button>
+                                    )}
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            );
-          })()}
+              );
+            })()}
 
           {/* Pagination */}
           {totalPages > 1 && (
