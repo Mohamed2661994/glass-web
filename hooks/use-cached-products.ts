@@ -14,6 +14,43 @@ const CACHE_KEY_PREFIX = "products_cache_";
 const VARIANTS_CACHE_KEY_PREFIX = "variants_cache_";
 const CACHE_DURATION = 60 * 60 * 1000; // ساعة واحدة
 const CACHE_VERSION = 2; // زيادة الرقم تمسح الكاش القديم تلقائي
+const INVALIDATION_KEY = "products_cache_invalidated_at";
+
+// =====================================================
+//  🔔  Global listener — invalidate ALL product caches
+//  when any invoice/transfer event fires, even if no
+//  hook instance is mounted for that specific cache key
+// =====================================================
+if (typeof window !== "undefined") {
+  const markInvalidated = () => {
+    try {
+      localStorage.setItem(INVALIDATION_KEY, Date.now().toString());
+    } catch {}
+  };
+
+  // Same-tab events (CustomEvent dispatched by broadcastUpdate)
+  window.addEventListener("glass_update", markInvalidated);
+
+  // Cross-tab events (BroadcastChannel)
+  try {
+    if ("BroadcastChannel" in window) {
+      const invalidationChannel = new BroadcastChannel("glass_system_updates");
+      invalidationChannel.addEventListener("message", (e) => {
+        const type = e.data?.type;
+        if (
+          [
+            "invoice_created",
+            "invoice_updated",
+            "invoice_deleted",
+            "transfer_created",
+          ].includes(type)
+        ) {
+          markInvalidated();
+        }
+      });
+    }
+  } catch {}
+}
 
 interface CacheEntry<T> {
   data: T;
@@ -51,6 +88,15 @@ function getFromCache<T>(
     const raw = localStorage.getItem(getCacheKey(prefix, key));
     if (!raw) return null;
     const entry: CacheEntry<T> = JSON.parse(raw);
+
+    // Check global invalidation timestamp — if caches were invalidated
+    // after this entry was saved, treat as expired
+    const invalidatedAt = parseInt(
+      localStorage.getItem(INVALIDATION_KEY) || "0",
+      10,
+    );
+    if (invalidatedAt > entry.timestamp) return null;
+
     const isExpired = Date.now() - entry.timestamp > duration;
     const paramsMatch = entry.params === params;
     const versionMatch = entry.version === CACHE_VERSION;
