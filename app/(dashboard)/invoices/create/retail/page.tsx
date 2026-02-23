@@ -1949,7 +1949,9 @@ export default function CreateRetailInvoicePage() {
               >
                 دفع الكل
               </Button>
-            </div>}
+            </div>
+
+            {/* المتبقي */}
             <div className="grid grid-cols-3 items-center py-3 px-4 rounded-lg bg-destructive/10 border border-destructive/20">
               <span className="font-bold text-destructive text-sm">
                 المتبقي
