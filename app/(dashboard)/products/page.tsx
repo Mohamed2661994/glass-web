@@ -127,12 +127,6 @@ export default function ProductsPage() {
   const [page, setPage] = useState(1);
   const limit = 30;
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  useRealtime(["data:products", "data:invoices", "data:stock"], fetchProducts);
-
   const fetchProducts = async () => {
     try {
       setLoading(true);
@@ -163,6 +157,12 @@ export default function ProductsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  useRealtime(["data:products", "data:invoices", "data:stock"], fetchProducts);
 
   // استخراج المصانع
   const manufacturers = [

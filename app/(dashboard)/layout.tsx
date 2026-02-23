@@ -261,78 +261,81 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   return (
     <SocketProvider>
-    <div className="h-dvh flex bg-background overflow-hidden print:h-auto print:overflow-visible">
-      {/* Sidebar */}
-      <div className="print:hidden">
-        <Sidebar onExpandChange={setSidebarOpen} />
+      <div className="h-dvh flex bg-background overflow-hidden print:h-auto print:overflow-visible">
+        {/* Sidebar */}
+        <div className="print:hidden">
+          <Sidebar onExpandChange={setSidebarOpen} />
+        </div>
+
+        {/* Main */}
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 print:block print:min-h-auto print:overflow-visible">
+          {/* ===== HEADER FULL WIDTH ===== */}
+          <header className="h-16 border-b bg-background/80 relative print:hidden">
+            <div className="absolute inset-0 backdrop-blur-md pointer-events-none" />
+
+            <div className="relative flex items-center justify-between px-2 sm:px-6 h-full">
+              {/* LEFT */}
+              <div className="flex items-center gap-1 sm:gap-3 shrink-0">
+                <MobileSidebar />
+              </div>
+
+              {/* CENTER - Name + Branch */}
+              <div
+                className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center cursor-pointer select-none max-w-[45%]"
+                onClick={() => router.replace("/")}
+                title="الرجوع للوحة التحكم"
+              >
+                <span className="text-sm sm:text-base font-bold truncate max-w-full">
+                  {user?.full_name || user?.username}
+                </span>
+                <span className="text-[10px] sm:text-xs text-muted-foreground leading-tight">
+                  {branchName}
+                </span>
+              </div>
+
+              {/* RIGHT */}
+              <div className="flex items-center gap-1 sm:gap-4 shrink-0">
+                {mounted && user?.id && (
+                  <ChatDrawer userId={user.id} branchId={user.branch_id} />
+                )}
+
+                {mounted && user?.id && user?.branch_id === 2 && (
+                  <NotificationBell
+                    userId={user.id}
+                    branchId={user.branch_id}
+                  />
+                )}
+
+                <CashCounterModal />
+                <ThemeToggle />
+              </div>
+            </div>
+          </header>
+
+          {/* ===== CONTENT ONLY ===== */}
+          <main className="flex-1 min-h-0 overflow-hidden print:py-0 print:overflow-visible print:block print:min-h-auto print:h-auto">
+            <PullToRefresh className="h-full overflow-y-auto scrollbar-hide print:!h-auto print:!overflow-visible">
+              <div className="w-full px-4 py-6 print:px-0 print:py-0">
+                {children}
+              </div>
+            </PullToRefresh>
+          </main>
+        </div>
+
+        {/* F4 Add Product Dialog */}
+        <ProductFormDialog
+          open={productDialogOpen}
+          onOpenChange={setProductDialogOpen}
+          onSuccess={() => setProductDialogOpen(false)}
+        />
+
+        {/* F1 Product Lookup Modal */}
+        <ProductLookupModal
+          open={lookupOpen}
+          onOpenChange={setLookupOpen}
+          branchId={user?.branch_id || 1}
+        />
       </div>
-
-      {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-0 print:block print:min-h-auto print:overflow-visible">
-        {/* ===== HEADER FULL WIDTH ===== */}
-        <header className="h-16 border-b bg-background/80 relative print:hidden">
-          <div className="absolute inset-0 backdrop-blur-md pointer-events-none" />
-
-          <div className="relative flex items-center justify-between px-2 sm:px-6 h-full">
-            {/* LEFT */}
-            <div className="flex items-center gap-1 sm:gap-3 shrink-0">
-              <MobileSidebar />
-            </div>
-
-            {/* CENTER - Name + Branch */}
-            <div
-              className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center cursor-pointer select-none max-w-[45%]"
-              onClick={() => router.replace("/")}
-              title="الرجوع للوحة التحكم"
-            >
-              <span className="text-sm sm:text-base font-bold truncate max-w-full">
-                {user?.full_name || user?.username}
-              </span>
-              <span className="text-[10px] sm:text-xs text-muted-foreground leading-tight">
-                {branchName}
-              </span>
-            </div>
-
-            {/* RIGHT */}
-            <div className="flex items-center gap-1 sm:gap-4 shrink-0">
-              {mounted && user?.id && (
-                <ChatDrawer userId={user.id} branchId={user.branch_id} />
-              )}
-
-              {mounted && user?.id && user?.branch_id === 2 && (
-                <NotificationBell userId={user.id} branchId={user.branch_id} />
-              )}
-
-              <CashCounterModal />
-              <ThemeToggle />
-            </div>
-          </div>
-        </header>
-
-        {/* ===== CONTENT ONLY ===== */}
-        <main className="flex-1 min-h-0 overflow-hidden print:py-0 print:overflow-visible print:block print:min-h-auto print:h-auto">
-          <PullToRefresh className="h-full overflow-y-auto scrollbar-hide print:!h-auto print:!overflow-visible">
-            <div className="w-full px-4 py-6 print:px-0 print:py-0">
-              {children}
-            </div>
-          </PullToRefresh>
-        </main>
-      </div>
-
-      {/* F4 Add Product Dialog */}
-      <ProductFormDialog
-        open={productDialogOpen}
-        onOpenChange={setProductDialogOpen}
-        onSuccess={() => setProductDialogOpen(false)}
-      />
-
-      {/* F1 Product Lookup Modal */}
-      <ProductLookupModal
-        open={lookupOpen}
-        onOpenChange={setLookupOpen}
-        branchId={user?.branch_id || 1}
-      />
-    </div>
     </SocketProvider>
   );
 }
