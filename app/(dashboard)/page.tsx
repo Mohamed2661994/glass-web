@@ -1255,7 +1255,7 @@ export default function DashboardPage() {
                             {inv.id}
                           </TableCell>
                           <TableCell className="max-w-[80px] truncate">
-                            {inv.customer_name || "—"}
+                            {inv.movement_type === "purchase" ? (inv.supplier_name || "—") : (inv.customer_name || "—")}
                           </TableCell>
                           <TableCell className="hidden sm:table-cell">
                             {movementLabel(inv.movement_type)}
@@ -1327,7 +1327,7 @@ export default function DashboardPage() {
                             {inv.id}
                           </TableCell>
                           <TableCell className="max-w-[90px] truncate py-1">
-                            {inv.customer_name || "—"}
+                            {inv.movement_type === "purchase" ? (inv.supplier_name || "—") : (inv.customer_name || "—")}
                           </TableCell>
                           <TableCell className="whitespace-nowrap py-1">
                             {Math.round(inv.total).toLocaleString()} ج
@@ -1376,7 +1376,7 @@ export default function DashboardPage() {
                           {paymentBadge(inv.payment_status)}
                         </div>
                         <p className="text-xs font-medium truncate">
-                          {inv.customer_name || "—"}
+                          {inv.movement_type === "purchase" ? (inv.supplier_name || "—") : (inv.customer_name || "—")}
                         </p>
                         <div className="flex items-center justify-between text-[11px]">
                           <span className="font-semibold">
