@@ -688,6 +688,7 @@ export default function EditWholesaleInvoicePage() {
                 <table className="w-full text-sm">
                   <thead className="bg-muted">
                     <tr>
+                      <th className="p-3 text-center w-10">#</th>
                       <th className="p-3 text-right">الصنف</th>
                       <th className="p-3 text-center">السعر</th>
                       <th className="p-3 text-center">الكمية</th>
@@ -698,8 +699,11 @@ export default function EditWholesaleInvoicePage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {items.map((item) => (
+                    {items.map((item, index) => (
                       <tr key={item.uid} className="border-b">
+                        <td className="p-3 text-center text-muted-foreground">
+                          {index + 1}
+                        </td>
                         <td className="p-3">
                           <div>
                             {item.product_name} - {item.manufacturer}
