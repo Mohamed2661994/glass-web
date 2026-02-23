@@ -224,6 +224,7 @@ interface Invoice {
   invoice_type: "retail" | "wholesale";
   movement_type: "sale" | "purchase";
   customer_name: string;
+  supplier_name?: string;
   total: number;
   paid_amount: number;
   remaining_amount: number;
