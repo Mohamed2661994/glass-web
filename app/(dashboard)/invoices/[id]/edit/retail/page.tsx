@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/services/api";
+import { broadcastUpdate } from "@/lib/broadcast";
 import {
   Trash2,
   Loader2,
@@ -545,6 +546,7 @@ export default function EditRetailInvoicePage() {
       // Backend handles cash_in sync in the PUT transaction
 
       toast.success("تم تعديل الفاتورة بنجاح");
+      broadcastUpdate("invoice_updated");
       invalidateCache();
       window.location.reload();
     } catch (err: any) {

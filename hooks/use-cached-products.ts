@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import api from "@/services/api";
+import { onUpdate } from "@/lib/broadcast";
 
 // =====================================================
 //  🏪  Product Cache — localStorage + auto-refresh
@@ -215,6 +216,17 @@ export function useCachedProducts({
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [fetchProducts, cacheDuration]);
+
+  // Auto-refresh when invoices/transfers are created or updated
+  useEffect(() => {
+    const cleanup = onUpdate(
+      ["invoice_created", "invoice_updated", "invoice_deleted", "transfer_created"],
+      () => {
+        fetchProducts(true, true);
+      },
+    );
+    return cleanup;
+  }, [fetchProducts]);
 
   // Invalidate cache manually
   const invalidateCache = useCallback(() => {
