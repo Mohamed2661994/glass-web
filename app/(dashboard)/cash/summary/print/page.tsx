@@ -22,7 +22,7 @@ type CashOutItem = {
   transaction_date: string;
   amount: number;
   name: string;
-  entry_type: "expense" | "purchase";
+  entry_type: "expense" | "purchase" | "supplier_payment";
   notes?: string | null;
 };
 
@@ -122,6 +122,7 @@ function CashSummaryPrintInner() {
   const filteredOut = cashOut.filter((o) => inRange(o.transaction_date));
   const expenses = filteredOut.filter((o) => o.entry_type === "expense");
   const purchases = filteredOut.filter((o) => o.entry_type === "purchase");
+  const supplierPayments = filteredOut.filter((o) => o.entry_type === "supplier_payment");
 
   const fromDateTime = fromDate ? toDateOnly(fromDate) : null;
 
@@ -246,6 +247,14 @@ function CashSummaryPrintInner() {
             <DataTable
               title="المنصرف (مشتريات)"
               rows={purchases.map((o) => [o.name, o.amount, o.notes || "-"])}
+            />
+          )}
+
+          {/* دفعات الموردين */}
+          {supplierPayments.length > 0 && (
+            <DataTable
+              title="المنصرف (دفعات موردين)"
+              rows={supplierPayments.map((o) => [o.name, o.amount, o.notes || "-"])}
             />
           )}
         </div>

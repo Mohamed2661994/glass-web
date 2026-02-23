@@ -43,7 +43,7 @@ type CashOutItem = {
   transaction_date: string;
   amount: number;
   name: string;
-  entry_type: "expense" | "purchase";
+  entry_type: "expense" | "purchase" | "supplier_payment";
   notes?: string | null;
 };
 
@@ -204,6 +204,9 @@ export default function CashSummaryPage() {
   const expenseOut = filteredCashOut.filter((o) => o.entry_type === "expense");
   const purchaseOut = filteredCashOut.filter(
     (o) => o.entry_type === "purchase",
+  );
+  const supplierPaymentOut = filteredCashOut.filter(
+    (o) => o.entry_type === "supplier_payment",
   );
 
   /* ================= PRINT ================= */
@@ -626,11 +629,11 @@ export default function CashSummaryPage() {
                     </div>
                     <Badge
                       variant={
-                        o.entry_type === "purchase" ? "default" : "destructive"
+                        o.entry_type === "purchase" ? "default" : o.entry_type === "supplier_payment" ? "secondary" : "destructive"
                       }
                       className="text-[10px] px-1.5 py-0"
                     >
-                      {o.entry_type === "purchase" ? "مشتريات" : "مصروفات"}
+                      {o.entry_type === "purchase" ? "مشتريات" : o.entry_type === "supplier_payment" ? "دفعة مورد" : "مصروفات"}
                     </Badge>
                   </div>
                   {o.notes && (

@@ -1220,7 +1220,9 @@ export default function DashboardPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="text-right">#</TableHead>
-                      <TableHead className="text-right">العميل/المورد</TableHead>
+                      <TableHead className="text-right">
+                        العميل/المورد
+                      </TableHead>
                       <TableHead className="text-right hidden sm:table-cell">
                         النوع
                       </TableHead>
@@ -1299,7 +1301,9 @@ export default function DashboardPage() {
                   <TableHeader>
                     <TableRow className="h-7">
                       <TableHead className="text-right py-1">#</TableHead>
-                      <TableHead className="text-right py-1">العميل/المورد</TableHead>
+                      <TableHead className="text-right py-1">
+                        العميل/المورد
+                      </TableHead>
                       <TableHead className="text-right py-1">
                         الإجمالي
                       </TableHead>

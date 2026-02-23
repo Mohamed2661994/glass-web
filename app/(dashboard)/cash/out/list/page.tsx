@@ -38,7 +38,7 @@ interface CashOutItem {
   notes: string | null;
   transaction_date: string;
   permission_number: string;
-  entry_type: "expense" | "purchase";
+  entry_type: "expense" | "purchase" | "supplier_payment";
 }
 
 export default function CashOutListPage() {
@@ -201,10 +201,12 @@ export default function CashOutListPage() {
                         variant={
                           item.entry_type === "expense"
                             ? "destructive"
-                            : "default"
+                            : item.entry_type === "supplier_payment"
+                              ? "secondary"
+                              : "default"
                         }
                       >
-                        {item.entry_type === "expense" ? "مصروفات" : "مشتريات"}
+                        {item.entry_type === "expense" ? "مصروفات" : item.entry_type === "supplier_payment" ? "دفعة مورد" : "مشتريات"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-red-500 font-bold">
