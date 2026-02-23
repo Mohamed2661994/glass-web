@@ -1410,7 +1410,7 @@ export default function EditRetailInvoicePage() {
                 type="button"
                 variant="outline"
                 size="sm"
-                className="text-xs"
+                className="text-xs w-fit"
                 onClick={() => setPaidAmount(String(totalWithPrevious))}
                 title="دفع المتبقي بالكامل"
               >
