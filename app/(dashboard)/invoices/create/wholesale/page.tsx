@@ -1710,7 +1710,6 @@ export default function CreateWholesaleInvoicePage() {
               </span>
               <span />
             </div>
-
           </Card>
         )}
 

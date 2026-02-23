@@ -1365,7 +1365,6 @@ export default function EditWholesaleInvoicePage() {
               </span>
               <span />
             </div>
-
           </Card>
         )}
 

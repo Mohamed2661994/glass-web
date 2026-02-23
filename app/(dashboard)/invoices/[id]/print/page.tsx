@@ -53,6 +53,18 @@ const MARGIN_VALUES: Record<MarginSize, number> = {
   none: 0,
 };
 
+const FONT_OPTIONS = [
+  { label: "Tahoma", value: "Tahoma, Arial, sans-serif" },
+  { label: "Arial", value: "Arial, Helvetica, sans-serif" },
+  { label: "Cairo", value: "Cairo, sans-serif" },
+  { label: "Amiri", value: "Amiri, serif" },
+  { label: "Noto Kufi Arabic", value: "Noto Kufi Arabic, sans-serif" },
+  { label: "Tajawal", value: "Tajawal, sans-serif" },
+  { label: "IBM Plex Sans Arabic", value: "IBM Plex Sans Arabic, sans-serif" },
+  { label: "Almarai", value: "Almarai, sans-serif" },
+  { label: "Noto Sans Arabic", value: "Noto Sans Arabic, sans-serif" },
+];
+
 const COLOR_PRESETS = [
   { label: "أسود", value: "#000000" },
   { label: "كحلي", value: "#1e3a5f" },
@@ -96,6 +108,7 @@ function InvoicePrintPage() {
   const [fontSize, setFontSize] = useState(10);
   const [showLogo, setShowLogo] = useState(true);
   const [showPhone, setShowPhone] = useState(true);
+  const [fontFamily, setFontFamily] = useState("Tahoma, Arial, sans-serif");
   const [isPrinting, setIsPrinting] = useState(false);
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -122,6 +135,7 @@ function InvoicePrintPage() {
         if (s.fontSize) setFontSize(s.fontSize);
         if (s.showLogo !== undefined) setShowLogo(s.showLogo);
         if (s.showPhone !== undefined) setShowPhone(s.showPhone);
+        if (s.fontFamily) setFontFamily(s.fontFamily);
       }
     } catch {}
   }, []);
@@ -141,12 +155,13 @@ function InvoicePrintPage() {
           fontSize,
           showLogo,
           showPhone,
+          fontFamily,
           ...patch,
         };
         localStorage.setItem("printSettings", JSON.stringify(next));
       } catch {}
     },
-    [copies, paperSize, orientation, margins, fontSize, showLogo, showPhone],
+    [copies, paperSize, orientation, margins, fontSize, showLogo, showPhone, fontFamily],
   );
 
   /* ──── تحميل الفاتورة ──── */
@@ -177,11 +192,11 @@ function InvoicePrintPage() {
 
     const css = `
       <style>
-        body { margin:0; padding:0; background:white; font-family:Tahoma,Arial; direction:rtl; }
+        body { margin:0; padding:0; background:white; font-family:${fontFamily}; direction:rtl; }
         * { color: ${printColor} !important; }
         .invoice-wrap {
           width:100%; margin:0; padding:${marginMM}mm; box-sizing:border-box;
-          direction:rtl; font-size:${fontSize}px;
+          direction:rtl; font-size:${fontSize}px; font-family:${fontFamily};
           ${printBold ? "font-weight:bold;" : ""}
           color:${printColor} !important;
         }
@@ -211,7 +226,8 @@ function InvoicePrintPage() {
     for (let c = 0; c < copies; c++) {
       pages += `<div class="invoice-wrap" ${c > 0 ? 'style="page-break-before:always;"' : ""}>${html}</div>`;
     }
-    return `<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8">${css}</head><body>${pages}</body></html>`;
+    const fontLink = `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&family=Amiri:wght@400;700&family=Noto+Kufi+Arabic:wght@400;700&family=Tajawal:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;700&family=Almarai:wght@400;700&family=Noto+Sans+Arabic:wght@400;700&display=swap">`;
+    return `<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8">${fontLink}${css}</head><body>${pages}</body></html>`;
   }, [
     copies,
     paperSize,
@@ -220,6 +236,7 @@ function InvoicePrintPage() {
     printBold,
     printColor,
     fontSize,
+    fontFamily,
     pageW,
     pageH,
     marginMM,
@@ -397,9 +414,14 @@ function InvoicePrintPage() {
 
   return (
     <>
+      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&family=Amiri:wght@400;700&family=Noto+Kufi+Arabic:wght@400;700&family=Tajawal:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;700&family=Almarai:wght@400;700&family=Noto+Sans+Arabic:wght@400;700&display=swap"
+      />
       <style>{`
 html, body { margin:0; padding:0; height:100%; overflow:hidden; }
-body { background:#3b3b3b; font-family:Tahoma,Arial; }
+body { background:#3b3b3b; font-family:${fontFamily}; }
 
 /* ===== التخطيط الرئيسي - شبيه بـ Chrome Print ===== */
 .print-modal {
@@ -694,6 +716,26 @@ th,td { padding:3px 4px; text-align:center; }
                 }}
               />
 
+              {/* نوع الخط */}
+              <div className="setting-group">
+                <label className="setting-label">نوع الخط</label>
+                <select
+                  className="s-select"
+                  value={fontFamily}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setFontFamily(v);
+                    savePrintSettings({ fontFamily: v });
+                  }}
+                >
+                  {FONT_OPTIONS.map((f) => (
+                    <option key={f.value} value={f.value} style={{ fontFamily: f.value }}>
+                      {f.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* حجم الخط */}
               <div className="setting-group">
                 <label className="setting-label">حجم الخط: {fontSize}px</label>
@@ -915,6 +957,7 @@ th,td { padding:3px 4px; text-align:center; }
               style={{
                 padding: `${marginMM}mm`,
                 fontSize: `${fontSize}px`,
+                fontFamily: fontFamily,
               }}
             >
               {/* HEADER */}

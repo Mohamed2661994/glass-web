@@ -2095,7 +2095,6 @@ export default function CreateRetailInvoicePage() {
               </span>
               <span />
             </div>
-
           </Card>
         )}
 

@@ -1563,7 +1563,6 @@ export default function EditRetailInvoicePage() {
               </span>
               <span />
             </div>
-
           </Card>
         )}
 
