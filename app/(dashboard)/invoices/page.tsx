@@ -37,6 +37,7 @@ interface Invoice {
   movement_type: "sale" | "purchase";
   is_return?: boolean;
   customer_name: string;
+  supplier_name?: string;
   subtotal: number;
   total: number;
   previous_balance: number;
@@ -199,7 +200,7 @@ export default function InvoicesPage() {
         <CardContent className="p-3 md:p-4 space-y-3">
           <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:gap-3">
             <Input
-              placeholder="بحث باسم العميل..."
+              placeholder="بحث باسم العميل أو المورد..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -297,7 +298,7 @@ export default function InvoicesPage() {
               <tr>
                 <th className="p-3 text-right">رقم</th>
                 <th className="p-3 text-right">الحركة</th>
-                <th className="p-3 text-right">العميل</th>
+                <th className="p-3 text-right">العميل / المورد</th>
                 <th className="p-3 text-right">إجمالي الأصناف</th>
                 <th className="p-3 text-right">حساب سابق</th>
                 <th className="p-3 text-right">المدفوع</th>
@@ -341,7 +342,11 @@ export default function InvoicesPage() {
                         </Badge>
                       )}
                     </td>
-                    <td className="p-3">{invoice.customer_name || "نقدي"}</td>
+                    <td className="p-3">
+                      {invoice.movement_type === "purchase"
+                        ? invoice.supplier_name || "—"
+                        : invoice.customer_name || "نقدي"}
+                    </td>
                     <td className="p-3">
                       {Number(invoice.subtotal).toFixed(2)}
                     </td>
@@ -457,7 +462,9 @@ export default function InvoicesPage() {
                 {/* Customer name */}
                 <div className="px-3 pb-2">
                   <p className="text-sm font-medium">
-                    {invoice.customer_name || "نقدي"}
+                    {invoice.movement_type === "purchase"
+                      ? invoice.supplier_name || "—"
+                      : invoice.customer_name || "نقدي"}
                   </p>
                   {invoice.created_by_name && (
                     <p className="text-[10px] text-muted-foreground mt-0.5">
