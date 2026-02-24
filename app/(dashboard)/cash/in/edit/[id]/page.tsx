@@ -128,7 +128,9 @@ export default function EditCashInPage() {
   return (
     <div className="max-w-md mx-auto p-4" dir="rtl">
       <h1 className="text-xl font-bold text-center mb-6">
-        {sourceType === "invoice" ? "تعديل تاريخ الفاتورة" : "تعديل وارد الخزنة"}
+        {sourceType === "invoice"
+          ? "تعديل تاريخ الفاتورة"
+          : "تعديل وارد الخزنة"}
       </h1>
 
       {sourceType === "invoice" && (
