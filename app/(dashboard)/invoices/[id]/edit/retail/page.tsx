@@ -833,7 +833,7 @@ export default function EditRetailInvoicePage() {
                       ))}
                     </div>
                   )}
-                  {customerId && customerName && (
+                  {customerName && (
                     <Button
                       type="button"
                       variant="outline"

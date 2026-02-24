@@ -94,7 +94,11 @@ export default function EditWholesaleInvoicePage() {
     setLoadingPrevInvoices(true);
     try {
       const { data } = await api.get("/invoices", {
-        params: { customer_name: name, invoice_type: "wholesale", _t: Date.now() },
+        params: {
+          customer_name: name,
+          invoice_type: "wholesale",
+          _t: Date.now(),
+        },
       });
       setPrevInvoices(Array.isArray(data) ? data : (data.data ?? []));
     } catch {
@@ -753,7 +757,7 @@ export default function EditWholesaleInvoicePage() {
                       ))}
                     </div>
                   )}
-                  {customerId && customerName && (
+                  {customerName && (
                     <Button
                       type="button"
                       variant="outline"
