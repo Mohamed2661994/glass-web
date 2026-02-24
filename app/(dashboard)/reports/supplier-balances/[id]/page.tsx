@@ -525,10 +525,10 @@ export default function SupplierDebtDetailsPage() {
                           {item.quantity}
                         </TableCell>
                         <TableCell className="text-center">
-                          {Number(item.unit_price).toLocaleString()}
+                          {Number(item.price).toLocaleString()}
                         </TableCell>
                         <TableCell className="text-center">
-                          {Number(item.total_price).toLocaleString()}
+                          {Number(item.total).toLocaleString()}
                         </TableCell>
                       </TableRow>
                     ))}
