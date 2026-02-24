@@ -109,6 +109,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   const [allUsers, setAllUsers] = useState<ChatUser[]>([]);
   const [userSearch, setUserSearch] = useState("");
   const [typing, setTyping] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState<Set<number>>(new Set());
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [highlightedMsgId, setHighlightedMsgId] = useState<number | null>(null);
   const [popup, setPopup] = useState<{
@@ -513,6 +514,23 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
       },
     );
 
+    // Online status events
+    socket.on("online_users", ({ user_ids }: { user_ids: number[] }) => {
+      setOnlineUsers(new Set(user_ids));
+    });
+
+    socket.on("user_online", ({ user_id }: { user_id: number }) => {
+      setOnlineUsers((prev) => new Set([...prev, user_id]));
+    });
+
+    socket.on("user_offline", ({ user_id }: { user_id: number }) => {
+      setOnlineUsers((prev) => {
+        const next = new Set(prev);
+        next.delete(user_id);
+        return next;
+      });
+    });
+
     return () => {
       socket.disconnect();
     };
@@ -776,10 +794,14 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                 <h2 className="text-sm font-bold">
                   {displayName(activeConv?.other_user ?? null)}
                 </h2>
-                {typing && (
+                {typing ? (
                   <span className="text-xs text-green-500 animate-pulse">
                     يكتب...
                   </span>
+                ) : activeConv?.other_user && onlineUsers.has(activeConv.other_user.id) ? (
+                  <span className="text-xs text-green-500">متصل الآن</span>
+                ) : (
+                  <span className="text-xs text-muted-foreground">غير متصل</span>
                 )}
               </div>
               <div className="w-9" />
@@ -816,8 +838,13 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                     }}
                   >
                     {/* Avatar */}
-                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
-                      {displayName(conv.other_user)[0]?.toUpperCase() || "?"}
+                    <div className="relative shrink-0">
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                        {displayName(conv.other_user)[0]?.toUpperCase() || "?"}
+                      </div>
+                      {conv.other_user && onlineUsers.has(conv.other_user.id) && (
+                        <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
+                      )}
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -907,15 +934,20 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                       if (e.key === "Enter") startNewConversation(u);
                     }}
                   >
-                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
-                      {(u.full_name || u.username)[0]?.toUpperCase() || "?"}
+                    <div className="relative shrink-0">
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center text-white font-bold text-sm">
+                        {(u.full_name || u.username)[0]?.toUpperCase() || "?"}
+                      </div>
+                      {onlineUsers.has(u.id) && (
+                        <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold truncate">
                         {u.full_name || u.username}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        @{u.username} · {branchLabel(u.branch_id)}
+                        @{u.username} · {branchLabel(u.branch_id)}{onlineUsers.has(u.id) ? " · 🟢 متصل" : ""}
                       </p>
                     </div>
                   </div>
