@@ -128,6 +128,7 @@ export default function NegativeStockReportPage() {
 
     setZeroing(true);
     let totalItems = 0;
+    let totalInvoices = 0;
     let failCount = 0;
     for (const wid of warehouseIds) {
       try {
@@ -135,12 +136,13 @@ export default function NegativeStockReportPage() {
           warehouse_id: wid,
         });
         if (data.items_count) totalItems += data.items_count;
+        if (data.invoices_created) totalInvoices += data.invoices_created;
       } catch {
         failCount++;
       }
     }
     if (totalItems > 0) {
-      toast.success(`تم تصفير ${totalItems} صنف سالب`);
+      toast.success(`تم تصفير ${totalItems} صنف في ${totalInvoices} فاتورة`);
     }
     if (failCount > 0 && totalItems === 0) {
       toast.error("فشل تصفير الأصناف السالبة");
@@ -201,7 +203,9 @@ export default function NegativeStockReportPage() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>تصفير الأصناف السالبة؟</AlertDialogTitle>
                   <AlertDialogDescription className="text-right">
-                    هيتم إنشاء فاتورة شراء تعديلية لتصفير{" "}
+                    هيتم إنشاء{" "}
+                    <strong>{Math.ceil(filteredData.length / 50)}</strong>{" "}
+                    فاتورة شراء تعديلية (50 صنف لكل فاتورة) لتصفير{" "}
                     <strong>{filteredData.length}</strong> صنف سالب.
                     <br />
                     رصيد كل الأصناف دي هيبقى صفر بعد التصفير.
