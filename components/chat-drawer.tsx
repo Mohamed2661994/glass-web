@@ -436,10 +436,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
             setMessages((prev) => [...prev, message]);
             scrollToBottom();
 
-            // Mark as read since we're viewing
-            api
-              .get(`/chat/conversations/${conversation_id}/messages`)
-              .catch(() => {});
+            // Notify sender that we read it (lightweight socket event only)
             socket.emit("chat_messages_read", {
               conversation_id,
               reader_id: userId,
@@ -472,8 +469,10 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
           popupTimerRef.current = setTimeout(() => setPopup(null), 4000);
         }
 
-        // Always refresh conversations list & unread
-        fetchConversations();
+        // Refresh conversations list only when drawer is open, always bump unread
+        if (openRef.current) {
+          fetchConversations();
+        }
         fetchUnread();
       },
     );
@@ -798,10 +797,13 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                   <span className="text-xs text-green-500 animate-pulse">
                     يكتب...
                   </span>
-                ) : activeConv?.other_user && onlineUsers.has(activeConv.other_user.id) ? (
+                ) : activeConv?.other_user &&
+                  onlineUsers.has(activeConv.other_user.id) ? (
                   <span className="text-xs text-green-500">متصل الآن</span>
                 ) : (
-                  <span className="text-xs text-muted-foreground">غير متصل</span>
+                  <span className="text-xs text-muted-foreground">
+                    غير متصل
+                  </span>
                 )}
               </div>
               <div className="w-9" />
@@ -842,9 +844,10 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                       <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
                         {displayName(conv.other_user)[0]?.toUpperCase() || "?"}
                       </div>
-                      {conv.other_user && onlineUsers.has(conv.other_user.id) && (
-                        <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
-                      )}
+                      {conv.other_user &&
+                        onlineUsers.has(conv.other_user.id) && (
+                          <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
+                        )}
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -947,7 +950,8 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                         {u.full_name || u.username}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        @{u.username} · {branchLabel(u.branch_id)}{onlineUsers.has(u.id) ? " · 🟢 متصل" : ""}
+                        @{u.username} · {branchLabel(u.branch_id)}
+                        {onlineUsers.has(u.id) ? " · 🟢 متصل" : ""}
                       </p>
                     </div>
                   </div>

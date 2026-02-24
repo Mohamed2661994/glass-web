@@ -725,7 +725,7 @@ export default function DashboardPage() {
   useRealtime(
     ["data:invoices", "data:cash", "data:stock", "data:products"],
     () => setRefreshKey((k) => k + 1),
-    1000,
+    5000,
   );
 
   /* cash summary */
@@ -974,14 +974,9 @@ export default function DashboardPage() {
       try {
         const today = getTodayDate();
         const { data } = await api.get("/stock-transfers", {
-          params: { limit: 100, _t: Date.now() },
+          params: { limit: 50, date_from: today, _t: Date.now() },
         });
-        const all: Transfer[] = data?.data ?? [];
-        // Filter to today's transfers only
-        const todayTransfers = all.filter(
-          (t) => t.created_at?.substring(0, 10) === today,
-        );
-        setTransfers(todayTransfers);
+        setTransfers(data?.data ?? []);
       } catch {
         /* silent */
       } finally {
@@ -998,16 +993,13 @@ export default function DashboardPage() {
       try {
         const today = getTodayDate();
         const [inRes, outRes] = await Promise.all([
-          api.get("/cash-in", { params: { branch_id: branchId } }),
+          api.get("/cash-in", { params: { branch_id: branchId, from_date: today, to_date: today } }),
           api.get("/cash/out", {
             params: { branch_id: branchId, from_date: today, to_date: today },
           }),
         ]);
-        const inItems: CashInItem[] = inRes.data?.data ?? [];
+        const todayInItems: CashInItem[] = inRes.data?.data ?? [];
         const outItems: CashOutItem[] = outRes.data?.data ?? [];
-        const todayInItems = inItems.filter(
-          (i) => i.transaction_date.substring(0, 10) === today,
-        );
         setCashInTotal(
           todayInItems.reduce((s, i) => {
             // Parse {{total|paid|remaining}} from notes if available
