@@ -99,18 +99,12 @@ export default function SupplierDebtDetailsPage() {
   const invoices = data.filter((r) => r.record_type === "invoice");
   const payments = data.filter((r) => r.record_type === "payment");
 
-  const totalPurchases = invoices.reduce(
-    (s, i) => s + Number(i.total),
-    0,
-  );
+  const totalPurchases = invoices.reduce((s, i) => s + Number(i.total), 0);
   const totalPaidInvoices = invoices.reduce(
     (s, i) => s + Number(i.paid_amount),
     0,
   );
-  const totalPayments = payments.reduce(
-    (s, i) => s + Number(i.paid_amount),
-    0,
-  );
+  const totalPayments = payments.reduce((s, i) => s + Number(i.paid_amount), 0);
   const netDebt = totalPurchases - totalPaidInvoices - totalPayments;
 
   return (
@@ -226,9 +220,7 @@ export default function SupplierDebtDetailsPage() {
                           </TableCell>
                           <TableCell className="text-center">
                             {row.record_type === "invoice"
-                              ? Math.round(
-                                  Number(row.total),
-                                ).toLocaleString()
+                              ? Math.round(Number(row.total)).toLocaleString()
                               : "—"}
                           </TableCell>
                           <TableCell className="text-center text-green-600">
@@ -245,9 +237,7 @@ export default function SupplierDebtDetailsPage() {
                                   : ""
                             }`}
                           >
-                            {Math.round(
-                              runningBalances[idx],
-                            ).toLocaleString()}
+                            {Math.round(runningBalances[idx]).toLocaleString()}
                           </TableCell>
                           <TableCell className="text-center text-xs text-muted-foreground max-w-[120px] truncate">
                             {row.notes || "—"}
@@ -279,9 +269,7 @@ export default function SupplierDebtDetailsPage() {
                           }
                           className="text-xs"
                         >
-                          {row.record_type === "invoice"
-                            ? "فاتورة"
-                            : "دفعة"}
+                          {row.record_type === "invoice" ? "فاتورة" : "دفعة"}
                         </Badge>
                         <span className="font-bold text-sm">
                           {row.record_type === "invoice"

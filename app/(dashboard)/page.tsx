@@ -731,6 +731,7 @@ export default function DashboardPage() {
   const [cashOutTotal, setCashOutTotal] = useState(0);
   const [cashExpenseTotal, setCashExpenseTotal] = useState(0);
   const [cashPurchaseTotal, setCashPurchaseTotal] = useState(0);
+  const [cashSupplierPaymentTotal, setCashSupplierPaymentTotal] = useState(0);
   const [loadingCash, setLoadingCash] = useState(true);
 
   /* notifications */
@@ -1019,12 +1020,17 @@ export default function DashboardPage() {
         );
         setCashExpenseTotal(
           outItems
-            .filter((i) => i.entry_type !== "purchase")
+            .filter((i) => i.entry_type === "expense")
             .reduce((s, i) => s + Number(i.amount || 0), 0),
         );
         setCashPurchaseTotal(
           outItems
             .filter((i) => i.entry_type === "purchase")
+            .reduce((s, i) => s + Number(i.amount || 0), 0),
+        );
+        setCashSupplierPaymentTotal(
+          outItems
+            .filter((i) => i.entry_type === "supplier_payment")
             .reduce((s, i) => s + Number(i.amount || 0), 0),
         );
       } catch {
@@ -1642,6 +1648,19 @@ export default function DashboardPage() {
                           {Math.round(cashPurchaseTotal).toLocaleString()}
                         </p>
                       </div>
+                      {cashSupplierPaymentTotal > 0 && (
+                        <>
+                          <div className="h-px w-8 sm:h-8 sm:w-px bg-red-300/40 dark:bg-red-600/40" />
+                          <div className="flex items-center justify-center gap-1">
+                            <p className="text-[10px] text-muted-foreground">
+                              موردين
+                            </p>
+                            <p className="text-xs font-bold text-red-500 dark:text-red-400">
+                              {Math.round(cashSupplierPaymentTotal).toLocaleString()}
+                            </p>
+                          </div>
+                        </>
+                      )}
                     </div>
                     <div className="border-t border-red-300/30 dark:border-red-600/30 pt-1 mt-1">
                       <p className="text-[10px] text-muted-foreground">

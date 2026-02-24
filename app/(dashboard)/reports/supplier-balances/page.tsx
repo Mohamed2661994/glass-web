@@ -77,9 +77,7 @@ export default function SupplierBalancesPage() {
   return (
     <PageContainer size="xl">
       <div dir="rtl" className="space-y-4 py-6">
-        <h1 className="text-2xl font-bold text-center">
-          كشف حساب الموردين
-        </h1>
+        <h1 className="text-2xl font-bold text-center">كشف حساب الموردين</h1>
 
         {/* Filters */}
         <Card>
@@ -130,9 +128,7 @@ export default function SupplierBalancesPage() {
                       <TableHead className="text-center">
                         المدفوع (فواتير)
                       </TableHead>
-                      <TableHead className="text-center">
-                        دفعات نقدية
-                      </TableHead>
+                      <TableHead className="text-center">دفعات نقدية</TableHead>
                       <TableHead className="text-center">المديونية</TableHead>
                     </TableRow>
                   </TableHeader>
