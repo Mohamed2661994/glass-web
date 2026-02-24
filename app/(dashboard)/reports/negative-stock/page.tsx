@@ -127,21 +127,28 @@ export default function NegativeStockReportPage() {
     }
 
     setZeroing(true);
-    try {
-      let totalItems = 0;
-      const invoiceIds: number[] = [];
-      for (const wid of warehouseIds) {
-        const { data } = await api.post("/invoices/zero-negative-stock", { warehouse_id: wid });
+    let totalItems = 0;
+    let failCount = 0;
+    for (const wid of warehouseIds) {
+      try {
+        const { data } = await api.post("/invoices/zero-negative-stock", {
+          warehouse_id: wid,
+        });
         if (data.items_count) totalItems += data.items_count;
-        if (data.invoice_id) invoiceIds.push(data.invoice_id);
+      } catch {
+        failCount++;
       }
-      toast.success(`تم تصفير ${totalItems} صنف سالب`);
-      fetchReport();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || "فشل تصفير الأصناف السالبة");
-    } finally {
-      setZeroing(false);
     }
+    if (totalItems > 0) {
+      toast.success(`تم تصفير ${totalItems} صنف سالب`);
+    }
+    if (failCount > 0 && totalItems === 0) {
+      toast.error("فشل تصفير الأصناف السالبة");
+    } else if (failCount > 0) {
+      toast.warning("تم التصفير جزئياً — بعض المخازن فشلت");
+    }
+    fetchReport();
+    setZeroing(false);
   };
 
   return (
@@ -181,11 +188,7 @@ export default function NegativeStockReportPage() {
           {!loading && filteredData.length > 0 && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  disabled={zeroing}
-                >
+                <Button variant="destructive" size="sm" disabled={zeroing}>
                   {zeroing ? (
                     <Loader2 className="h-4 w-4 ml-1 animate-spin" />
                   ) : (
@@ -205,7 +208,10 @@ export default function NegativeStockReportPage() {
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="flex-row-reverse gap-2">
-                  <AlertDialogAction onClick={handleZeroOut} className="bg-red-600 hover:bg-red-700">
+                  <AlertDialogAction
+                    onClick={handleZeroOut}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
                     تأكيد التصفير
                   </AlertDialogAction>
                   <AlertDialogCancel>إلغاء</AlertDialogCancel>
