@@ -145,7 +145,7 @@ function CashOutPage() {
       try {
         setSupplierSearching(true);
         const { data } = await api.get("/suppliers/search", {
-          params: { q: supplierSearch },
+          params: { name: supplierSearch },
         });
         setSupplierResults(data || []);
         setShowSupplierDropdown(true);
