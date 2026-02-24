@@ -34,6 +34,7 @@ type StatementRow = {
   total: number;
   paid_amount: number;
   remaining_amount: number;
+  previous_balance?: number;
   notes?: string | null;
   permission_number?: string | null;
 };
@@ -106,10 +107,16 @@ export default function SupplierDebtDetailsPage() {
 
   useRealtime(["data:invoices", "data:cash"], fetchDetails);
 
+  /* ========== Opening Balance (from first invoice's previous_balance) ========== */
+  const openingBalance = useMemo(() => {
+    const firstInvoice = data.find((r) => r.record_type === "invoice");
+    return firstInvoice ? Number(firstInvoice.previous_balance || 0) : 0;
+  }, [data]);
+
   /* ========== Running Balance (الحساب السابق) ========== */
   const runningBalances = useMemo(() => {
     const balances: number[] = [];
-    let balance = 0;
+    let balance = openingBalance;
     for (let i = 0; i < data.length; i++) {
       balances.push(balance);
       const row = data[i];
@@ -120,7 +127,7 @@ export default function SupplierDebtDetailsPage() {
       }
     }
     return balances;
-  }, [data]);
+  }, [data, openingBalance]);
 
   /* ========== Totals ========== */
   const invoices = data.filter((r) => r.record_type === "invoice");
@@ -133,7 +140,7 @@ export default function SupplierDebtDetailsPage() {
   );
   const totalPayments = payments.reduce((s, i) => s + Number(i.paid_amount), 0);
   const totalPaid = totalPaidInvoices + totalPayments;
-  const netDebt = totalPurchases - totalPaid;
+  const netDebt = openingBalance + totalPurchases - totalPaid;
 
   return (
     <PageContainer size="xl">
@@ -417,6 +424,14 @@ export default function SupplierDebtDetailsPage() {
           <Card>
             <CardContent className="p-4">
               <div className="flex flex-wrap gap-4 justify-center text-sm">
+                {openingBalance !== 0 && (
+                  <div className="text-center">
+                    <p className="text-muted-foreground">رصيد سابق</p>
+                    <p className="font-bold text-orange-600">
+                      {Math.round(openingBalance).toLocaleString()}
+                    </p>
+                  </div>
+                )}
                 <div className="text-center">
                   <p className="text-muted-foreground">إجمالي المشتريات</p>
                   <p className="font-bold">
@@ -538,9 +553,7 @@ export default function SupplierDebtDetailsPage() {
                   <div className="flex justify-between text-sm">
                     <span>الحساب السابق</span>
                     <span className="text-orange-600">
-                      {Number(
-                        previewInvoice.previous_balance,
-                      ).toLocaleString()}{" "}
+                      {Number(previewInvoice.previous_balance).toLocaleString()}{" "}
                       ج.م
                     </span>
                   </div>

@@ -12,6 +12,7 @@ type StatementRow = {
   total: number;
   paid_amount: number;
   remaining_amount: number;
+  previous_balance?: number;
   notes?: string | null;
   permission_number?: string | null;
 };
@@ -74,6 +75,12 @@ function SupplierStatementPrintInner() {
     }
   }, [loading]);
 
+  /* ========== Opening Balance ========== */
+  const openingBalance = useMemo(() => {
+    const firstInvoice = data.find((r) => r.record_type === "invoice");
+    return firstInvoice ? Number(firstInvoice.previous_balance || 0) : 0;
+  }, [data]);
+
   /* ========== Totals ========== */
   const invoices = data.filter((r) => r.record_type === "invoice");
   const payments = data.filter((r) => r.record_type === "payment");
@@ -85,12 +92,12 @@ function SupplierStatementPrintInner() {
   );
   const totalPayments = payments.reduce((s, i) => s + Number(i.paid_amount), 0);
   const totalPaid = totalPaidInvoices + totalPayments;
-  const netDebt = totalPurchases - totalPaid;
+  const netDebt = openingBalance + totalPurchases - totalPaid;
 
   /* ========== Running Balance ========== */
   const runningBalances = useMemo(() => {
     const balances: number[] = [];
-    let balance = 0;
+    let balance = openingBalance;
     for (let i = 0; i < data.length; i++) {
       balances.push(balance);
       const row = data[i];
@@ -101,7 +108,7 @@ function SupplierStatementPrintInner() {
       }
     }
     return balances;
-  }, [data]);
+  }, [data, openingBalance]);
 
   const dateRange =
     from || to
@@ -231,6 +238,14 @@ function SupplierStatementPrintInner() {
         {/* Summary */}
         {data.length > 0 && (
           <div style={{ textAlign: "right", fontSize: 14 }}>
+            {openingBalance !== 0 && (
+              <p style={{ marginBottom: 4 }}>
+                <span style={{ fontWeight: "bold" }}>رصيد سابق:</span>{" "}
+                <span style={{ color: "#ea580c" }}>
+                  {formatMoney(openingBalance)}
+                </span>
+              </p>
+            )}
             <p style={{ marginBottom: 4 }}>
               <span style={{ fontWeight: "bold" }}>إجمالي المشتريات:</span>{" "}
               {formatMoney(totalPurchases)}
