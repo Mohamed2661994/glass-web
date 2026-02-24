@@ -216,8 +216,8 @@ function InvoicePrintPage() {
         td { border-bottom:1px solid #ddd; }
         th,td { padding:3px 4px; text-align:center; }
         tfoot tr:first-child { border-top:3px solid #000; }
-        tfoot .summary-row td { border-bottom:none; text-align:right; padding:1px 4px; font-size:${fontSize + 1}px; }
-        tfoot .summary-row .summary-label { text-align:left; }
+        tfoot .summary-row td { border-bottom:none; padding:1px 4px; font-size:${fontSize + 1}px; }
+        tfoot .summary-row:first-of-type td { border-top:1px solid #000; padding-top:4px; }
         tfoot .summary-remaining td { font-size:${fontSize + 3}px; }
         hr { border:none; border-top:2px solid #000; margin-bottom:10px; }
         @page { size:${pageW}mm ${pageH}mm; margin:${marginMM}mm; }
@@ -578,8 +578,8 @@ th { background:#f3f3f3; font-weight:bold; border-bottom:2px solid ${printColor}
 td { border-bottom:1px solid #ddd; }
 th,td { padding:3px 4px; text-align:center; }
 tfoot tr:first-child { border-top:3px solid #000; }
-tfoot .summary-row td { border-bottom:none; text-align:right; padding:1px 4px; }
-tfoot .summary-row .summary-label { text-align:left; }
+tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
+tfoot .summary-row:first-of-type td { border-top:1px solid #000; padding-top:4px; }
 .totals-section {
   margin-top:6px; padding-top:6px;
   border-top:none;
@@ -1082,34 +1082,49 @@ tfoot .summary-row .summary-label { text-align:left; }
                   </tr>
                   {previousBalance !== 0 && (
                     <tr className="summary-row">
-                      <td colSpan={4}></td>
-                      <td className="summary-label">حساب سابق:</td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td style={{textAlign:'left'}}>حساب سابق:</td>
                       <td>{fmt(previousBalance)}</td>
                     </tr>
                   )}
                   {extraDiscount > 0 && (
                     <tr className="summary-row">
-                      <td colSpan={4}></td>
-                      <td className="summary-label">خصم:</td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td style={{textAlign:'left'}}>خصم:</td>
                       <td>{fmt(extraDiscount)}</td>
                     </tr>
                   )}
                   <tr className="summary-row">
-                    <td colSpan={4}></td>
-                    <td className="summary-label"><b>الصافي:</b></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td style={{textAlign:'left'}}><b>الصافي:</b></td>
                     <td><b>{fmt(netTotal)}</b></td>
                   </tr>
                   {paidAmount !== 0 && (
                     <tr className="summary-row">
-                      <td colSpan={4}></td>
-                      <td className="summary-label">المدفوع:</td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td style={{textAlign:'left'}}>المدفوع:</td>
                       <td>{fmt(paidAmount)}</td>
                     </tr>
                   )}
                   {remaining !== 0 && (
                     <tr className="summary-row summary-remaining">
-                      <td colSpan={4}></td>
-                      <td className="summary-label"><b>المتبقي:</b></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td style={{textAlign:'left'}}><b>المتبقي:</b></td>
                       <td><b>{fmt(remaining)}</b></td>
                     </tr>
                   )}
