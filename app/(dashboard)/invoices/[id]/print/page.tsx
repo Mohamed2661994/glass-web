@@ -217,7 +217,8 @@ function InvoicePrintPage() {
         th,td { padding:3px 4px; text-align:center; }
         tfoot tr:first-child { border-top:3px solid #000; }
         tfoot .summary-row td { border-bottom:none; padding:1px 4px; font-size:${fontSize + 1}px; }
-        tfoot .summary-row:first-of-type td:nth-last-child(-n+2) { border-top:1px solid #000; padding-top:4px; }
+        tfoot .summary-first td:nth-last-child(1),
+        tfoot .summary-first td:nth-last-child(2) { border-top:1px solid #000; padding-top:4px; }
         tfoot .summary-remaining td { font-size:${fontSize + 3}px; }
         hr { border:none; border-top:2px solid #000; margin-bottom:10px; }
         @page { size:${pageW}mm ${pageH}mm; margin:${marginMM}mm; }
@@ -579,7 +580,8 @@ td { border-bottom:1px solid #ddd; }
 th,td { padding:3px 4px; text-align:center; }
 tfoot tr:first-child { border-top:3px solid #000; }
 tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
-tfoot .summary-row:first-of-type td:nth-last-child(-n+2) { border-top:1px solid #000; padding-top:4px; }
+tfoot .summary-first td:nth-last-child(1),
+tfoot .summary-first td:nth-last-child(2) { border-top:1px solid #000; padding-top:4px; }
 .totals-section {
   margin-top:6px; padding-top:6px;
   border-top:none;
@@ -1081,7 +1083,7 @@ tfoot .summary-row:first-of-type td:nth-last-child(-n+2) { border-top:1px solid 
                     <td>{fmt(itemsSubtotal)}</td>
                   </tr>
                   {previousBalance !== 0 && (
-                    <tr className="summary-row">
+                    <tr className={`summary-row${previousBalance !== 0 ? ' summary-first' : ''}`}>
                       <td></td>
                       <td></td>
                       <td></td>
@@ -1091,7 +1093,7 @@ tfoot .summary-row:first-of-type td:nth-last-child(-n+2) { border-top:1px solid 
                     </tr>
                   )}
                   {extraDiscount > 0 && (
-                    <tr className="summary-row">
+                    <tr className={`summary-row${previousBalance === 0 ? ' summary-first' : ''}`}>
                       <td></td>
                       <td></td>
                       <td></td>
@@ -1100,7 +1102,7 @@ tfoot .summary-row:first-of-type td:nth-last-child(-n+2) { border-top:1px solid 
                       <td>{fmt(extraDiscount)}</td>
                     </tr>
                   )}
-                  <tr className="summary-row">
+                  <tr className={`summary-row${previousBalance === 0 && extraDiscount <= 0 ? ' summary-first' : ''}`}>
                     <td></td>
                     <td></td>
                     <td></td>
