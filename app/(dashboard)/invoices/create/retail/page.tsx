@@ -279,7 +279,7 @@ export default function CreateRetailInvoicePage() {
 
   const [extraDiscount, setExtraDiscount] = useState("0");
   const [paidAmount, setPaidAmount] = useState("0");
-  const [applyItemsDiscount, setApplyItemsDiscount] = useState(true);
+  const [applyItemsDiscount, setApplyItemsDiscount] = useState(false);
 
   /* =========================================================
      4.5 Draft Auto-Save & Restore
@@ -824,6 +824,19 @@ export default function CreateRetailInvoicePage() {
       return sum + (item.is_return ? -raw : raw);
     }, 0);
   }, [items, applyItemsDiscount]);
+
+  /* preview: total WITH discount (for eye icon) */
+  const discountPreviewTotal = useMemo(() => {
+    if (applyItemsDiscount) return null; // already applied
+    return items.reduce((sum, item) => {
+      const raw =
+        Number(item.price) * (Number(item.quantity) || 0) -
+        (Number(item.discount) || 0) * (Number(item.quantity) || 0);
+      return sum + (item.is_return ? -raw : raw);
+    }, 0);
+  }, [items, applyItemsDiscount]);
+
+  const [showDiscountPreview, setShowDiscountPreview] = useState(false);
 
   const finalTotal = useMemo(() => {
     return totalBeforeDiscount - (Number(extraDiscount) || 0);
@@ -2016,6 +2029,23 @@ export default function CreateRetailInvoicePage() {
               >
                 خصم الأصناف
               </label>
+              {!applyItemsDiscount && discountPreviewTotal !== null && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  title="عرض الإجمالي بعد الخصم"
+                  onClick={() => setShowDiscountPreview((p) => !p)}
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
+              )}
+              {showDiscountPreview && discountPreviewTotal !== null && (
+                <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 rounded px-2 py-1">
+                  بعد الخصم: {Math.round(discountPreviewTotal).toLocaleString()} ج.م
+                </span>
+              )}
             </div>
 
             {/* الإجمالي */}
