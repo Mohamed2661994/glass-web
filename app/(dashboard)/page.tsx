@@ -993,7 +993,9 @@ export default function DashboardPage() {
       try {
         const today = getTodayDate();
         const [inRes, outRes] = await Promise.all([
-          api.get("/cash-in", { params: { branch_id: branchId, from_date: today, to_date: today } }),
+          api.get("/cash-in", {
+            params: { branch_id: branchId, from_date: today, to_date: today },
+          }),
           api.get("/cash/out", {
             params: { branch_id: branchId, from_date: today, to_date: today },
           }),
