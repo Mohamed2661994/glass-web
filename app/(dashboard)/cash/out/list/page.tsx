@@ -206,7 +206,11 @@ export default function CashOutListPage() {
                               : "default"
                         }
                       >
-                        {item.entry_type === "expense" ? "مصروفات" : item.entry_type === "supplier_payment" ? "دفعة مورد" : "مشتريات"}
+                        {item.entry_type === "expense"
+                          ? "مصروفات"
+                          : item.entry_type === "supplier_payment"
+                            ? "دفعة مورد"
+                            : "مشتريات"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-red-500 font-bold">

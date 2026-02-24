@@ -38,7 +38,6 @@ import { toast } from "sonner";
 import { List, Pencil, Trash2 } from "lucide-react";
 import api from "@/services/api";
 import { useSearchParams } from "next/navigation";
-import { noSpaces, normalizeArabic } from "@/lib/utils";
 
 export default function CashOutPageWrapper() {
   return (
@@ -56,12 +55,16 @@ function CashOutPage() {
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
-  const [entryType, setEntryType] = useState<"expense" | "purchase" | "supplier_payment">("expense");
+  const [entryType, setEntryType] = useState<
+    "expense" | "purchase" | "supplier_payment"
+  >("expense");
 
   /* ========== Supplier Autocomplete State ========== */
   const [supplierId, setSupplierId] = useState<number | null>(null);
   const [supplierSearch, setSupplierSearch] = useState("");
-  const [supplierResults, setSupplierResults] = useState<{id: number; name: string}[]>([]);
+  const [supplierResults, setSupplierResults] = useState<
+    { id: number; name: string }[]
+  >([]);
   const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
   const [supplierSearching, setSupplierSearching] = useState(false);
   const [date, setDate] = useState(() => {
@@ -141,7 +144,9 @@ function CashOutPage() {
     const timer = setTimeout(async () => {
       try {
         setSupplierSearching(true);
-        const { data } = await api.get("/suppliers/search", { params: { q: supplierSearch } });
+        const { data } = await api.get("/suppliers/search", {
+          params: { q: supplierSearch },
+        });
         setSupplierResults(data || []);
         setShowSupplierDropdown(true);
       } catch {
@@ -263,7 +268,9 @@ function CashOutPage() {
 
           {/* الاسم / اسم المورد */}
           <div className="relative">
-            <Label>{entryType === "supplier_payment" ? "اسم المورد" : "الاسم"}</Label>
+            <Label>
+              {entryType === "supplier_payment" ? "اسم المورد" : "الاسم"}
+            </Label>
             {entryType === "supplier_payment" ? (
               <>
                 <div className="relative mt-2">
@@ -274,7 +281,10 @@ function CashOutPage() {
                       setSupplierId(null);
                       setShowSupplierDropdown(true);
                     }}
-                    onFocus={() => supplierResults.length > 0 && setShowSupplierDropdown(true)}
+                    onFocus={() =>
+                      supplierResults.length > 0 &&
+                      setShowSupplierDropdown(true)
+                    }
                     placeholder="ابحث عن المورد..."
                     className={supplierId ? "border-green-500 pr-8" : ""}
                   />
@@ -284,27 +294,31 @@ function CashOutPage() {
                     </div>
                   )}
                   {supplierId && (
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500 text-xs">✓</div>
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500 text-xs">
+                      ✓
+                    </div>
                   )}
                 </div>
-                {showSupplierDropdown && supplierResults.length > 0 && !supplierId && (
-                  <div className="absolute z-50 w-full mt-1 bg-background border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                    {supplierResults.map((s) => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        className="w-full text-right px-3 py-2 hover:bg-muted text-sm transition-colors"
-                        onClick={() => {
-                          setSupplierId(s.id);
-                          setSupplierSearch(s.name);
-                          setShowSupplierDropdown(false);
-                        }}
-                      >
-                        {s.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                {showSupplierDropdown &&
+                  supplierResults.length > 0 &&
+                  !supplierId && (
+                    <div className="absolute z-50 w-full mt-1 bg-background border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                      {supplierResults.map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          className="w-full text-right px-3 py-2 hover:bg-muted text-sm transition-colors"
+                          onClick={() => {
+                            setSupplierId(s.id);
+                            setSupplierSearch(s.name);
+                            setShowSupplierDropdown(false);
+                          }}
+                        >
+                          {s.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
               </>
             ) : (
               <Input
@@ -343,7 +357,10 @@ function CashOutPage() {
                 </Label>
               </div>
               <div className="flex items-center gap-2">
-                <RadioGroupItem value="supplier_payment" id="supplier_payment" />
+                <RadioGroupItem
+                  value="supplier_payment"
+                  id="supplier_payment"
+                />
                 <Label htmlFor="supplier_payment" className="cursor-pointer">
                   دفعة مورد
                 </Label>

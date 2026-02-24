@@ -629,11 +629,19 @@ export default function CashSummaryPage() {
                     </div>
                     <Badge
                       variant={
-                        o.entry_type === "purchase" ? "default" : o.entry_type === "supplier_payment" ? "secondary" : "destructive"
+                        o.entry_type === "purchase"
+                          ? "default"
+                          : o.entry_type === "supplier_payment"
+                            ? "secondary"
+                            : "destructive"
                       }
                       className="text-[10px] px-1.5 py-0"
                     >
-                      {o.entry_type === "purchase" ? "مشتريات" : o.entry_type === "supplier_payment" ? "دفعة مورد" : "مصروفات"}
+                      {o.entry_type === "purchase"
+                        ? "مشتريات"
+                        : o.entry_type === "supplier_payment"
+                          ? "دفعة مورد"
+                          : "مصروفات"}
                     </Badge>
                   </div>
                   {o.notes && (

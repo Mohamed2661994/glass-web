@@ -122,7 +122,9 @@ function CashSummaryPrintInner() {
   const filteredOut = cashOut.filter((o) => inRange(o.transaction_date));
   const expenses = filteredOut.filter((o) => o.entry_type === "expense");
   const purchases = filteredOut.filter((o) => o.entry_type === "purchase");
-  const supplierPayments = filteredOut.filter((o) => o.entry_type === "supplier_payment");
+  const supplierPayments = filteredOut.filter(
+    (o) => o.entry_type === "supplier_payment",
+  );
 
   const fromDateTime = fromDate ? toDateOnly(fromDate) : null;
 
@@ -254,7 +256,11 @@ function CashSummaryPrintInner() {
           {supplierPayments.length > 0 && (
             <DataTable
               title="المنصرف (دفعات موردين)"
-              rows={supplierPayments.map((o) => [o.name, o.amount, o.notes || "-"])}
+              rows={supplierPayments.map((o) => [
+                o.name,
+                o.amount,
+                o.notes || "-",
+              ])}
             />
           )}
         </div>
