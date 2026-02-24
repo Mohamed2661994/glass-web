@@ -23,7 +23,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Search, AlertTriangle } from "lucide-react";
+import { Loader2, Search, AlertTriangle, Wrench } from "lucide-react";
+import { toast } from "sonner";
 import { useRealtime } from "@/hooks/use-realtime";
 
 /* ========== Types ========== */
@@ -51,6 +52,7 @@ export default function InventorySummaryPage() {
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
   const [discrepancyOpen, setDiscrepancyOpen] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
   const [selectedWarehouse, setSelectedWarehouse] = useState<WarehouseFilter>(
     isShowroomUser
       ? "مخزن المعرض"
@@ -305,10 +307,37 @@ export default function InventorySummaryPage() {
             className="sm:max-w-4xl max-h-[85vh] flex flex-col p-0"
           >
             <DialogHeader className="p-4 border-b shrink-0">
-              <DialogTitle className="flex items-center gap-2 text-red-600">
-                <AlertTriangle className="h-5 w-5" />
-                أصناف بها فرق في الرصيد ({discrepancyItems.length})
-              </DialogTitle>
+              <div className="flex items-center justify-between">
+                <DialogTitle className="flex items-center gap-2 text-red-600">
+                  <AlertTriangle className="h-5 w-5" />
+                  أصناف بها فرق في الرصيد ({discrepancyItems.length})
+                </DialogTitle>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={reconciling}
+                  onClick={async () => {
+                    setReconciling(true);
+                    try {
+                      const { data } = await api.post("/stock/reconcile");
+                      toast.success(data.message || "تم تصحيح الأرصدة");
+                      setDiscrepancyOpen(false);
+                      fetchReport();
+                    } catch {
+                      toast.error("فشل تصحيح الأرصدة");
+                    } finally {
+                      setReconciling(false);
+                    }
+                  }}
+                >
+                  {reconciling ? (
+                    <Loader2 className="h-4 w-4 ml-1 animate-spin" />
+                  ) : (
+                    <Wrench className="h-4 w-4 ml-1" />
+                  )}
+                  تصحيح الأرصدة
+                </Button>
+              </div>
             </DialogHeader>
             <div className="flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {discrepancyItems.length === 0 ? (
