@@ -175,6 +175,11 @@ export function Sidebar({
         href: "/reports/customer-balances",
       },
       {
+        label: "كشف حساب الموردين",
+        icon: Store,
+        href: "/reports/supplier-balances",
+      },
+      {
         label: "حركة الأصناف",
         icon: BarChart3,
         href: "/reports/product-movement",
