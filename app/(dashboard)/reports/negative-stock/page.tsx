@@ -15,7 +15,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, TrendingDown, RefreshCw } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Loader2, TrendingDown, RefreshCw, Eraser } from "lucide-react";
+import { toast } from "sonner";
 
 /* ========== Types ========== */
 type NegativeStockItem = {
@@ -38,6 +50,7 @@ export default function NegativeStockReportPage() {
 
   const [data, setData] = useState<NegativeStockItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [zeroing, setZeroing] = useState(false);
   const [selectedWarehouse, setSelectedWarehouse] = useState<WarehouseFilter>(
     isShowroomUser
       ? "مخزن المعرض"
@@ -100,6 +113,37 @@ export default function NegativeStockReportPage() {
     [filteredData],
   );
 
+  /* ========== Zero Out ========== */
+  const handleZeroOut = async () => {
+    // Determine which warehouse(s) to zero out
+    const warehouseIds: number[] = [];
+    if (selectedWarehouse === "مخزن المعرض" || isShowroomUser) {
+      warehouseIds.push(1);
+    } else if (selectedWarehouse === "المخزن الرئيسي" || isWarehouseUser) {
+      warehouseIds.push(2);
+    } else {
+      // "الكل" — zero both
+      warehouseIds.push(1, 2);
+    }
+
+    setZeroing(true);
+    try {
+      let totalItems = 0;
+      const invoiceIds: number[] = [];
+      for (const wid of warehouseIds) {
+        const { data } = await api.post("/invoices/zero-negative-stock", { warehouse_id: wid });
+        if (data.items_count) totalItems += data.items_count;
+        if (data.invoice_id) invoiceIds.push(data.invoice_id);
+      }
+      toast.success(`تم تصفير ${totalItems} صنف سالب`);
+      fetchReport();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "فشل تصفير الأصناف السالبة");
+    } finally {
+      setZeroing(false);
+    }
+  };
+
   return (
     <PageContainer size="xl">
       <div dir="rtl" className="space-y-4 py-6">
@@ -132,6 +176,43 @@ export default function NegativeStockReportPage() {
             />
             تحديث
           </Button>
+
+          {/* Zero out button */}
+          {!loading && filteredData.length > 0 && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={zeroing}
+                >
+                  {zeroing ? (
+                    <Loader2 className="h-4 w-4 ml-1 animate-spin" />
+                  ) : (
+                    <Eraser className="h-4 w-4 ml-1" />
+                  )}
+                  تصفير الأصناف السالبة
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent dir="rtl">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>تصفير الأصناف السالبة؟</AlertDialogTitle>
+                  <AlertDialogDescription className="text-right">
+                    هيتم إنشاء فاتورة شراء تعديلية لتصفير{" "}
+                    <strong>{filteredData.length}</strong> صنف سالب.
+                    <br />
+                    رصيد كل الأصناف دي هيبقى صفر بعد التصفير.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex-row-reverse gap-2">
+                  <AlertDialogAction onClick={handleZeroOut} className="bg-red-600 hover:bg-red-700">
+                    تأكيد التصفير
+                  </AlertDialogAction>
+                  <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
 
         {/* Summary cards */}
