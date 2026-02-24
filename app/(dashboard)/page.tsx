@@ -604,71 +604,82 @@ const ALL_PAGES: { label: string; href: string }[] = [
   { label: "استعلام عن الأصناف", href: "#product-lookup" },
 ];
 
-const DEFAULT_QUICK_LINKS: QuickLink[] = [
-  {
-    id: "1",
-    label: "فاتورة جديدة",
-    href: "/invoices/create/retail",
-    icon: "Plus",
-    color: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-  },
-  {
-    id: "2",
-    label: "الفواتير",
-    href: "/invoices",
-    icon: "FileText",
-    color: "bg-green-500/10 text-green-600 dark:text-green-400",
-  },
-  {
-    id: "3",
-    label: "الأصناف",
-    href: "/products",
-    icon: "Package",
-    color: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
-  },
-  {
-    id: "4",
-    label: "تحويل مخزون",
-    href: "/stock-transfer",
-    icon: "ArrowLeftRight",
-    color: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
-  },
-  {
-    id: "5",
-    label: "وارد الخزنة",
-    href: "/cash/in",
-    icon: "TrendingUp",
-    color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  },
-  {
-    id: "6",
-    label: "أرصدة العملاء",
-    href: "/reports/customer-balances",
-    icon: "Users",
-    color: "bg-sky-500/10 text-sky-600 dark:text-sky-400",
-  },
-  {
-    id: "7",
-    label: "جرد المخزون",
-    href: "/reports/inventory-summary",
-    icon: "BarChart3",
-    color: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  },
-  {
-    id: "8",
-    label: "ملخص الخزنة",
-    href: "/cash/summary",
-    icon: "Wallet",
-    color: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
-  },
-  {
-    id: "9",
-    label: "استعلام عن الأصناف",
-    href: "#product-lookup",
-    icon: "Search",
-    color: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
-  },
-];
+function getDefaultQuickLinks(branchId?: number): QuickLink[] {
+  const isWholesale = branchId === 2;
+  return [
+    {
+      id: "1",
+      label: "فاتورة جديدة",
+      href: isWholesale
+        ? "/invoices/create/wholesale"
+        : "/invoices/create/retail",
+      icon: "Plus",
+      color: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    },
+    {
+      id: "2",
+      label: "الفواتير",
+      href: "/invoices",
+      icon: "FileText",
+      color: "bg-green-500/10 text-green-600 dark:text-green-400",
+    },
+    {
+      id: "3",
+      label: "الأصناف",
+      href: "/products",
+      icon: "Package",
+      color: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
+    },
+    {
+      id: "4",
+      label: "تحويل مخزون",
+      href: "/stock-transfer",
+      icon: "ArrowLeftRight",
+      color: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
+    },
+    {
+      id: "5",
+      label: "وارد الخزنة",
+      href: "/cash/in",
+      icon: "TrendingUp",
+      color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    },
+    {
+      id: "6",
+      label: isWholesale ? "صرف الخزنة" : "أرصدة العملاء",
+      href: isWholesale ? "/cash/summary" : "/reports/customer-balances",
+      icon: isWholesale ? "Wallet" : "Users",
+      color: isWholesale
+        ? "bg-rose-500/10 text-rose-600 dark:text-rose-400"
+        : "bg-sky-500/10 text-sky-600 dark:text-sky-400",
+    },
+    {
+      id: "7",
+      label: "جرد المخزون",
+      href: "/reports/inventory-summary",
+      icon: "BarChart3",
+      color: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+    },
+    {
+      id: "8",
+      label: isWholesale ? "أرصدة العملاء" : "ملخص الخزنة",
+      href: isWholesale
+        ? "/reports/customer-balances"
+        : "/cash/summary",
+      icon: isWholesale ? "Users" : "Wallet",
+      color: isWholesale
+        ? "bg-sky-500/10 text-sky-600 dark:text-sky-400"
+        : "bg-rose-500/10 text-rose-600 dark:text-rose-400",
+    },
+    {
+      id: "9",
+      label: "استعلام عن الأصناف",
+      href: "#product-lookup",
+      icon: "Search",
+      color: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
+    },
+  ];
+}
 
 /** Merge saved widget prefs with defaults (handles new widgets, label updates) */
 function mergeWidgetsWithDefaults(
@@ -780,8 +791,9 @@ export default function DashboardPage() {
   const [lookupOpen, setLookupOpen] = useState(false);
 
   /* ---------- quick links ---------- */
+  const defaultLinks = useMemo(() => getDefaultQuickLinks(branchId), [branchId]);
   const [quickLinks, setQuickLinks] =
-    useState<QuickLink[]>(DEFAULT_QUICK_LINKS);
+    useState<QuickLink[]>([]);
   const [linksEditorOpen, setLinksEditorOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<QuickLink | null>(null);
   const [linkForm, setLinkForm] = useState({
@@ -791,17 +803,20 @@ export default function DashboardPage() {
     color: COLOR_OPTIONS[0].value,
   });
 
-  // Sync from preferences when they load
+  // Sync from preferences when they load (or reset to defaults on user switch)
   useEffect(() => {
-    if (prefs.dashboard_widgets) {
-      setWidgets(
-        mergeWidgetsWithDefaults(prefs.dashboard_widgets as WidgetConfig[]),
-      );
-    }
-    if (prefs.quick_links) {
-      setQuickLinks(prefs.quick_links as QuickLink[]);
-    }
-  }, [prefs.dashboard_widgets, prefs.quick_links]);
+    if (!prefsLoaded) return;
+    setWidgets(
+      prefs.dashboard_widgets
+        ? mergeWidgetsWithDefaults(prefs.dashboard_widgets as WidgetConfig[])
+        : DEFAULT_WIDGETS,
+    );
+    setQuickLinks(
+      prefs.quick_links
+        ? (prefs.quick_links as QuickLink[])
+        : defaultLinks,
+    );
+  }, [prefsLoaded, prefs.dashboard_widgets, prefs.quick_links, defaultLinks]);
 
   const isVisible = useCallback(
     (id: WidgetId) => widgets.find((w) => w.id === id)?.visible ?? true,
@@ -896,8 +911,8 @@ export default function DashboardPage() {
   };
 
   const resetQuickLinks = () => {
-    setQuickLinks(DEFAULT_QUICK_LINKS);
-    saveQuickLinksPrefs(DEFAULT_QUICK_LINKS);
+    setQuickLinks(defaultLinks);
+    saveQuickLinksPrefs(defaultLinks);
   };
 
   const handleDragStart = (idx: number) => setDragIdx(idx);

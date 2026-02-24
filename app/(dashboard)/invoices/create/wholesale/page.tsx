@@ -1657,7 +1657,8 @@ export default function CreateWholesaleInvoicePage() {
               )}
               {showDiscountPreview && discountPreviewTotal !== null && (
                 <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 rounded px-2 py-1">
-                  بعد الخصم: {Math.round(discountPreviewTotal).toLocaleString()} ج.م
+                  بعد الخصم: {Math.round(discountPreviewTotal).toLocaleString()}{" "}
+                  ج.م
                 </span>
               )}
             </div>

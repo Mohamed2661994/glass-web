@@ -99,7 +99,15 @@ export function useUserPreferences() {
 
   /* ── Load preferences (localStorage first, then try backend) ── */
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      setPrefsState({});
+      setLoaded(false);
+      return;
+    }
+
+    // Reset first so old user's prefs don't bleed over
+    setPrefsState({});
+    setLoaded(false);
 
     // 1. Load from localStorage immediately
     try {
