@@ -215,20 +215,16 @@ function InvoicePrintPage() {
         th { background:#f3f3f3; font-weight:bold; border-bottom:2px solid ${printColor}; }
         td { border-bottom:1px solid #ddd; }
         th,td { padding:3px 4px; text-align:center; }
-        tfoot tr { border-top:3px solid #000; }
-        .totals-section {
-          margin-top:6px; padding-top:6px; border-top:none;
-          width:55%; margin-left:0; margin-right:auto;
-          font-size:${fontSize + 1}px; line-height:1.5; text-align:left;
-        }
-        .totals-remaining { font-size:${fontSize + 3}px; }
+        tfoot tr:first-child { border-top:3px solid #000; }
+        tfoot .summary-row td { border-bottom:none; text-align:right; padding:1px 4px; font-size:${fontSize + 1}px; }
+        tfoot .summary-row .summary-label { text-align:left; }
+        tfoot .summary-remaining td { font-size:${fontSize + 3}px; }
         hr { border:none; border-top:2px solid #000; margin-bottom:10px; }
         @page { size:${pageW}mm ${pageH}mm; margin:${marginMM}mm; }
         table { page-break-inside:auto; break-inside:auto; }
         tr { page-break-inside:avoid; break-inside:avoid; }
         thead { display:table-header-group; }
         tfoot { display:table-row-group; }
-        .totals-section { break-inside:avoid; }
       </style>
     `;
 
@@ -581,7 +577,9 @@ table { width:100%; border-collapse:collapse; }
 th { background:#f3f3f3; font-weight:bold; border-bottom:2px solid ${printColor}; }
 td { border-bottom:1px solid #ddd; }
 th,td { padding:3px 4px; text-align:center; }
-tfoot tr { border-top:3px solid #000; }
+tfoot tr:first-child { border-top:3px solid #000; }
+tfoot .summary-row td { border-bottom:none; text-align:right; padding:1px 4px; }
+tfoot .summary-row .summary-label { text-align:left; }
 .totals-section {
   margin-top:6px; padding-top:6px;
   border-top:none;
@@ -1082,31 +1080,41 @@ tfoot tr { border-top:3px solid #000; }
                     <td></td>
                     <td>{fmt(itemsSubtotal)}</td>
                   </tr>
+                  {previousBalance !== 0 && (
+                    <tr className="summary-row">
+                      <td colSpan={4}></td>
+                      <td className="summary-label">حساب سابق:</td>
+                      <td>{fmt(previousBalance)}</td>
+                    </tr>
+                  )}
+                  {extraDiscount > 0 && (
+                    <tr className="summary-row">
+                      <td colSpan={4}></td>
+                      <td className="summary-label">خصم:</td>
+                      <td>{fmt(extraDiscount)}</td>
+                    </tr>
+                  )}
+                  <tr className="summary-row">
+                    <td colSpan={4}></td>
+                    <td className="summary-label"><b>الصافي:</b></td>
+                    <td><b>{fmt(netTotal)}</b></td>
+                  </tr>
+                  {paidAmount !== 0 && (
+                    <tr className="summary-row">
+                      <td colSpan={4}></td>
+                      <td className="summary-label">المدفوع:</td>
+                      <td>{fmt(paidAmount)}</td>
+                    </tr>
+                  )}
+                  {remaining !== 0 && (
+                    <tr className="summary-row summary-remaining">
+                      <td colSpan={4}></td>
+                      <td className="summary-label"><b>المتبقي:</b></td>
+                      <td><b>{fmt(remaining)}</b></td>
+                    </tr>
+                  )}
                 </tfoot>
               </table>
-
-              {/* التوتالز */}
-              <div
-                className="totals-section"
-                style={{ fontSize: `${fontSize + 1}px` }}
-              >
-                {previousBalance !== 0 && (
-                  <div>حساب سابق: {fmt(previousBalance)}</div>
-                )}
-                {extraDiscount > 0 && <div>خصم : {fmt(extraDiscount)}</div>}
-                <div>
-                  <b>الصافي: {fmt(netTotal)}</b>
-                </div>
-                {paidAmount !== 0 && <div>المدفوع: {fmt(paidAmount)}</div>}
-                {remaining !== 0 && (
-                  <div
-                    className="totals-remaining"
-                    style={{ fontSize: `${fontSize + 3}px` }}
-                  >
-                    <b>المتبقي: {fmt(remaining)}</b>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </div>
