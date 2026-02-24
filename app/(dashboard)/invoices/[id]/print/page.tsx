@@ -215,8 +215,9 @@ function InvoicePrintPage() {
         th { background:#f3f3f3; font-weight:bold; border-bottom:2px solid ${printColor}; }
         td { border-bottom:1px solid #ddd; }
         th,td { padding:3px 4px; text-align:center; }
+        tfoot tr { border-top:3px solid #000; }
         .totals-section {
-          margin-top:6px; padding-top:6px; border-top:3px solid #2563eb;
+          margin-top:6px; padding-top:6px; border-top:1px solid #000;
           width:55%; margin-left:0; margin-right:auto;
           font-size:${fontSize + 1}px; line-height:1.5; text-align:left;
         }
@@ -580,9 +581,10 @@ table { width:100%; border-collapse:collapse; }
 th { background:#f3f3f3; font-weight:bold; border-bottom:2px solid ${printColor}; }
 td { border-bottom:1px solid #ddd; }
 th,td { padding:3px 4px; text-align:center; }
+tfoot tr { border-top:3px solid #000; }
 .totals-section {
   margin-top:6px; padding-top:6px;
-  border-top:3px solid #2563eb;
+  border-top:1px solid #000;
   width:55%; margin-left:0; margin-right:auto;
   line-height:1.5; text-align:left;
 }
