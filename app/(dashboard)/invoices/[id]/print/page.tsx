@@ -217,7 +217,7 @@ function InvoicePrintPage() {
         th,td { padding:3px 4px; text-align:center; }
         tfoot tr:first-child { border-top:3px solid #000; }
         tfoot .summary-row td { border-bottom:none; padding:1px 4px; font-size:${fontSize + 1}px; }
-        tfoot .summary-row:first-of-type td { border-top:1px solid #000; padding-top:4px; }
+        tfoot .summary-row:first-of-type td:nth-last-child(-n+2) { border-top:1px solid #000; padding-top:4px; }
         tfoot .summary-remaining td { font-size:${fontSize + 3}px; }
         hr { border:none; border-top:2px solid #000; margin-bottom:10px; }
         @page { size:${pageW}mm ${pageH}mm; margin:${marginMM}mm; }
@@ -579,7 +579,7 @@ td { border-bottom:1px solid #ddd; }
 th,td { padding:3px 4px; text-align:center; }
 tfoot tr:first-child { border-top:3px solid #000; }
 tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
-tfoot .summary-row:first-of-type td { border-top:1px solid #000; padding-top:4px; }
+tfoot .summary-row:first-of-type td:nth-last-child(-n+2) { border-top:1px solid #000; padding-top:4px; }
 .totals-section {
   margin-top:6px; padding-top:6px;
   border-top:none;
@@ -1086,7 +1086,7 @@ tfoot .summary-row:first-of-type td { border-top:1px solid #000; padding-top:4px
                       <td></td>
                       <td></td>
                       <td></td>
-                      <td style={{textAlign:'left'}}>حساب سابق:</td>
+                      <td style={{ textAlign: "left" }}>حساب سابق:</td>
                       <td>{fmt(previousBalance)}</td>
                     </tr>
                   )}
@@ -1096,7 +1096,7 @@ tfoot .summary-row:first-of-type td { border-top:1px solid #000; padding-top:4px
                       <td></td>
                       <td></td>
                       <td></td>
-                      <td style={{textAlign:'left'}}>خصم:</td>
+                      <td style={{ textAlign: "left" }}>خصم:</td>
                       <td>{fmt(extraDiscount)}</td>
                     </tr>
                   )}
@@ -1105,8 +1105,12 @@ tfoot .summary-row:first-of-type td { border-top:1px solid #000; padding-top:4px
                     <td></td>
                     <td></td>
                     <td></td>
-                    <td style={{textAlign:'left'}}><b>الصافي:</b></td>
-                    <td><b>{fmt(netTotal)}</b></td>
+                    <td style={{ textAlign: "left" }}>
+                      <b>الصافي:</b>
+                    </td>
+                    <td>
+                      <b>{fmt(netTotal)}</b>
+                    </td>
                   </tr>
                   {paidAmount !== 0 && (
                     <tr className="summary-row">
@@ -1114,7 +1118,7 @@ tfoot .summary-row:first-of-type td { border-top:1px solid #000; padding-top:4px
                       <td></td>
                       <td></td>
                       <td></td>
-                      <td style={{textAlign:'left'}}>المدفوع:</td>
+                      <td style={{ textAlign: "left" }}>المدفوع:</td>
                       <td>{fmt(paidAmount)}</td>
                     </tr>
                   )}
@@ -1124,8 +1128,12 @@ tfoot .summary-row:first-of-type td { border-top:1px solid #000; padding-top:4px
                       <td></td>
                       <td></td>
                       <td></td>
-                      <td style={{textAlign:'left'}}><b>المتبقي:</b></td>
-                      <td><b>{fmt(remaining)}</b></td>
+                      <td style={{ textAlign: "left" }}>
+                        <b>المتبقي:</b>
+                      </td>
+                      <td>
+                        <b>{fmt(remaining)}</b>
+                      </td>
                     </tr>
                   )}
                 </tfoot>
