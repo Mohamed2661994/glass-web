@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, useRef } from "react";
 import { useAuth } from "@/app/context/auth-context";
 import api, { API_URL } from "@/services/api";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
-import type { ChatPrefs } from "@/hooks/use-user-preferences";
+import type { ChatPrefs, PrintSettings, NotifSettings } from "@/hooks/use-user-preferences";
 import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,7 @@ import {
   Volume2,
   Check,
   Palette,
+  Save,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -202,24 +203,36 @@ export default function SettingsPage() {
     }
   };
 
-  /* ---- Load settings from localStorage ---- */
+  /* ---- Load settings from user prefs (per-user) or fallback to localStorage ---- */
+  const prefsLoadedRef = useRef(false);
   useEffect(() => {
-    const settings = localStorage.getItem("appSettings");
-    if (settings) {
-      try {
-        const s = JSON.parse(settings);
-        if (s.autoPrint !== undefined) setAutoPrint(s.autoPrint);
-        if (s.showCompanyHeader !== undefined)
-          setShowCompanyHeader(s.showCompanyHeader);
-        if (s.printBold !== undefined) setPrintBold(s.printBold);
-        if (s.printColor !== undefined) setPrintColor(s.printColor);
-        if (s.notifSound !== undefined) setNotifSound(s.notifSound);
-        if (s.notifTransfers !== undefined) setNotifTransfers(s.notifTransfers);
-      } catch {
-        /* ignore */
+    if (prefsLoadedRef.current) return;
+    const ps = prefs.printSettings as PrintSettings | undefined;
+    const ns = prefs.notifSettings as NotifSettings | undefined;
+    if (ps || ns) {
+      prefsLoadedRef.current = true;
+      if (ps?.autoPrint !== undefined) setAutoPrint(ps.autoPrint);
+      if (ps?.showCompanyHeader !== undefined) setShowCompanyHeader(ps.showCompanyHeader);
+      if (ps?.printBold !== undefined) setPrintBold(ps.printBold);
+      if (ps?.printColor !== undefined) setPrintColor(ps.printColor);
+      if (ns?.notifSound !== undefined) setNotifSound(ns.notifSound);
+      if (ns?.notifTransfers !== undefined) setNotifTransfers(ns.notifTransfers);
+    } else {
+      // Fallback to localStorage (legacy, shared across users)
+      const settings = localStorage.getItem("appSettings");
+      if (settings) {
+        try {
+          const s = JSON.parse(settings);
+          if (s.autoPrint !== undefined) setAutoPrint(s.autoPrint);
+          if (s.showCompanyHeader !== undefined) setShowCompanyHeader(s.showCompanyHeader);
+          if (s.printBold !== undefined) setPrintBold(s.printBold);
+          if (s.printColor !== undefined) setPrintColor(s.printColor);
+          if (s.notifSound !== undefined) setNotifSound(s.notifSound);
+          if (s.notifTransfers !== undefined) setNotifTransfers(s.notifTransfers);
+        } catch { /* ignore */ }
       }
     }
-  }, []);
+  }, [prefs.printSettings, prefs.notifSettings]);
 
   /* ---- Save settings to localStorage ---- */
   const saveSettings = useCallback(
@@ -231,6 +244,30 @@ export default function SettingsPage() {
     },
     [],
   );
+
+  /* ========== Section Save Handlers ========== */
+  const handleSavePrint = () => {
+    const ps: PrintSettings = { autoPrint, showCompanyHeader, printBold, printColor };
+    saveSettings(ps as Record<string, boolean | string>);
+    setPrefs((prev) => ({ ...prev, printSettings: ps }));
+    toast.success("تم حفظ إعدادات الطباعة ✅");
+  };
+
+  const handleSaveNotif = () => {
+    const ns: NotifSettings = { notifSound, notifTransfers };
+    saveSettings(ns as Record<string, boolean | string>);
+    setPrefs((prev) => ({ ...prev, notifSettings: ns }));
+    toast.success("تم حفظ إعدادات الإشعارات ✅");
+  };
+
+  const handleSaveChat = async () => {
+    try {
+      await api.put("/user/preferences", prefs);
+      toast.success("تم حفظ إعدادات المحادثة ✅");
+    } catch {
+      toast.success("تم الحفظ ✅");
+    }
+  };
 
   /* ========== Handlers ========== */
 
@@ -490,10 +527,7 @@ export default function SettingsPage() {
               </div>
               <Switch
                 checked={autoPrint}
-                onCheckedChange={(v) => {
-                  setAutoPrint(v);
-                  saveSettings({ autoPrint: v });
-                }}
+                onCheckedChange={setAutoPrint}
               />
             </div>
             <Separator />
@@ -506,10 +540,7 @@ export default function SettingsPage() {
               </div>
               <Switch
                 checked={showCompanyHeader}
-                onCheckedChange={(v) => {
-                  setShowCompanyHeader(v);
-                  saveSettings({ showCompanyHeader: v });
-                }}
+                onCheckedChange={setShowCompanyHeader}
               />
             </div>
             <Separator />
@@ -522,10 +553,7 @@ export default function SettingsPage() {
               </div>
               <Switch
                 checked={printBold}
-                onCheckedChange={(v) => {
-                  setPrintBold(v);
-                  saveSettings({ printBold: v });
-                }}
+                onCheckedChange={setPrintBold}
               />
             </div>
             <Separator />
@@ -545,10 +573,7 @@ export default function SettingsPage() {
                   <input
                     type="color"
                     value={printColor}
-                    onChange={(e) => {
-                      setPrintColor(e.target.value);
-                      saveSettings({ printColor: e.target.value });
-                    }}
+                    onChange={(e) => setPrintColor(e.target.value)}
                     className="w-8 h-8 cursor-pointer rounded border-0 p-0 bg-transparent"
                   />
                 </div>
@@ -567,10 +592,7 @@ export default function SettingsPage() {
                   <button
                     key={c.color}
                     title={c.label}
-                    onClick={() => {
-                      setPrintColor(c.color);
-                      saveSettings({ printColor: c.color });
-                    }}
+                    onClick={() => setPrintColor(c.color)}
                     className={`w-8 h-8 rounded-full border-2 transition-all ${
                       printColor === c.color
                         ? "border-primary scale-110 ring-2 ring-primary/30"
@@ -585,10 +607,15 @@ export default function SettingsPage() {
                 ))}
               </div>
             </div>
+            <Separator />
+            <div className="flex justify-end pt-2">
+              <Button onClick={handleSavePrint} className="gap-2">
+                <Save className="h-4 w-4" />
+                حفظ إعدادات الطباعة
+              </Button>
+            </div>
           </div>
         </SectionCard>
-
-        {/* ═══════════════ 5. Notification Settings ═══════════════ */}
         <SectionCard
           icon={Bell}
           title="إعدادات الإشعارات"
@@ -606,10 +633,7 @@ export default function SettingsPage() {
               </div>
               <Switch
                 checked={notifSound}
-                onCheckedChange={(v) => {
-                  setNotifSound(v);
-                  saveSettings({ notifSound: v });
-                }}
+                onCheckedChange={setNotifSound}
               />
             </div>
             <Separator />
@@ -622,11 +646,15 @@ export default function SettingsPage() {
               </div>
               <Switch
                 checked={notifTransfers}
-                onCheckedChange={(v) => {
-                  setNotifTransfers(v);
-                  saveSettings({ notifTransfers: v });
-                }}
+                onCheckedChange={setNotifTransfers}
               />
+            </div>
+            <Separator />
+            <div className="flex justify-end pt-2">
+              <Button onClick={handleSaveNotif} className="gap-2">
+                <Save className="h-4 w-4" />
+                حفظ إعدادات الإشعارات
+              </Button>
             </div>
           </div>
         </SectionCard>
@@ -921,10 +949,15 @@ export default function SettingsPage() {
                 )}
               </div>
             </div>
+            <Separator />
+            <div className="flex justify-end pt-2">
+              <Button onClick={handleSaveChat} className="gap-2">
+                <Save className="h-4 w-4" />
+                حفظ إعدادات المحادثة
+              </Button>
+            </div>
           </div>
         </SectionCard>
-
-        {/* ═══════════════ 5.6 Theme Customizer ═══════════════ */}
         <SectionCard
           icon={Palette}
           title="تخصيص الألوان"

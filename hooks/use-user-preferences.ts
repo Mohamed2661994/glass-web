@@ -53,6 +53,18 @@ export interface CustomColors {
   warning?: string; // amber/orange numbers (prices, warnings)
 }
 
+export interface PrintSettings {
+  autoPrint?: boolean;
+  showCompanyHeader?: boolean;
+  printBold?: boolean;
+  printColor?: string;
+}
+
+export interface NotifSettings {
+  notifSound?: boolean;
+  notifTransfers?: boolean;
+}
+
 export interface UserPreferences {
   dashboard_widgets?: DashboardWidgetPref[];
   quick_links?: QuickLinkPref[];
@@ -63,6 +75,8 @@ export interface UserPreferences {
   dash_invoice_view?: "table" | "compact" | "cards";
   dash_transfer_view?: "table" | "cards";
   products_view?: "cards" | "compact" | "table" | "split" | "swipe" | "kanban";
+  printSettings?: PrintSettings;
+  notifSettings?: NotifSettings;
   /** Any future per-user preferences can be added here */
   [key: string]: unknown;
 }

@@ -1085,9 +1085,7 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                     <td>{fmt(itemsSubtotal)}</td>
                   </tr>
                   {previousBalance !== 0 && (
-                    <tr
-                      className="summary-row"
-                    >
+                    <tr className="summary-row">
                       <td></td>
                       <td></td>
                       <td></td>
@@ -1097,9 +1095,7 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                     </tr>
                   )}
                   {extraDiscount > 0 && (
-                    <tr
-                      className="summary-row"
-                    >
+                    <tr className="summary-row">
                       <td></td>
                       <td></td>
                       <td></td>
@@ -1108,9 +1104,7 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                       <td>{fmt(extraDiscount)}</td>
                     </tr>
                   )}
-                  <tr
-                    className="summary-row"
-                  >
+                  <tr className="summary-row">
                     <td></td>
                     <td></td>
                     <td></td>
