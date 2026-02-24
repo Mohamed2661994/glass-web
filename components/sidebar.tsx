@@ -33,6 +33,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/app/context/auth-context";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
+import { useNavLoading } from "@/app/context/nav-loading-context";
 import type { LucideIcon } from "lucide-react";
 
 type RouteItem = {
@@ -66,6 +67,7 @@ export function Sidebar({
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const { prefs, setSidebar } = useUserPreferences();
+  const { startNavigation } = useNavLoading();
 
   const savedSidebar = prefs.sidebar;
   const [pinned, setPinnedLocal] = useState(false);
@@ -364,7 +366,10 @@ export function Sidebar({
                         <Link
                           key={child.href}
                           href={child.href}
-                          onClick={onNavigate}
+                          onClick={() => {
+                            if (pathname !== child.href) startNavigation();
+                            onNavigate?.();
+                          }}
                           className={cn(
                             "flex items-center gap-3 rounded-xl px-2 py-1.5 text-sm transition-colors",
                             isActive
@@ -396,7 +401,10 @@ export function Sidebar({
               key={entry.href}
               href={entry.href}
               replace={entry.href === "/"}
-              onClick={onNavigate}
+              onClick={() => {
+                if (pathname !== entry.href) startNavigation();
+                onNavigate?.();
+              }}
               className={cn(
                 "flex items-center gap-3 rounded-xl px-2 py-2 text-sm transition-colors",
                 isActive
@@ -420,7 +428,10 @@ export function Sidebar({
       <div className="p-2 border-t space-y-1">
         <Link
           href="/settings"
-          onClick={onNavigate}
+          onClick={() => {
+            if (pathname !== "/settings") startNavigation();
+            onNavigate?.();
+          }}
           className={cn(
             "flex items-center gap-3 rounded-xl px-2 py-2 text-sm transition-colors",
             pathname === "/settings" || pathname.startsWith("/settings/")

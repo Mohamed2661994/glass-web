@@ -15,6 +15,7 @@ import { ProductLookupModal } from "@/components/product-lookup-modal";
 import { ChatDrawer } from "@/components/chat-drawer";
 import { PullToRefresh } from "@/components/pull-to-refresh";
 import { SocketProvider } from "@/app/context/socket-context";
+import { NavLoadingProvider } from "@/app/context/nav-loading-context";
 import api, { API_URL } from "@/services/api";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -261,6 +262,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   return (
     <SocketProvider>
+      <NavLoadingProvider>
       <div className="h-dvh flex bg-background overflow-hidden print:h-auto print:overflow-visible">
         {/* Sidebar */}
         <div className="print:hidden">
@@ -336,6 +338,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           branchId={user?.branch_id || 1}
         />
       </div>
+      </NavLoadingProvider>
     </SocketProvider>
   );
 }

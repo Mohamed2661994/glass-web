@@ -17,6 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/auth-context";
+import { useNavLoading } from "@/app/context/nav-loading-context";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import api from "@/services/api";
 import { getTodayDate } from "@/lib/constants";
@@ -708,6 +709,7 @@ const formatDate = (iso: string) =>
 export default function DashboardPage() {
   const { user } = useAuth();
   const router = useRouter();
+  const { startNavigation } = useNavLoading();
   const branchId = user?.branch_id;
   const invoiceType = branchId === 1 ? "retail" : "wholesale";
 
@@ -1112,7 +1114,7 @@ export default function DashboardPage() {
 
             <Card
               className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => router.push("/reports/low-stock")}
+              onClick={() => { startNavigation(); router.push("/reports/low-stock"); }}
             >
               <CardContent className="p-4 flex flex-col items-center text-center gap-2">
                 <div className="rounded-lg bg-orange-100 dark:bg-orange-900/30 p-2.5">
@@ -1133,7 +1135,7 @@ export default function DashboardPage() {
 
             <Card
               className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => router.push("/reports/negative-stock")}
+              onClick={() => { startNavigation(); router.push("/reports/negative-stock"); }}
             >
               <CardContent className="p-4 flex flex-col items-center text-center gap-2">
                 <div className="rounded-lg bg-red-100 dark:bg-red-900/30 p-2.5">
@@ -1258,7 +1260,7 @@ export default function DashboardPage() {
                         <TableRow
                           key={inv.id}
                           className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => router.push(`/invoices/${inv.id}`)}
+                          onClick={() => { startNavigation(); router.push(`/invoices/${inv.id}`); }}
                         >
                           <TableCell className="font-medium">
                             {inv.id}
@@ -1334,7 +1336,7 @@ export default function DashboardPage() {
                         <TableRow
                           key={inv.id}
                           className="cursor-pointer hover:bg-muted/50 h-7"
-                          onClick={() => router.push(`/invoices/${inv.id}`)}
+                          onClick={() => { startNavigation(); router.push(`/invoices/${inv.id}`); }}
                         >
                           <TableCell className="font-medium py-1">
                             {inv.id}
@@ -1382,7 +1384,7 @@ export default function DashboardPage() {
                       <div
                         key={inv.id}
                         className="rounded-lg border bg-card p-2.5 cursor-pointer hover:bg-muted/50 transition-colors space-y-1.5"
-                        onClick={() => router.push(`/invoices/${inv.id}`)}
+                        onClick={() => { startNavigation(); router.push(`/invoices/${inv.id}`); }}
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-[11px] font-bold text-muted-foreground">
@@ -1504,7 +1506,7 @@ export default function DashboardPage() {
                         <TableRow
                           key={tr.id}
                           className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => router.push(`/transfers/${tr.id}`)}
+                          onClick={() => { startNavigation(); router.push(`/transfers/${tr.id}`); }}
                         >
                           <TableCell className="font-medium">{tr.id}</TableCell>
                           <TableCell>{tr.items_count}</TableCell>
@@ -1546,7 +1548,7 @@ export default function DashboardPage() {
                       <div
                         key={tr.id}
                         className="rounded-lg border bg-card p-2.5 cursor-pointer hover:bg-muted/50 transition-colors space-y-1.5"
-                        onClick={() => router.push(`/transfers/${tr.id}`)}
+                        onClick={() => { startNavigation(); router.push(`/transfers/${tr.id}`); }}
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-[11px] font-bold text-muted-foreground">
@@ -1656,7 +1658,9 @@ export default function DashboardPage() {
                               موردين
                             </p>
                             <p className="text-xs font-bold text-red-500 dark:text-red-400">
-                              {Math.round(cashSupplierPaymentTotal).toLocaleString()}
+                              {Math.round(
+                                cashSupplierPaymentTotal,
+                              ).toLocaleString()}
                             </p>
                           </div>
                         </>
@@ -1748,6 +1752,7 @@ export default function DashboardPage() {
                         if (link.href === "#product-lookup") {
                           setLookupOpen(true);
                         } else {
+                          startNavigation();
                           router.push(link.href);
                         }
                       }}
