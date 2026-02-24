@@ -216,9 +216,10 @@ function InvoicePrintPage() {
         td { border-bottom:1px solid #ddd; }
         th,td { padding:3px 4px; text-align:center; }
         tfoot tr:first-child { border-top:3px solid #000; }
+        tfoot tr:first-child td { border-bottom:none; }
+        tfoot tr:first-child td:nth-last-child(1),
+        tfoot tr:first-child td:nth-last-child(2) { border-bottom:2px solid #000; }
         tfoot .summary-row td { border-bottom:none; padding:1px 4px; font-size:${fontSize + 1}px; }
-        tfoot .summary-first td:nth-last-child(1),
-        tfoot .summary-first td:nth-last-child(2) { border-top:1px solid #000; padding-top:4px; }
         tfoot .summary-remaining td { font-size:${fontSize + 3}px; }
         hr { border:none; border-top:2px solid #000; margin-bottom:10px; }
         @page { size:${pageW}mm ${pageH}mm; margin:${marginMM}mm; }
@@ -579,9 +580,10 @@ th { background:#f3f3f3; font-weight:bold; border-bottom:2px solid ${printColor}
 td { border-bottom:1px solid #ddd; }
 th,td { padding:3px 4px; text-align:center; }
 tfoot tr:first-child { border-top:3px solid #000; }
+tfoot tr:first-child td { border-bottom:none; }
+tfoot tr:first-child td:nth-last-child(1),
+tfoot tr:first-child td:nth-last-child(2) { border-bottom:2px solid #000; }
 tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
-tfoot .summary-first td:nth-last-child(1),
-tfoot .summary-first td:nth-last-child(2) { border-top:1px solid #000; padding-top:4px; }
 .totals-section {
   margin-top:6px; padding-top:6px;
   border-top:none;
@@ -1083,7 +1085,9 @@ tfoot .summary-first td:nth-last-child(2) { border-top:1px solid #000; padding-t
                     <td>{fmt(itemsSubtotal)}</td>
                   </tr>
                   {previousBalance !== 0 && (
-                    <tr className={`summary-row${previousBalance !== 0 ? ' summary-first' : ''}`}>
+                    <tr
+                      className="summary-row"
+                    >
                       <td></td>
                       <td></td>
                       <td></td>
@@ -1093,7 +1097,9 @@ tfoot .summary-first td:nth-last-child(2) { border-top:1px solid #000; padding-t
                     </tr>
                   )}
                   {extraDiscount > 0 && (
-                    <tr className={`summary-row${previousBalance === 0 ? ' summary-first' : ''}`}>
+                    <tr
+                      className="summary-row"
+                    >
                       <td></td>
                       <td></td>
                       <td></td>
@@ -1102,7 +1108,9 @@ tfoot .summary-first td:nth-last-child(2) { border-top:1px solid #000; padding-t
                       <td>{fmt(extraDiscount)}</td>
                     </tr>
                   )}
-                  <tr className={`summary-row${previousBalance === 0 && extraDiscount <= 0 ? ' summary-first' : ''}`}>
+                  <tr
+                    className="summary-row"
+                  >
                     <td></td>
                     <td></td>
                     <td></td>
