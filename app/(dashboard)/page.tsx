@@ -778,6 +778,7 @@ export default function DashboardPage() {
   const [widgets, setWidgets] = useState<WidgetConfig[]>(DEFAULT_WIDGETS);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [linkDragIdx, setLinkDragIdx] = useState<number | null>(null);
 
   /* ---------- invoice view mode ---------- */
   const [invoiceView, setInvoiceView] = useState<"table" | "compact" | "cards">(
@@ -922,6 +923,22 @@ export default function DashboardPage() {
       return next;
     });
   };
+
+  /* Drag-and-drop for quick links */
+  const handleLinkDragStart = (idx: number) => setLinkDragIdx(idx);
+  const handleLinkDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    if (linkDragIdx === null || linkDragIdx === idx) return;
+    setQuickLinks((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(linkDragIdx, 1);
+      next.splice(idx, 0, moved);
+      saveQuickLinksPrefs(next);
+      return next;
+    });
+    setLinkDragIdx(idx);
+  };
+  const handleLinkDragEnd = () => setLinkDragIdx(null);
 
   const resetQuickLinks = () => {
     setQuickLinks(defaultLinks);
@@ -2003,14 +2020,23 @@ export default function DashboardPage() {
                 لا توجد روابط
               </p>
             )}
-            {quickLinks.map((link) => {
+            {quickLinks.map((link, idx) => {
               const IconComp = ICON_MAP[link.icon] || Plus;
               return (
                 <div
                   key={link.id}
-                  className="flex items-center justify-between p-2.5 rounded-lg border border-border hover:bg-muted/50"
+                  draggable
+                  onDragStart={() => handleLinkDragStart(idx)}
+                  onDragOver={(e) => handleLinkDragOver(e, idx)}
+                  onDragEnd={handleLinkDragEnd}
+                  className={`flex items-center justify-between p-2.5 rounded-lg border cursor-grab active:cursor-grabbing transition-colors ${
+                    linkDragIdx === idx
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:bg-muted/50"
+                  }`}
                 >
                   <div className="flex items-center gap-2">
+                    <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
                     <div className={`p-1.5 rounded-lg ${link.color}`}>
                       <IconComp className="h-4 w-4" />
                     </div>
@@ -2022,30 +2048,6 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0"
-                      disabled={quickLinks.indexOf(link) === 0}
-                      onClick={() =>
-                        moveQuickLink(quickLinks.indexOf(link), "up")
-                      }
-                    >
-                      <ArrowUp className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0"
-                      disabled={
-                        quickLinks.indexOf(link) === quickLinks.length - 1
-                      }
-                      onClick={() =>
-                        moveQuickLink(quickLinks.indexOf(link), "down")
-                      }
-                    >
-                      <ArrowDown className="h-3 w-3" />
-                    </Button>
                     <Button
                       variant="ghost"
                       size="sm"

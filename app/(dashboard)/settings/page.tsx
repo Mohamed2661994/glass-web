@@ -4,7 +4,11 @@ import { useCallback, useEffect, useState, useRef } from "react";
 import { useAuth } from "@/app/context/auth-context";
 import api, { API_URL } from "@/services/api";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
-import type { ChatPrefs, PrintSettings, NotifSettings } from "@/hooks/use-user-preferences";
+import type {
+  ChatPrefs,
+  PrintSettings,
+  NotifSettings,
+} from "@/hooks/use-user-preferences";
 import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -212,11 +216,13 @@ export default function SettingsPage() {
     if (ps || ns) {
       prefsLoadedRef.current = true;
       if (ps?.autoPrint !== undefined) setAutoPrint(ps.autoPrint);
-      if (ps?.showCompanyHeader !== undefined) setShowCompanyHeader(ps.showCompanyHeader);
+      if (ps?.showCompanyHeader !== undefined)
+        setShowCompanyHeader(ps.showCompanyHeader);
       if (ps?.printBold !== undefined) setPrintBold(ps.printBold);
       if (ps?.printColor !== undefined) setPrintColor(ps.printColor);
       if (ns?.notifSound !== undefined) setNotifSound(ns.notifSound);
-      if (ns?.notifTransfers !== undefined) setNotifTransfers(ns.notifTransfers);
+      if (ns?.notifTransfers !== undefined)
+        setNotifTransfers(ns.notifTransfers);
     } else {
       // Fallback to localStorage (legacy, shared across users)
       const settings = localStorage.getItem("appSettings");
@@ -224,12 +230,16 @@ export default function SettingsPage() {
         try {
           const s = JSON.parse(settings);
           if (s.autoPrint !== undefined) setAutoPrint(s.autoPrint);
-          if (s.showCompanyHeader !== undefined) setShowCompanyHeader(s.showCompanyHeader);
+          if (s.showCompanyHeader !== undefined)
+            setShowCompanyHeader(s.showCompanyHeader);
           if (s.printBold !== undefined) setPrintBold(s.printBold);
           if (s.printColor !== undefined) setPrintColor(s.printColor);
           if (s.notifSound !== undefined) setNotifSound(s.notifSound);
-          if (s.notifTransfers !== undefined) setNotifTransfers(s.notifTransfers);
-        } catch { /* ignore */ }
+          if (s.notifTransfers !== undefined)
+            setNotifTransfers(s.notifTransfers);
+        } catch {
+          /* ignore */
+        }
       }
     }
   }, [prefs.printSettings, prefs.notifSettings]);
@@ -247,7 +257,12 @@ export default function SettingsPage() {
 
   /* ========== Section Save Handlers ========== */
   const handleSavePrint = () => {
-    const ps: PrintSettings = { autoPrint, showCompanyHeader, printBold, printColor };
+    const ps: PrintSettings = {
+      autoPrint,
+      showCompanyHeader,
+      printBold,
+      printColor,
+    };
     saveSettings(ps as Record<string, boolean | string>);
     setPrefs((prev) => ({ ...prev, printSettings: ps }));
     toast.success("تم حفظ إعدادات الطباعة ✅");
@@ -525,10 +540,7 @@ export default function SettingsPage() {
                   فتح نافذة الطباعة تلقائياً عند الانتقال لصفحة الطباعة
                 </p>
               </div>
-              <Switch
-                checked={autoPrint}
-                onCheckedChange={setAutoPrint}
-              />
+              <Switch checked={autoPrint} onCheckedChange={setAutoPrint} />
             </div>
             <Separator />
             <div className="flex items-center justify-between">
@@ -551,10 +563,7 @@ export default function SettingsPage() {
                   جعل نص الفاتورة بخط عريض عند الطباعة
                 </p>
               </div>
-              <Switch
-                checked={printBold}
-                onCheckedChange={setPrintBold}
-              />
+              <Switch checked={printBold} onCheckedChange={setPrintBold} />
             </div>
             <Separator />
             <div>
@@ -631,10 +640,7 @@ export default function SettingsPage() {
                   تشغيل صوت عند وصول إشعار جديد
                 </p>
               </div>
-              <Switch
-                checked={notifSound}
-                onCheckedChange={setNotifSound}
-              />
+              <Switch checked={notifSound} onCheckedChange={setNotifSound} />
             </div>
             <Separator />
             <div className="flex items-center justify-between">
