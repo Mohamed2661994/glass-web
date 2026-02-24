@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import api from "@/services/api";
+import { useAuth } from "@/app/context/auth-context";
 
 /* ========== Types ========== */
 type StatementRow = {
@@ -27,6 +28,7 @@ function SupplierStatementPrintInner() {
   const supplierId = params.id as string;
   const from = searchParams.get("from");
   const to = searchParams.get("to");
+  const { user } = useAuth();
 
   const [supplierName, setSupplierName] = useState("");
   const [data, setData] = useState<StatementRow[]>([]);
@@ -53,6 +55,7 @@ function SupplierStatementPrintInner() {
           supplier_id: supplierId,
           from: from || undefined,
           to: to || undefined,
+          warehouse_id: user?.branch_id || undefined,
         },
       });
       setData(res.data || []);

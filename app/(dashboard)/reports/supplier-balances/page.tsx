@@ -18,6 +18,7 @@ import {
 import { Loader2, Search } from "lucide-react";
 import Link from "next/link";
 import { useRealtime } from "@/hooks/use-realtime";
+import { useAuth } from "@/app/context/auth-context";
 
 /* ========== Types ========== */
 type SupplierBalanceItem = {
@@ -32,6 +33,7 @@ type SupplierBalanceItem = {
 
 /* ========== Component ========== */
 export default function SupplierBalancesPage() {
+  const { user } = useAuth();
   const [data, setData] = useState<SupplierBalanceItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [supplierSearch, setSupplierSearch] = useState("");
@@ -43,6 +45,7 @@ export default function SupplierBalancesPage() {
       const res = await api.get("/reports/supplier-balances", {
         params: {
           supplier_name: supplierSearch || undefined,
+          warehouse_id: user?.branch_id || undefined,
         },
       });
       setData(Array.isArray(res.data) ? res.data : []);
@@ -51,7 +54,7 @@ export default function SupplierBalancesPage() {
     } finally {
       setLoading(false);
     }
-  }, [supplierSearch]);
+  }, [supplierSearch, user?.branch_id]);
 
   /* Auto-search */
   useEffect(() => {

@@ -25,6 +25,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Loader2, Printer, Eye } from "lucide-react";
 import { useRealtime } from "@/hooks/use-realtime";
+import { useAuth } from "@/app/context/auth-context";
 
 /* ========== Types ========== */
 type StatementRow = {
@@ -41,6 +42,7 @@ type StatementRow = {
 
 /* ========== Component ========== */
 export default function SupplierDebtDetailsPage() {
+  const { user } = useAuth();
   const params = useParams();
   const router = useRouter();
   const supplierId = params.id as string;
@@ -91,6 +93,7 @@ export default function SupplierDebtDetailsPage() {
           supplier_id: supplierId,
           from: fromDate || undefined,
           to: toDate || undefined,
+          warehouse_id: user?.branch_id || undefined,
         },
       });
       setData(res.data || []);
@@ -99,7 +102,7 @@ export default function SupplierDebtDetailsPage() {
     } finally {
       setLoading(false);
     }
-  }, [supplierId, fromDate, toDate]);
+  }, [supplierId, fromDate, toDate, user?.branch_id]);
 
   useEffect(() => {
     fetchDetails();
