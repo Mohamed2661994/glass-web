@@ -16,7 +16,17 @@ import {
   ChevronDown,
   ArrowLeftRight,
   Eye,
+  FileText,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { QuickTransferModal } from "@/components/quick-transfer-modal";
 import { useCachedProducts } from "@/hooks/use-cached-products";
 import { highlightText } from "@/lib/highlight-text";
@@ -72,6 +82,26 @@ export default function EditRetailInvoicePage() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerId, setCustomerId] = useState<number | null>(null);
   const [previousBalance, setPreviousBalance] = useState("0");
+
+  /* previous invoices modal */
+  const [prevInvoicesOpen, setPrevInvoicesOpen] = useState(false);
+  const [prevInvoices, setPrevInvoices] = useState<any[]>([]);
+  const [loadingPrevInvoices, setLoadingPrevInvoices] = useState(false);
+
+  const fetchPrevInvoices = async (name: string) => {
+    setPrevInvoicesOpen(true);
+    setLoadingPrevInvoices(true);
+    try {
+      const { data } = await api.get("/invoices", {
+        params: { customer_name: name, invoice_type: "retail", _t: Date.now() },
+      });
+      setPrevInvoices(Array.isArray(data) ? data : (data.data ?? []));
+    } catch {
+      setPrevInvoices([]);
+    } finally {
+      setLoadingPrevInvoices(false);
+    }
+  };
 
   /* Supplier fields (purchase only) */
   const [supplierName, setSupplierName] = useState("");
@@ -802,6 +832,18 @@ export default function EditRetailInvoicePage() {
                         </div>
                       ))}
                     </div>
+                  )}
+                  {customerId && customerName && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-2 text-xs gap-1"
+                      onClick={() => fetchPrevInvoices(customerName)}
+                    >
+                      <FileText className="h-3 w-3" />
+                      الفواتير السابقة
+                    </Button>
                   )}
                 </div>
 
@@ -1799,6 +1841,128 @@ export default function EditRetailInvoicePage() {
             refreshProducts();
           }}
         />
+
+        {/* Previous Invoices Modal */}
+        <Dialog open={prevInvoicesOpen} onOpenChange={setPrevInvoicesOpen}>
+          <DialogContent
+            dir="rtl"
+            className="sm:max-w-4xl max-h-[85vh] flex flex-col p-0"
+          >
+            <DialogHeader className="p-4 border-b shrink-0">
+              <DialogTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                الفواتير السابقة — {customerName}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {loadingPrevInvoices ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : prevInvoices.length === 0 ? (
+                <p className="text-center py-12 text-muted-foreground">
+                  لا توجد فواتير سابقة
+                </p>
+              ) : (
+                <Table className="text-xs sm:text-sm">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-right">#</TableHead>
+                      <TableHead className="text-right">النوع</TableHead>
+                      <TableHead className="text-right">الإجمالي</TableHead>
+                      <TableHead className="text-right">المدفوع</TableHead>
+                      <TableHead className="text-right">الباقي</TableHead>
+                      <TableHead className="text-right">الحالة</TableHead>
+                      <TableHead className="text-right">التاريخ</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {prevInvoices.map((inv: any) => {
+                      const remaining = Number(inv.remaining_amount || 0);
+                      const status = inv.payment_status;
+                      return (
+                        <TableRow
+                          key={inv.id}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() =>
+                            window.open(`/invoices/${inv.id}`, "_blank")
+                          }
+                        >
+                          <TableCell className="font-medium">
+                            {inv.id}
+                          </TableCell>
+                          <TableCell>
+                            {inv.movement_type === "sale"
+                              ? "بيع"
+                              : inv.movement_type === "purchase"
+                                ? "شراء"
+                                : inv.movement_type}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {Math.round(
+                              Number(inv.total || 0),
+                            ).toLocaleString()}{" "}
+                            ج
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap text-green-600 dark:text-green-400">
+                            {Math.round(
+                              Number(inv.paid_amount || 0),
+                            ).toLocaleString()}{" "}
+                            ج
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap text-red-600 dark:text-red-400">
+                            {Math.round(remaining).toLocaleString()} ج
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] ${
+                                status === "paid"
+                                  ? "border-green-300 text-green-700 dark:border-green-700 dark:text-green-400"
+                                  : status === "partial"
+                                    ? "border-yellow-300 text-yellow-700 dark:border-yellow-700 dark:text-yellow-400"
+                                    : "border-red-300 text-red-700 dark:border-red-700 dark:text-red-400"
+                              }`}
+                            >
+                              {status === "paid"
+                                ? "مدفوعة"
+                                : status === "partial"
+                                  ? "جزئي"
+                                  : "غير مدفوعة"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-xs">
+                            {new Date(
+                              inv.invoice_date || inv.created_at,
+                            ).toLocaleDateString("ar-EG")}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+            {prevInvoices.length > 0 && (
+              <div className="p-3 border-t text-xs text-muted-foreground flex justify-between shrink-0">
+                <span>إجمالي: {prevInvoices.length} فاتورة</span>
+                <span>
+                  الباقي الكلي:{" "}
+                  <span className="text-red-600 dark:text-red-400 font-semibold">
+                    {Math.round(
+                      prevInvoices.reduce(
+                        (s: number, i: any) =>
+                          s + Number(i.remaining_amount || 0),
+                        0,
+                      ),
+                    ).toLocaleString()}{" "}
+                    ج
+                  </span>
+                </span>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
