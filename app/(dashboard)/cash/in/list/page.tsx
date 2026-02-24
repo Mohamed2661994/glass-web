@@ -303,18 +303,16 @@ export default function CashInListPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
-                          {item.source_type !== "invoice" && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() =>
-                                router.push(`/cash/in/edit/${item.id}`)
-                              }
-                            >
-                              <Pencil className="h-4 w-4 text-blue-500" />
-                            </Button>
-                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() =>
+                              router.push(`/cash/in/edit/${item.id}`)
+                            }
+                          >
+                            <Pencil className="h-4 w-4 text-blue-500" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"

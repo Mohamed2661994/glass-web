@@ -52,7 +52,7 @@ export default function EditCashInPage() {
         const res = await api.get(`/cash-in/${id}`);
         const item = res.data.data;
 
-        if (!item || item.source_type === "invoice") {
+        if (!item) {
           toast.error("لا يمكن تعديل هذا القيد");
           router.back();
           return;
@@ -80,22 +80,27 @@ export default function EditCashInPage() {
   const submitEdit = async () => {
     try {
       setSaving(true);
-      const payload: any = {
-        customer_name: sourceName,
-        description,
-        transaction_date: date,
-        source_type: sourceType,
-      };
-      if (sourceType === "manual") {
-        payload.amount = Number(amount);
+      if (sourceType === "invoice") {
+        // For invoices, only update the date
+        await api.put(`/cash-in/${id}`, { transaction_date: date });
       } else {
-        payload.paid_amount = Number(paidAmount);
-        payload.amount = Number(amount);
-        payload.remaining_amount = Number(amount) - Number(paidAmount);
+        const payload: any = {
+          customer_name: sourceName,
+          description,
+          transaction_date: date,
+          source_type: sourceType,
+        };
+        if (sourceType === "manual") {
+          payload.amount = Number(amount);
+        } else {
+          payload.paid_amount = Number(paidAmount);
+          payload.amount = Number(amount);
+          payload.remaining_amount = Number(amount) - Number(paidAmount);
+        }
+        // Backend doesn't support PUT → DELETE then re-create
+        await api.delete(`/cash-in/${id}`);
+        await api.post("/cash/in", payload);
       }
-      // Backend doesn't support PUT → DELETE then re-create
-      await api.delete(`/cash-in/${id}`);
-      await api.post("/cash/in", payload);
       toast.success("تم حفظ التعديل");
       router.back();
     } catch {
@@ -122,7 +127,15 @@ export default function EditCashInPage() {
 
   return (
     <div className="max-w-md mx-auto p-4" dir="rtl">
-      <h1 className="text-xl font-bold text-center mb-6">تعديل وارد الخزنة</h1>
+      <h1 className="text-xl font-bold text-center mb-6">
+        {sourceType === "invoice" ? "تعديل تاريخ الفاتورة" : "تعديل وارد الخزنة"}
+      </h1>
+
+      {sourceType === "invoice" && (
+        <p className="text-center text-sm text-muted-foreground mb-4">
+          يمكن تعديل التاريخ فقط للفواتير
+        </p>
+      )}
 
       <Card>
         <CardContent className="p-5 space-y-4">
@@ -141,6 +154,7 @@ export default function EditCashInPage() {
               value={sourceName}
               onChange={(e) => setSourceName(e.target.value)}
               className="mt-1"
+              disabled={sourceType === "invoice"}
             />
           </div>
 
@@ -162,9 +176,8 @@ export default function EditCashInPage() {
                 <Input
                   type="number"
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
                   className="mt-1 text-center font-semibold"
-                  onFocus={(e) => e.target.select()}
+                  disabled
                 />
               </div>
               <div>
@@ -172,9 +185,8 @@ export default function EditCashInPage() {
                 <Input
                   type="number"
                   value={paidAmount}
-                  onChange={(e) => setPaidAmount(e.target.value)}
                   className="mt-1 text-center font-semibold text-green-600"
-                  onFocus={(e) => e.target.select()}
+                  disabled
                 />
               </div>
               <div className="text-center text-sm">
@@ -204,6 +216,7 @@ export default function EditCashInPage() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="mt-1 min-h-[80px]"
+              disabled={sourceType === "invoice"}
             />
           </div>
 
