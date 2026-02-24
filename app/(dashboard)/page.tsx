@@ -581,26 +581,41 @@ const COLOR_OPTIONS = [
 ];
 
 const ALL_PAGES: { label: string; href: string }[] = [
+  /* ── الفواتير ── */
   { label: "فاتورة قطاعي", href: "/invoices/create/retail" },
   { label: "فاتورة جملة", href: "/invoices/create/wholesale" },
-  { label: "الفواتير", href: "/invoices" },
+  { label: "قائمة الفواتير", href: "/invoices" },
+  /* ── الأصناف ── */
   { label: "الأصناف", href: "/products" },
+  { label: "استيراد أصناف", href: "/products/import" },
+  { label: "تعطيل أصناف بالجملة", href: "/products/bulk-deactivate" },
   { label: "المصانع", href: "/manufacturers" },
+  /* ── العملاء والموردين ── */
+  { label: "العملاء", href: "/customers" },
+  { label: "الموردين", href: "/suppliers" },
+  /* ── التحويلات ── */
   { label: "تحويل مخزون", href: "/stock-transfer" },
+  { label: "تحويلات حسب التاريخ", href: "/transfers/by-date" },
+  /* ── الخزنة ── */
   { label: "وارد الخزنة", href: "/cash/in" },
   { label: "عرض الوارد", href: "/cash/in/list" },
   { label: "صرف نقدي", href: "/cash/out" },
   { label: "عرض المنصرف", href: "/cash/out/list" },
   { label: "اليومية", href: "/cash/summary" },
-  { label: "أرصدة العملاء", href: "/reports/customer-balances" },
-  { label: "جرد المخزون", href: "/reports/inventory-summary" },
+  /* ── التقارير ── */
+  { label: "مديونية العملاء", href: "/reports/customer-balances" },
+  { label: "كشف حساب الموردين", href: "/reports/supplier-balances" },
+  { label: "حركة المخزون", href: "/reports/inventory-summary" },
   { label: "قيمة المخزون", href: "/reports/inventory-value" },
   { label: "نقص المخزون", href: "/reports/low-stock" },
-  { label: "حركة صنف", href: "/reports/product-movement" },
+  { label: "أصناف سالبة", href: "/reports/negative-stock" },
+  { label: "حركة الأصناف", href: "/reports/product-movement" },
+  /* ── أخرى ── */
   { label: "استبدال", href: "/replace" },
   { label: "رصيد افتتاحي", href: "/opening-stock" },
   { label: "الإعدادات", href: "/settings" },
   { label: "المستخدمين", href: "/users" },
+  { label: "لوحة التحكم", href: "/" },
   { label: "استعلام عن الأصناف", href: "#product-lookup" },
 ];
 
@@ -663,9 +678,7 @@ function getDefaultQuickLinks(branchId?: number): QuickLink[] {
     {
       id: "8",
       label: isWholesale ? "أرصدة العملاء" : "ملخص الخزنة",
-      href: isWholesale
-        ? "/reports/customer-balances"
-        : "/cash/summary",
+      href: isWholesale ? "/reports/customer-balances" : "/cash/summary",
       icon: isWholesale ? "Users" : "Wallet",
       color: isWholesale
         ? "bg-sky-500/10 text-sky-600 dark:text-sky-400"
@@ -791,9 +804,11 @@ export default function DashboardPage() {
   const [lookupOpen, setLookupOpen] = useState(false);
 
   /* ---------- quick links ---------- */
-  const defaultLinks = useMemo(() => getDefaultQuickLinks(branchId), [branchId]);
-  const [quickLinks, setQuickLinks] =
-    useState<QuickLink[]>([]);
+  const defaultLinks = useMemo(
+    () => getDefaultQuickLinks(branchId),
+    [branchId],
+  );
+  const [quickLinks, setQuickLinks] = useState<QuickLink[]>([]);
   const [linksEditorOpen, setLinksEditorOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<QuickLink | null>(null);
   const [linkForm, setLinkForm] = useState({
@@ -812,9 +827,7 @@ export default function DashboardPage() {
         : DEFAULT_WIDGETS,
     );
     setQuickLinks(
-      prefs.quick_links
-        ? (prefs.quick_links as QuickLink[])
-        : defaultLinks,
+      prefs.quick_links ? (prefs.quick_links as QuickLink[]) : defaultLinks,
     );
   }, [prefsLoaded, prefs.dashboard_widgets, prefs.quick_links, defaultLinks]);
 
