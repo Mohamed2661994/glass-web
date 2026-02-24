@@ -328,9 +328,7 @@ export default function SupplierDebtDetailsPage() {
                           }
                           className="text-xs"
                         >
-                          {row.record_type === "invoice"
-                            ? "فاتورة"
-                            : "دفعة"}
+                          {row.record_type === "invoice" ? "فاتورة" : "دفعة"}
                         </Badge>
                         <span className="font-bold text-sm">
                           {row.record_type === "invoice"
@@ -379,9 +377,7 @@ export default function SupplierDebtDetailsPage() {
                       <div>
                         <p className="text-muted-foreground">المدفوع</p>
                         <p className="font-medium text-green-600">
-                          {Math.round(
-                            Number(row.paid_amount),
-                          ).toLocaleString()}
+                          {Math.round(Number(row.paid_amount)).toLocaleString()}
                         </p>
                       </div>
                       <div>
@@ -462,9 +458,7 @@ export default function SupplierDebtDetailsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="h-5 w-5" />
-              {previewInvoice
-                ? `فاتورة #${previewInvoice.id}`
-                : "عرض الفاتورة"}
+              {previewInvoice ? `فاتورة #${previewInvoice.id}` : "عرض الفاتورة"}
             </DialogTitle>
           </DialogHeader>
 
@@ -539,6 +533,18 @@ export default function SupplierDebtDetailsPage() {
               <Separator />
 
               {/* Totals */}
+              {previewInvoice.previous_balance != null &&
+                Number(previewInvoice.previous_balance) !== 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span>الحساب السابق</span>
+                    <span className="text-orange-600">
+                      {Number(
+                        previewInvoice.previous_balance,
+                      ).toLocaleString()}{" "}
+                      ج.م
+                    </span>
+                  </div>
+                )}
               <div className="flex justify-between text-sm font-bold">
                 <span>الإجمالي</span>
                 <span>
