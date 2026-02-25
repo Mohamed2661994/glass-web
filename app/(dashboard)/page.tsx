@@ -1107,7 +1107,8 @@ export default function DashboardPage() {
     (async () => {
       try {
         const { data } = await api.get("/notifications");
-        setNotifications(Array.isArray(data) ? data.slice(0, 8) : []);
+        const list = Array.isArray(data) ? data : (data?.data ?? []);
+        setNotifications(list.slice(0, 8));
       } catch {
         /* silent */
       } finally {
