@@ -458,14 +458,14 @@ export async function downloadInvoicePdf(
 }
 
 /**
- * Share invoice via WhatsApp:
+ * Send invoice PDF via WhatsApp:
  * 1. Generate PDF blob in isolated iframe
- * 2. Try Web Share API with file (works on mobile → user picks WhatsApp)
- * 3. Fallback: download PDF + open wa.me
+ * 2. Download the PDF file
+ * 3. Open WhatsApp chat directly on customer's number
  */
 export async function shareViaWhatsApp(
   invoice: WhatsAppInvoice,
-): Promise<"shared" | "downloaded_and_opened" | "no_phone" | "failed"> {
+): Promise<"downloaded_and_opened" | "no_phone" | "failed"> {
   const isSale = invoice.movement_type !== "purchase";
   const phone = isSale ? invoice.customer_phone : invoice.supplier_phone;
 
@@ -475,25 +475,7 @@ export async function shareViaWhatsApp(
   const pdfBlob = await generateInvoicePdfBlob(invoice);
   if (!pdfBlob) return "failed";
 
-  const pdfFile = new File([pdfBlob], `invoice-${invoice.id}.pdf`, {
-    type: "application/pdf",
-  });
-
-  // 2. Try Web Share API (works on mobile)
-  if (navigator.share && navigator.canShare?.({ files: [pdfFile] })) {
-    try {
-      await navigator.share({
-        files: [pdfFile],
-        title: `فاتورة #${invoice.id}`,
-      });
-      return "shared";
-    } catch (err: any) {
-      // User cancelled share — fall through to fallback
-      if (err?.name === "AbortError") return "failed";
-    }
-  }
-
-  // 3. Fallback: download PDF + open WhatsApp
+  // 2. Download PDF
   const blobUrl = URL.createObjectURL(pdfBlob);
   const link = document.createElement("a");
   link.href = blobUrl;
@@ -503,12 +485,12 @@ export async function shareViaWhatsApp(
   link.click();
   document.body.removeChild(link);
 
-  // Open WhatsApp after a short delay
+  // 3. Open WhatsApp on the customer's number after a short delay
   const normalizedPhone = normalizePhone(phone);
   setTimeout(() => {
     window.open(`https://wa.me/${normalizedPhone}`, "_blank");
     URL.revokeObjectURL(blobUrl);
-  }, 1000);
+  }, 800);
 
   return "downloaded_and_opened";
 }
