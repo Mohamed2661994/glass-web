@@ -1536,7 +1536,7 @@ export default function CreateRetailInvoicePage() {
                       <th className="p-3 text-right">الصنف</th>
                       <th className="p-3 text-center">السعر</th>
                       <th className="p-3 text-center">الكمية</th>
-                      <th className="p-3 text-center">الخصم</th>
+                      {!applyItemsDiscount && <th className="p-3 text-center">الخصم</th>}
                       <th className="p-3 text-center">الإجمالي</th>
                       <th className="p-3 text-center">مرتجع</th>
                       <th className="p-3 text-center">إجراءات</th>
@@ -1645,6 +1645,7 @@ export default function CreateRetailInvoicePage() {
                             ) : null;
                           })()}
                         </td>
+                        {!applyItemsDiscount && (
                         <td className="p-3 text-center">
                           {editingItemUid === item.uid ? (
                             <Input
@@ -1683,6 +1684,7 @@ export default function CreateRetailInvoicePage() {
                             </span>
                           )}
                         </td>
+                        )}
                         <td className="p-3 text-center font-semibold">
                           {(() => {
                             const raw =
@@ -1949,6 +1951,7 @@ export default function CreateRetailInvoicePage() {
                           ) : null;
                         })()}
                       </div>
+                      {!applyItemsDiscount && (
                       <div className="space-y-1">
                         <label className="text-xs text-muted-foreground">
                           الخصم
@@ -1983,6 +1986,7 @@ export default function CreateRetailInvoicePage() {
                           }
                         />
                       </div>
+                      )}
                     </div>
 
                     {/* Total */}
