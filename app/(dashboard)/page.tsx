@@ -1018,10 +1018,29 @@ export default function DashboardPage() {
     (async () => {
       try {
         const today = getTodayDate();
-        const { data } = await api.get("/stock-transfers", {
-          params: { limit: 50, date_from: today, _t: Date.now() },
+        const { data } = await api.get("/stock-transfers/by-date", {
+          params: { date: today, _t: Date.now() },
         });
-        setTransfers(data?.data ?? []);
+        const items = data?.items ?? data;
+        const rows: any[] = Array.isArray(items) ? items : [];
+        // Group items by transfer_id to build Transfer objects
+        const map = new Map<number, Transfer>();
+        for (const row of rows) {
+          const tid = row.transfer_id ?? row.id;
+          if (!map.has(tid)) {
+            map.set(tid, {
+              id: tid,
+              items_count: 0,
+              total_from_quantity: 0,
+              status: row.transfer_status ?? row.status ?? "completed",
+              created_at: row.created_at,
+            });
+          }
+          const tr = map.get(tid)!;
+          tr.items_count += 1;
+          tr.total_from_quantity += Number(row.from_quantity ?? 0);
+        }
+        setTransfers(Array.from(map.values()));
       } catch {
         /* silent */
       } finally {
