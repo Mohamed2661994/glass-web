@@ -82,7 +82,7 @@ export default function ProductsPage() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [showInactive, setShowInactive] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<"all" | "true" | "false">("true");
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedManufacturer, setSelectedManufacturer] =
     useState<string>("الكل");
@@ -162,7 +162,7 @@ export default function ProductsPage() {
       setLoading(true);
       const params: Record<string, string> = {};
       const sq = opts?.searchQuery ?? "";
-      const af = opts?.activeFilter ?? (showInactive ? "all" : "true");
+      const af = opts?.activeFilter ?? activeFilter;
       if (sq) params.search = sq;
       params.active = sq ? "all" : af; // search always searches all
       const res = await api.get("/admin/products", { params });
@@ -194,8 +194,8 @@ export default function ProductsPage() {
   };
 
   useEffect(() => {
-    fetchProducts({ activeFilter: showInactive ? "all" : "true" });
-  }, [showInactive]);
+    fetchProducts({ activeFilter });
+  }, [activeFilter]);
 
   useRealtime(["data:products", "data:invoices", "data:stock"], () =>
     fetchProducts(),
@@ -443,7 +443,7 @@ export default function ProductsPage() {
                   }, 400);
                 } else if (val.trim().length === 0) {
                   fetchProducts({
-                    activeFilter: showInactive ? "all" : "true",
+                    activeFilter,
                   });
                 }
               }}
@@ -476,16 +476,22 @@ export default function ProductsPage() {
               <span className="text-sm text-muted-foreground">
                 {filteredProducts.length} صنف
               </span>
-              <button
-                onClick={() => setShowInactive((v) => !v)}
-                className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
-                  showInactive
-                    ? "bg-orange-100 dark:bg-orange-900/30 border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-300"
-                    : "border-muted-foreground/30 text-muted-foreground hover:bg-muted"
-                }`}
+              <Select
+                value={activeFilter}
+                onValueChange={(val: "all" | "true" | "false") => {
+                  setActiveFilter(val);
+                  setPage(1);
+                }}
               >
-                {showInactive ? "✅ عرض الكل" : "عرض الغير مفعلين"}
-              </button>
+                <SelectTrigger className="h-8 w-auto min-w-[140px] text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">الأصناف المفعلة</SelectItem>
+                  <SelectItem value="false">الأصناف الغير مفعلة</SelectItem>
+                  <SelectItem value="all">جميع الأصناف</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
               <button
