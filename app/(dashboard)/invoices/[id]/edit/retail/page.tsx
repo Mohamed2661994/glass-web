@@ -1738,9 +1738,7 @@ export default function EditRetailInvoicePage() {
                           is_return: it.is_return,
                         })),
                       } as WhatsAppInvoice);
-                      if (result === "shared")
-                        toast.success("تم إرسال الفاتورة بنجاح");
-                      else if (result === "downloaded_and_opened")
+                      if (result === "downloaded_and_opened")
                         toast.success(
                           "تم تنزيل الفاتورة — ارفقها من 📎 في المحادثة",
                           { duration: 8000 },
