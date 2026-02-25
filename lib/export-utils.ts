@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import html2canvas from "html2canvas";
 
 /* ================================================================
@@ -220,152 +221,132 @@ function normalizePhone(phone: string): string {
 }
 
 /**
- * Build a clean invoice HTML, render via html2canvas, then wrap in a PDF blob
+ * Build invoice PDF using jsPDF + autoTable (no DOM rendering needed)
  */
-async function generateInvoicePdfBlob(
+function generateInvoicePdfBlob(
   invoice: WhatsAppInvoice,
-): Promise<Blob | null> {
-  const isSale = invoice.movement_type !== "purchase";
-  const name = isSale
-    ? invoice.customer_name || "نقدي"
-    : invoice.supplier_name || "—";
-  const phone = isSale ? invoice.customer_phone : invoice.supplier_phone;
-  const dateStr = invoice.invoice_date
-    ? new Date(invoice.invoice_date).toLocaleDateString("ar-EG", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-    : new Date().toLocaleDateString("ar-EG", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
+): Blob | null {
+  try {
+    const isSale = invoice.movement_type !== "purchase";
+    const name = isSale
+      ? invoice.customer_name || "نقدي"
+      : invoice.supplier_name || "—";
+    const phone = isSale ? invoice.customer_phone : invoice.supplier_phone;
+    const dateStr = invoice.invoice_date
+      ? new Date(invoice.invoice_date).toLocaleDateString("ar-EG", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+      : new Date().toLocaleDateString("ar-EG", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+
+    const items = invoice.items || [];
+    const extraDiscount =
+      Number(invoice.extra_discount || 0) + Number(invoice.manual_discount || 0);
+
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+    // Use built-in Helvetica (supports basic Latin) — Arabic won't render natively,
+    // so we'll use the autoTable approach which handles text better
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const margin = 14;
+
+    // Title
+    pdf.setFontSize(18);
+    pdf.text(`Invoice #${invoice.id}`, pageWidth / 2, 20, { align: "center" });
+    pdf.setFontSize(11);
+    pdf.setTextColor(100);
+    pdf.text(dateStr, pageWidth / 2, 27, { align: "center" });
+
+    // Customer/Supplier info
+    pdf.setTextColor(0);
+    pdf.setFontSize(11);
+    let yPos = 36;
+    const infoLabel = isSale ? "Customer" : "Supplier";
+    pdf.text(`${infoLabel}: ${name}`, pageWidth - margin, yPos, { align: "right" });
+    if (phone) {
+      yPos += 6;
+      pdf.text(`Phone: ${phone}`, pageWidth - margin, yPos, { align: "right" });
+    }
+
+    // Items table
+    yPos += 8;
+    if (items.length > 0) {
+      const hasDiscount = items.some((it) => Number(it.discount || 0) > 0);
+
+      const head = hasDiscount
+        ? [["#", "Product", "Package", "Price", "Disc.", "Qty", "Total"]]
+        : [["#", "Product", "Package", "Price", "Qty", "Total"]];
+
+      const body = items.map((it, idx) => {
+        const total = Math.abs(Number(it.total));
+        const row: (string | number)[] = [
+          idx + 1,
+          `${it.product_name}${it.is_return ? " (Return)" : ""}`,
+          it.package || "-",
+          Number(it.price).toFixed(2),
+        ];
+        if (hasDiscount) row.push(Number(it.discount || 0).toFixed(2));
+        row.push(it.quantity);
+        row.push(`${it.is_return ? "-" : ""}${total.toFixed(2)}`);
+        return row;
       });
 
-  const items = invoice.items || [];
-  const hasDiscount = items.some((it) => Number(it.discount || 0) > 0);
-  const extraDiscount =
-    Number(invoice.extra_discount || 0) + Number(invoice.manual_discount || 0);
+      autoTable(pdf, {
+        startY: yPos,
+        head,
+        body,
+        theme: "grid",
+        headStyles: { fillColor: [41, 128, 185], halign: "center", fontSize: 9 },
+        bodyStyles: { halign: "center", fontSize: 9 },
+        columnStyles: {
+          1: { halign: "left" },
+        },
+        margin: { left: margin, right: margin },
+      });
 
-  // Build items rows HTML
-  const itemsHtml = items
-    .map((it, idx) => {
-      const unitPrice = hasDiscount
-        ? Number(it.price) - Number(it.discount || 0)
-        : Number(it.price);
-      const total = Math.abs(Number(it.total));
-      return `<tr style="border-bottom:1px solid #e5e7eb;">
-        <td style="padding:6px 8px;text-align:center;">${idx + 1}</td>
-        <td style="padding:6px 8px;">${it.product_name}${it.is_return ? ' <span style="color:#ea580c;font-size:11px;">(مرتجع)</span>' : ""}</td>
-        <td style="padding:6px 8px;text-align:center;">${it.package || "-"}</td>
-        <td style="padding:6px 8px;text-align:center;">${unitPrice.toFixed(2)}</td>
-        <td style="padding:6px 8px;text-align:center;">${it.quantity}</td>
-        <td style="padding:6px 8px;text-align:center;font-weight:600;">${it.is_return ? "-" : ""}${total.toFixed(2)}</td>
-      </tr>`;
-    })
-    .join("");
+      yPos = (pdf as any).lastAutoTable.finalY + 10;
+    }
 
-  const html = `
-    <div style="width:580px;direction:rtl;font-family:Tahoma,Arial,sans-serif;background:#fff;color:#111;padding:24px;line-height:1.6;">
-      <div style="text-align:center;margin-bottom:16px;">
-        <h2 style="margin:0 0 4px;font-size:20px;">فاتورة رقم #${invoice.id}</h2>
-        <p style="margin:0;color:#666;font-size:13px;">${dateStr}</p>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:16px;padding:10px 12px;background:#f9fafb;border-radius:6px;border:1px solid #e5e7eb;">
-        <div>
-          <span style="color:#666;font-size:13px;">${isSale ? "العميل" : "المورد"}:</span>
-          <strong style="margin-right:6px;">${name}</strong>
-        </div>
-        ${phone ? `<div><span style="color:#666;font-size:13px;">هاتف:</span> <span style="margin-right:6px;">${phone}</span></div>` : ""}
-      </div>
-      ${
-        items.length > 0
-          ? `<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px;">
-              <thead>
-                <tr style="background:#f3f4f6;border-bottom:2px solid #d1d5db;">
-                  <th style="padding:8px;text-align:center;width:36px;">#</th>
-                  <th style="padding:8px;text-align:right;">الصنف</th>
-                  <th style="padding:8px;text-align:center;">العبوة</th>
-                  <th style="padding:8px;text-align:center;">السعر</th>
-                  <th style="padding:8px;text-align:center;">الكمية</th>
-                  <th style="padding:8px;text-align:center;">الإجمالي</th>
-                </tr>
-              </thead>
-              <tbody>${itemsHtml}</tbody>
-            </table>`
-          : ""
-      }
-      <div style="border-top:2px solid #111;padding-top:12px;font-size:14px;">
-        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-          <span>الإجمالي</span>
-          <strong>${Number(invoice.total).toFixed(2)} جنيه</strong>
-        </div>
-        ${extraDiscount > 0 ? `<div style="display:flex;justify-content:space-between;margin-bottom:6px;color:#dc2626;"><span>الخصم</span><span>-${extraDiscount.toFixed(2)}</span></div>` : ""}
-        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-          <span>المدفوع</span>
-          <span>${Number(invoice.paid_amount).toFixed(2)} جنيه</span>
-        </div>
-        ${Number(invoice.remaining_amount) > 0 ? `<div style="display:flex;justify-content:space-between;color:#dc2626;font-weight:700;"><span>المتبقي</span><span>${Number(invoice.remaining_amount).toFixed(2)} جنيه</span></div>` : ""}
-      </div>
-    </div>`;
+    // Summary section
+    pdf.setDrawColor(0);
+    pdf.setLineWidth(0.5);
+    pdf.line(margin, yPos - 4, pageWidth - margin, yPos - 4);
 
-  // Create a hidden container
-  const container = document.createElement("div");
-  container.style.position = "fixed";
-  container.style.left = "-9999px";
-  container.style.top = "0";
-  container.style.zIndex = "-1";
-  container.innerHTML = html;
-  document.body.appendChild(container);
+    const summaryX1 = pageWidth - margin;
+    const summaryX2 = margin;
 
-  try {
-    const target = container.firstElementChild as HTMLElement;
-    const canvas = await (html2canvas as any)(target, {
-      useCORS: true,
-      backgroundColor: "#ffffff",
-      scale: 2,
-    });
-    document.body.removeChild(container);
+    pdf.setFontSize(11);
+    pdf.text("Total:", summaryX2, yPos);
+    pdf.text(`${Number(invoice.total).toFixed(2)} EGP`, summaryX1, yPos, { align: "right" });
+    yPos += 7;
 
-    // Convert canvas to PDF
-    const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = 10;
-    const usableWidth = pageWidth - margin * 2;
-    const imgHeight = (canvas.height * usableWidth) / canvas.width;
-    const usableHeight = pageHeight - margin * 2;
+    if (extraDiscount > 0) {
+      pdf.setTextColor(220, 38, 38);
+      pdf.text("Discount:", summaryX2, yPos);
+      pdf.text(`-${extraDiscount.toFixed(2)}`, summaryX1, yPos, { align: "right" });
+      pdf.setTextColor(0);
+      yPos += 7;
+    }
 
-    if (imgHeight <= usableHeight) {
-      pdf.addImage(imgData, "PNG", margin, margin, usableWidth, imgHeight);
-    } else {
-      let remainingHeight = canvas.height;
-      let srcY = 0;
-      const sliceHeightPx = (usableHeight / usableWidth) * canvas.width;
-      let isFirstPage = true;
-      while (remainingHeight > 0) {
-        if (!isFirstPage) pdf.addPage();
-        const sliceH = Math.min(sliceHeightPx, remainingHeight);
-        const sliceCanvas = document.createElement("canvas");
-        sliceCanvas.width = canvas.width;
-        sliceCanvas.height = sliceH;
-        const ctx = sliceCanvas.getContext("2d");
-        if (ctx) {
-          ctx.drawImage(canvas, 0, srcY, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-        }
-        const sliceImg = sliceCanvas.toDataURL("image/png");
-        const displayH = (sliceH * usableWidth) / canvas.width;
-        pdf.addImage(sliceImg, "PNG", margin, margin, usableWidth, displayH);
-        srcY += sliceH;
-        remainingHeight -= sliceH;
-        isFirstPage = false;
-      }
+    pdf.text("Paid:", summaryX2, yPos);
+    pdf.text(`${Number(invoice.paid_amount).toFixed(2)} EGP`, summaryX1, yPos, { align: "right" });
+    yPos += 7;
+
+    if (Number(invoice.remaining_amount) > 0) {
+      pdf.setFontSize(12);
+      pdf.setTextColor(220, 38, 38);
+      pdf.text("Remaining:", summaryX2, yPos);
+      pdf.text(`${Number(invoice.remaining_amount).toFixed(2)} EGP`, summaryX1, yPos, { align: "right" });
     }
 
     return pdf.output("blob");
-  } catch {
-    document.body.removeChild(container);
+  } catch (e) {
+    console.error("PDF generation failed:", e);
     return null;
   }
 }
@@ -376,20 +357,25 @@ async function generateInvoicePdfBlob(
 export async function downloadInvoicePdf(
   invoice: WhatsAppInvoice,
 ): Promise<boolean> {
-  const pdfBlob = await generateInvoicePdfBlob(invoice);
-  if (!pdfBlob) return false;
+  try {
+    const pdfBlob = generateInvoicePdfBlob(invoice);
+    if (!pdfBlob) return false;
 
-  const blobUrl = URL.createObjectURL(pdfBlob);
-  const link = document.createElement("a");
-  link.href = blobUrl;
-  link.download = `invoice-${invoice.id}.pdf`;
-  link.style.display = "none";
-  document.body.appendChild(link);
-  link.click();
-  await new Promise((r) => setTimeout(r, 1500));
-  document.body.removeChild(link);
-  URL.revokeObjectURL(blobUrl);
-  return true;
+    const blobUrl = URL.createObjectURL(pdfBlob);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = `invoice-${invoice.id}.pdf`;
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    await new Promise((r) => setTimeout(r, 1500));
+    document.body.removeChild(link);
+    URL.revokeObjectURL(blobUrl);
+    return true;
+  } catch (e) {
+    console.error("PDF download failed:", e);
+    return false;
+  }
 }
 
 /**
