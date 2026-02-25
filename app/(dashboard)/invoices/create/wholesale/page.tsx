@@ -471,7 +471,9 @@ export default function CreateWholesaleInvoicePage() {
       const d = res.data;
       let bal: number | null = null;
       if (d?.total_sales != null && d?.total_paid != null) {
-        bal = Math.round((Number(d.total_sales) - Number(d.total_paid)) * 100) / 100;
+        bal =
+          Math.round((Number(d.total_sales) - Number(d.total_paid)) * 100) /
+          100;
       } else {
         bal = d?.balance ?? d?.balance_due ?? null;
       }
@@ -480,12 +482,19 @@ export default function CreateWholesaleInvoicePage() {
       if ((bal === 0 || bal == null) && name) {
         try {
           const invRes = await api.get("/invoices", {
-            params: { customer_name: name, invoice_type: "wholesale", _t: Date.now() },
+            params: {
+              customer_name: name,
+              invoice_type: "wholesale",
+              _t: Date.now(),
+            },
           });
-          const invoices = Array.isArray(invRes.data) ? invRes.data : (invRes.data?.data ?? []);
+          const invoices = Array.isArray(invRes.data)
+            ? invRes.data
+            : (invRes.data?.data ?? []);
           if (invoices.length > 0) {
-            const sum = invoices.reduce((s: number, inv: any) => s + Number(inv.remaining_amount || 0), 0);
-            bal = Math.round(sum * 100) / 100;
+            // Sort by id descending to get the most recent invoice
+            const sorted = [...invoices].sort((a: any, b: any) => Number(b.id) - Number(a.id));
+            bal = Math.round(Number(sorted[0].remaining_amount || 0) * 100) / 100;
           }
         } catch {}
       }
