@@ -372,9 +372,8 @@ async function generateInvoicePdfBlob(
 
 /**
  * Share an invoice via WhatsApp
- * 1. Generate a PDF from invoice data
- * 2. Try Web Share API directly (skip canShare — some browsers lie)
- * 3. Fallback: download PDF + open WhatsApp Web
+ * - Mobile: use Web Share API to share PDF directly
+ * - Desktop: download PDF to user's device, then open WhatsApp Web chat
  */
 export async function shareInvoiceWhatsApp(
   invoice: WhatsAppInvoice,
@@ -391,14 +390,21 @@ export async function shareInvoiceWhatsApp(
 
   // Generate invoice PDF
   const pdfBlob = await generateInvoicePdfBlob(invoice);
+  if (!pdfBlob) {
+    // PDF generation failed — just open chat with text
+    const text = encodeURIComponent(`فاتورة رقم #${invoice.id}`);
+    window.open(`https://wa.me/${normalizedPhone}?text=${text}`, "_blank");
+    return "whatsapp_opened";
+  }
 
-  // Try Web Share API directly with the PDF file
-  if (pdfBlob && navigator.share) {
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  // Mobile: use Web Share API to share the PDF file directly
+  if (isMobile && navigator.share) {
     try {
       const pdfFile = new File([pdfBlob], `invoice-${invoice.id}.pdf`, {
         type: "application/pdf",
       });
-
       await navigator.share({
         title: `فاتورة #${invoice.id}`,
         files: [pdfFile],
@@ -406,21 +412,26 @@ export async function shareInvoiceWhatsApp(
       return "shared";
     } catch (err: any) {
       if (err?.name === "AbortError") return "shared";
-      // Share failed (e.g. files not supported) — fall through to download
+      // Fall through to download
     }
   }
 
-  // Fallback: download the PDF then open WhatsApp Web
-  if (pdfBlob) {
-    const url = URL.createObjectURL(pdfBlob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `فاتورة-${invoice.id}.pdf`;
-    a.click();
-    URL.revokeObjectURL(url);
-    await new Promise((r) => setTimeout(r, 500));
-  }
+  // Desktop (or mobile share failed): download PDF then open WhatsApp Web
+  // Use a proper download approach that works reliably
+  const blobUrl = URL.createObjectURL(pdfBlob);
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = `invoice-${invoice.id}.pdf`;
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
 
+  // Wait for the browser to start the download before revoking
+  await new Promise((r) => setTimeout(r, 1500));
+  document.body.removeChild(link);
+  URL.revokeObjectURL(blobUrl);
+
+  // Open WhatsApp Web with the chat
   const textMessage = `فاتورة رقم #${invoice.id} — ${isSale ? "العميل" : "المورد"}: ${name}`;
   const encoded = encodeURIComponent(textMessage);
   window.open(
