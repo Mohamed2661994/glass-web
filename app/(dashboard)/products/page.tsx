@@ -82,6 +82,8 @@ export default function ProductsPage() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [showInactive, setShowInactive] = useState(false);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedManufacturer, setSelectedManufacturer] =
     useState<string>("الكل");
   const {
@@ -152,10 +154,15 @@ export default function ProductsPage() {
   const [page, setPage] = useState(1);
   const limit = 30;
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (opts?: { searchQuery?: string; activeFilter?: string }) => {
     try {
       setLoading(true);
-      const res = await api.get("/admin/products");
+      const params: Record<string, string> = {};
+      const sq = opts?.searchQuery ?? "";
+      const af = opts?.activeFilter ?? (showInactive ? "all" : "true");
+      if (sq) params.search = sq;
+      params.active = sq ? "all" : af; // search always searches all
+      const res = await api.get("/admin/products", { params });
       const prods = res.data;
       setAllProducts(prods);
 
@@ -184,10 +191,10 @@ export default function ProductsPage() {
   };
 
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    fetchProducts({ activeFilter: showInactive ? "all" : "true" });
+  }, [showInactive]);
 
-  useRealtime(["data:products", "data:invoices", "data:stock"], fetchProducts);
+  useRealtime(["data:products", "data:invoices", "data:stock"], () => fetchProducts());
 
   // استخراج المصانع
   const manufacturers = [
@@ -419,8 +426,18 @@ export default function ProductsPage() {
               placeholder="ابحث باسم المنتج أو الباركود..."
               value={search}
               onChange={(e) => {
-                setSearch(e.target.value);
+                const val = e.target.value;
+                setSearch(val);
                 setPage(1);
+                // Debounced server search
+                if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+                if (val.trim().length >= 2) {
+                  searchTimerRef.current = setTimeout(() => {
+                    fetchProducts({ searchQuery: val.trim() });
+                  }, 400);
+                } else if (val.trim().length === 0) {
+                  fetchProducts({ activeFilter: showInactive ? "all" : "true" });
+                }
               }}
             />
             {manufacturers.length > 2 && (
@@ -447,9 +464,21 @@ export default function ProductsPage() {
 
           {/* View Mode Toggle */}
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">
-              {filteredProducts.length} صنف
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground">
+                {filteredProducts.length} صنف
+              </span>
+              <button
+                onClick={() => setShowInactive((v) => !v)}
+                className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                  showInactive
+                    ? "bg-orange-100 dark:bg-orange-900/30 border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-300"
+                    : "border-muted-foreground/30 text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {showInactive ? "✅ عرض الكل" : "عرض الغير مفعلين"}
+              </button>
+            </div>
             <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
               <button
                 onClick={() => {
