@@ -63,7 +63,11 @@ export async function exportToPdf(
     backgroundColor: "#ffffff",
     windowWidth: targetWidth + 40,
     width: targetWidth + 32,
-    onclone: (_doc: Document, clonedEl: HTMLElement) => {
+    onclone: (doc: Document, clonedEl: HTMLElement) => {
+      // Remove all stylesheets to avoid html2canvas choking on modern CSS
+      // (e.g. lab(), oklch() color functions from Tailwind/shadcn)
+      doc.querySelectorAll('style, link[rel="stylesheet"]').forEach((el) => el.remove());
+
       // Style the cloned element for clean PDF output
       clonedEl.style.width = targetWidth + "px";
       clonedEl.style.direction = "rtl";
