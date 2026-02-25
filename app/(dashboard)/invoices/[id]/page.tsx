@@ -307,8 +307,8 @@ export default function InvoiceDetailsPage() {
                   toast.success("تم المشاركة بنجاح");
                 } else if (result === "whatsapp_opened") {
                   toast.success(
-                    "تم تنزيل PDF الفاتورة — ارفقها في المحادثة",
-                    { duration: 6000 },
+                    "تم تنزيل الفاتورة PDF — ارفقها من 📎 في المحادثة",
+                    { duration: 8000 },
                   );
                 }
               } catch {

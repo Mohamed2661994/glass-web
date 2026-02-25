@@ -373,8 +373,8 @@ async function generateInvoicePdfBlob(
 /**
  * Share an invoice via WhatsApp
  * 1. Generate a PDF from invoice data
- * 2. Try Web Share API with PDF file (works on Chrome/Edge desktop + mobile)
- * 3. Fallback: download PDF + open wa.me chat
+ * 2. Try Web Share API directly (skip canShare — some browsers lie)
+ * 3. Fallback: download PDF + open WhatsApp Web
  */
 export async function shareInvoiceWhatsApp(
   invoice: WhatsAppInvoice,
@@ -388,32 +388,29 @@ export async function shareInvoiceWhatsApp(
   if (!phone) return "no_phone";
 
   const normalizedPhone = normalizePhone(phone);
-  const textMessage = `فاتورة رقم #${invoice.id} — ${isSale ? "العميل" : "المورد"}: ${name}`;
 
   // Generate invoice PDF
   const pdfBlob = await generateInvoicePdfBlob(invoice);
 
-  // Try Web Share API with PDF file
-  if (pdfBlob && navigator.share && navigator.canShare) {
+  // Try Web Share API directly with the PDF file
+  if (pdfBlob && navigator.share) {
     try {
-      const pdfFile = new File([pdfBlob], `فاتورة-${invoice.id}.pdf`, {
+      const pdfFile = new File([pdfBlob], `invoice-${invoice.id}.pdf`, {
         type: "application/pdf",
       });
 
-      if (navigator.canShare({ files: [pdfFile] })) {
-        await navigator.share({
-          title: `فاتورة #${invoice.id}`,
-          text: textMessage,
-          files: [pdfFile],
-        });
-        return "shared";
-      }
+      await navigator.share({
+        title: `فاتورة #${invoice.id}`,
+        files: [pdfFile],
+      });
+      return "shared";
     } catch (err: any) {
       if (err?.name === "AbortError") return "shared";
+      // Share failed (e.g. files not supported) — fall through to download
     }
   }
 
-  // Fallback: download the PDF then open wa.me
+  // Fallback: download the PDF then open WhatsApp Web
   if (pdfBlob) {
     const url = URL.createObjectURL(pdfBlob);
     const a = document.createElement("a");
@@ -424,7 +421,11 @@ export async function shareInvoiceWhatsApp(
     await new Promise((r) => setTimeout(r, 500));
   }
 
+  const textMessage = `فاتورة رقم #${invoice.id} — ${isSale ? "العميل" : "المورد"}: ${name}`;
   const encoded = encodeURIComponent(textMessage);
-  window.open(`https://wa.me/${normalizedPhone}?text=${encoded}`, "_blank");
+  window.open(
+    `https://web.whatsapp.com/send?phone=${normalizedPhone}&text=${encoded}`,
+    "_blank",
+  );
   return "whatsapp_opened";
 }
