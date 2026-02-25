@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "@/services/api";
 import { broadcastUpdate } from "@/lib/broadcast";
-import { openWhatsApp } from "@/lib/export-utils";
+import { shareViaWhatsApp, type WhatsAppInvoice } from "@/lib/export-utils";
 import {
   Trash2,
   Loader2,
@@ -1799,13 +1799,36 @@ export default function CreateWholesaleInvoicePage() {
                   variant="secondary"
                   size="lg"
                   className="text-green-600"
-                  onClick={() => {
-                    const result = openWhatsApp({
+                  disabled={saving || items.length === 0}
+                  onClick={async () => {
+                    const inv: WhatsAppInvoice = {
+                      id: 0,
+                      customer_name: customerName || "نقدي",
                       customer_phone: customerPhone,
+                      supplier_name: supplierName,
                       supplier_phone: supplierPhone,
                       movement_type: movementType,
-                    });
-                    if (result === "no_phone") toast.error("لا يوجد رقم هاتف");
+                      invoice_date: invoiceDate,
+                      total: finalTotal,
+                      paid_amount: Number(paidAmount) || 0,
+                      remaining_amount: remaining,
+                      extra_discount: Number(extraDiscount) || 0,
+                      items: items.map((it: any) => ({
+                        product_name: it.product_name,
+                        package: it.package,
+                        price: Number(it.price),
+                        quantity: Number(it.quantity || 0),
+                        discount: Number(it.discount || 0),
+                        total: (Number(it.price) - Number(it.discount || 0)) * Number(it.quantity || 0),
+                        is_return: it.is_return || false,
+                      })),
+                    };
+                    const result = await shareViaWhatsApp(inv);
+                    if (result === "downloaded_and_opened")
+                      toast.success("تم تنزيل الفاتورة — ارفقها من 📎 في المحادثة", { duration: 8000 });
+                    else if (result === "no_phone")
+                      toast.error("لا يوجد رقم هاتف");
+                    else toast.error("فشل إنشاء PDF");
                   }}
                 >
                   <svg className="h-4 w-4 ml-1" viewBox="0 0 24 24" fill="currentColor">
@@ -1906,14 +1929,35 @@ export default function CreateWholesaleInvoicePage() {
                     <Button
                       variant="secondary"
                       className="flex-1 text-green-600"
-                      onClick={() => {
-                        const result = openWhatsApp({
+                      onClick={async () => {
+                        const inv: WhatsAppInvoice = {
+                          id: savedInvoiceId || 0,
+                          customer_name: customerName || "نقدي",
                           customer_phone: customerPhone,
+                          supplier_name: supplierName,
                           supplier_phone: supplierPhone,
                           movement_type: movementType,
-                        });
-                        if (result === "no_phone")
+                          invoice_date: invoiceDate,
+                          total: finalTotal,
+                          paid_amount: Number(paidAmount) || 0,
+                          remaining_amount: remaining,
+                          extra_discount: Number(extraDiscount) || 0,
+                          items: items.map((it: any) => ({
+                            product_name: it.product_name,
+                            package: it.package,
+                            price: Number(it.price),
+                            quantity: Number(it.quantity || 0),
+                            discount: Number(it.discount || 0),
+                            total: (Number(it.price) - Number(it.discount || 0)) * Number(it.quantity || 0),
+                            is_return: it.is_return || false,
+                          })),
+                        };
+                        const result = await shareViaWhatsApp(inv);
+                        if (result === "downloaded_and_opened")
+                          toast.success("تم تنزيل الفاتورة — ارفقها من 📎 في المحادثة", { duration: 8000 });
+                        else if (result === "no_phone")
                           toast.error("لا يوجد رقم هاتف");
+                        else toast.error("فشل إنشاء PDF");
                       }}
                     >
                       <svg
