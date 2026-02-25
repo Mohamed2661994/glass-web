@@ -294,40 +294,39 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                     </div>
                   </div>
 
-                  {/* Row 2: Details */}
+                  {/* Row 1: Retail details + Manufacturer */}
                   <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-4 gap-y-1">
                     <span>
                       المصنع:{" "}
                       {highlightText(product.manufacturer || "-", search)}
                     </span>
                     <span>
-                      العبوة:{" "}
-                      {invoiceType === "retail"
-                        ? product.retail_package || "-"
-                        : product.wholesale_package || "-"}
+                      العبوة: {product.retail_package || "-"}
                     </span>
-                    {invoiceType === "retail" &&
-                      product.wholesale_package && (
-                        <span>
-                          عبوة جملة: {product.wholesale_package}
-                        </span>
-                      )}
                     <span className="font-semibold text-foreground">
-                      السعر: {product.price}
+                      السعر: {invoiceType === "retail" ? product.price : product.retail_price}
                     </span>
-                    {invoiceType === "retail" &&
-                      product.wholesale_price != null &&
-                      Number(product.wholesale_price) > 0 && (
-                        <span className="font-semibold text-blue-600 dark:text-blue-400">
-                          سعر الجملة: {product.wholesale_price}
-                        </span>
-                      )}
                     {product.discount_amount > 0 && (
                       <span className="text-destructive">
                         خصم: {product.discount_amount}
                       </span>
                     )}
                   </div>
+
+                  {/* Row 2: Wholesale details */}
+                  {product.wholesale_package && (
+                    <div className="text-xs mt-1 flex flex-wrap gap-x-4 gap-y-1 text-blue-600 dark:text-blue-400">
+                      <span>
+                        عبوة جملة: {product.wholesale_package}
+                      </span>
+                      {product.wholesale_price != null &&
+                        Number(product.wholesale_price) > 0 && (
+                          <span className="font-semibold">
+                            سعر الجملة: {product.wholesale_price}
+                          </span>
+                        )}
+                    </div>
+                  )}
 
                   {/* Row 3: Branch Balances */}
                   <div className="text-xs mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
