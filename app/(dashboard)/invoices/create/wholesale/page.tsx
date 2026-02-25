@@ -464,10 +464,10 @@ export default function CreateWholesaleInvoicePage() {
 
   const fetchCustomerBalance = async (id: number, name?: string) => {
     try {
+      // Try balance endpoint first
       const res = await api.get(`/customers/${id}/balance`, {
         params: { invoice_type: "wholesale" },
       });
-
       const d = res.data;
       let bal: number | null = null;
       if (d?.total_sales != null && d?.total_paid != null) {
@@ -476,16 +476,16 @@ export default function CreateWholesaleInvoicePage() {
         bal = d?.balance ?? d?.balance_due ?? null;
       }
 
-      // Fallback: if balance is 0, check reports endpoint (handles negative/credit balances)
+      // Fallback: compute from invoices remaining_amount (handles negative/credit)
       if ((bal === 0 || bal == null) && name) {
         try {
-          const rpt = await api.get("/reports/customer-balances", {
-            params: { customer_name: name },
+          const invRes = await api.get("/invoices", {
+            params: { customer_name: name, invoice_type: "wholesale", _t: Date.now() },
           });
-          const rows = Array.isArray(rpt.data) ? rpt.data : [];
-          const match = rows.find((r: any) => r.customer_name === name);
-          if (match && Number(match.balance_due) !== 0) {
-            bal = Math.round(Number(match.balance_due) * 100) / 100;
+          const invoices = Array.isArray(invRes.data) ? invRes.data : (invRes.data?.data ?? []);
+          if (invoices.length > 0) {
+            const sum = invoices.reduce((s: number, inv: any) => s + Number(inv.remaining_amount || 0), 0);
+            bal = Math.round(sum * 100) / 100;
           }
         } catch {}
       }
