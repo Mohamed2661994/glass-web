@@ -1536,7 +1536,9 @@ export default function CreateRetailInvoicePage() {
                       <th className="p-3 text-right">الصنف</th>
                       <th className="p-3 text-center">السعر</th>
                       <th className="p-3 text-center">الكمية</th>
-                      {!applyItemsDiscount && <th className="p-3 text-center">الخصم</th>}
+                      {!applyItemsDiscount && (
+                        <th className="p-3 text-center">الخصم</th>
+                      )}
                       <th className="p-3 text-center">الإجمالي</th>
                       <th className="p-3 text-center">مرتجع</th>
                       <th className="p-3 text-center">إجراءات</th>
@@ -1646,44 +1648,44 @@ export default function CreateRetailInvoicePage() {
                           })()}
                         </td>
                         {!applyItemsDiscount && (
-                        <td className="p-3 text-center">
-                          {editingItemUid === item.uid ? (
-                            <Input
-                              type="number"
-                              data-discount-id={item.uid}
-                              className="w-20 mx-auto text-center"
-                              value={item.discount || 0}
-                              onFocus={(e) => e.target.select()}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  setEditingItemUid(null);
-                                  barcodeRef.current?.focus();
-                                  barcodeRef.current?.select();
+                          <td className="p-3 text-center">
+                            {editingItemUid === item.uid ? (
+                              <Input
+                                type="number"
+                                data-discount-id={item.uid}
+                                className="w-20 mx-auto text-center"
+                                value={item.discount || 0}
+                                onFocus={(e) => e.target.select()}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    setEditingItemUid(null);
+                                    barcodeRef.current?.focus();
+                                    barcodeRef.current?.select();
+                                  }
+                                }}
+                                onChange={(e) =>
+                                  setItems((prev) =>
+                                    prev.map((i) =>
+                                      i.uid === item.uid
+                                        ? {
+                                            ...i,
+                                            discount:
+                                              e.target.value === ""
+                                                ? 0
+                                                : Number(e.target.value),
+                                          }
+                                        : i,
+                                    ),
+                                  )
                                 }
-                              }}
-                              onChange={(e) =>
-                                setItems((prev) =>
-                                  prev.map((i) =>
-                                    i.uid === item.uid
-                                      ? {
-                                          ...i,
-                                          discount:
-                                            e.target.value === ""
-                                              ? 0
-                                              : Number(e.target.value),
-                                        }
-                                      : i,
-                                  ),
-                                )
-                              }
-                            />
-                          ) : (
-                            <span className="font-medium">
-                              {item.discount || 0}
-                            </span>
-                          )}
-                        </td>
+                              />
+                            ) : (
+                              <span className="font-medium">
+                                {item.discount || 0}
+                              </span>
+                            )}
+                          </td>
                         )}
                         <td className="p-3 text-center font-semibold">
                           {(() => {
@@ -1952,40 +1954,40 @@ export default function CreateRetailInvoicePage() {
                         })()}
                       </div>
                       {!applyItemsDiscount && (
-                      <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">
-                          الخصم
-                        </label>
-                        <Input
-                          type="number"
-                          data-mobile-discount-id={item.uid}
-                          className="text-center"
-                          value={item.discount || 0}
-                          onFocus={(e) => e.target.select()}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              setExpandedItemUid(null);
-                              setShowProductModal(true);
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">
+                            الخصم
+                          </label>
+                          <Input
+                            type="number"
+                            data-mobile-discount-id={item.uid}
+                            className="text-center"
+                            value={item.discount || 0}
+                            onFocus={(e) => e.target.select()}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                setExpandedItemUid(null);
+                                setShowProductModal(true);
+                              }
+                            }}
+                            onChange={(e) =>
+                              setItems((prev) =>
+                                prev.map((i) =>
+                                  i.uid === item.uid
+                                    ? {
+                                        ...i,
+                                        discount:
+                                          e.target.value === ""
+                                            ? 0
+                                            : Number(e.target.value),
+                                      }
+                                    : i,
+                                ),
+                              )
                             }
-                          }}
-                          onChange={(e) =>
-                            setItems((prev) =>
-                              prev.map((i) =>
-                                i.uid === item.uid
-                                  ? {
-                                      ...i,
-                                      discount:
-                                        e.target.value === ""
-                                          ? 0
-                                          : Number(e.target.value),
-                                    }
-                                  : i,
-                              ),
-                            )
-                          }
-                        />
-                      </div>
+                          />
+                        </div>
                       )}
                     </div>
 
