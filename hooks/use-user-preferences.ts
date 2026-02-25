@@ -65,6 +65,11 @@ export interface NotifSettings {
   notifTransfers?: boolean;
 }
 
+export interface CashCounterPref {
+  denominations: number[];
+  counts: Record<number, number>;
+}
+
 export interface UserPreferences {
   dashboard_widgets?: DashboardWidgetPref[];
   quick_links?: QuickLinkPref[];
@@ -77,6 +82,7 @@ export interface UserPreferences {
   products_view?: "cards" | "compact" | "table" | "split" | "swipe" | "kanban";
   printSettings?: PrintSettings;
   notifSettings?: NotifSettings;
+  cashCounter?: CashCounterPref;
   /** Any future per-user preferences can be added here */
   [key: string]: unknown;
 }

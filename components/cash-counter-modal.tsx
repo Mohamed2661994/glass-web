@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useAuth } from "@/app/context/auth-context";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 /* ═══════════════════════════════════════════════════════════
    Types
@@ -21,43 +21,11 @@ type OpenSource = "icon" | "keyboard" | null;
 const DEFAULT_DENOMINATIONS = [200, 100, 50, 20, 10, 5, 1];
 
 /* ═══════════════════════════════════════════════════════════
-   Helpers – per-user localStorage
-   ═══════════════════════════════════════════════════════════ */
-
-function storageKey(userId: number | undefined) {
-  return `cash_counter_${userId ?? "guest"}`;
-}
-
-function saveToStorage(
-  userId: number | undefined,
-  denominations: number[],
-  counts: Record<number, number>,
-) {
-  try {
-    localStorage.setItem(
-      storageKey(userId),
-      JSON.stringify({ denominations, counts }),
-    );
-  } catch {}
-}
-
-function loadFromStorage(userId: number | undefined) {
-  try {
-    const raw = localStorage.getItem(storageKey(userId));
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed as { denominations: number[]; counts: Record<number, number> };
-  } catch {
-    return null;
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════
    Component
    ═══════════════════════════════════════════════════════════ */
 
 export function CashCounterModal() {
-  const { user } = useAuth();
+  const { prefs, loaded: prefsLoaded, setPrefs } = useUserPreferences();
   const [open, setOpen] = useState(false);
   const [source, setSource] = useState<OpenSource>(null);
 
@@ -69,19 +37,21 @@ export function CashCounterModal() {
   const [editingDenominations, setEditingDenominations] = useState(false);
   const [tempDenominations, setTempDenominations] = useState("");
 
-  /* ───── Load saved data for current user ───── */
+  /* ───── Load saved data from user preferences (synced to server) ───── */
 
   const loadedRef = useRef(false);
 
   useEffect(() => {
-    if (loadedRef.current) return;
-    const saved = loadFromStorage(user?.id);
+    if (!prefsLoaded || loadedRef.current) return;
+    const saved = prefs.cashCounter as
+      | { denominations?: number[]; counts?: Record<number, number> }
+      | undefined;
     if (saved) {
       if (saved.denominations?.length) setDenominations(saved.denominations);
       if (saved.counts) setCounts(saved.counts);
     }
     loadedRef.current = true;
-  }, [user?.id]);
+  }, [prefsLoaded, prefs.cashCounter]);
 
   const inputRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
@@ -132,6 +102,18 @@ export function CashCounterModal() {
     return () => window.removeEventListener("keydown", handler);
   }, [open, openFromKeyboard, closeModal]);
 
+  /* ───── Helper: persist to user preferences ───── */
+
+  const saveCashCounter = useCallback(
+    (d: number[], c: Record<number, number>) => {
+      setPrefs((prev) => ({
+        ...prev,
+        cashCounter: { denominations: d, counts: c },
+      }));
+    },
+    [setPrefs],
+  );
+
   /* ───── Counts ───── */
 
   const setCount = (denom: number, val: string) => {
@@ -139,7 +121,7 @@ export function CashCounterModal() {
     if (isNaN(n) || n < 0) return;
     setCounts((prev) => {
       const next = { ...prev, [denom]: n };
-      saveToStorage(user?.id, denominations, next);
+      saveCashCounter(denominations, next);
       return next;
     });
   };
@@ -150,7 +132,7 @@ export function CashCounterModal() {
 
   const clearAll = () => {
     setCounts({});
-    saveToStorage(user?.id, denominations, {});
+    saveCashCounter(denominations, {});
   };
 
   /* ───── Edit denominations ───── */
@@ -171,7 +153,7 @@ export function CashCounterModal() {
     const sorted = [...new Set(parsed)].sort((a, b) => b - a);
     setDenominations(sorted);
     setCounts({});
-    saveToStorage(user?.id, sorted, {});
+    saveCashCounter(sorted, {});
     setEditingDenominations(false);
   };
 
