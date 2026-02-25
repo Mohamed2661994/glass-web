@@ -339,7 +339,7 @@ export default function CreateWholesaleInvoicePage() {
     setOriginalPhone(ph);
     setShowNameDropdown(false);
     setCustomerSuggestions([]);
-    fetchCustomerBalance(customer.id);
+    fetchCustomerBalance(customer.id, customer.name);
 
     if (
       customer.apply_items_discount !== undefined &&
@@ -395,7 +395,7 @@ export default function CreateWholesaleInvoicePage() {
     setOriginalPhone(ph);
     setShowPhoneDropdown(false);
     setPhoneSuggestions([]);
-    fetchCustomerBalance(customer.id);
+    fetchCustomerBalance(customer.id, customer.name);
 
     if (
       customer.apply_items_discount !== undefined &&
@@ -462,20 +462,34 @@ export default function CreateWholesaleInvoicePage() {
      8️⃣ Fetch Customer Balance
      ========================================================= */
 
-  const fetchCustomerBalance = async (id: number) => {
+  const fetchCustomerBalance = async (id: number, name?: string) => {
     try {
       const res = await api.get(`/customers/${id}/balance`, {
         params: { invoice_type: "wholesale" },
       });
 
       const d = res.data;
-      // Use computed balance from totals if available (handles negative/credit balances)
       let bal: number | null = null;
       if (d?.total_sales != null && d?.total_paid != null) {
         bal = Math.round((Number(d.total_sales) - Number(d.total_paid)) * 100) / 100;
       } else {
         bal = d?.balance ?? d?.balance_due ?? null;
       }
+
+      // Fallback: if balance is 0, check reports endpoint (handles negative/credit balances)
+      if ((bal === 0 || bal == null) && name) {
+        try {
+          const rpt = await api.get("/reports/customer-balances", {
+            params: { customer_name: name },
+          });
+          const rows = Array.isArray(rpt.data) ? rpt.data : [];
+          const match = rows.find((r: any) => r.customer_name === name);
+          if (match && Number(match.balance_due) !== 0) {
+            bal = Math.round(Number(match.balance_due) * 100) / 100;
+          }
+        } catch {}
+      }
+
       setPreviousBalance(String(bal != null ? bal : 0));
     } catch {
       setPreviousBalance("0");
@@ -2444,7 +2458,7 @@ export default function CreateWholesaleInvoicePage() {
             setCustomerId(c.id);
             setCustomerPhone(c.phone || "");
             setOriginalPhone(c.phone || "");
-            fetchCustomerBalance(c.id);
+            fetchCustomerBalance(c.id, c.name);
           }}
         />
       </div>
