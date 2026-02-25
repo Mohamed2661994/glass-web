@@ -320,7 +320,7 @@ async function generateInvoicePdfBlob(
   iframe.style.position = "fixed";
   iframe.style.left = "-9999px";
   iframe.style.top = "0";
-  iframe.style.width = "620px";
+  iframe.style.width = "650px";
   iframe.style.height = "900px";
   iframe.style.border = "none";
   document.body.appendChild(iframe);
@@ -348,7 +348,8 @@ async function generateInvoicePdfBlob(
       useCORS: true,
       backgroundColor: "#ffffff",
       scale: 2,
-      width: 580,
+      width: target.scrollWidth,
+      windowWidth: target.scrollWidth,
     });
 
     document.body.removeChild(iframe);
