@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/services/api";
 import { broadcastUpdate } from "@/lib/broadcast";
-import { shareInvoiceWhatsApp } from "@/lib/export-utils";
+import { shareInvoiceWhatsApp, type WhatsAppInvoice } from "@/lib/export-utils";
 import {
   Trash2,
   Loader2,
@@ -1672,10 +1672,21 @@ export default function EditRetailInvoicePage() {
                         supplier_name: supplierName,
                         supplier_phone: supplierPhone,
                         movement_type: movementType,
+                        invoice_date: invoiceDate,
                         total: finalTotal,
                         paid_amount: Number(paidAmount) || 0,
                         remaining_amount: remaining,
-                      });
+                        extra_discount: Number(extraDiscount) || 0,
+                        items: items.map((it: any) => ({
+                          product_name: it.product_name,
+                          package: it.package,
+                          price: it.price,
+                          quantity: it.quantity,
+                          discount: it.discount,
+                          total: Number(it.price) * Number(it.quantity || 0),
+                          is_return: it.is_return,
+                        })),
+                      } as WhatsAppInvoice);
                       if (result === "no_phone")
                         toast.error("لا يوجد رقم هاتف");
                     } catch {

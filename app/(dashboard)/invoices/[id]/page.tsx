@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { shareInvoiceWhatsApp } from "@/lib/export-utils";
+import { shareInvoiceWhatsApp, type WhatsAppInvoice } from "@/lib/export-utils";
 
 interface InvoiceItem {
   product_id: number;
@@ -287,10 +287,22 @@ export default function InvoiceDetailsPage() {
                   supplier_name: invoice.supplier_name,
                   supplier_phone: invoice.supplier_phone,
                   movement_type: invoice.movement_type,
+                  invoice_date: invoice.invoice_date,
                   total: invoice.total,
                   paid_amount: invoice.paid_amount,
                   remaining_amount: invoice.remaining_amount,
-                });
+                  extra_discount: invoice.extra_discount,
+                  manual_discount: invoice.manual_discount,
+                  items: items.map((it) => ({
+                    product_name: it.product_name,
+                    package: it.package,
+                    price: it.price,
+                    quantity: it.quantity,
+                    discount: it.discount,
+                    total: it.total,
+                    is_return: it.is_return,
+                  })),
+                } as WhatsAppInvoice);
                 if (result === "shared") {
                   toast.success("تم المشاركة بنجاح");
                 } else if (result === "whatsapp_opened") {
