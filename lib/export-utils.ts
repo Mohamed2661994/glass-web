@@ -1,6 +1,4 @@
 import * as XLSX from "xlsx";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
 
 /* ================================================================
    Export Utilities — Excel & PDF
@@ -56,134 +54,95 @@ export async function exportToPdf(
   title?: string,
   orientation: "portrait" | "landscape" = "portrait",
 ) {
-  const targetWidth = orientation === "landscape" ? 1100 : 750;
+  // Clone the table HTML and open in a new print window.
+  // The browser's print engine handles Arabic text perfectly.
+  const tableHtml = tableRef.outerHTML;
 
-  const canvas = await (html2canvas as any)(tableRef, {
-    useCORS: true,
-    backgroundColor: "#ffffff",
-    windowWidth: targetWidth + 40,
-    width: targetWidth + 32,
-    onclone: (doc: Document, clonedEl: HTMLElement) => {
-      // Remove only stylesheets containing modern color functions that break html2canvas
-      doc.querySelectorAll('style').forEach((el) => {
-        if (el.textContent && /lab\(|oklch\(|oklab\(|lch\(/.test(el.textContent)) el.remove();
-      });
-      doc.querySelectorAll('link[rel="stylesheet"]').forEach((el) => el.remove());
-
-      // Style the cloned element for clean PDF output
-      const font = 'Tahoma, "Segoe UI", Arial, sans-serif';
-      clonedEl.style.width = targetWidth + "px";
-      clonedEl.style.direction = "rtl";
-      clonedEl.style.fontFamily = font;
-      clonedEl.style.background = "white";
-      clonedEl.style.color = "black";
-      clonedEl.style.padding = "16px";
-
-      clonedEl.querySelectorAll("*").forEach((el: Element) => {
-        const htmlEl = el as HTMLElement;
-        htmlEl.style.fontFamily = font;
-        htmlEl.style.color = "black";
-        if (htmlEl.tagName === "TH" || htmlEl.closest("thead")) {
-          htmlEl.style.backgroundColor = "#f3f4f6";
-        } else {
-          htmlEl.style.backgroundColor = "white";
-        }
-        htmlEl.style.borderColor = "#d1d5db";
-      });
-    },
-  });
-
-  const imgData = canvas.toDataURL("image/png");
-  const pdf = new jsPDF({
-    orientation,
-    unit: "mm",
-    format: "a4",
-  });
-
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  const margin = 10;
-  const usableWidth = pageWidth - margin * 2;
-
-  let yPos = margin;
-
-  // Add title if provided
-  if (title) {
-    pdf.setFontSize(16);
-    pdf.text(title, pageWidth / 2, yPos + 6, { align: "center" });
-    yPos += 14;
-  }
-
-  // Add date
-  const now = new Date();
-  const dateStr = now.toLocaleDateString("ar-EG", {
+  const dateStr = new Date().toLocaleDateString("ar-EG", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
-  pdf.setFontSize(9);
-  pdf.text(dateStr, pageWidth / 2, yPos + 4, { align: "center" });
-  yPos += 10;
 
-  // Calculate image dimensions to fit page
-  const imgWidth = usableWidth;
-  const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-  // If image is taller than one page, split across multiple pages
-  const usableHeight = pageHeight - yPos - margin;
-
-  if (imgHeight <= usableHeight) {
-    pdf.addImage(imgData, "PNG", margin, yPos, imgWidth, imgHeight);
-  } else {
-    // Multi-page: slice the canvas
-    let remainingHeight = canvas.height;
-    let srcY = 0;
-    const sliceHeightPx = (usableHeight / imgWidth) * canvas.width;
-    let isFirstPage = true;
-
-    while (remainingHeight > 0) {
-      if (!isFirstPage) {
-        pdf.addPage();
-        yPos = margin;
-      }
-
-      const currentSliceHeight = Math.min(sliceHeightPx, remainingHeight);
-      const currentSliceCanvas = document.createElement("canvas");
-      currentSliceCanvas.width = canvas.width;
-      currentSliceCanvas.height = currentSliceHeight;
-      const ctx = currentSliceCanvas.getContext("2d");
-      if (ctx) {
-        ctx.drawImage(
-          canvas,
-          0,
-          srcY,
-          canvas.width,
-          currentSliceHeight,
-          0,
-          0,
-          canvas.width,
-          currentSliceHeight,
-        );
-      }
-
-      const sliceImgData = currentSliceCanvas.toDataURL("image/png");
-      const sliceDisplayHeight = (currentSliceHeight * imgWidth) / canvas.width;
-      pdf.addImage(
-        sliceImgData,
-        "PNG",
-        margin,
-        yPos,
-        imgWidth,
-        sliceDisplayHeight,
-      );
-
-      srcY += currentSliceHeight;
-      remainingHeight -= currentSliceHeight;
-      isFirstPage = false;
-    }
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) {
+    alert("يرجى السماح بالنوافذ المنبثقة لتنزيل PDF");
+    return;
   }
 
-  pdf.save(`${filename}.pdf`);
+  printWindow.document.write(`<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>${filename}</title>
+  <style>
+    @page {
+      size: ${orientation === "landscape" ? "landscape" : "portrait"};
+      margin: 10mm;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: Tahoma, "Segoe UI", Arial, sans-serif;
+      direction: rtl;
+      background: #fff;
+      color: #000;
+      margin: 0;
+      padding: 16px;
+    }
+    .pdf-title {
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .pdf-date {
+      text-align: center;
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 16px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    th, td {
+      border: 1px solid #d1d5db;
+      padding: 6px 8px;
+      text-align: center;
+    }
+    th {
+      background-color: #f3f4f6;
+      font-weight: 600;
+    }
+    tr:nth-child(even) td {
+      background-color: #f9fafb;
+    }
+    .print-hint {
+      text-align: center;
+      margin-top: 20px;
+      padding: 12px;
+      background: #fef3c7;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #92400e;
+    }
+    @media print {
+      .print-hint { display: none; }
+    }
+  </style>
+</head>
+<body>
+  ${title ? `<div class="pdf-title">${title}</div>` : ""}
+  <div class="pdf-date">${dateStr}</div>
+  ${tableHtml}
+  <div class="print-hint">
+    💡 اضغط Ctrl+P واختر "Save as PDF" لحفظ الملف
+  </div>
+  <script>window.onload = function() { window.print(); }<\/script>
+</body>
+</html>`);
+  printWindow.document.close();
 }
 
 /* ================================================================
@@ -228,185 +187,148 @@ function normalizePhone(phone: string): string {
 }
 
 /**
- * Build invoice PDF via html2canvas (renders Arabic correctly as image)
- */
-async function generateInvoicePdfBlob(
-  invoice: WhatsAppInvoice,
-): Promise<Blob | null> {
-  const isSale = invoice.movement_type !== "purchase";
-  const name = isSale
-    ? invoice.customer_name || "نقدي"
-    : invoice.supplier_name || "—";
-  const phone = isSale ? invoice.customer_phone : invoice.supplier_phone;
-  const dateStr = invoice.invoice_date
-    ? new Date(invoice.invoice_date).toLocaleDateString("ar-EG", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-    : new Date().toLocaleDateString("ar-EG", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
-
-  const items = invoice.items || [];
-  const hasDiscount = items.some((it) => Number(it.discount || 0) > 0);
-  const extraDiscount =
-    Number(invoice.extra_discount || 0) + Number(invoice.manual_discount || 0);
-
-  const itemsHtml = items
-    .map((it, idx) => {
-      const unitPrice = hasDiscount
-        ? Number(it.price) - Number(it.discount || 0)
-        : Number(it.price);
-      const total = Math.abs(Number(it.total));
-      return `<tr style="border-bottom:1px solid #e5e7eb;">
-        <td style="padding:6px 8px;text-align:center;">${idx + 1}</td>
-        <td style="padding:6px 8px;">${it.product_name}${it.is_return ? ' <span style="color:#ea580c;font-size:11px;">(مرتجع)</span>' : ""}</td>
-        <td style="padding:6px 8px;text-align:center;">${it.package || "-"}</td>
-        <td style="padding:6px 8px;text-align:center;">${unitPrice.toFixed(2)}</td>
-        <td style="padding:6px 8px;text-align:center;">${it.quantity}</td>
-        <td style="padding:6px 8px;text-align:center;font-weight:600;">${it.is_return ? "-" : ""}${total.toFixed(2)}</td>
-      </tr>`;
-    })
-    .join("");
-
-  const html = `
-    <div style="width:580px;direction:rtl;font-family:Tahoma,Arial,sans-serif;background:#fff;color:#111;padding:24px;line-height:1.6;">
-      <div style="text-align:center;margin-bottom:16px;">
-        <h2 style="margin:0 0 4px;font-size:20px;">فاتورة رقم #${invoice.id}</h2>
-        <p style="margin:0;color:#666;font-size:13px;">${dateStr}</p>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:16px;padding:10px 12px;background:#f9fafb;border-radius:6px;border:1px solid #e5e7eb;">
-        <div>
-          <span style="color:#666;font-size:13px;">${isSale ? "العميل" : "المورد"}:</span>
-          <strong style="margin-right:6px;">${name}</strong>
-        </div>
-        ${phone ? `<div><span style="color:#666;font-size:13px;">هاتف:</span> <span style="margin-right:6px;">${phone}</span></div>` : ""}
-      </div>
-      ${
-        items.length > 0
-          ? `<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px;">
-              <thead>
-                <tr style="background:#f3f4f6;border-bottom:2px solid #d1d5db;">
-                  <th style="padding:8px;text-align:center;width:36px;">#</th>
-                  <th style="padding:8px;text-align:right;">الصنف</th>
-                  <th style="padding:8px;text-align:center;">العبوة</th>
-                  <th style="padding:8px;text-align:center;">السعر</th>
-                  <th style="padding:8px;text-align:center;">الكمية</th>
-                  <th style="padding:8px;text-align:center;">الإجمالي</th>
-                </tr>
-              </thead>
-              <tbody>${itemsHtml}</tbody>
-            </table>`
-          : ""
-      }
-      <div style="border-top:2px solid #111;padding-top:12px;font-size:14px;">
-        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-          <span>الإجمالي</span>
-          <strong>${Number(invoice.total).toFixed(2)} جنيه</strong>
-        </div>
-        ${extraDiscount > 0 ? `<div style="display:flex;justify-content:space-between;margin-bottom:6px;color:#dc2626;"><span>الخصم</span><span>-${extraDiscount.toFixed(2)}</span></div>` : ""}
-        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-          <span>المدفوع</span>
-          <span>${Number(invoice.paid_amount).toFixed(2)} جنيه</span>
-        </div>
-        ${Number(invoice.remaining_amount) > 0 ? `<div style="display:flex;justify-content:space-between;color:#dc2626;font-weight:700;"><span>المتبقي</span><span>${Number(invoice.remaining_amount).toFixed(2)} جنيه</span></div>` : ""}
-      </div>
-    </div>`;
-
-  const container = document.createElement("div");
-  container.style.position = "fixed";
-  container.style.left = "-9999px";
-  container.style.top = "0";
-  container.style.zIndex = "-1";
-  container.innerHTML = html;
-  document.body.appendChild(container);
-
-  // Wait for browser to paint the off-screen element
-  await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 100)));
-
-  try {
-    const target = container.firstElementChild as HTMLElement;
-    const canvas = await (html2canvas as any)(target, {
-      useCORS: true,
-      backgroundColor: "#ffffff",
-      scale: 2,
-      onclone: (clonedDoc: Document) => {
-        // Remove only stylesheets containing modern color functions that break html2canvas
-        clonedDoc.querySelectorAll('style').forEach((el) => {
-          if (el.textContent && /lab\(|oklch\(|oklab\(|lch\(/.test(el.textContent)) el.remove();
-        });
-        clonedDoc.querySelectorAll('link[rel="stylesheet"]').forEach((el) => el.remove());
-      },
-    });
-    document.body.removeChild(container);
-
-    const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = 10;
-    const usableWidth = pageWidth - margin * 2;
-    const imgHeight = (canvas.height * usableWidth) / canvas.width;
-    const usableHeight = pageHeight - margin * 2;
-
-    if (imgHeight <= usableHeight) {
-      pdf.addImage(imgData, "PNG", margin, margin, usableWidth, imgHeight);
-    } else {
-      let remaining = canvas.height;
-      let srcY = 0;
-      const sliceHeightPx = (usableHeight / usableWidth) * canvas.width;
-      let first = true;
-      while (remaining > 0) {
-        if (!first) pdf.addPage();
-        const sliceH = Math.min(sliceHeightPx, remaining);
-        const sliceCanvas = document.createElement("canvas");
-        sliceCanvas.width = canvas.width;
-        sliceCanvas.height = sliceH;
-        const ctx = sliceCanvas.getContext("2d");
-        if (ctx) ctx.drawImage(canvas, 0, srcY, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-        const sliceImg = sliceCanvas.toDataURL("image/png");
-        const displayH = (sliceH * usableWidth) / canvas.width;
-        pdf.addImage(sliceImg, "PNG", margin, margin, usableWidth, displayH);
-        srcY += sliceH;
-        remaining -= sliceH;
-        first = false;
-      }
-    }
-
-    return pdf.output("blob");
-  } catch (e) {
-    console.error("html2canvas PDF generation failed:", e);
-    try { document.body.removeChild(container); } catch { /* already removed */ }
-    return null;
-  }
-}
-
-/**
- * Download invoice as PDF
+ * Download invoice as PDF — opens a print window with clean styled HTML
  */
 export async function downloadInvoicePdf(
   invoice: WhatsAppInvoice,
 ): Promise<boolean> {
   try {
-    const pdfBlob = await generateInvoicePdfBlob(invoice);
-    if (!pdfBlob) return false;
+    const isSale = invoice.movement_type !== "purchase";
+    const name = isSale
+      ? invoice.customer_name || "نقدي"
+      : invoice.supplier_name || "—";
+    const phone = isSale ? invoice.customer_phone : invoice.supplier_phone;
+    const dateStr = invoice.invoice_date
+      ? new Date(invoice.invoice_date).toLocaleDateString("ar-EG", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+      : new Date().toLocaleDateString("ar-EG", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
 
-    const blobUrl = URL.createObjectURL(pdfBlob);
-    const link = document.createElement("a");
-    link.href = blobUrl;
-    link.download = `invoice-${invoice.id}.pdf`;
-    link.style.display = "none";
-    document.body.appendChild(link);
-    link.click();
-    await new Promise((r) => setTimeout(r, 1500));
-    document.body.removeChild(link);
-    URL.revokeObjectURL(blobUrl);
+    const items = invoice.items || [];
+    const hasDiscount = items.some((it) => Number(it.discount || 0) > 0);
+    const extraDiscount =
+      Number(invoice.extra_discount || 0) + Number(invoice.manual_discount || 0);
+
+    const itemsHtml = items
+      .map((it, idx) => {
+        const unitPrice = hasDiscount
+          ? Number(it.price) - Number(it.discount || 0)
+          : Number(it.price);
+        const total = Math.abs(Number(it.total));
+        return `<tr>
+          <td>${idx + 1}</td>
+          <td style="text-align:right;">${it.product_name}${it.is_return ? ' <span style="color:#ea580c;font-size:11px;">(مرتجع)</span>' : ""}</td>
+          <td>${it.package || "-"}</td>
+          <td>${unitPrice.toFixed(2)}</td>
+          <td>${it.quantity}</td>
+          <td style="font-weight:600;">${it.is_return ? "-" : ""}${total.toFixed(2)}</td>
+        </tr>`;
+      })
+      .join("");
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("يرجى السماح بالنوافذ المنبثقة لتنزيل PDF");
+      return false;
+    }
+
+    printWindow.document.write(`<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>فاتورة ${invoice.id}</title>
+  <style>
+    @page { size: portrait; margin: 12mm; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: Tahoma, "Segoe UI", Arial, sans-serif;
+      direction: rtl;
+      background: #fff;
+      color: #111;
+      margin: 0;
+      padding: 24px;
+      line-height: 1.6;
+    }
+    .header { text-align: center; margin-bottom: 16px; }
+    .header h2 { margin: 0 0 4px; font-size: 20px; }
+    .header p { margin: 0; color: #666; font-size: 13px; }
+    .info {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding: 10px 12px;
+      background: #f9fafb;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+    }
+    .info span.label { color: #666; font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 16px; }
+    th { padding: 8px; background: #f3f4f6; border-bottom: 2px solid #d1d5db; text-align: center; }
+    td { padding: 6px 8px; text-align: center; border-bottom: 1px solid #e5e7eb; }
+    .summary { border-top: 2px solid #111; padding-top: 12px; font-size: 14px; }
+    .summary-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+    .red { color: #dc2626; }
+    .bold { font-weight: 700; }
+    .print-hint {
+      text-align: center; margin-top: 24px; padding: 12px;
+      background: #fef3c7; border-radius: 8px; font-size: 14px; color: #92400e;
+    }
+    @media print { .print-hint { display: none; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>فاتورة رقم #${invoice.id}</h2>
+    <p>${dateStr}</p>
+  </div>
+  <div class="info">
+    <div>
+      <span class="label">${isSale ? "العميل" : "المورد"}:</span>
+      <strong>${name}</strong>
+    </div>
+    ${phone ? `<div><span class="label">هاتف:</span> ${phone}</div>` : ""}
+  </div>
+  ${
+    items.length > 0
+      ? `<table>
+          <thead><tr>
+            <th style="width:36px;">#</th>
+            <th style="text-align:right;">الصنف</th>
+            <th>العبوة</th>
+            <th>السعر</th>
+            <th>الكمية</th>
+            <th>الإجمالي</th>
+          </tr></thead>
+          <tbody>${itemsHtml}</tbody>
+        </table>`
+      : ""
+  }
+  <div class="summary">
+    <div class="summary-row">
+      <span>الإجمالي</span>
+      <strong>${Number(invoice.total).toFixed(2)} جنيه</strong>
+    </div>
+    ${extraDiscount > 0 ? `<div class="summary-row red"><span>الخصم</span><span>-${extraDiscount.toFixed(2)}</span></div>` : ""}
+    <div class="summary-row">
+      <span>المدفوع</span>
+      <span>${Number(invoice.paid_amount).toFixed(2)} جنيه</span>
+    </div>
+    ${Number(invoice.remaining_amount) > 0 ? `<div class="summary-row red bold"><span>المتبقي</span><span>${Number(invoice.remaining_amount).toFixed(2)} جنيه</span></div>` : ""}
+  </div>
+  <div class="print-hint">💡 اضغط Ctrl+P واختر "Save as PDF" لحفظ الملف</div>
+  <script>window.onload = function() { window.print(); }<\/script>
+</body>
+</html>`);
+    printWindow.document.close();
     return true;
   } catch (e) {
-    console.error("PDF download failed:", e);
+    console.error("PDF generation failed:", e);
     return false;
   }
 }
