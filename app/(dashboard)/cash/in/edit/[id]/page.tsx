@@ -150,29 +150,13 @@ export default function EditCashInPage() {
             </div>
           )}
 
-          <div>
-            <Label>الاسم</Label>
-            <Input
-              value={sourceName}
-              onChange={(e) => setSourceName(e.target.value)}
-              className="mt-1"
-              disabled={sourceType === "invoice"}
-            />
-          </div>
-
-          {sourceType === "manual" ? (
-            <div>
-              <Label>المبلغ</Label>
-              <Input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="mt-1 text-center font-semibold"
-                onFocus={(e) => e.target.select()}
-              />
-            </div>
-          ) : (
+          {sourceType === "invoice" ? (
+            /* فاتورة: عرض فقط + تعديل التاريخ */
             <>
+              <div>
+                <Label>الاسم</Label>
+                <Input value={sourceName} className="mt-1" disabled />
+              </div>
               <div>
                 <Label>إجمالي الفاتورة</Label>
                 <Input
@@ -199,28 +183,121 @@ export default function EditCashInPage() {
                   {(Number(amount) - Number(paidAmount)).toLocaleString()} ج.م
                 </span>
               </div>
+              <div>
+                <Label>تاريخ العملية</Label>
+                <Input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>ملاحظات</Label>
+                <Textarea
+                  value={description}
+                  className="mt-1 min-h-[80px]"
+                  disabled
+                />
+              </div>
+            </>
+          ) : sourceType === "manual" ? (
+            /* وارد عادي */
+            <>
+              <div>
+                <Label>الاسم</Label>
+                <Input
+                  value={sourceName}
+                  onChange={(e) => setSourceName(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>المبلغ</Label>
+                <Input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="mt-1 text-center font-semibold"
+                  onFocus={(e) => e.target.select()}
+                />
+              </div>
+              <div>
+                <Label>تاريخ العملية</Label>
+                <Input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>ملاحظات</Label>
+                <Textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="mt-1 min-h-[80px]"
+                />
+              </div>
+            </>
+          ) : (
+            /* سند دفع: كل الحقول قابلة للتعديل */
+            <>
+              <div>
+                <Label>الاسم</Label>
+                <Input
+                  value={sourceName}
+                  onChange={(e) => setSourceName(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>إجمالي الفاتورة</Label>
+                <Input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="mt-1 text-center font-semibold"
+                  onFocus={(e) => e.target.select()}
+                />
+              </div>
+              <div>
+                <Label>المدفوع</Label>
+                <Input
+                  type="number"
+                  value={paidAmount}
+                  onChange={(e) => setPaidAmount(e.target.value)}
+                  className="mt-1 text-center font-semibold text-green-600"
+                  onFocus={(e) => e.target.select()}
+                />
+              </div>
+              <div className="text-center text-sm">
+                <span className="text-muted-foreground">المتبقي: </span>
+                <span
+                  className={`font-bold ${Number(amount) - Number(paidAmount) > 0 ? "text-red-500" : "text-green-600"}`}
+                >
+                  {(Number(amount) - Number(paidAmount)).toLocaleString()} ج.م
+                </span>
+              </div>
+              <div>
+                <Label>تاريخ العملية</Label>
+                <Input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>ملاحظات</Label>
+                <Textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="mt-1 min-h-[80px]"
+                />
+              </div>
             </>
           )}
-
-          <div>
-            <Label>تاريخ العملية</Label>
-            <Input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="mt-1"
-            />
-          </div>
-
-          <div>
-            <Label>ملاحظات</Label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="mt-1 min-h-[80px]"
-              disabled={sourceType === "invoice"}
-            />
-          </div>
 
           <Button
             className="w-full bg-green-600 hover:bg-green-700"

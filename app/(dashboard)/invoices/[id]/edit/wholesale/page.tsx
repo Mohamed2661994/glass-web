@@ -349,8 +349,11 @@ export default function EditWholesaleInvoicePage() {
             : (invRes.data?.data ?? []);
           if (invoices.length > 0) {
             // Sort by id descending to get the most recent invoice
-            const sorted = [...invoices].sort((a: any, b: any) => Number(b.id) - Number(a.id));
-            bal = Math.round(Number(sorted[0].remaining_amount || 0) * 100) / 100;
+            const sorted = [...invoices].sort(
+              (a: any, b: any) => Number(b.id) - Number(a.id),
+            );
+            bal =
+              Math.round(Number(sorted[0].remaining_amount || 0) * 100) / 100;
           }
         } catch {}
       }
