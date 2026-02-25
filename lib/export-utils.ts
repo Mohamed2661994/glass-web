@@ -325,6 +325,11 @@ async function generateInvoicePdfBlob(
       useCORS: true,
       backgroundColor: "#ffffff",
       scale: 2,
+      onclone: (clonedDoc: Document) => {
+        // Remove all stylesheets to avoid html2canvas choking on modern CSS
+        // (e.g. lab(), oklch() color functions from Tailwind/shadcn)
+        clonedDoc.querySelectorAll('style, link[rel="stylesheet"]').forEach((el) => el.remove());
+      },
     });
     document.body.removeChild(container);
 
