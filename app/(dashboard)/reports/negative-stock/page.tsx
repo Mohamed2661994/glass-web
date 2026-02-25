@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "@/services/api";
 import { useAuth } from "@/app/context/auth-context";
 import { PageContainer } from "@/components/layout/page-container";
@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Loader2, TrendingDown, RefreshCw, Eraser } from "lucide-react";
 import { toast } from "sonner";
+import { ExportButtons, type ExportColumn } from "@/components/export-buttons";
 
 /* ========== Types ========== */
 type NegativeStockItem = {
@@ -51,6 +52,7 @@ export default function NegativeStockReportPage() {
   const [data, setData] = useState<NegativeStockItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [zeroing, setZeroing] = useState(false);
+  const tableRef = useRef<HTMLDivElement>(null);
   const [selectedWarehouse, setSelectedWarehouse] = useState<WarehouseFilter>(
     isShowroomUser
       ? "مخزن المعرض"
@@ -112,6 +114,24 @@ export default function NegativeStockReportPage() {
     () => filteredData.reduce((sum, item) => sum + item.current_stock, 0),
     [filteredData],
   );
+
+  /* ========== Export columns ========== */
+  const exportColumns: ExportColumn[] = [
+    { header: "#", key: "idx", width: 6 },
+    { header: "الصنف", key: "product_name_full", width: 30 },
+    { header: "الباركود", key: "barcode", width: 16 },
+    { header: "المخزن", key: "warehouse_name", width: 16 },
+    { header: "العبوات", key: "pkg", width: 14 },
+    { header: "الرصيد الحالي", key: "current_stock", width: 12 },
+  ];
+
+  const exportData = filteredData.map((item, idx) => ({
+    ...item,
+    idx: idx + 1,
+    product_name_full: item.product_name + (item.manufacturer_name ? ` - ${item.manufacturer_name}` : ""),
+    barcode: item.barcode || "—",
+    pkg: item.package_name || "—",
+  }));
 
   /* ========== Zero Out ========== */
   const handleZeroOut = async () => {
@@ -254,11 +274,24 @@ export default function NegativeStockReportPage() {
           </div>
         )}
 
+        {/* Export buttons */}
+        {!loading && filteredData.length > 0 && (
+          <div className="flex justify-center">
+            <ExportButtons
+              tableRef={tableRef}
+              columns={exportColumns}
+              data={exportData}
+              filename={`الأصناف-السالبة-${new Date().toISOString().slice(0, 10)}`}
+              title="تقرير الأصناف السالبة"
+            />
+          </div>
+        )}
+
         {/* Table */}
         {!loading && filteredData.length > 0 && (
           <Card>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto" ref={tableRef}>
                 <Table>
                   <TableHeader>
                     <TableRow>

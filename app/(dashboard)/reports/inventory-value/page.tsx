@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "@/services/api";
 import { useAuth } from "@/app/context/auth-context";
 import { PageContainer } from "@/components/layout/page-container";
@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
+import { ExportButtons, type ExportColumn } from "@/components/export-buttons";
 import { useRealtime } from "@/hooks/use-realtime";
 
 /* ========== Types ========== */
@@ -56,6 +57,7 @@ export default function InventoryValuePage() {
   const [loading, setLoading] = useState(true);
   const [manufacturers, setManufacturers] = useState<string[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const tableRef = useRef<HTMLDivElement>(null);
 
   const [warehouseFilter, setWarehouseFilter] = useState<string | null>(null);
   const [manufacturerFilter, setManufacturerFilter] = useState<string | null>(
@@ -143,6 +145,24 @@ export default function InventoryValuePage() {
 
   const hasFilters = warehouseFilter !== null || manufacturerFilter !== null;
 
+  /* ========== Export columns ========== */
+  const exportColumns: ExportColumn[] = [
+    { header: "الصنف", key: "product_name_full", width: 30 },
+    { header: "العبوات", key: "pkg", width: 14 },
+    { header: "الكمية", key: "quantity", width: 10 },
+    { header: "سعر الشراء", key: "purchase_price", width: 14 },
+    { header: "الإجمالي", key: "total_value", width: 14 },
+  ];
+
+  const exportData = data.map((item) => ({
+    ...item,
+    product_name_full: item.product_name + (item.manufacturer ? ` - ${item.manufacturer}` : ""),
+    pkg: item.package_name || item.packages || "—",
+    quantity: Number(item.quantity),
+    purchase_price: Number(item.purchase_price),
+    total_value: Number(item.total_value),
+  }));
+
   /* ========== Warehouse buttons (only if not locked) ========== */
   const warehouseOptions =
     !isShowroomUser && !isWarehouseUser
@@ -226,11 +246,24 @@ export default function InventoryValuePage() {
           </div>
         )}
 
+        {/* Export buttons */}
+        {!loading && data.length > 0 && (
+          <div className="flex justify-center">
+            <ExportButtons
+              tableRef={tableRef}
+              columns={exportColumns}
+              data={exportData}
+              filename={`قيمة-المخزون-${new Date().toISOString().slice(0, 10)}`}
+              title="تقرير قيمة المخزون"
+            />
+          </div>
+        )}
+
         {/* Table */}
         {!loading && data.length > 0 && (
           <Card>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto" ref={tableRef}>
                 <Table>
                   <TableHeader>
                     <TableRow>

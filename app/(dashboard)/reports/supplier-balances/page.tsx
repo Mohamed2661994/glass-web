@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "@/services/api";
 import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Loader2, Search } from "lucide-react";
+import { ExportButtons, type ExportColumn } from "@/components/export-buttons";
 import Link from "next/link";
 import { useRealtime } from "@/hooks/use-realtime";
 import { useAuth } from "@/app/context/auth-context";
@@ -37,6 +38,7 @@ export default function SupplierBalancesPage() {
   const [data, setData] = useState<SupplierBalanceItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [supplierSearch, setSupplierSearch] = useState("");
+  const tableRef = useRef<HTMLDivElement>(null);
 
   /* ========== Fetch ========== */
   const fetchReport = useCallback(async () => {
@@ -77,6 +79,27 @@ export default function SupplierBalancesPage() {
     [data],
   );
 
+  /* ========== Export columns ========== */
+  const exportColumns: ExportColumn[] = [
+    { header: "المورد", key: "supplier_name", width: 25 },
+    { header: "آخر فاتورة", key: "last_invoice_date_formatted", width: 16 },
+    { header: "إجمالي المشتريات", key: "total_purchases", width: 16 },
+    { header: "المدفوع (فواتير)", key: "total_paid_invoices", width: 16 },
+    { header: "دفعات نقدية", key: "total_payments", width: 14 },
+    { header: "المديونية", key: "balance_due", width: 16 },
+  ];
+
+  const exportData = data.map((item) => ({
+    ...item,
+    last_invoice_date_formatted: item.last_invoice_date
+      ? new Date(item.last_invoice_date).toLocaleDateString("ar-EG")
+      : "—",
+    total_purchases: Number(item.total_purchases || 0),
+    total_paid_invoices: Number(item.total_paid_invoices || 0),
+    total_payments: Number(item.total_payments || 0),
+    balance_due: Number(item.balance_due || 0),
+  }));
+
   return (
     <PageContainer size="xl">
       <div dir="rtl" className="space-y-4 py-6">
@@ -115,11 +138,24 @@ export default function SupplierBalancesPage() {
           </div>
         )}
 
+        {/* Export buttons */}
+        {!loading && data.length > 0 && (
+          <div className="flex justify-center">
+            <ExportButtons
+              tableRef={tableRef}
+              columns={exportColumns}
+              data={exportData}
+              filename={`مديونية-الموردين-${new Date().toISOString().slice(0, 10)}`}
+              title="كشف حساب الموردين"
+            />
+          </div>
+        )}
+
         {/* Table */}
         {!loading && data.length > 0 && (
           <Card>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto" ref={tableRef}>
                 <Table>
                   <TableHeader>
                     <TableRow>

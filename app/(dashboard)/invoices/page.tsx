@@ -14,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Eye, Pencil, Trash2, Printer } from "lucide-react";
+import { ExportButtons, type ExportColumn } from "@/components/export-buttons";
 import { Skeleton } from "@/components/ui/skeleton";
 import axios from "@/services/api";
 import { useRouter } from "next/navigation";
@@ -78,6 +79,7 @@ export default function InvoicesPage() {
 
   const [page, setPage] = useState(1);
   const limit = 10;
+  const tableRef = useRef<HTMLDivElement>(null);
 
   // Debounce search input
   useEffect(() => {
@@ -290,9 +292,25 @@ export default function InvoicesPage() {
         </CardContent>
       </Card>
 
+      {/* Export PDF */}
+      {!loading && data.length > 0 && (
+        <div className="flex justify-center">
+          <ExportButtons
+            tableRef={tableRef}
+            columns={[]}
+            data={[]}
+            filename={`فواتير-${invoiceType === "retail" ? "القطاعي" : "الجملة"}-${new Date().toISOString().slice(0, 10)}`}
+            title={`فواتير ${invoiceType === "retail" ? "القطاعي" : "الجملة"}`}
+            pdfOnly
+            pdfOrientation="landscape"
+          />
+        </div>
+      )}
+
       {/* Desktop Table */}
       <Card className="hidden md:block">
         <CardContent className="p-0">
+          <div ref={tableRef}>
           <table className="w-full text-sm">
             <thead className="bg-muted">
               <tr>
@@ -410,6 +428,7 @@ export default function InvoicesPage() {
               )}
             </tbody>
           </table>
+          </div>
         </CardContent>
       </Card>
 

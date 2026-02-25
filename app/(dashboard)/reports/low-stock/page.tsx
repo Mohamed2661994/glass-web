@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "@/services/api";
 import { useAuth } from "@/app/context/auth-context";
 import { PageContainer } from "@/components/layout/page-container";
@@ -16,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Loader2, Search } from "lucide-react";
+import { ExportButtons, type ExportColumn } from "@/components/export-buttons";
 import { Input } from "@/components/ui/input";
 import { multiWordMatch, multiWordScore } from "@/lib/utils";
 import { useRealtime } from "@/hooks/use-realtime";
@@ -41,6 +42,7 @@ export default function LowStockReportPage() {
   const [data, setData] = useState<LowStockItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const tableRef = useRef<HTMLDivElement>(null);
   const [selectedWarehouse, setSelectedWarehouse] = useState<WarehouseFilter>(
     isShowroomUser
       ? "مخزن المعرض"
@@ -126,6 +128,20 @@ export default function LowStockReportPage() {
       ? ["الكل", "المخزن الرئيسي", "مخزن المعرض"]
       : [];
 
+  /* ========== Export columns ========== */
+  const exportColumns: ExportColumn[] = [
+    { header: "الصنف", key: "product_name_full", width: 30 },
+    { header: "المخزن", key: "warehouse_name", width: 16 },
+    { header: "العبوات", key: "pkg", width: 14 },
+    { header: "الرصيد الحالي", key: "current_stock", width: 12 },
+  ];
+
+  const exportData = filteredData.map((item) => ({
+    ...item,
+    product_name_full: item.product_name + (item.manufacturer_name ? ` - ${item.manufacturer_name}` : ""),
+    pkg: item.package_name || "—",
+  }));
+
   return (
     <PageContainer size="xl">
       <div dir="rtl" className="space-y-4 py-6">
@@ -165,11 +181,24 @@ export default function LowStockReportPage() {
           </div>
         )}
 
+        {/* Export buttons */}
+        {!loading && filteredData.length > 0 && (
+          <div className="flex justify-center">
+            <ExportButtons
+              tableRef={tableRef}
+              columns={exportColumns}
+              data={exportData}
+              filename={`نقص-المخزون-${new Date().toISOString().slice(0, 10)}`}
+              title="تقرير نقص المخزون"
+            />
+          </div>
+        )}
+
         {/* Table */}
         {!loading && filteredData.length > 0 && (
           <Card>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto" ref={tableRef}>
                 <Table>
                   <TableHeader>
                     <TableRow>

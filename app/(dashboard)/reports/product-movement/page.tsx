@@ -25,6 +25,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Loader2, Search } from "lucide-react";
+import { ExportButtons, type ExportColumn } from "@/components/export-buttons";
 import { useRealtime } from "@/hooks/use-realtime";
 
 /* ========== Types ========== */
@@ -81,6 +82,7 @@ export default function ProductMovementPage() {
   );
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
 
   /* ========== Fetch Products ========== */
   const fetchProducts = useCallback(async () => {
@@ -190,6 +192,32 @@ export default function ProductMovementPage() {
     return { totalIn: inQty, totalOut: outQty };
   }, [filteredData]);
 
+  /* ========== Export columns ========== */
+  const exportColumns: ExportColumn[] = [
+    { header: "التاريخ", key: "date_formatted", width: 14 },
+    { header: "المخزن", key: "warehouse_name", width: 16 },
+    { header: "النوع", key: "type_label", width: 10 },
+    { header: "رقم الفاتورة", key: "invoice_id", width: 12 },
+    { header: "الكمية", key: "quantity", width: 10 },
+    { header: "العبوة", key: "pkg", width: 14 },
+    { header: "الطرف", key: "party_name", width: 18 },
+    { header: "ملاحظات", key: "note", width: 20 },
+  ];
+
+  const exportData = filteredData.map((item) => {
+    const mt = item.movement_type || item.invoice_movement_type || "";
+    const isIn = ["purchase", "transfer_in", "replace_in", "in"].includes(mt);
+    return {
+      ...item,
+      date_formatted: getDate(item),
+      type_label: isIn ? "وارد" : "صادر",
+      invoice_id: item.invoice_id || "—",
+      pkg: item.package_name || "—",
+      party_name: item.party_name || "—",
+      note: item.note || "",
+    };
+  });
+
   return (
     <PageContainer size="xl">
       <div dir="rtl" className="space-y-4 py-6">
@@ -294,9 +322,21 @@ export default function ProductMovementPage() {
 
         {/* Table */}
         {!loading && filteredData.length > 0 && (
+          <>
+          {/* Export buttons */}
+          <div className="flex justify-center">
+            <ExportButtons
+              tableRef={tableRef}
+              columns={exportColumns}
+              data={exportData}
+              filename={`حركة-${selectedProduct?.name || "صنف"}-${new Date().toISOString().slice(0, 10)}`}
+              title={`تقرير حركة: ${selectedProduct?.name || ""}`}
+              pdfOrientation="landscape"
+            />
+          </div>
           <Card>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto" ref={tableRef}>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -370,6 +410,7 @@ export default function ProductMovementPage() {
               </div>
             </CardContent>
           </Card>
+          </>
         )}
 
         {/* Empty */}

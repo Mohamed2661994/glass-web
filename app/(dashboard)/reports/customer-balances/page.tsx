@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "@/services/api";
 import { useAuth } from "@/app/context/auth-context";
 import { PageContainer } from "@/components/layout/page-container";
@@ -17,6 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Loader2, Printer, Search } from "lucide-react";
+import { ExportButtons, type ExportColumn } from "@/components/export-buttons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -44,6 +45,7 @@ export default function CustomerBalancesPage() {
     new Set(),
   );
   const router = useRouter();
+  const tableRef = useRef<HTMLDivElement>(null);
 
   /* ========== Fetch ========== */
   const fetchReport = useCallback(async () => {
@@ -95,6 +97,25 @@ export default function CustomerBalancesPage() {
   };
 
   const hasFilters = customerSearch || fromDate || toDate;
+
+  /* ========== Export columns ========== */
+  const exportColumns: ExportColumn[] = [
+    { header: "العميل", key: "customer_name", width: 25 },
+    { header: "آخر فاتورة", key: "last_invoice_date_formatted", width: 16 },
+    { header: "إجمالي المبيعات", key: "total_sales", width: 16 },
+    { header: "المدفوع", key: "total_paid", width: 16 },
+    { header: "المديونية", key: "balance_due", width: 16 },
+  ];
+
+  const exportData = data.map((item) => ({
+    ...item,
+    last_invoice_date_formatted: item.last_invoice_date
+      ? new Date(item.last_invoice_date).toLocaleDateString("ar-EG")
+      : "—",
+    total_sales: Number(item.total_sales || 0),
+    total_paid: Number(item.total_paid || 0),
+    balance_due: Number(item.balance_due || 0),
+  }));
 
   /* ========== Checkbox helpers ========== */
   const toggleCustomer = (name: string) => {
@@ -174,15 +195,24 @@ export default function CustomerBalancesPage() {
           </CardContent>
         </Card>
 
-        {/* Print selected button */}
-        {selectedCustomers.size > 0 && (
-          <div className="flex justify-center">
+        {/* Export & Print buttons */}
+        <div className="flex justify-center gap-2 flex-wrap">
+          {!loading && data.length > 0 && (
+            <ExportButtons
+              tableRef={tableRef}
+              columns={exportColumns}
+              data={exportData}
+              filename={`مديونية-العملاء-${new Date().toISOString().slice(0, 10)}`}
+              title="تقرير مديونية العملاء"
+            />
+          )}
+          {selectedCustomers.size > 0 && (
             <Button onClick={handlePrintSelected} className="gap-2">
               <Printer className="h-4 w-4" />
               طباعة تقرير العملاء المختارين ({selectedCustomers.size})
             </Button>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Loading */}
         {loading && (
@@ -195,7 +225,7 @@ export default function CustomerBalancesPage() {
         {!loading && data.length > 0 && (
           <Card>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto" ref={tableRef}>
                 <Table>
                   <TableHeader>
                     <TableRow>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "@/services/api";
 import { multiWordMatch } from "@/lib/utils";
 import { useAuth } from "@/app/context/auth-context";
@@ -24,6 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Loader2, Search, AlertTriangle, Wrench } from "lucide-react";
+import { ExportButtons, type ExportColumn } from "@/components/export-buttons";
 import { toast } from "sonner";
 import { useRealtime } from "@/hooks/use-realtime";
 
@@ -53,6 +54,7 @@ export default function InventorySummaryPage() {
   const [searchText, setSearchText] = useState("");
   const [discrepancyOpen, setDiscrepancyOpen] = useState(false);
   const [reconciling, setReconciling] = useState(false);
+  const tableRef = useRef<HTMLDivElement>(null);
   const [selectedWarehouse, setSelectedWarehouse] = useState<WarehouseFilter>(
     isShowroomUser
       ? "مخزن المعرض"
@@ -152,6 +154,27 @@ export default function InventorySummaryPage() {
 
   const problemCount = discrepancyItems.length;
 
+  /* ========== Export columns ========== */
+  const exportColumns: ExportColumn[] = [
+    { header: "الصنف", key: "product_name_full", width: 30 },
+    { header: "المخزن", key: "warehouse_name", width: 16 },
+    { header: "العبوات", key: "package_name", width: 14 },
+    { header: "وارد", key: "total_in", width: 10 },
+    { header: "صادر", key: "total_out", width: 10 },
+    { header: "الرصيد", key: "current_stock", width: 10 },
+    { header: "الفرق", key: "difference", width: 10 },
+  ];
+
+  const exportData = filteredData.map((item) => ({
+    ...item,
+    product_name_full: item.product_name + (item.manufacturer_name ? ` - ${item.manufacturer_name}` : ""),
+    package_name: item.package_name || "—",
+    total_in: Number(item.total_in || 0),
+    total_out: Number(item.total_out || 0),
+    current_stock: Number(item.current_stock || 0),
+    difference: Number(item.current_stock || 0) - (Number(item.total_in || 0) - Number(item.total_out || 0)),
+  }));
+
   /* ========== Warehouse buttons (only if not locked) ========== */
   const warehouseOptions: WarehouseFilter[] =
     !isShowroomUser && !isWarehouseUser
@@ -200,6 +223,20 @@ export default function InventorySummaryPage() {
           </button>
         )}
 
+        {/* Export buttons */}
+        {!loading && filteredData.length > 0 && (
+          <div className="flex justify-center">
+            <ExportButtons
+              tableRef={tableRef}
+              columns={exportColumns}
+              data={exportData}
+              filename={`حركة-المخزون-${new Date().toISOString().slice(0, 10)}`}
+              title="تقرير حركة المخزون"
+              pdfOrientation="landscape"
+            />
+          </div>
+        )}
+
         {/* Loading */}
         {loading && (
           <div className="flex justify-center py-16">
@@ -211,7 +248,7 @@ export default function InventorySummaryPage() {
         {!loading && filteredData.length > 0 && (
           <Card>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto" ref={tableRef}>
                 <Table>
                   <TableHeader>
                     <TableRow>

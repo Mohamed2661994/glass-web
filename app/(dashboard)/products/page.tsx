@@ -154,7 +154,10 @@ export default function ProductsPage() {
   const [page, setPage] = useState(1);
   const limit = 30;
 
-  const fetchProducts = async (opts?: { searchQuery?: string; activeFilter?: string }) => {
+  const fetchProducts = async (opts?: {
+    searchQuery?: string;
+    activeFilter?: string;
+  }) => {
     try {
       setLoading(true);
       const params: Record<string, string> = {};
@@ -194,7 +197,9 @@ export default function ProductsPage() {
     fetchProducts({ activeFilter: showInactive ? "all" : "true" });
   }, [showInactive]);
 
-  useRealtime(["data:products", "data:invoices", "data:stock"], () => fetchProducts());
+  useRealtime(["data:products", "data:invoices", "data:stock"], () =>
+    fetchProducts(),
+  );
 
   // استخراج المصانع
   const manufacturers = [
@@ -430,13 +435,16 @@ export default function ProductsPage() {
                 setSearch(val);
                 setPage(1);
                 // Debounced server search
-                if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+                if (searchTimerRef.current)
+                  clearTimeout(searchTimerRef.current);
                 if (val.trim().length >= 2) {
                   searchTimerRef.current = setTimeout(() => {
                     fetchProducts({ searchQuery: val.trim() });
                   }, 400);
                 } else if (val.trim().length === 0) {
-                  fetchProducts({ activeFilter: showInactive ? "all" : "true" });
+                  fetchProducts({
+                    activeFilter: showInactive ? "all" : "true",
+                  });
                 }
               }}
             />
