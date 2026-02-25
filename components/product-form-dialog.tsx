@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -63,6 +63,36 @@ export function ProductFormDialog({
   onSuccess,
 }: Props) {
   const isEdit = !!product;
+  const formRef = useRef<HTMLDivElement>(null);
+
+  // Enter key navigation between fields
+  const handleEnterNav = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key !== "Enter") return;
+      const target = e.target as HTMLElement;
+      if (target.tagName === "BUTTON" || target.tagName === "TEXTAREA") return;
+      e.preventDefault();
+      const container = formRef.current;
+      if (!container) return;
+      const focusables = Array.from(
+        container.querySelectorAll<HTMLElement>(
+          'input:not([disabled]), [role="combobox"]:not([disabled])'
+        )
+      ).filter((el) => {
+        // skip hidden elements
+        return el.offsetParent !== null;
+      });
+      const idx = focusables.indexOf(target);
+      if (idx >= 0 && idx < focusables.length - 1) {
+        focusables[idx + 1].focus();
+      } else if (idx === focusables.length - 1) {
+        // Last field → click submit button
+        const btn = container.querySelector<HTMLButtonElement>('button[data-submit]');
+        btn?.click();
+      }
+    },
+    []
+  );
 
   const [manufacturers, setManufacturers] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -402,7 +432,7 @@ export function ProductFormDialog({
           <DialogTitle>{isEdit ? "تعديل صنف" : "إضافة صنف جديد"}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5">
+        <div className="space-y-5" ref={formRef} onKeyDown={handleEnterNav}>
           {/* Barcode */}
           <div className="space-y-1">
             <div className="relative">
@@ -987,7 +1017,7 @@ export function ProductFormDialog({
             إضافة عبوة أخرى
           </Button>
 
-          <Button className="w-full" onClick={handleSubmit} disabled={loading}>
+          <Button className="w-full" data-submit onClick={handleSubmit} disabled={loading}>
             {loading ? "جاري الحفظ..." : "حفظ الصنف"}
           </Button>
         </div>
