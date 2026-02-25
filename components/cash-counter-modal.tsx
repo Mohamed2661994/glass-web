@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useAuth } from "@/app/context/auth-context";
 
 /* ═══════════════════════════════════════════════════════════
    Types
@@ -20,10 +21,43 @@ type OpenSource = "icon" | "keyboard" | null;
 const DEFAULT_DENOMINATIONS = [200, 100, 50, 20, 10, 5, 1];
 
 /* ═══════════════════════════════════════════════════════════
+   Helpers – per-user localStorage
+   ═══════════════════════════════════════════════════════════ */
+
+function storageKey(userId: number | undefined) {
+  return `cash_counter_${userId ?? "guest"}`;
+}
+
+function saveToStorage(
+  userId: number | undefined,
+  denominations: number[],
+  counts: Record<number, number>,
+) {
+  try {
+    localStorage.setItem(
+      storageKey(userId),
+      JSON.stringify({ denominations, counts }),
+    );
+  } catch {}
+}
+
+function loadFromStorage(userId: number | undefined) {
+  try {
+    const raw = localStorage.getItem(storageKey(userId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed as { denominations: number[]; counts: Record<number, number> };
+  } catch {
+    return null;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
    Component
    ═══════════════════════════════════════════════════════════ */
 
 export function CashCounterModal() {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [source, setSource] = useState<OpenSource>(null);
 
@@ -34,6 +68,20 @@ export function CashCounterModal() {
   const [counts, setCounts] = useState<Record<number, number>>({});
   const [editingDenominations, setEditingDenominations] = useState(false);
   const [tempDenominations, setTempDenominations] = useState("");
+
+  /* ───── Load saved data for current user ───── */
+
+  const loadedRef = useRef(false);
+
+  useEffect(() => {
+    if (loadedRef.current) return;
+    const saved = loadFromStorage(user?.id);
+    if (saved) {
+      if (saved.denominations?.length) setDenominations(saved.denominations);
+      if (saved.counts) setCounts(saved.counts);
+    }
+    loadedRef.current = true;
+  }, [user?.id]);
 
   const inputRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
@@ -89,14 +137,21 @@ export function CashCounterModal() {
   const setCount = (denom: number, val: string) => {
     const n = val === "" ? 0 : parseInt(val, 10);
     if (isNaN(n) || n < 0) return;
-    setCounts((prev) => ({ ...prev, [denom]: n }));
+    setCounts((prev) => {
+      const next = { ...prev, [denom]: n };
+      saveToStorage(user?.id, denominations, next);
+      return next;
+    });
   };
 
   const rowTotal = (denom: number) => denom * (counts[denom] || 0);
 
   const grandTotal = denominations.reduce((s, d) => s + rowTotal(d), 0);
 
-  const clearAll = () => setCounts({});
+  const clearAll = () => {
+    setCounts({});
+    saveToStorage(user?.id, denominations, {});
+  };
 
   /* ───── Edit denominations ───── */
 
@@ -116,6 +171,7 @@ export function CashCounterModal() {
     const sorted = [...new Set(parsed)].sort((a, b) => b - a);
     setDenominations(sorted);
     setCounts({});
+    saveToStorage(user?.id, sorted, {});
     setEditingDenominations(false);
   };
 
