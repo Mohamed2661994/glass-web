@@ -76,8 +76,8 @@ export function ProductFormDialog({
       if (!container) return;
       const focusables = Array.from(
         container.querySelectorAll<HTMLElement>(
-          'input:not([disabled]), [role="combobox"]:not([disabled])'
-        )
+          'input:not([disabled]), [role="combobox"]:not([disabled])',
+        ),
       ).filter((el) => {
         // skip hidden elements
         return el.offsetParent !== null;
@@ -87,11 +87,13 @@ export function ProductFormDialog({
         focusables[idx + 1].focus();
       } else if (idx === focusables.length - 1) {
         // Last field → click submit button
-        const btn = container.querySelector<HTMLButtonElement>('button[data-submit]');
+        const btn = container.querySelector<HTMLButtonElement>(
+          "button[data-submit]",
+        );
         btn?.click();
       }
     },
-    []
+    [],
   );
 
   const [manufacturers, setManufacturers] = useState<string[]>([]);
@@ -1017,7 +1019,12 @@ export function ProductFormDialog({
             إضافة عبوة أخرى
           </Button>
 
-          <Button className="w-full" data-submit onClick={handleSubmit} disabled={loading}>
+          <Button
+            className="w-full"
+            data-submit
+            onClick={handleSubmit}
+            disabled={loading}
+          >
             {loading ? "جاري الحفظ..." : "حفظ الصنف"}
           </Button>
         </div>

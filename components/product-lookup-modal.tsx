@@ -306,6 +306,12 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                         ? product.retail_package || "-"
                         : product.wholesale_package || "-"}
                     </span>
+                    {invoiceType === "retail" &&
+                      product.wholesale_package && (
+                        <span>
+                          عبوة جملة: {product.wholesale_package}
+                        </span>
+                      )}
                     <span className="font-semibold text-foreground">
                       السعر: {product.price}
                     </span>
