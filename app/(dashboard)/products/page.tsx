@@ -82,7 +82,9 @@ export default function ProductsPage() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [activeFilter, setActiveFilter] = useState<"all" | "true" | "false">("true");
+  const [activeFilter, setActiveFilter] = useState<"all" | "true" | "false">(
+    "true",
+  );
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedManufacturer, setSelectedManufacturer] =
     useState<string>("الكل");

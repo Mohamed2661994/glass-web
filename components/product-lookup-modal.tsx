@@ -309,11 +309,13 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                     <span className="font-semibold text-foreground">
                       السعر: {product.price}
                     </span>
-                    {invoiceType === "retail" && product.wholesale_price != null && (
-                      <span className="font-semibold text-blue-600 dark:text-blue-400">
-                        سعر الجملة: {product.wholesale_price}
-                      </span>
-                    )}
+                    {invoiceType === "retail" &&
+                      product.wholesale_price != null &&
+                      Number(product.wholesale_price) > 0 && (
+                        <span className="font-semibold text-blue-600 dark:text-blue-400">
+                          سعر الجملة: {product.wholesale_price}
+                        </span>
+                      )}
                     {product.discount_amount > 0 && (
                       <span className="text-destructive">
                         خصم: {product.discount_amount}
