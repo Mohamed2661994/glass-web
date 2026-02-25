@@ -382,19 +382,24 @@ export async function shareInvoiceWhatsApp(
     }
   }
 
-  // Fallback: download the image then open wa.me
+  // Fallback for desktop: copy image to clipboard, then open WhatsApp Web
   if (imgBlob) {
-    const url = URL.createObjectURL(imgBlob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `فاتورة-${invoice.id}.png`;
-    a.click();
-    URL.revokeObjectURL(url);
-
-    // Small delay then open wa.me so user can attach the downloaded image
-    await new Promise((r) => setTimeout(r, 500));
+    try {
+      // Try to copy the image to clipboard so user can paste in WhatsApp Web
+      const item = new ClipboardItem({ "image/png": imgBlob });
+      await navigator.clipboard.write([item]);
+    } catch {
+      // Clipboard API not available — download the image instead
+      const url = URL.createObjectURL(imgBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `فاتورة-${invoice.id}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   }
 
+  // Open WhatsApp Web chat (user pastes image with Ctrl+V)
   const encoded = encodeURIComponent(textMessage);
   window.open(`https://wa.me/${normalizedPhone}?text=${encoded}`, "_blank");
   return "whatsapp_opened";

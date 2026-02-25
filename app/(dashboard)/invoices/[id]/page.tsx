@@ -306,7 +306,10 @@ export default function InvoiceDetailsPage() {
                 if (result === "shared") {
                   toast.success("تم المشاركة بنجاح");
                 } else if (result === "whatsapp_opened") {
-                  toast.success("تم فتح واتساب");
+                  toast.success(
+                    "تم نسخ صورة الفاتورة — الصقها في المحادثة (Ctrl+V)",
+                    { duration: 6000 },
+                  );
                 }
               } catch {
                 toast.error("فشل إرسال الفاتورة");

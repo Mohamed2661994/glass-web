@@ -1497,8 +1497,14 @@ export default function EditWholesaleInvoicePage() {
                           is_return: it.is_return,
                         })),
                       } as WhatsAppInvoice);
-                      if (result === "no_phone")
+                      if (result === "no_phone") {
                         toast.error("لا يوجد رقم هاتف");
+                      } else if (result === "whatsapp_opened") {
+                        toast.success(
+                          "تم نسخ صورة الفاتورة — الصقها في المحادثة (Ctrl+V)",
+                          { duration: 6000 },
+                        );
+                      }
                     } catch {
                       toast.error("فشل الإرسال");
                     } finally {
