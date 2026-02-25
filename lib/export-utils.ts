@@ -371,53 +371,14 @@ async function generateInvoicePdfBlob(
 }
 
 /**
- * Share an invoice via WhatsApp
- * - Mobile: use Web Share API to share PDF directly
- * - Desktop: download PDF to user's device, then open WhatsApp Web chat
+ * Download invoice as PDF
  */
-export async function shareInvoiceWhatsApp(
+export async function downloadInvoicePdf(
   invoice: WhatsAppInvoice,
-): Promise<"shared" | "whatsapp_opened" | "no_phone"> {
-  const isSale = invoice.movement_type !== "purchase";
-  const name = isSale
-    ? invoice.customer_name || "نقدي"
-    : invoice.supplier_name || "—";
-  const phone = isSale ? invoice.customer_phone : invoice.supplier_phone;
-
-  if (!phone) return "no_phone";
-
-  const normalizedPhone = normalizePhone(phone);
-
-  // Generate invoice PDF
+): Promise<boolean> {
   const pdfBlob = await generateInvoicePdfBlob(invoice);
-  if (!pdfBlob) {
-    // PDF generation failed — just open chat with text
-    const text = encodeURIComponent(`فاتورة رقم #${invoice.id}`);
-    window.open(`https://wa.me/${normalizedPhone}?text=${text}`, "_blank");
-    return "whatsapp_opened";
-  }
+  if (!pdfBlob) return false;
 
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-  // Mobile: use Web Share API to share the PDF file directly
-  if (isMobile && navigator.share) {
-    try {
-      const pdfFile = new File([pdfBlob], `invoice-${invoice.id}.pdf`, {
-        type: "application/pdf",
-      });
-      await navigator.share({
-        title: `فاتورة #${invoice.id}`,
-        files: [pdfFile],
-      });
-      return "shared";
-    } catch (err: any) {
-      if (err?.name === "AbortError") return "shared";
-      // Fall through to download
-    }
-  }
-
-  // Desktop (or mobile share failed): download PDF then open WhatsApp Web
-  // Use a proper download approach that works reliably
   const blobUrl = URL.createObjectURL(pdfBlob);
   const link = document.createElement("a");
   link.href = blobUrl;
@@ -425,18 +386,29 @@ export async function shareInvoiceWhatsApp(
   link.style.display = "none";
   document.body.appendChild(link);
   link.click();
-
-  // Wait for the browser to start the download before revoking
   await new Promise((r) => setTimeout(r, 1500));
   document.body.removeChild(link);
   URL.revokeObjectURL(blobUrl);
+  return true;
+}
 
-  // Open WhatsApp Web with the chat
-  const textMessage = `فاتورة رقم #${invoice.id} — ${isSale ? "العميل" : "المورد"}: ${name}`;
-  const encoded = encodeURIComponent(textMessage);
-  window.open(
-    `https://web.whatsapp.com/send?phone=${normalizedPhone}&text=${encoded}`,
-    "_blank",
-  );
-  return "whatsapp_opened";
+/**
+ * Open WhatsApp chat with the customer/supplier
+ */
+export function openWhatsApp(invoice: {
+  id: number;
+  customer_name?: string;
+  customer_phone?: string;
+  supplier_name?: string;
+  supplier_phone?: string;
+  movement_type?: string;
+}): "opened" | "no_phone" {
+  const isSale = invoice.movement_type !== "purchase";
+  const phone = isSale ? invoice.customer_phone : invoice.supplier_phone;
+
+  if (!phone) return "no_phone";
+
+  const normalizedPhone = normalizePhone(phone);
+  window.open(`https://wa.me/${normalizedPhone}`, "_blank");
+  return "opened";
 }
