@@ -459,13 +459,13 @@ export async function downloadInvoicePdf(
 
 /**
  * Send invoice PDF via WhatsApp:
- * 1. Generate PDF blob in isolated iframe
- * 2. Download the PDF file
- * 3. Open WhatsApp chat directly on customer's number
+ * 1. Generate PDF blob
+ * 2. Mobile → Web Share API (PDF auto-attached to WhatsApp)
+ * 3. Desktop fallback → download PDF + open wa.me chat
  */
 export async function shareViaWhatsApp(
   invoice: WhatsAppInvoice,
-): Promise<"downloaded_and_opened" | "no_phone" | "failed"> {
+): Promise<"shared" | "downloaded_and_opened" | "no_phone" | "failed"> {
   const isSale = invoice.movement_type !== "purchase";
   const phone = isSale ? invoice.customer_phone : invoice.supplier_phone;
 
@@ -475,18 +475,36 @@ export async function shareViaWhatsApp(
   const pdfBlob = await generateInvoicePdfBlob(invoice);
   if (!pdfBlob) return "failed";
 
-  // 2. Download PDF
+  const normalizedPhone = normalizePhone(phone);
+  const pdfFile = new File([pdfBlob], `فاتورة-${invoice.id}.pdf`, {
+    type: "application/pdf",
+  });
+
+  // 2. Mobile: Web Share API — PDF gets auto-attached in WhatsApp
+  if (navigator.share && navigator.canShare?.({ files: [pdfFile] })) {
+    try {
+      await navigator.share({
+        files: [pdfFile],
+        title: `فاتورة #${invoice.id}`,
+        text: `فاتورة رقم ${invoice.id}`,
+      });
+      return "shared";
+    } catch (err: any) {
+      if (err?.name === "AbortError") return "failed";
+      // Fall through to desktop fallback
+    }
+  }
+
+  // 3. Desktop fallback: download PDF + open WhatsApp chat
   const blobUrl = URL.createObjectURL(pdfBlob);
   const link = document.createElement("a");
   link.href = blobUrl;
-  link.download = `invoice-${invoice.id}.pdf`;
+  link.download = `فاتورة-${invoice.id}.pdf`;
   link.style.display = "none";
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
 
-  // 3. Open WhatsApp on the customer's number after a short delay
-  const normalizedPhone = normalizePhone(phone);
   setTimeout(() => {
     window.open(`https://wa.me/${normalizedPhone}`, "_blank");
     URL.revokeObjectURL(blobUrl);

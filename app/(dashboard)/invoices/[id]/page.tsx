@@ -356,8 +356,13 @@ export default function InvoiceDetailsPage() {
                     is_return: it.is_return,
                   })),
                 } as WhatsAppInvoice);
-                if (result === "downloaded_and_opened")
-                  toast.success("تم تنزيل الفاتورة — ارفقها من 📎 في المحادثة", { duration: 8000 });
+                if (result === "shared")
+                  toast.success("تم إرسال الفاتورة بنجاح");
+                else if (result === "downloaded_and_opened")
+                  toast.success(
+                    "تم تنزيل الفاتورة — ارفقها من 📎 في المحادثة",
+                    { duration: 8000 },
+                  );
                 else if (result === "no_phone") toast.error("لا يوجد رقم هاتف");
                 else toast.error("فشل إنشاء PDF");
               } catch {
