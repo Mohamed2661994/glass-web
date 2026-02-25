@@ -51,7 +51,8 @@ export default function CustomersPage() {
   const [savingPhone, setSavingPhone] = useState(false);
 
   // Delete customer confirm
-  const [deleteCustomerTarget, setDeleteCustomerTarget] = useState<Customer | null>(null);
+  const [deleteCustomerTarget, setDeleteCustomerTarget] =
+    useState<Customer | null>(null);
   const [deletingCustomer, setDeletingCustomer] = useState(false);
 
   // Delete phone confirm
@@ -164,7 +165,9 @@ export default function CustomersPage() {
       setDeletingCustomer(true);
       await api.delete(`/customers/${deleteCustomerTarget.id}`);
       toast.success(`تم حذف العميل "${deleteCustomerTarget.name}"`);
-      setCustomers((prev) => prev.filter((c) => c.id !== deleteCustomerTarget.id));
+      setCustomers((prev) =>
+        prev.filter((c) => c.id !== deleteCustomerTarget.id),
+      );
       // If we were editing this customer, close the dialog
       if (editCustomer?.id === deleteCustomerTarget.id) closeEdit();
     } catch (err: any) {
@@ -402,13 +405,16 @@ export default function CustomersPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>حذف العميل</AlertDialogTitle>
               <AlertDialogDescription>
-                هل أنت متأكد من حذف العميل &quot;{deleteCustomerTarget?.name}&quot;؟
+                هل أنت متأكد من حذف العميل &quot;{deleteCustomerTarget?.name}
+                &quot;؟
                 <br />
                 سيتم حذف جميع أرقام الهاتف المسجلة له.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={deletingCustomer}>إلغاء</AlertDialogCancel>
+              <AlertDialogCancel disabled={deletingCustomer}>
+                إلغاء
+              </AlertDialogCancel>
               <AlertDialogAction
                 onClick={deleteCustomer}
                 disabled={deletingCustomer}
