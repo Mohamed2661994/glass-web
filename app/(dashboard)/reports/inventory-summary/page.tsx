@@ -167,12 +167,16 @@ export default function InventorySummaryPage() {
 
   const exportData = filteredData.map((item) => ({
     ...item,
-    product_name_full: item.product_name + (item.manufacturer_name ? ` - ${item.manufacturer_name}` : ""),
+    product_name_full:
+      item.product_name +
+      (item.manufacturer_name ? ` - ${item.manufacturer_name}` : ""),
     package_name: item.package_name || "—",
     total_in: Number(item.total_in || 0),
     total_out: Number(item.total_out || 0),
     current_stock: Number(item.current_stock || 0),
-    difference: Number(item.current_stock || 0) - (Number(item.total_in || 0) - Number(item.total_out || 0)),
+    difference:
+      Number(item.current_stock || 0) -
+      (Number(item.total_in || 0) - Number(item.total_out || 0)),
   }));
 
   /* ========== Warehouse buttons (only if not locked) ========== */

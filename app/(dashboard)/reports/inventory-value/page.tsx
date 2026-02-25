@@ -156,7 +156,8 @@ export default function InventoryValuePage() {
 
   const exportData = data.map((item) => ({
     ...item,
-    product_name_full: item.product_name + (item.manufacturer ? ` - ${item.manufacturer}` : ""),
+    product_name_full:
+      item.product_name + (item.manufacturer ? ` - ${item.manufacturer}` : ""),
     pkg: item.package_name || item.packages || "—",
     quantity: Number(item.quantity),
     purchase_price: Number(item.purchase_price),

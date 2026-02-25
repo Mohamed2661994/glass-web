@@ -311,123 +311,126 @@ export default function InvoicesPage() {
       <Card className="hidden md:block">
         <CardContent className="p-0">
           <div ref={tableRef}>
-          <table className="w-full text-sm">
-            <thead className="bg-muted">
-              <tr>
-                <th className="p-3 text-right">رقم</th>
-                <th className="p-3 text-right">الحركة</th>
-                <th className="p-3 text-right">العميل / المورد</th>
-                <th className="p-3 text-right">إجمالي الأصناف</th>
-                <th className="p-3 text-right">حساب سابق</th>
-                <th className="p-3 text-right">المدفوع</th>
-                <th className="p-3 text-right">الباقي</th>
-                <th className="p-3 text-right">الحالة</th>
-                <th className="p-3 text-right">بواسطة</th>
-                <th className="p-3 text-center">إجراءات</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i} className="border-b">
-                    {Array.from({ length: 10 }).map((_, j) => (
-                      <td key={j} className="p-3">
-                        <Skeleton className="h-4 w-full" />
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              ) : data.length === 0 ? (
+            <table className="w-full text-sm">
+              <thead className="bg-muted">
                 <tr>
-                  <td
-                    colSpan={10}
-                    className="p-6 text-center text-muted-foreground"
-                  >
-                    لا توجد فواتير
-                  </td>
+                  <th className="p-3 text-right">رقم</th>
+                  <th className="p-3 text-right">الحركة</th>
+                  <th className="p-3 text-right">العميل / المورد</th>
+                  <th className="p-3 text-right">إجمالي الأصناف</th>
+                  <th className="p-3 text-right">حساب سابق</th>
+                  <th className="p-3 text-right">المدفوع</th>
+                  <th className="p-3 text-right">الباقي</th>
+                  <th className="p-3 text-right">الحالة</th>
+                  <th className="p-3 text-right">بواسطة</th>
+                  <th className="p-3 text-center">إجراءات</th>
                 </tr>
-              ) : (
-                data.map((invoice) => (
-                  <tr key={invoice.id} className="border-b hover:bg-muted/50">
-                    <td className="p-3">{invoice.id}</td>
-                    <td className="p-3">
-                      <span>
-                        {invoice.movement_type === "sale" ? "بيع" : "شراء"}
-                      </span>
-                      {invoice.is_return && (
-                        <Badge className="bg-orange-500 mr-2 text-xs">
-                          مرتجع
-                        </Badge>
-                      )}
-                    </td>
-                    <td className="p-3">
-                      {invoice.movement_type === "purchase"
-                        ? invoice.supplier_name || "—"
-                        : invoice.customer_name || "نقدي"}
-                    </td>
-                    <td className="p-3">
-                      {Number(invoice.subtotal).toFixed(2)}
-                    </td>
-                    <td className="p-3">
-                      {Number(invoice.previous_balance || 0).toFixed(2)}
-                    </td>
-                    <td className="p-3">
-                      {Number(invoice.paid_amount).toFixed(2)}
-                    </td>
-                    <td className="p-3">
-                      {Number(invoice.remaining_amount).toFixed(2)}
-                    </td>
-                    <td className="p-3">
-                      {getStatusBadge(invoice.payment_status)}
-                    </td>
-                    <td className="p-3 text-xs text-muted-foreground">
-                      {invoice.created_by_name || "—"}
-                    </td>
-                    <td className="p-3 flex gap-2 justify-center">
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        onClick={() => router.push(`/invoices/${invoice.id}`)}
-                      >
-                        <Eye size={16} />
-                      </Button>
-
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        onClick={() =>
-                          router.push(
-                            `/invoices/${invoice.id}/edit/${invoice.invoice_type}`,
-                          )
-                        }
-                      >
-                        <Pencil size={16} />
-                      </Button>
-
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        disabled={deleting === invoice.id}
-                        onClick={() => confirmDelete(invoice.id)}
-                      >
-                        <Trash2 size={16} />
-                      </Button>
-
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        onClick={() =>
-                          window.open(`/invoices/${invoice.id}/print`, "_blank")
-                        }
-                      >
-                        <Printer size={16} />
-                      </Button>
+              </thead>
+              <tbody>
+                {loading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i} className="border-b">
+                      {Array.from({ length: 10 }).map((_, j) => (
+                        <td key={j} className="p-3">
+                          <Skeleton className="h-4 w-full" />
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                ) : data.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={10}
+                      className="p-6 text-center text-muted-foreground"
+                    >
+                      لا توجد فواتير
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  data.map((invoice) => (
+                    <tr key={invoice.id} className="border-b hover:bg-muted/50">
+                      <td className="p-3">{invoice.id}</td>
+                      <td className="p-3">
+                        <span>
+                          {invoice.movement_type === "sale" ? "بيع" : "شراء"}
+                        </span>
+                        {invoice.is_return && (
+                          <Badge className="bg-orange-500 mr-2 text-xs">
+                            مرتجع
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="p-3">
+                        {invoice.movement_type === "purchase"
+                          ? invoice.supplier_name || "—"
+                          : invoice.customer_name || "نقدي"}
+                      </td>
+                      <td className="p-3">
+                        {Number(invoice.subtotal).toFixed(2)}
+                      </td>
+                      <td className="p-3">
+                        {Number(invoice.previous_balance || 0).toFixed(2)}
+                      </td>
+                      <td className="p-3">
+                        {Number(invoice.paid_amount).toFixed(2)}
+                      </td>
+                      <td className="p-3">
+                        {Number(invoice.remaining_amount).toFixed(2)}
+                      </td>
+                      <td className="p-3">
+                        {getStatusBadge(invoice.payment_status)}
+                      </td>
+                      <td className="p-3 text-xs text-muted-foreground">
+                        {invoice.created_by_name || "—"}
+                      </td>
+                      <td className="p-3 flex gap-2 justify-center">
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={() => router.push(`/invoices/${invoice.id}`)}
+                        >
+                          <Eye size={16} />
+                        </Button>
+
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={() =>
+                            router.push(
+                              `/invoices/${invoice.id}/edit/${invoice.invoice_type}`,
+                            )
+                          }
+                        >
+                          <Pencil size={16} />
+                        </Button>
+
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          disabled={deleting === invoice.id}
+                          onClick={() => confirmDelete(invoice.id)}
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={() =>
+                            window.open(
+                              `/invoices/${invoice.id}/print`,
+                              "_blank",
+                            )
+                          }
+                        >
+                          <Printer size={16} />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>

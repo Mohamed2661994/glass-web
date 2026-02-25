@@ -323,93 +323,95 @@ export default function ProductMovementPage() {
         {/* Table */}
         {!loading && filteredData.length > 0 && (
           <>
-          {/* Export buttons */}
-          <div className="flex justify-center">
-            <ExportButtons
-              tableRef={tableRef}
-              columns={exportColumns}
-              data={exportData}
-              filename={`حركة-${selectedProduct?.name || "صنف"}-${new Date().toISOString().slice(0, 10)}`}
-              title={`تقرير حركة: ${selectedProduct?.name || ""}`}
-              pdfOrientation="landscape"
-            />
-          </div>
-          <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto" ref={tableRef}>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-center">التاريخ</TableHead>
-                      <TableHead className="text-center">المخزن</TableHead>
-                      <TableHead className="text-center">النوع</TableHead>
-                      <TableHead className="text-center">
-                        رقم الفاتورة
-                      </TableHead>
-                      <TableHead className="text-center">الكمية</TableHead>
-                      <TableHead className="text-center">العبوة</TableHead>
-                      <TableHead className="text-center">الطرف</TableHead>
-                      <TableHead className="text-center">ملاحظات</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredData.map((item, idx) => {
-                      const mt =
-                        item.movement_type || item.invoice_movement_type || "";
-                      const isIn = [
-                        "purchase",
-                        "transfer_in",
-                        "replace_in",
-                        "in",
-                      ].includes(mt);
+            {/* Export buttons */}
+            <div className="flex justify-center">
+              <ExportButtons
+                tableRef={tableRef}
+                columns={exportColumns}
+                data={exportData}
+                filename={`حركة-${selectedProduct?.name || "صنف"}-${new Date().toISOString().slice(0, 10)}`}
+                title={`تقرير حركة: ${selectedProduct?.name || ""}`}
+                pdfOrientation="landscape"
+              />
+            </div>
+            <Card>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto" ref={tableRef}>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-center">التاريخ</TableHead>
+                        <TableHead className="text-center">المخزن</TableHead>
+                        <TableHead className="text-center">النوع</TableHead>
+                        <TableHead className="text-center">
+                          رقم الفاتورة
+                        </TableHead>
+                        <TableHead className="text-center">الكمية</TableHead>
+                        <TableHead className="text-center">العبوة</TableHead>
+                        <TableHead className="text-center">الطرف</TableHead>
+                        <TableHead className="text-center">ملاحظات</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredData.map((item, idx) => {
+                        const mt =
+                          item.movement_type ||
+                          item.invoice_movement_type ||
+                          "";
+                        const isIn = [
+                          "purchase",
+                          "transfer_in",
+                          "replace_in",
+                          "in",
+                        ].includes(mt);
 
-                      return (
-                        <TableRow key={idx}>
-                          <TableCell className="text-center text-xs">
-                            {getDate(item)}
-                          </TableCell>
-                          <TableCell className="text-center text-xs">
-                            {item.warehouse_name}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant={isIn ? "default" : "destructive"}>
-                              {isIn ? "وارد" : "صادر"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-center text-xs">
-                            {item.invoice_id ? (
-                              <a
-                                href={`/invoices/${item.invoice_id}`}
-                                className="text-blue-600 hover:underline font-medium"
-                              >
-                                #{item.invoice_id}
-                              </a>
-                            ) : (
-                              "—"
-                            )}
-                          </TableCell>
-                          <TableCell
-                            className={`text-center font-bold ${isIn ? "text-green-600" : "text-red-600"}`}
-                          >
-                            {item.quantity}
-                          </TableCell>
-                          <TableCell className="text-center text-xs">
-                            {item.package_name || "—"}
-                          </TableCell>
-                          <TableCell className="text-center text-xs font-medium">
-                            {item.party_name || "—"}
-                          </TableCell>
-                          <TableCell className="text-center text-xs text-muted-foreground">
-                            {item.note || "—"}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+                        return (
+                          <TableRow key={idx}>
+                            <TableCell className="text-center text-xs">
+                              {getDate(item)}
+                            </TableCell>
+                            <TableCell className="text-center text-xs">
+                              {item.warehouse_name}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant={isIn ? "default" : "destructive"}>
+                                {isIn ? "وارد" : "صادر"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center text-xs">
+                              {item.invoice_id ? (
+                                <a
+                                  href={`/invoices/${item.invoice_id}`}
+                                  className="text-blue-600 hover:underline font-medium"
+                                >
+                                  #{item.invoice_id}
+                                </a>
+                              ) : (
+                                "—"
+                              )}
+                            </TableCell>
+                            <TableCell
+                              className={`text-center font-bold ${isIn ? "text-green-600" : "text-red-600"}`}
+                            >
+                              {item.quantity}
+                            </TableCell>
+                            <TableCell className="text-center text-xs">
+                              {item.package_name || "—"}
+                            </TableCell>
+                            <TableCell className="text-center text-xs font-medium">
+                              {item.party_name || "—"}
+                            </TableCell>
+                            <TableCell className="text-center text-xs text-muted-foreground">
+                              {item.note || "—"}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
           </>
         )}
 

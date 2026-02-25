@@ -138,7 +138,9 @@ export default function LowStockReportPage() {
 
   const exportData = filteredData.map((item) => ({
     ...item,
-    product_name_full: item.product_name + (item.manufacturer_name ? ` - ${item.manufacturer_name}` : ""),
+    product_name_full:
+      item.product_name +
+      (item.manufacturer_name ? ` - ${item.manufacturer_name}` : ""),
     pkg: item.package_name || "—",
   }));
 

@@ -128,7 +128,9 @@ export default function NegativeStockReportPage() {
   const exportData = filteredData.map((item, idx) => ({
     ...item,
     idx: idx + 1,
-    product_name_full: item.product_name + (item.manufacturer_name ? ` - ${item.manufacturer_name}` : ""),
+    product_name_full:
+      item.product_name +
+      (item.manufacturer_name ? ` - ${item.manufacturer_name}` : ""),
     barcode: item.barcode || "—",
     pkg: item.package_name || "—",
   }));

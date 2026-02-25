@@ -139,7 +139,10 @@ export function ExportButtons({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={handleExcel} className="gap-2 cursor-pointer">
+        <DropdownMenuItem
+          onClick={handleExcel}
+          className="gap-2 cursor-pointer"
+        >
           <FileSpreadsheet className="h-4 w-4" />
           تصدير Excel
         </DropdownMenuItem>
