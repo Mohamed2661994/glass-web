@@ -220,9 +220,9 @@ function normalizePhone(phone: string): string {
 }
 
 /**
- * Build a clean invoice HTML and render to PNG blob via html2canvas
+ * Build a clean invoice HTML, render via html2canvas, then wrap in a PDF blob
  */
-async function generateInvoiceImageBlob(
+async function generateInvoicePdfBlob(
   invoice: WhatsAppInvoice,
 ): Promise<Blob | null> {
   const isSale = invoice.movement_type !== "purchase";
@@ -244,7 +244,8 @@ async function generateInvoiceImageBlob(
 
   const items = invoice.items || [];
   const hasDiscount = items.some((it) => Number(it.discount || 0) > 0);
-  const extraDiscount = Number(invoice.extra_discount || 0) + Number(invoice.manual_discount || 0);
+  const extraDiscount =
+    Number(invoice.extra_discount || 0) + Number(invoice.manual_discount || 0);
 
   // Build items rows HTML
   const itemsHtml = items
@@ -326,13 +327,43 @@ async function generateInvoiceImageBlob(
     });
     document.body.removeChild(container);
 
-    return new Promise<Blob | null>((resolve) => {
-      canvas.toBlob(
-        (blob: Blob | null) => resolve(blob),
-        "image/png",
-        1,
-      );
-    });
+    // Convert canvas to PDF
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 10;
+    const usableWidth = pageWidth - margin * 2;
+    const imgHeight = (canvas.height * usableWidth) / canvas.width;
+    const usableHeight = pageHeight - margin * 2;
+
+    if (imgHeight <= usableHeight) {
+      pdf.addImage(imgData, "PNG", margin, margin, usableWidth, imgHeight);
+    } else {
+      let remainingHeight = canvas.height;
+      let srcY = 0;
+      const sliceHeightPx = (usableHeight / usableWidth) * canvas.width;
+      let isFirstPage = true;
+      while (remainingHeight > 0) {
+        if (!isFirstPage) pdf.addPage();
+        const sliceH = Math.min(sliceHeightPx, remainingHeight);
+        const sliceCanvas = document.createElement("canvas");
+        sliceCanvas.width = canvas.width;
+        sliceCanvas.height = sliceH;
+        const ctx = sliceCanvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(canvas, 0, srcY, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+        }
+        const sliceImg = sliceCanvas.toDataURL("image/png");
+        const displayH = (sliceH * usableWidth) / canvas.width;
+        pdf.addImage(sliceImg, "PNG", margin, margin, usableWidth, displayH);
+        srcY += sliceH;
+        remainingHeight -= sliceH;
+        isFirstPage = false;
+      }
+    }
+
+    return pdf.output("blob");
   } catch {
     document.body.removeChild(container);
     return null;
@@ -341,9 +372,9 @@ async function generateInvoiceImageBlob(
 
 /**
  * Share an invoice via WhatsApp
- * 1. Generate a clean invoice image from data
- * 2. Try Web Share API with image (works on mobile — shows WhatsApp picker)
- * 3. Fallback: download the image + open wa.me chat
+ * 1. Generate a PDF from invoice data
+ * 2. Try Web Share API with PDF file (works on Chrome/Edge desktop + mobile)
+ * 3. Fallback: download PDF + open wa.me chat
  */
 export async function shareInvoiceWhatsApp(
   invoice: WhatsAppInvoice,
@@ -359,21 +390,21 @@ export async function shareInvoiceWhatsApp(
   const normalizedPhone = normalizePhone(phone);
   const textMessage = `فاتورة رقم #${invoice.id} — ${isSale ? "العميل" : "المورد"}: ${name}`;
 
-  // Generate invoice image
-  const imgBlob = await generateInvoiceImageBlob(invoice);
+  // Generate invoice PDF
+  const pdfBlob = await generateInvoicePdfBlob(invoice);
 
-  // Try Web Share API with image file
-  if (imgBlob && navigator.share && navigator.canShare) {
+  // Try Web Share API with PDF file
+  if (pdfBlob && navigator.share && navigator.canShare) {
     try {
-      const imgFile = new File([imgBlob], `فاتورة-${invoice.id}.png`, {
-        type: "image/png",
+      const pdfFile = new File([pdfBlob], `فاتورة-${invoice.id}.pdf`, {
+        type: "application/pdf",
       });
 
-      if (navigator.canShare({ files: [imgFile] })) {
+      if (navigator.canShare({ files: [pdfFile] })) {
         await navigator.share({
           title: `فاتورة #${invoice.id}`,
           text: textMessage,
-          files: [imgFile],
+          files: [pdfFile],
         });
         return "shared";
       }
@@ -382,24 +413,17 @@ export async function shareInvoiceWhatsApp(
     }
   }
 
-  // Fallback for desktop: copy image to clipboard, then open WhatsApp Web
-  if (imgBlob) {
-    try {
-      // Try to copy the image to clipboard so user can paste in WhatsApp Web
-      const item = new ClipboardItem({ "image/png": imgBlob });
-      await navigator.clipboard.write([item]);
-    } catch {
-      // Clipboard API not available — download the image instead
-      const url = URL.createObjectURL(imgBlob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `فاتورة-${invoice.id}.png`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
+  // Fallback: download the PDF then open wa.me
+  if (pdfBlob) {
+    const url = URL.createObjectURL(pdfBlob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `فاتورة-${invoice.id}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+    await new Promise((r) => setTimeout(r, 500));
   }
 
-  // Open WhatsApp Web chat (user pastes image with Ctrl+V)
   const encoded = encodeURIComponent(textMessage);
   window.open(`https://wa.me/${normalizedPhone}?text=${encoded}`, "_blank");
   return "whatsapp_opened";

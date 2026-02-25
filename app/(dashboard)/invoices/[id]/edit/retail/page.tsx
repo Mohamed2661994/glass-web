@@ -1691,7 +1691,7 @@ export default function EditRetailInvoicePage() {
                         toast.error("لا يوجد رقم هاتف");
                       } else if (result === "whatsapp_opened") {
                         toast.success(
-                          "تم نسخ صورة الفاتورة — الصقها في المحادثة (Ctrl+V)",
+                          "تم تنزيل PDF الفاتورة — ارفقها في المحادثة",
                           { duration: 6000 },
                         );
                       }
