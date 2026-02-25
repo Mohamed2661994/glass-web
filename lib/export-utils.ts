@@ -64,20 +64,24 @@ export async function exportToPdf(
     windowWidth: targetWidth + 40,
     width: targetWidth + 32,
     onclone: (doc: Document, clonedEl: HTMLElement) => {
-      // Remove all stylesheets to avoid html2canvas choking on modern CSS
-      // (e.g. lab(), oklch() color functions from Tailwind/shadcn)
-      doc.querySelectorAll('style, link[rel="stylesheet"]').forEach((el) => el.remove());
+      // Remove only stylesheets containing modern color functions that break html2canvas
+      doc.querySelectorAll('style').forEach((el) => {
+        if (el.textContent && /lab\(|oklch\(|oklab\(|lch\(/.test(el.textContent)) el.remove();
+      });
+      doc.querySelectorAll('link[rel="stylesheet"]').forEach((el) => el.remove());
 
       // Style the cloned element for clean PDF output
+      const font = 'Tahoma, "Segoe UI", Arial, sans-serif';
       clonedEl.style.width = targetWidth + "px";
       clonedEl.style.direction = "rtl";
-      clonedEl.style.fontFamily = "Tahoma, Arial, sans-serif";
+      clonedEl.style.fontFamily = font;
       clonedEl.style.background = "white";
       clonedEl.style.color = "black";
       clonedEl.style.padding = "16px";
 
       clonedEl.querySelectorAll("*").forEach((el: Element) => {
         const htmlEl = el as HTMLElement;
+        htmlEl.style.fontFamily = font;
         htmlEl.style.color = "black";
         if (htmlEl.tagName === "TH" || htmlEl.closest("thead")) {
           htmlEl.style.backgroundColor = "#f3f4f6";
@@ -330,9 +334,11 @@ async function generateInvoicePdfBlob(
       backgroundColor: "#ffffff",
       scale: 2,
       onclone: (clonedDoc: Document) => {
-        // Remove all stylesheets to avoid html2canvas choking on modern CSS
-        // (e.g. lab(), oklch() color functions from Tailwind/shadcn)
-        clonedDoc.querySelectorAll('style, link[rel="stylesheet"]').forEach((el) => el.remove());
+        // Remove only stylesheets containing modern color functions that break html2canvas
+        clonedDoc.querySelectorAll('style').forEach((el) => {
+          if (el.textContent && /lab\(|oklch\(|oklab\(|lch\(/.test(el.textContent)) el.remove();
+        });
+        clonedDoc.querySelectorAll('link[rel="stylesheet"]').forEach((el) => el.remove());
       },
     });
     document.body.removeChild(container);
