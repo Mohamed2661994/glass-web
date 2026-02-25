@@ -212,8 +212,7 @@ function buildInvoiceHtml(invoice: WhatsAppInvoice): string {
   const items = invoice.items || [];
   const hasDiscount = items.some((it) => Number(it.discount || 0) > 0);
   const extraDiscount =
-    Number(invoice.extra_discount || 0) +
-    Number(invoice.manual_discount || 0);
+    Number(invoice.extra_discount || 0) + Number(invoice.manual_discount || 0);
 
   const itemsHtml = items
     .map((it, idx) => {
@@ -355,7 +354,11 @@ async function generateInvoicePdfBlob(
     document.body.removeChild(iframe);
 
     const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
+    });
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
     const margin = 10;
@@ -377,7 +380,18 @@ async function generateInvoicePdfBlob(
         sliceCanvas.width = canvas.width;
         sliceCanvas.height = sliceH;
         const ctx = sliceCanvas.getContext("2d");
-        if (ctx) ctx.drawImage(canvas, 0, srcY, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+        if (ctx)
+          ctx.drawImage(
+            canvas,
+            0,
+            srcY,
+            canvas.width,
+            sliceH,
+            0,
+            0,
+            canvas.width,
+            sliceH,
+          );
         const sliceImg = sliceCanvas.toDataURL("image/png");
         const displayH = (sliceH * usableWidth) / canvas.width;
         pdf.addImage(sliceImg, "PNG", margin, margin, usableWidth, displayH);
@@ -390,7 +404,11 @@ async function generateInvoicePdfBlob(
     return pdf.output("blob");
   } catch (e) {
     console.error("PDF generation in iframe failed:", e);
-    try { document.body.removeChild(iframe); } catch { /* already removed */ }
+    try {
+      document.body.removeChild(iframe);
+    } catch {
+      /* already removed */
+    }
     return null;
   }
 }

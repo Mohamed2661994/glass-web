@@ -1738,10 +1738,15 @@ export default function EditRetailInvoicePage() {
                           is_return: it.is_return,
                         })),
                       } as WhatsAppInvoice);
-                      if (result === "shared") toast.success("تم الإرسال بنجاح");
+                      if (result === "shared")
+                        toast.success("تم الإرسال بنجاح");
                       else if (result === "downloaded_and_opened")
-                        toast.success("تم تنزيل PDF وفتح واتساب — ارفق الملف من 📎", { duration: 8000 });
-                      else if (result === "no_phone") toast.error("لا يوجد رقم هاتف");
+                        toast.success(
+                          "تم تنزيل PDF وفتح واتساب — ارفق الملف من 📎",
+                          { duration: 8000 },
+                        );
+                      else if (result === "no_phone")
+                        toast.error("لا يوجد رقم هاتف");
                       else toast.error("فشل الإرسال");
                     } catch {
                       toast.error("فشل الإرسال");

@@ -50,6 +50,10 @@ export default function CustomersPage() {
   const [savingName, setSavingName] = useState(false);
   const [savingPhone, setSavingPhone] = useState(false);
 
+  // Delete customer confirm
+  const [deleteCustomerTarget, setDeleteCustomerTarget] = useState<Customer | null>(null);
+  const [deletingCustomer, setDeletingCustomer] = useState(false);
+
   // Delete phone confirm
   const [deletePhoneTarget, setDeletePhoneTarget] = useState<{
     customerId: number;
@@ -154,6 +158,24 @@ export default function CustomersPage() {
     setDeletePhoneTarget({ customerId, phoneId, phone });
   };
 
+  const deleteCustomer = async () => {
+    if (!deleteCustomerTarget) return;
+    try {
+      setDeletingCustomer(true);
+      await api.delete(`/customers/${deleteCustomerTarget.id}`);
+      toast.success(`تم حذف العميل "${deleteCustomerTarget.name}"`);
+      setCustomers((prev) => prev.filter((c) => c.id !== deleteCustomerTarget.id));
+      // If we were editing this customer, close the dialog
+      if (editCustomer?.id === deleteCustomerTarget.id) closeEdit();
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || "فشل حذف العميل";
+      toast.error(msg);
+    } finally {
+      setDeletingCustomer(false);
+      setDeleteCustomerTarget(null);
+    }
+  };
+
   const deletePhone = async () => {
     if (!deletePhoneTarget) return;
     try {
@@ -231,17 +253,30 @@ export default function CustomersPage() {
                       </div>
                     )}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="shrink-0"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openEdit(c);
-                    }}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteCustomerTarget(c);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEdit(c);
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -357,6 +392,36 @@ export default function CustomersPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Customer Confirm */}
+        <AlertDialog
+          open={!!deleteCustomerTarget}
+          onOpenChange={(o) => !o && setDeleteCustomerTarget(null)}
+        >
+          <AlertDialogContent dir="rtl">
+            <AlertDialogHeader>
+              <AlertDialogTitle>حذف العميل</AlertDialogTitle>
+              <AlertDialogDescription>
+                هل أنت متأكد من حذف العميل &quot;{deleteCustomerTarget?.name}&quot;؟
+                <br />
+                سيتم حذف جميع أرقام الهاتف المسجلة له.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deletingCustomer}>إلغاء</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={deleteCustomer}
+                disabled={deletingCustomer}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deletingCustomer ? (
+                  <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                ) : null}
+                حذف
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Delete Phone Confirm */}
         <AlertDialog
