@@ -108,7 +108,9 @@ export default function CashSummaryPage() {
       try {
         const [inRes, outRes] = await Promise.all([
           api.get("/cash-in", { params: { branch_id: user.branch_id } }),
-          api.get("/cash/out", { params: { branch_id: user.branch_id } }),
+          api.get("/cash/out", {
+            params: { branch_id: user.branch_id, limit: 100000 },
+          }),
         ]);
 
         const mappedCashIn = (inRes.data.data || []).map(

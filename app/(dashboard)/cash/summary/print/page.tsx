@@ -88,7 +88,9 @@ function CashSummaryPrintInner() {
       try {
         const [inRes, outRes] = await Promise.all([
           api.get("/cash-in", { params: { branch_id: branchId } }),
-          api.get("/cash/out", { params: { branch_id: branchId } }),
+          api.get("/cash/out", {
+            params: { branch_id: branchId, limit: 100000 },
+          }),
         ]);
         setCashIn(inRes.data.data || []);
         setCashOut(outRes.data.data || []);
