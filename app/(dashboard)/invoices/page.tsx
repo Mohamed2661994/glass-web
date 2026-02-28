@@ -112,14 +112,11 @@ export default function InvoicesPage() {
       if (invoiceIdSearch) params.invoice_id = invoiceIdSearch;
 
       if (hasDateFilter) {
-        // Backend filters by created_at, but we want invoice_date.
-        // Send date params so API returns data, then re-filter client-side.
         if (dateFrom) params.date_from = dateFrom;
         if (dateTo) params.date_to = dateTo;
         params.limit = 10000;
         params.offset = 0;
       } else {
-        // No date filter → use normal server-side pagination
         params.limit = limit;
         params.offset = (page - 1) * limit;
       }
@@ -130,17 +127,8 @@ export default function InvoicesPage() {
         : (res.data.data ?? []);
 
       if (hasDateFilter) {
-        // Re-filter by invoice_date (fallback to created_at) client-side
-        const filtered = raw.filter((inv) => {
-          const d = (inv.invoice_date || inv.created_at || "").slice(0, 10);
-          if (!d) return false;
-          if (dateFrom && d < dateFrom) return false;
-          if (dateTo && d > dateTo) return false;
-          return true;
-        });
-        setAllData(filtered);
-        // Paginate client-side
-        setData(filtered.slice((page - 1) * limit, page * limit));
+        setAllData(raw);
+        setData(raw.slice((page - 1) * limit, page * limit));
       } else {
         setAllData(raw);
         setData(raw);
@@ -638,9 +626,7 @@ export default function InvoicesPage() {
         <Button
           variant="outline"
           disabled={
-            hasDateFilter
-              ? page * limit >= allData.length
-              : data.length < limit
+            hasDateFilter ? page * limit >= allData.length : data.length < limit
           }
           onClick={() => setPage((p) => p + 1)}
         >
