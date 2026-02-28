@@ -15,7 +15,6 @@ type CashInItem = {
   source_type: "manual" | "invoice" | "customer_payment";
   customer_name: string;
   notes?: string | null;
-  invoice_id?: number;
 };
 
 type CashOutItem = {
@@ -25,7 +24,6 @@ type CashOutItem = {
   name: string;
   entry_type: "expense" | "purchase" | "supplier_payment";
   notes?: string | null;
-  invoice_id?: number;
 };
 
 /* ================= HELPERS ================= */
@@ -86,44 +84,14 @@ function CashSummaryPrintInner() {
   useEffect(() => {
     const stored = localStorage.getItem("user");
     const branchId = stored ? JSON.parse(stored).branch_id : 1;
-    const invoiceType = branchId === 1 ? "retail" : "wholesale";
     (async () => {
       try {
-        const [inRes, outRes, invRes] = await Promise.all([
+        const [inRes, outRes] = await Promise.all([
           api.get("/cash-in", { params: { branch_id: branchId } }),
           api.get("/cash/out", { params: { branch_id: branchId } }),
-          api.get("/invoices", { params: { invoice_type: invoiceType, limit: 10000 } }),
         ]);
-
-        // Build invoice_id → invoice_date map
-        const invoices: any[] = Array.isArray(invRes.data)
-          ? invRes.data
-          : (invRes.data.data ?? []);
-        const invoiceDateMap = new Map<number, string>();
-        for (const inv of invoices) {
-          if (inv.id && inv.invoice_date) {
-            invoiceDateMap.set(inv.id, inv.invoice_date);
-          }
-        }
-
-        // Override transaction_date with invoice_date for invoice-sourced records
-        const mappedIn = (inRes.data.data || []).map((item: CashInItem) => {
-          if (item.source_type === "invoice" && item.invoice_id) {
-            const invDate = invoiceDateMap.get(item.invoice_id);
-            if (invDate) return { ...item, transaction_date: invDate };
-          }
-          return item;
-        });
-        const mappedOut = (outRes.data.data || []).map((item: CashOutItem) => {
-          if (item.entry_type === "purchase" && (item as any).invoice_id) {
-            const invDate = invoiceDateMap.get((item as any).invoice_id);
-            if (invDate) return { ...item, transaction_date: invDate };
-          }
-          return item;
-        });
-
-        setCashIn(mappedIn);
-        setCashOut(mappedOut);
+        setCashIn(inRes.data.data || []);
+        setCashOut(outRes.data.data || []);
       } catch {
         console.error("CASH SUMMARY LOAD ERROR");
       } finally {
