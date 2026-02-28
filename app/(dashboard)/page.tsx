@@ -966,7 +966,7 @@ export default function DashboardPage() {
     [widgets],
   );
 
-  /* fetch invoices */
+  /* fetch invoices – filter by invoice_date (not created_at) */
   useEffect(() => {
     if (!branchId) return;
     setLoadingInv(true);
@@ -981,7 +981,14 @@ export default function DashboardPage() {
             _t: Date.now(),
           },
         });
-        setInvoices(Array.isArray(data) ? data : (data.data ?? []));
+        const all: Invoice[] = Array.isArray(data) ? data : (data.data ?? []);
+        // Keep only invoices whose invoice_date matches today
+        const filtered = all.filter((inv) => {
+          const d = inv.invoice_date;
+          if (!d) return false;
+          return d.startsWith(today);
+        });
+        setInvoices(filtered);
       } catch {
         /* silent */
       } finally {

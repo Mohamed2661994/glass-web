@@ -81,6 +81,9 @@ export default function InvoicesPage() {
   const limit = 10;
   const tableRef = useRef<HTMLDivElement>(null);
 
+  /* ── all fetched invoices (before client-side date filtering) ── */
+  const [allData, setAllData] = useState<Invoice[]>([]);
+
   // Debounce search input
   useEffect(() => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
@@ -92,26 +95,54 @@ export default function InvoicesPage() {
     };
   }, [search]);
 
+  /* ── Does the user have a date filter active? ── */
+  const hasDateFilter = !!(dateFrom || dateTo);
+
   const fetchInvoices = async () => {
     if (!invoiceType) return;
     try {
       setLoading(true);
 
       const params: any = {
-        limit,
-        offset: (page - 1) * limit,
         invoice_type: invoiceType,
       };
 
       if (movementType !== "all") params.movement_type = movementType;
       if (debouncedSearch) params.customer_name = debouncedSearch;
       if (invoiceIdSearch) params.invoice_id = invoiceIdSearch;
-      if (dateFrom) params.date_from = dateFrom;
-      if (dateTo) params.date_to = dateTo;
+
+      if (hasDateFilter) {
+        // Don't send date_from/date_to to the API (backend filters by created_at).
+        // Instead, fetch all invoices and filter client-side by invoice_date.
+        params.limit = 10000;
+        params.offset = 0;
+      } else {
+        // No date filter → use normal server-side pagination
+        params.limit = limit;
+        params.offset = (page - 1) * limit;
+      }
 
       const res = await axios.get("/invoices", { params });
+      const raw: Invoice[] = Array.isArray(res.data)
+        ? res.data
+        : (res.data.data ?? []);
 
-      setData(res.data);
+      if (hasDateFilter) {
+        // Filter by invoice_date client-side
+        const filtered = raw.filter((inv) => {
+          const d = inv.invoice_date?.slice(0, 10); // "YYYY-MM-DD"
+          if (!d) return false;
+          if (dateFrom && d < dateFrom) return false;
+          if (dateTo && d > dateTo) return false;
+          return true;
+        });
+        setAllData(filtered);
+        // Paginate client-side
+        setData(filtered.slice((page - 1) * limit, page * limit));
+      } else {
+        setAllData(raw);
+        setData(raw);
+      }
     } catch (err) {
       toast.error("فشل تحميل الفواتير");
     } finally {
@@ -604,7 +635,11 @@ export default function InvoicesPage() {
 
         <Button
           variant="outline"
-          disabled={data.length < limit}
+          disabled={
+            hasDateFilter
+              ? page * limit >= allData.length
+              : data.length < limit
+          }
           onClick={() => setPage((p) => p + 1)}
         >
           التالي

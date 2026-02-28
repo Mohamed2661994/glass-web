@@ -300,11 +300,12 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                       المصنع:{" "}
                       {highlightText(product.manufacturer || "-", search)}
                     </span>
-                    <span>
-                      العبوة: {product.retail_package || "-"}
-                    </span>
+                    <span>العبوة: {product.retail_package || "-"}</span>
                     <span className="font-semibold text-foreground">
-                      السعر: {invoiceType === "retail" ? product.price : product.retail_price}
+                      السعر:{" "}
+                      {invoiceType === "retail"
+                        ? product.price
+                        : product.retail_price}
                     </span>
                     {product.discount_amount > 0 && (
                       <span className="text-destructive">
@@ -316,9 +317,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                   {/* Row 2: Wholesale details */}
                   {product.wholesale_package && (
                     <div className="text-xs mt-1 flex flex-wrap gap-x-4 gap-y-1 text-blue-600 dark:text-blue-400">
-                      <span>
-                        عبوة جملة: {product.wholesale_package}
-                      </span>
+                      <span>عبوة جملة: {product.wholesale_package}</span>
                       {product.wholesale_price != null &&
                         Number(product.wholesale_price) > 0 && (
                           <span className="font-semibold">
