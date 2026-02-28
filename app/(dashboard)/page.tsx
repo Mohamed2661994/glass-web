@@ -982,11 +982,10 @@ export default function DashboardPage() {
           },
         });
         const all: Invoice[] = Array.isArray(data) ? data : (data.data ?? []);
-        // Keep only invoices whose invoice_date matches today
+        // Keep only invoices whose invoice_date (or created_at) matches today
         const filtered = all.filter((inv) => {
-          const d = inv.invoice_date;
-          if (!d) return false;
-          return d.startsWith(today);
+          const d = (inv.invoice_date || inv.created_at || "").slice(0, 10);
+          return d === today;
         });
         setInvoices(filtered);
       } catch {

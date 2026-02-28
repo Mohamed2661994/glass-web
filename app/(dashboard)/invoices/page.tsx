@@ -112,8 +112,10 @@ export default function InvoicesPage() {
       if (invoiceIdSearch) params.invoice_id = invoiceIdSearch;
 
       if (hasDateFilter) {
-        // Don't send date_from/date_to to the API (backend filters by created_at).
-        // Instead, fetch all invoices and filter client-side by invoice_date.
+        // Backend filters by created_at, but we want invoice_date.
+        // Send date params so API returns data, then re-filter client-side.
+        if (dateFrom) params.date_from = dateFrom;
+        if (dateTo) params.date_to = dateTo;
         params.limit = 10000;
         params.offset = 0;
       } else {
@@ -128,9 +130,9 @@ export default function InvoicesPage() {
         : (res.data.data ?? []);
 
       if (hasDateFilter) {
-        // Filter by invoice_date client-side
+        // Re-filter by invoice_date (fallback to created_at) client-side
         const filtered = raw.filter((inv) => {
-          const d = inv.invoice_date?.slice(0, 10); // "YYYY-MM-DD"
+          const d = (inv.invoice_date || inv.created_at || "").slice(0, 10);
           if (!d) return false;
           if (dateFrom && d < dateFrom) return false;
           if (dateTo && d > dateTo) return false;
