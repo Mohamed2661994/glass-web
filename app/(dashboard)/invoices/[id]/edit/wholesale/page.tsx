@@ -555,6 +555,7 @@ export default function EditWholesaleInvoicePage() {
         paid_amount: Number(paidAmount) || 0,
         previous_balance: Number(previousBalance) ?? 0,
         apply_items_discount: applyItemsDiscount,
+        invoice_date: invoiceDate || undefined,
         updated_by: user?.id,
         updated_by_name: user?.username,
         ...(movementType === "purchase" && supplierName
@@ -745,7 +746,7 @@ export default function EditWholesaleInvoicePage() {
 
             <div>
               <label className="text-sm mb-2 block">التاريخ</label>
-              <Input type="date" value={invoiceDate} disabled />
+              <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
             </div>
 
             {movementType !== "purchase" && (
