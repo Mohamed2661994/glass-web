@@ -25,8 +25,11 @@ export function highlightText(
 
   // Build a combined regex: each word allows optional spaces between chars
   const wordPatterns = words.map((w) => {
-    const escaped = w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return escaped.split("").join("\\s*");
+    // Escape each character individually THEN join, so escape sequences stay intact
+    return w
+      .split("")
+      .map((c) => c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+      .join("\\s*");
   });
 
   const combined = new RegExp(`(${wordPatterns.join("|")})`, "gi");
