@@ -41,6 +41,7 @@ import {
 interface HealthData {
   status: string;
   activeDb: "local" | "neon";
+  manualOverride?: boolean;
   lastFailoverTime: string | null;
   lastFailbackTime: string | null;
   lastBackup: {
@@ -328,6 +329,14 @@ export function DbStatusIndicator() {
                   <Wifi className="h-2.5 w-2.5 ml-1" />
                   متصل
                 </Badge>
+                {health.manualOverride && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] px-1.5 py-0 border-blue-500/40 text-blue-600 dark:text-blue-400"
+                  >
+                    يدوي
+                  </Badge>
+                )}
               </div>
               <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                 <span>تشغيل: {formatUptime(health.uptime)}</span>
@@ -400,9 +409,7 @@ export function DbStatusIndicator() {
               <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all duration-500 ease-out ${
-                    progress >= 100
-                      ? "bg-green-500"
-                      : "bg-primary"
+                    progress >= 100 ? "bg-green-500" : "bg-primary"
                   }`}
                   style={{ width: `${Math.min(progress, 100)}%` }}
                 />
