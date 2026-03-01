@@ -126,6 +126,9 @@ export default function InvoicesPage() {
         ? res.data
         : (res.data.data ?? []);
 
+      // Sort newest first
+      raw.sort((a, b) => b.id - a.id);
+
       if (hasDateFilter) {
         setAllData(raw);
         setData(raw.slice((page - 1) * limit, page * limit));
