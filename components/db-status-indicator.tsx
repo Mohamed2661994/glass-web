@@ -10,6 +10,7 @@ import {
   Clock,
   Wifi,
   WifiOff,
+  HardDrive,
 } from "lucide-react";
 import {
   Tooltip,
@@ -23,6 +24,11 @@ interface HealthData {
   activeDb: "local" | "neon";
   lastFailoverTime: string | null;
   lastFailbackTime: string | null;
+  lastBackup: {
+    file: string;
+    time: string;
+    count: number;
+  } | null;
   uptime: number;
   timestamp: string;
 }
@@ -167,6 +173,29 @@ export function DbStatusIndicator() {
                     آخر رجوع للمحلي: {formatTime(health.lastFailbackTime)}
                   </div>
                 )}
+              </TooltipContent>
+            </Tooltip>
+          </>
+        )}
+
+        {/* آخر باك أب */}
+        {health.lastBackup && (
+          <>
+            <span className="text-muted-foreground/30">|</span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1 cursor-default">
+                  <HardDrive className="h-3.5 w-3.5" />
+                  <span className="text-xs">
+                    باك أب: {formatTime(health.lastBackup.time)}
+                  </span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">
+                <div className="space-y-1">
+                  <div>الملف: {health.lastBackup.file}</div>
+                  <div>عدد النسخ: {health.lastBackup.count}</div>
+                </div>
               </TooltipContent>
             </Tooltip>
           </>
