@@ -22,6 +22,61 @@ export function noSpaces(s: string): string {
   return s.replace(/\s/g, "");
 }
 
+/**
+ * Keyboard layout mapping: English keys → Arabic characters.
+ * When someone types on an English keyboard thinking it's Arabic,
+ * this converts the English characters to what they intended in Arabic.
+ */
+const EN_TO_AR: Record<string, string> = {
+  q: "ض",
+  w: "ص",
+  e: "ث",
+  r: "ق",
+  t: "ف",
+  y: "غ",
+  u: "ع",
+  i: "ه",
+  o: "خ",
+  p: "ح",
+  a: "ش",
+  s: "س",
+  d: "ي",
+  f: "ب",
+  g: "ل",
+  h: "ا",
+  j: "ت",
+  k: "ن",
+  l: "م",
+  z: "ئ",
+  x: "ء",
+  c: "ؤ",
+  v: "ر",
+  b: "لا",
+  n: "ى",
+  m: "ة",
+  ";": "ك",
+  "'": "ط",
+  ",": "و",
+  ".": "ز",
+  "/": "ظ",
+  "[": "ج",
+  "]": "د",
+};
+
+/** Convert English-typed text to Arabic (keyboard layout mapping) */
+export function enToAr(s: string): string {
+  return s
+    .toLowerCase()
+    .split("")
+    .map((ch) => EN_TO_AR[ch] ?? ch)
+    .join("");
+}
+
+/** Check if a string contains any Latin letters */
+function hasLatin(s: string): boolean {
+  return /[a-zA-Z]/.test(s);
+}
+
 /** Normalize text for search: remove spaces, lowercase, normalize Arabic chars */
 function searchNormalize(s: string): string {
   return normalizeArabic(noSpaces(s).toLowerCase());
@@ -49,8 +104,20 @@ export function multiWordMatch(
   // Concatenate all fields into one searchable string
   const combined = fields.map((f) => searchNormalize(f || "")).join(" ");
 
-  // Every word must appear in at least one field
-  return words.some((word) => combined.includes(word));
+  // Try original query first
+  if (words.some((word) => combined.includes(word))) return true;
+
+  // If query has Latin chars, also try English→Arabic keyboard conversion
+  if (hasLatin(query)) {
+    const arWords = query
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((w) => searchNormalize(enToAr(w)));
+    return arWords.some((word) => combined.includes(word));
+  }
+
+  return false;
 }
 
 /**
@@ -70,7 +137,10 @@ export function multiWordScore(
   name: string | undefined | null,
   ...otherFields: (string | undefined | null)[]
 ): number {
-  const words = query
+  // If query has Latin chars, convert to Arabic and score that instead
+  const effectiveQuery = hasLatin(query) ? enToAr(query) : query;
+
+  const words = effectiveQuery
     .trim()
     .split(/\s+/)
     .filter(Boolean)

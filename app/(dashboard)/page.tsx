@@ -983,10 +983,12 @@ export default function DashboardPage() {
         });
         const all: Invoice[] = Array.isArray(data) ? data : (data.data ?? []);
         // Keep only invoices whose invoice_date (or created_at) matches today
-        const filtered = all.filter((inv) => {
-          const d = (inv.invoice_date || inv.created_at || "").slice(0, 10);
-          return d === today;
-        });
+        const filtered = all
+          .filter((inv) => {
+            const d = (inv.invoice_date || inv.created_at || "").slice(0, 10);
+            return d === today;
+          })
+          .sort((a, b) => b.id - a.id);
         setInvoices(filtered);
       } catch {
         /* silent */
@@ -1366,7 +1368,7 @@ export default function DashboardPage() {
                             {paymentBadge(inv.payment_status)}
                           </TableCell>
                           <TableCell className="text-muted-foreground text-xs hidden sm:table-cell">
-                            {formatDate(inv.invoice_date || inv.created_at)}
+                            {formatDate(inv.created_at || inv.invoice_date)}
                           </TableCell>
                         </TableRow>
                       ))
@@ -1491,7 +1493,7 @@ export default function DashboardPage() {
                           )}
                         </div>
                         <p className="text-[10px] text-muted-foreground">
-                          {formatDate(inv.invoice_date || inv.created_at)}
+                          {formatDate(inv.created_at || inv.invoice_date)}
                         </p>
                       </div>
                     ))}
