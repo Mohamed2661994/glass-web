@@ -746,7 +746,11 @@ export default function EditWholesaleInvoicePage() {
 
             <div>
               <label className="text-sm mb-2 block">التاريخ</label>
-              <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
+              <Input
+                type="date"
+                value={invoiceDate}
+                onChange={(e) => setInvoiceDate(e.target.value)}
+              />
             </div>
 
             {movementType !== "purchase" && (

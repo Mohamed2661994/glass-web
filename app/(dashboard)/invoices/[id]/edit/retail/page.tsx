@@ -822,7 +822,11 @@ export default function EditRetailInvoicePage() {
 
             <div>
               <label className="text-sm mb-2 block">التاريخ</label>
-              <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
+              <Input
+                type="date"
+                value={invoiceDate}
+                onChange={(e) => setInvoiceDate(e.target.value)}
+              />
             </div>
 
             {movementType !== "purchase" && (
@@ -1062,7 +1066,7 @@ export default function EditRetailInvoicePage() {
                       <th className="p-3 text-right">الصنف</th>
                       <th className="p-3 text-center">السعر</th>
                       <th className="p-3 text-center">الكمية</th>
-                      {!applyItemsDiscount && (
+                      {applyItemsDiscount && (
                         <th className="p-3 text-center">الخصم</th>
                       )}
                       <th className="p-3 text-center">الإجمالي</th>
@@ -1167,7 +1171,7 @@ export default function EditRetailInvoicePage() {
                             ) : null;
                           })()}
                         </td>
-                        {!applyItemsDiscount && (
+                        {applyItemsDiscount && (
                           <td className="p-3 text-center">
                             {editingItemUid === item.uid ? (
                               <Input
@@ -1468,7 +1472,7 @@ export default function EditRetailInvoicePage() {
                           ) : null;
                         })()}
                       </div>
-                      {!applyItemsDiscount && (
+                      {applyItemsDiscount && (
                         <div className="space-y-1">
                           <label className="text-xs text-muted-foreground">
                             الخصم
