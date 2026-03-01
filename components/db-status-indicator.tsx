@@ -90,6 +90,8 @@ export function DbStatusIndicator() {
   const [switching, setSwitching] = useState(false);
   const [backingUp, setBackingUp] = useState(false);
   const [restoring, setRestoring] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressMsg, setProgressMsg] = useState("");
   const [actionMsg, setActionMsg] = useState<{
     type: "success" | "error";
     text: string;
@@ -97,9 +99,9 @@ export function DbStatusIndicator() {
 
   // Confirm dialogs
   const [confirmSwitch, setConfirmSwitch] = useState(false);
-  const [confirmRestore, setConfirmRestore] = useState<
-    "local" | "neon" | null
-  >(null);
+  const [confirmRestore, setConfirmRestore] = useState<"local" | "neon" | null>(
+    null,
+  );
 
   const fetchHealth = useCallback(async () => {
     try {
@@ -128,13 +130,91 @@ export function DbStatusIndicator() {
     }
   }, [actionMsg]);
 
+  // SSE stream reader for progress endpoints
+  const streamAction = useCallback(
+    async (
+      url: string,
+      body: object | null,
+      setActive: (v: boolean) => void,
+    ) => {
+      setActive(true);
+      setProgress(0);
+      setProgressMsg("جاري التحضير...");
+      setActionMsg(null);
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${API_URL}${url}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: body ? JSON.stringify(body) : undefined,
+        });
+        if (!response.ok || !response.body) {
+          const errText = await response.text();
+          let errMsg = "حدث خطأ";
+          try {
+            errMsg = JSON.parse(errText).error || errMsg;
+          } catch {}
+          throw new Error(errMsg);
+        }
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              try {
+                const payload = JSON.parse(line.slice(6));
+                if (payload.progress !== undefined)
+                  setProgress(payload.progress);
+                if (payload.message) setProgressMsg(payload.message);
+                if (payload.done) {
+                  setActionMsg({ type: "success", text: payload.message });
+                  setProgress(0);
+                  setProgressMsg("");
+                  await fetchHealth();
+                }
+                if (payload.error) {
+                  setActionMsg({ type: "error", text: payload.message });
+                  setProgress(0);
+                  setProgressMsg("");
+                }
+              } catch {}
+            }
+          }
+        }
+      } catch (err: any) {
+        setActionMsg({
+          type: "error",
+          text: err.message || "حدث خطأ غير متوقع",
+        });
+        setProgress(0);
+        setProgressMsg("");
+      } finally {
+        setActive(false);
+      }
+    },
+    [fetchHealth],
+  );
+
   const handleSwitch = async () => {
     if (!health) return;
     setSwitching(true);
     setConfirmSwitch(false);
+    setProgress(30);
+    setProgressMsg("جاري اختبار الاتصال...");
     try {
       const target = health.activeDb === "local" ? "neon" : "local";
       await api.post("/admin/switch-db", { target });
+      setProgress(100);
+      setProgressMsg("تم!");
       setActionMsg({
         type: "success",
         text: `تم التحويل لـ ${target === "local" ? "المحلي" : "Neon"}`,
@@ -147,46 +227,18 @@ export function DbStatusIndicator() {
       });
     } finally {
       setSwitching(false);
+      setProgress(0);
+      setProgressMsg("");
     }
   };
 
-  const handleBackup = async () => {
-    setBackingUp(true);
-    try {
-      const { data } = await api.post("/admin/backup");
-      setActionMsg({
-        type: "success",
-        text: `تم الباك أب: ${data.file} (${data.sizeMB} MB)`,
-      });
-      await fetchHealth();
-    } catch (err: any) {
-      setActionMsg({
-        type: "error",
-        text: err.response?.data?.error || "فشل الباك أب",
-      });
-    } finally {
-      setBackingUp(false);
-    }
+  const handleBackup = () => {
+    streamAction("/admin/backup", null, setBackingUp);
   };
 
-  const handleRestore = async (target: "local" | "neon") => {
-    setRestoring(true);
+  const handleRestore = (target: "local" | "neon") => {
     setConfirmRestore(null);
-    try {
-      const { data } = await api.post("/admin/restore", { target });
-      setActionMsg({
-        type: "success",
-        text: `تم الريستور على ${target === "local" ? "المحلي" : "Neon"}: ${data.file}`,
-      });
-      await fetchHealth();
-    } catch (err: any) {
-      setActionMsg({
-        type: "error",
-        text: err.response?.data?.error || "فشل الريستور",
-      });
-    } finally {
-      setRestoring(false);
-    }
+    streamAction("/admin/restore", { target }, setRestoring);
   };
 
   if (loading) {
@@ -330,6 +382,31 @@ export function DbStatusIndicator() {
                 <XCircle className="h-3.5 w-3.5 shrink-0" />
               )}
               {actionMsg.text}
+            </div>
+          )}
+
+          {/* ── شريط التقدم ── */}
+          {(backingUp || restoring || switching) && progress > 0 && (
+            <div className="mx-4 mb-2 space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground flex items-center gap-1.5">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  {progressMsg}
+                </span>
+                <span className="font-mono font-bold text-sm tabular-nums">
+                  {progress}%
+                </span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ease-out ${
+                    progress >= 100
+                      ? "bg-green-500"
+                      : "bg-primary"
+                  }`}
+                  style={{ width: `${Math.min(progress, 100)}%` }}
+                />
+              </div>
             </div>
           )}
 
@@ -516,9 +593,7 @@ export function DbStatusIndicator() {
             <DialogDescription>
               سيتم استعادة آخر نسخة احتياطية على{" "}
               <strong>
-                {confirmRestore === "local"
-                  ? "السيرفر المحلي"
-                  : "Neon Cloud"}
+                {confirmRestore === "local" ? "السيرفر المحلي" : "Neon Cloud"}
               </strong>
               . هذا سيستبدل كل البيانات الحالية!
             </DialogDescription>
@@ -534,9 +609,7 @@ export function DbStatusIndicator() {
             <Button
               size="sm"
               variant="destructive"
-              onClick={() =>
-                confirmRestore && handleRestore(confirmRestore)
-              }
+              onClick={() => confirmRestore && handleRestore(confirmRestore)}
             >
               تأكيد الريستور
             </Button>
