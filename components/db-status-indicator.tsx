@@ -49,6 +49,13 @@ interface HealthData {
     time: string;
     count: number;
   } | null;
+  lastSync: {
+    time: string;
+    success: boolean;
+    tables: number;
+    rows: number;
+    error: string | null;
+  } | null;
   uptime: number;
   timestamp: string;
 }
@@ -346,6 +353,15 @@ export function DbStatusIndicator() {
                     <span>باك أب: {timeAgo(health.lastBackup.time)}</span>
                   </>
                 )}
+                {health.lastSync && (
+                  <>
+                    <span>•</span>
+                    <span>
+                      مزامنة: {timeAgo(health.lastSync.time)}
+                      {!health.lastSync.success && " ⚠️"}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
 
@@ -481,6 +497,26 @@ export function DbStatusIndicator() {
                     <div className="flex items-center gap-1.5 text-green-600 dark:text-green-400">
                       <ArrowLeftRight className="h-3.5 w-3.5" />
                       {formatTime(health.lastFailbackTime)}
+                    </div>
+                  </div>
+                )}
+                {health.lastSync && (
+                  <div className="space-y-1.5">
+                    <div className="text-muted-foreground font-medium">
+                      آخر مزامنة تلقائية
+                    </div>
+                    <div
+                      className={`flex items-center gap-1.5 ${
+                        health.lastSync.success
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-red-600 dark:text-red-400"
+                      }`}
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      {formatTime(health.lastSync.time)}
+                      {health.lastSync.success
+                        ? ` (${health.lastSync.tables} جدول)`
+                        : " (فشل)"}
                     </div>
                   </div>
                 )}
