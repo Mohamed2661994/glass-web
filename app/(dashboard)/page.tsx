@@ -212,6 +212,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { DbStatusIndicator } from "@/components/db-status-indicator";
 import {
   Dialog,
   DialogContent,
@@ -1941,6 +1942,9 @@ export default function DashboardPage() {
           تخصيص
         </Button>
       </div>
+
+      {/* ====== DB Status ====== */}
+      <DbStatusIndicator />
 
       {/* ====== Render widgets in grid layout ====== */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
