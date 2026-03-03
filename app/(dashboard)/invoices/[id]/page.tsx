@@ -303,6 +303,7 @@ export default function InvoiceDetailsPage() {
                 remaining_amount: invoice.remaining_amount,
                 extra_discount: invoice.extra_discount,
                 manual_discount: invoice.manual_discount,
+                previous_balance: invoice.previous_balance,
                 items: items.map((it) => ({
                   product_name: it.product_name,
                   package: it.package,
@@ -352,6 +353,7 @@ export default function InvoiceDetailsPage() {
                   remaining_amount: invoice.remaining_amount,
                   extra_discount: invoice.extra_discount,
                   manual_discount: invoice.manual_discount,
+                  previous_balance: invoice.previous_balance,
                   items: items.map((it) => ({
                     product_name: it.product_name,
                     package: it.package,
