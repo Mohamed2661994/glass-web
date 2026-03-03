@@ -91,7 +91,7 @@ function timeAgo(iso: string): string {
   return `منذ ${Math.floor(hrs / 24)} يوم`;
 }
 
-const SYNC_INTERVAL_MS = 5 * 60 * 1000;
+const SYNC_INTERVAL_MS = 15 * 60 * 1000;
 
 function formatCountdown(ms: number): string {
   const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
