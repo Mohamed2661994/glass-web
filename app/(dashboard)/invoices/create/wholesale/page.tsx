@@ -1310,34 +1310,34 @@ export default function CreateWholesaleInvoicePage() {
                           })()}
                         </td>
                         <td className="p-3 text-center">
-                            <Input
-                              type="number"
-                              data-discount-id={item.uid}
-                              className="w-20 mx-auto text-center"
-                              value={item.discount}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  setShowProductModal(true);
-                                }
-                              }}
-                              onChange={(e) =>
-                                setItems((prev) =>
-                                  prev.map((i) =>
-                                    i.uid === item.uid
-                                      ? {
-                                          ...i,
-                                          discount:
-                                            e.target.value === ""
-                                              ? ""
-                                              : Number(e.target.value),
-                                        }
-                                      : i,
-                                  ),
-                                )
+                          <Input
+                            type="number"
+                            data-discount-id={item.uid}
+                            className="w-20 mx-auto text-center"
+                            value={item.discount}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                setShowProductModal(true);
                               }
-                            />
-                          </td>
+                            }}
+                            onChange={(e) =>
+                              setItems((prev) =>
+                                prev.map((i) =>
+                                  i.uid === item.uid
+                                    ? {
+                                        ...i,
+                                        discount:
+                                          e.target.value === ""
+                                            ? ""
+                                            : Number(e.target.value),
+                                      }
+                                    : i,
+                                ),
+                              )
+                            }
+                          />
+                        </td>
                         <td className="p-3 text-center font-semibold">
                           {(() => {
                             const qty = Number(item.quantity) || 0;
@@ -1545,40 +1545,40 @@ export default function CreateWholesaleInvoicePage() {
                           ) : null;
                         })()}
                       </div>
-                        <div className="space-y-1">
-                          <label className="text-xs text-muted-foreground">
-                            الخصم
-                          </label>
-                          <Input
-                            type="number"
-                            data-mobile-discount-id={item.uid}
-                            className="text-center"
-                            value={item.discount || 0}
-                            onFocus={(e) => e.target.select()}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                setExpandedItemUid(null);
-                                setShowProductModal(true);
-                              }
-                            }}
-                            onChange={(e) =>
-                              setItems((prev) =>
-                                prev.map((i) =>
-                                  i.uid === item.uid
-                                    ? {
-                                        ...i,
-                                        discount:
-                                          e.target.value === ""
-                                            ? 0
-                                            : Number(e.target.value),
-                                      }
-                                    : i,
-                                ),
-                              )
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">
+                          الخصم
+                        </label>
+                        <Input
+                          type="number"
+                          data-mobile-discount-id={item.uid}
+                          className="text-center"
+                          value={item.discount || 0}
+                          onFocus={(e) => e.target.select()}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              setExpandedItemUid(null);
+                              setShowProductModal(true);
                             }
-                          />
-                        </div>
+                          }}
+                          onChange={(e) =>
+                            setItems((prev) =>
+                              prev.map((i) =>
+                                i.uid === item.uid
+                                  ? {
+                                      ...i,
+                                      discount:
+                                        e.target.value === ""
+                                          ? 0
+                                          : Number(e.target.value),
+                                    }
+                                  : i,
+                              ),
+                            )
+                          }
+                        />
+                      </div>
                     </div>
 
                     {/* Total */}
