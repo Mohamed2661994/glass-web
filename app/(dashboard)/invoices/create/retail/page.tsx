@@ -419,6 +419,49 @@ export default function CreateRetailInvoicePage() {
       .catch(() => setPackagePickerStock({}));
   }, [packagePickerProduct]);
 
+  const getAutoPackageChoice = useCallback(
+    (product: any) => {
+      if (movementType !== "sale") return null;
+
+      const options: Array<{
+        package: string;
+        price: number;
+        variant_id?: number;
+      }> = [];
+
+      const pkg = String(product?.retail_package || "").trim();
+      if (pkg) {
+        const spaceIdx = pkg.indexOf(" ");
+        const qtyPart = spaceIdx > -1 ? pkg.substring(0, spaceIdx) : pkg;
+        const type = spaceIdx > -1 ? pkg.substring(spaceIdx + 1).trim() : "";
+        const qtys = qtyPart.split(",").map((q: string) => q.trim()).filter(Boolean);
+
+        for (const q of qtys) {
+          options.push({
+            package: type ? `${q} ${type}` : q,
+            price: Number(product.price) || 0,
+            variant_id: 0,
+          });
+        }
+      }
+
+      const variants = variantsMap[product.id] || [];
+      for (const v of variants) {
+        options.push({
+          package: v.retail_package || "-",
+          price: Number(v.retail_price) || 0,
+          variant_id: v.id,
+        });
+      }
+
+      if (options.length !== 2) return null;
+      if (Math.abs(options[0].price - options[1].price) > 0.0001) return null;
+
+      return options[0];
+    },
+    [movementType, variantsMap],
+  );
+
   /* =========================================================
      5.5 Barcode Scan
      ========================================================= */
@@ -441,6 +484,20 @@ export default function CreateRetailInvoicePage() {
         finalizeAddItem(
           { ...product, price: product.price },
           product.retail_package || "-",
+          "barcode",
+        );
+        return;
+      }
+
+      const autoChoice = getAutoPackageChoice(product);
+      if (autoChoice) {
+        finalizeAddItem(
+          {
+            ...product,
+            price: autoChoice.price,
+            variant_id: autoChoice.variant_id || 0,
+          },
+          autoChoice.package,
           "barcode",
         );
         return;
@@ -792,6 +849,20 @@ export default function CreateRetailInvoicePage() {
 
   const addItem = useCallback(
     (product: any) => {
+      const autoChoice = getAutoPackageChoice(product);
+      if (autoChoice) {
+        finalizeAddItem(
+          {
+            ...product,
+            price: autoChoice.price,
+            variant_id: autoChoice.variant_id || 0,
+          },
+          autoChoice.package,
+          "manual",
+        );
+        return;
+      }
+
       // لو الصنف عنده أكواد فرعية → نعرض اختيار العبوة
       const variants = variantsMap[product.id];
       if (variants && variants.length > 0) {
@@ -811,7 +882,7 @@ export default function CreateRetailInvoicePage() {
 
       finalizeAddItem(product, pkg, "manual");
     },
-    [variantsMap],
+    [variantsMap, getAutoPackageChoice],
   );
 
   /* Focus quantity input of last added item */
