@@ -627,12 +627,10 @@ export default function CreateWholesaleInvoicePage() {
   const totalBeforeDiscount = useMemo(() => {
     return items.reduce((sum, item) => {
       const qty = Number(item.quantity) || 0;
-      const raw = applyItemsDiscount
-        ? (Number(item.price) - (Number(item.discount) || 0)) * qty
-        : Number(item.price) * qty;
+      const raw = (Number(item.price) - (Number(item.discount) || 0)) * qty;
       return sum + (item.is_return ? -raw : raw);
     }, 0);
-  }, [items, applyItemsDiscount]);
+  }, [items]);
 
   /* preview: total WITH discount (for eye icon) */
   const discountPreviewTotal = useMemo(() => {
@@ -688,13 +686,11 @@ export default function CreateWholesaleInvoicePage() {
 
     setSaving(true);
     try {
-      const itemsDiscount = applyItemsDiscount
-        ? items.reduce(
-            (sum, item) =>
-              sum + (Number(item.discount) || 0) * (Number(item.quantity) || 0),
-            0,
-          )
-        : 0;
+      const itemsDiscount = items.reduce(
+        (sum, item) =>
+          sum + (Number(item.discount) || 0) * (Number(item.quantity) || 0),
+        0,
+      );
 
       const res = await api.post("/invoices", {
         invoice_type: "wholesale",
@@ -1345,11 +1341,10 @@ export default function CreateWholesaleInvoicePage() {
                         <td className="p-3 text-center font-semibold">
                           {(() => {
                             const qty = Number(item.quantity) || 0;
-                            const raw = applyItemsDiscount
-                              ? (Number(item.price) -
-                                  (Number(item.discount) || 0)) *
-                                qty
-                              : Number(item.price) * qty;
+                            const raw =
+                              (Number(item.price) -
+                                (Number(item.discount) || 0)) *
+                              qty;
                             return item.is_return ? -raw : raw;
                           })()}
                         </td>
@@ -1426,9 +1421,8 @@ export default function CreateWholesaleInvoicePage() {
               {items.map((item, index) => {
                 const itemTotal = (() => {
                   const qty = Number(item.quantity) || 0;
-                  const raw = applyItemsDiscount
-                    ? (Number(item.price) - (Number(item.discount) || 0)) * qty
-                    : Number(item.price) * qty;
+                  const raw =
+                    (Number(item.price) - (Number(item.discount) || 0)) * qty;
                   return item.is_return ? -raw : raw;
                 })();
                 const isExpanded = expandedItemUid === item.uid;
