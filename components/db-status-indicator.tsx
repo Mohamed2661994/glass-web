@@ -316,11 +316,13 @@ export function DbStatusIndicator() {
 
   return (
     <TooltipProvider>
-      <Card className={`transition-all duration-300 ${
-        health.activeDb === "local"
-          ? "border-green-500/20 bg-gradient-to-l from-green-500/5 to-transparent"
-          : "border-blue-500/20 bg-gradient-to-l from-blue-500/5 to-transparent"
-      }`}>
+      <Card
+        className={`transition-all duration-300 ${
+          health.activeDb === "local"
+            ? "border-green-500/20 bg-gradient-to-l from-green-500/5 to-transparent"
+            : "border-blue-500/20 bg-gradient-to-l from-blue-500/5 to-transparent"
+        }`}
+      >
         <CardContent className="p-0">
           {/* ── الصف الرئيسي ── */}
           <div
@@ -329,28 +331,37 @@ export function DbStatusIndicator() {
           >
             {/* أيقونة + حالة */}
             <div className="relative">
-              <div className={`rounded-lg p-2 ${
-                health.activeDb === "local"
-                  ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                  : "bg-blue-500/10 text-blue-600 dark:text-blue-400"
-              }`}>
+              <div
+                className={`rounded-lg p-2 ${
+                  health.activeDb === "local"
+                    ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                    : "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                }`}
+              >
                 {health.activeDb === "local" ? (
                   <Server className="h-5 w-5" />
                 ) : (
                   <Cloud className="h-5 w-5" />
                 )}
               </div>
-              <span className={`absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background animate-pulse ${
-                health.localAlive && health.cloudAlive ? "bg-green-500" :
-                health.localAlive || health.cloudAlive ? "bg-amber-500" : "bg-red-500"
-              }`} />
+              <span
+                className={`absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background animate-pulse ${
+                  health.localAlive && health.cloudAlive
+                    ? "bg-green-500"
+                    : health.localAlive || health.cloudAlive
+                      ? "bg-amber-500"
+                      : "bg-red-500"
+                }`}
+              />
             </div>
 
             {/* معلومات الاتصال */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-sm">
-                  {health.activeDb === "local" ? "السيرفر المحلي" : "سيرفر الكلاود"}
+                  {health.activeDb === "local"
+                    ? "السيرفر المحلي"
+                    : "سيرفر الكلاود"}
                 </span>
                 <Badge
                   variant="outline"
@@ -367,15 +378,23 @@ export function DbStatusIndicator() {
                 <div className="flex items-center gap-1.5 mr-1">
                   <Tooltip>
                     <TooltipTrigger>
-                      <span className={`inline-block h-2 w-2 rounded-full ${health.localAlive ? "bg-green-500" : "bg-red-500"}`} />
+                      <span
+                        className={`inline-block h-2 w-2 rounded-full ${health.localAlive ? "bg-green-500" : "bg-red-500"}`}
+                      />
                     </TooltipTrigger>
-                    <TooltipContent>المحلي: {health.localAlive ? "متصل" : "غير متصل"}</TooltipContent>
+                    <TooltipContent>
+                      المحلي: {health.localAlive ? "متصل" : "غير متصل"}
+                    </TooltipContent>
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger>
-                      <span className={`inline-block h-2 w-2 rounded-full ${health.cloudAlive ? "bg-blue-500" : "bg-red-500"}`} />
+                      <span
+                        className={`inline-block h-2 w-2 rounded-full ${health.cloudAlive ? "bg-blue-500" : "bg-red-500"}`}
+                      />
                     </TooltipTrigger>
-                    <TooltipContent>الكلاود: {health.cloudAlive ? "متصل" : "غير متصل"}</TooltipContent>
+                    <TooltipContent>
+                      الكلاود: {health.cloudAlive ? "متصل" : "غير متصل"}
+                    </TooltipContent>
                   </Tooltip>
                 </div>
               </div>
@@ -398,6 +417,34 @@ export function DbStatusIndicator() {
 
             {/* أزرار */}
             <div className="flex items-center gap-1">
+              {/* زرار التحويل اليدوي */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className={`h-8 w-8 ${
+                      switching ? "animate-pulse" : ""
+                    }`}
+                    disabled={switching}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const target = health.activeDb === "local" ? "cloud" : "local";
+                      handleSwitch(target);
+                    }}
+                  >
+                    {switching ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <ArrowRightLeft className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  تبديل إلى {health.activeDb === "local" ? "الكلاود" : "المحلي"}
+                </TooltipContent>
+              </Tooltip>
+
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -470,19 +517,36 @@ export function DbStatusIndicator() {
               {/* حالة قواعد البيانات */}
               <div className="grid grid-cols-2 gap-3 text-xs">
                 {/* المحلي */}
-                <div className={`rounded-lg p-2.5 border ${
-                  health.localAlive ? "border-green-500/30 bg-green-500/5" : "border-red-500/30 bg-red-500/5"
-                }`}>
+                <div
+                  className={`rounded-lg p-2.5 border ${
+                    health.localAlive
+                      ? "border-green-500/30 bg-green-500/5"
+                      : "border-red-500/30 bg-red-500/5"
+                  }`}
+                >
                   <div className="flex items-center gap-1.5 mb-1">
                     <Server className="h-3.5 w-3.5" />
                     <span className="font-medium">المحلي</span>
                     {health.activeDb === "local" && (
-                      <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">نشط</Badge>
+                      <Badge
+                        variant="secondary"
+                        className="text-[9px] px-1 py-0 h-4"
+                      >
+                        نشط
+                      </Badge>
                     )}
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className={`h-1.5 w-1.5 rounded-full ${health.localAlive ? "bg-green-500" : "bg-red-500"}`} />
-                    <span className={health.localAlive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${health.localAlive ? "bg-green-500" : "bg-red-500"}`}
+                    />
+                    <span
+                      className={
+                        health.localAlive
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-red-600 dark:text-red-400"
+                      }
+                    >
                       {health.localAlive ? "متصل" : "غير متصل"}
                     </span>
                   </div>
@@ -500,19 +564,36 @@ export function DbStatusIndicator() {
                 </div>
 
                 {/* الكلاود */}
-                <div className={`rounded-lg p-2.5 border ${
-                  health.cloudAlive ? "border-blue-500/30 bg-blue-500/5" : "border-red-500/30 bg-red-500/5"
-                }`}>
+                <div
+                  className={`rounded-lg p-2.5 border ${
+                    health.cloudAlive
+                      ? "border-blue-500/30 bg-blue-500/5"
+                      : "border-red-500/30 bg-red-500/5"
+                  }`}
+                >
                   <div className="flex items-center gap-1.5 mb-1">
                     <Cloud className="h-3.5 w-3.5" />
                     <span className="font-medium">الكلاود</span>
                     {health.activeDb === "cloud" && (
-                      <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">نشط</Badge>
+                      <Badge
+                        variant="secondary"
+                        className="text-[9px] px-1 py-0 h-4"
+                      >
+                        نشط
+                      </Badge>
                     )}
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className={`h-1.5 w-1.5 rounded-full ${health.cloudAlive ? "bg-blue-500" : "bg-red-500"}`} />
-                    <span className={health.cloudAlive ? "text-blue-600 dark:text-blue-400" : "text-red-600 dark:text-red-400"}>
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${health.cloudAlive ? "bg-blue-500" : "bg-red-500"}`}
+                    />
+                    <span
+                      className={
+                        health.cloudAlive
+                          ? "text-blue-600 dark:text-blue-400"
+                          : "text-red-600 dark:text-red-400"
+                      }
+                    >
                       {health.cloudAlive ? "متصل" : "غير متصل"}
                     </span>
                   </div>
@@ -538,7 +619,13 @@ export function DbStatusIndicator() {
                     آخر مزامنة
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className={health.lastSync.ok ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                    <span
+                      className={
+                        health.lastSync.ok
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-red-600 dark:text-red-400"
+                      }
+                    >
                       {health.lastSync.ok ? "✅ ناجحة" : "❌ فشلت"}
                     </span>
                     {health.lastSync.synced !== undefined && (
@@ -548,7 +635,9 @@ export function DbStatusIndicator() {
                       <span>{health.lastSync.duration}</span>
                     )}
                     {health.lastSync.time && (
-                      <span className="text-muted-foreground">{timeAgo(health.lastSync.time)}</span>
+                      <span className="text-muted-foreground">
+                        {timeAgo(health.lastSync.time)}
+                      </span>
                     )}
                   </div>
                 </div>
@@ -557,7 +646,9 @@ export function DbStatusIndicator() {
               {/* تفاصيل إضافية */}
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div className="space-y-1.5">
-                  <div className="text-muted-foreground font-medium">آخر فحص</div>
+                  <div className="text-muted-foreground font-medium">
+                    آخر فحص
+                  </div>
                   <div className="flex items-center gap-1.5">
                     <Clock className="h-3.5 w-3.5" />
                     {formatTime(health.timestamp)}
@@ -565,7 +656,9 @@ export function DbStatusIndicator() {
                 </div>
                 {health.lastBackup && (
                   <div className="space-y-1.5">
-                    <div className="text-muted-foreground font-medium">نسخ محفوظة</div>
+                    <div className="text-muted-foreground font-medium">
+                      نسخ محفوظة
+                    </div>
                     <div className="flex items-center gap-1.5">
                       <Shield className="h-3.5 w-3.5" />
                       {health.lastBackup.count} نسخ
