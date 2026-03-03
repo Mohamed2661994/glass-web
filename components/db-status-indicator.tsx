@@ -925,58 +925,74 @@ export function DbStatusIndicator() {
               )}
 
               {syncLogs.map((log, idx) => (
-                <div key={`${log.time}_${idx}`} className="rounded-md border p-2 text-xs space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                      {getTriggerLabel(log.trigger)}
-                    </Badge>
-                    <span
-                      className={
-                        log.ok
-                          ? "text-green-600 dark:text-green-400"
-                          : "text-red-600 dark:text-red-400"
-                      }
-                    >
-                      {log.ok ? "✅ ناجحة" : "❌ فشلت"}
-                    </span>
-                    <span className="text-muted-foreground">{formatTime(log.time)}</span>
-                  </div>
-
-                  <div className="flex items-center gap-3 flex-wrap text-muted-foreground">
-                    {typeof log.synced === "number" && <span>{log.synced} صف</span>}
-                    {typeof log.errors === "number" && <span>أخطاء: {log.errors}</span>}
-                    {log.duration && <span>{log.duration}</span>}
-                  </div>
-
-                  {log.message && (
-                    <div
-                      className={
-                        log.ok
-                          ? "text-green-700 dark:text-green-400"
-                          : "text-red-700 dark:text-red-400"
-                      }
-                    >
-                      {log.message}
+                  <div
+                    key={`${log.time}_${idx}`}
+                    className="rounded-md border p-2 text-xs space-y-1"
+                  >
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] px-1.5 py-0"
+                      >
+                        {getTriggerLabel(log.trigger)}
+                      </Badge>
+                      <span
+                        className={
+                          log.ok
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-red-600 dark:text-red-400"
+                        }
+                      >
+                        {log.ok ? "✅ ناجحة" : "❌ فشلت"}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {formatTime(log.time)}
+                      </span>
                     </div>
-                  )}
 
-                  {Array.isArray(log.details) && log.details.length > 0 && (
-                    <div className="rounded-md bg-muted/40 px-2 py-1.5 space-y-1">
-                      {log.details.slice(0, 8).map((detail, dIdx) => (
-                        <div key={`${log.time}_${idx}_${dIdx}`} className="text-[11px] text-muted-foreground">
-                          • {getOperationLabel(detail.operation)} {detail.tableLabel || detail.table || "-"}
-                          {detail.id != null ? ` رقم ${detail.id}` : ""}
-                        </div>
-                      ))}
-                      {log.details.length > 8 && (
-                        <div className="text-[11px] text-muted-foreground">
-                          + {log.details.length - 8} تفاصيل إضافية
-                        </div>
+                    <div className="flex items-center gap-3 flex-wrap text-muted-foreground">
+                      {typeof log.synced === "number" && (
+                        <span>{log.synced} صف</span>
                       )}
+                      {typeof log.errors === "number" && (
+                        <span>أخطاء: {log.errors}</span>
+                      )}
+                      {log.duration && <span>{log.duration}</span>}
                     </div>
-                  )}
-                </div>
-              ))}
+
+                    {log.message && (
+                      <div
+                        className={
+                          log.ok
+                            ? "text-green-700 dark:text-green-400"
+                            : "text-red-700 dark:text-red-400"
+                        }
+                      >
+                        {log.message}
+                      </div>
+                    )}
+
+                    {Array.isArray(log.details) && log.details.length > 0 && (
+                      <div className="rounded-md bg-muted/40 px-2 py-1.5 space-y-1">
+                        {log.details.slice(0, 8).map((detail, dIdx) => (
+                          <div
+                            key={`${log.time}_${idx}_${dIdx}`}
+                            className="text-[11px] text-muted-foreground"
+                          >
+                            • {getOperationLabel(detail.operation)}{" "}
+                            {detail.tableLabel || detail.table || "-"}
+                            {detail.id != null ? ` رقم ${detail.id}` : ""}
+                          </div>
+                        ))}
+                        {log.details.length > 8 && (
+                          <div className="text-[11px] text-muted-foreground">
+                            + {log.details.length - 8} تفاصيل إضافية
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
             </div>
           </div>
         </DialogContent>
