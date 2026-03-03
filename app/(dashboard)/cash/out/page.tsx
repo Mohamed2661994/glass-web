@@ -417,9 +417,7 @@ function CashOutPage() {
               <Card className="border-dashed bg-muted/30">
                 <CardContent className="p-3 space-y-1.5 text-sm text-center">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">
-                      حساب المورد
-                    </span>
+                    <span className="text-muted-foreground">حساب المورد</span>
                     <span
                       className={`font-bold ${
                         supplierBalance > 0
@@ -444,7 +442,8 @@ function CashOutPage() {
                             : "text-green-600"
                         }`}
                       >
-                        {(supplierBalance - Number(amount)).toLocaleString()} ج.م
+                        {(supplierBalance - Number(amount)).toLocaleString()}{" "}
+                        ج.م
                       </span>
                     </div>
                   )}

@@ -458,12 +458,11 @@ export default function EditWholesaleInvoicePage() {
 
   const totalBeforeDiscount = useMemo(() => {
     return items.reduce((sum, item) => {
-      const raw =
-        Number(item.price) * (Number(item.quantity) || 0) -
-        (applyItemsDiscount ? Number(item.discount) || 0 : 0);
+      const qty = Number(item.quantity) || 0;
+      const raw = (Number(item.price) - (Number(item.discount) || 0)) * qty;
       return sum + (item.is_return ? -raw : raw);
     }, 0);
-  }, [items, applyItemsDiscount]);
+  }, [items]);
 
   /* preview: total WITH discount (for eye icon) */
   const discountPreviewTotal = useMemo(() => {
@@ -615,16 +614,21 @@ export default function EditWholesaleInvoicePage() {
      ========================================================= */
 
   const filteredProducts = useMemo(() => {
-    const filtered = products.filter((p) =>
-      multiWordMatch(
+    const filtered = products.filter((p) => {
+      // Only show products that have wholesale package
+      const wp = (p.wholesale_package || "").trim();
+      const hasWholesale =
+        p.has_wholesale !== false && wp !== "" && wp !== "كرتونة 0";
+      if (!hasWholesale) return false;
+      return multiWordMatch(
         search,
         String(p.id),
         p.name,
         p.description,
         p.barcode,
         p.manufacturer,
-      ),
-    );
+      );
+    });
 
     return filtered.sort((a, b) => {
       if (search.trim()) {
@@ -956,9 +960,7 @@ export default function EditWholesaleInvoicePage() {
                       <th className="p-3 text-right">الصنف</th>
                       <th className="p-3 text-center">السعر</th>
                       <th className="p-3 text-center">الكمية</th>
-                      {!applyItemsDiscount && (
-                        <th className="p-3 text-center">الخصم</th>
-                      )}
+                      <th className="p-3 text-center">الخصم</th>
                       <th className="p-3 text-center">الإجمالي</th>
                       <th className="p-3 text-center">مرتجع</th>
                       <th className="p-3 text-center">إجراءات</th>
@@ -1026,10 +1028,11 @@ export default function EditWholesaleInvoicePage() {
                             ) : null;
                           })()}
                         </td>
-                        {!applyItemsDiscount && (
-                          <td className="p-3 text-center">
+                        <td className="p-3 text-center">
                             <Input
-                              type="number"
+                              type="text"
+                              inputMode="numeric"
+                              dir="ltr"
                               data-discount-id={item.uid}
                               className="w-20 mx-auto text-center"
                               value={item.discount}
@@ -1039,32 +1042,28 @@ export default function EditWholesaleInvoicePage() {
                                   setShowProductModal(true);
                                 }
                               }}
-                              onChange={(e) =>
+                              onChange={(e) => {
+                                const raw = e.target.value.replace(/[^0-9.\-]/g, "");
+                                const hasMinus = raw.includes("-");
+                                const digits = raw.replace(/-/g, "");
+                                const num = digits === "" ? "" : (hasMinus ? -1 : 1) * Number(digits);
                                 setItems((prev) =>
                                   prev.map((i) =>
                                     i.uid === item.uid
-                                      ? {
-                                          ...i,
-                                          discount:
-                                            e.target.value === ""
-                                              ? ""
-                                              : Number(e.target.value),
-                                        }
+                                      ? { ...i, discount: num }
                                       : i,
                                   ),
-                                )
-                              }
+                                );
+                              }}
                             />
                           </td>
-                        )}
                         <td className="p-3 text-center font-semibold">
                           {(() => {
+                            const qty = Number(item.quantity) || 0;
                             const raw =
-                              Number(item.price) *
-                                (Number(item.quantity) || 0) -
-                              (applyItemsDiscount
-                                ? Number(item.discount) || 0
-                                : 0);
+                              (Number(item.price) -
+                                (Number(item.discount) || 0)) *
+                              qty;
                             return item.is_return ? -raw : raw;
                           })()}
                         </td>
@@ -1140,9 +1139,9 @@ export default function EditWholesaleInvoicePage() {
             <div className="md:hidden space-y-3">
               {items.map((item, index) => {
                 const itemTotal = (() => {
+                  const qty = Number(item.quantity) || 0;
                   const raw =
-                    Number(item.price) * (Number(item.quantity) || 0) -
-                    (applyItemsDiscount ? Number(item.discount) || 0 : 0);
+                    (Number(item.price) - (Number(item.discount) || 0)) * qty;
                   return item.is_return ? -raw : raw;
                 })();
                 const isExpanded = expandedItemUid === item.uid;
@@ -1265,13 +1264,14 @@ export default function EditWholesaleInvoicePage() {
                           ) : null;
                         })()}
                       </div>
-                      {!applyItemsDiscount && (
-                        <div className="space-y-1">
+                      <div className="space-y-1">
                           <label className="text-xs text-muted-foreground">
                             الخصم
                           </label>
                           <Input
-                            type="number"
+                            type="text"
+                            inputMode="numeric"
+                            dir="ltr"
                             data-mobile-discount-id={item.uid}
                             className="text-center"
                             value={item.discount || 0}
@@ -1283,24 +1283,21 @@ export default function EditWholesaleInvoicePage() {
                                 setShowProductModal(true);
                               }
                             }}
-                            onChange={(e) =>
+                            onChange={(e) => {
+                              const raw = e.target.value.replace(/[^0-9.\-]/g, "");
+                              const hasMinus = raw.includes("-");
+                              const digits = raw.replace(/-/g, "");
+                              const num = digits === "" ? 0 : (hasMinus ? -1 : 1) * Number(digits);
                               setItems((prev) =>
                                 prev.map((i) =>
                                   i.uid === item.uid
-                                    ? {
-                                        ...i,
-                                        discount:
-                                          e.target.value === ""
-                                            ? 0
-                                            : Number(e.target.value),
-                                      }
+                                    ? { ...i, discount: num }
                                     : i,
                                 ),
-                              )
-                            }
+                              );
+                            }}
                           />
                         </div>
-                      )}
                     </div>
 
                     {/* Total */}
