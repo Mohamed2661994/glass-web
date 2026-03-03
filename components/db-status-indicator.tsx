@@ -21,6 +21,7 @@ import {
   CloudOff,
   ArrowRightLeft,
   Zap,
+  List,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,24 @@ interface HealthData {
   } | null;
   uptime: number;
   timestamp: string;
+}
+
+interface SyncLogEntry {
+  time: string;
+  trigger: "realtime" | "periodic" | "manual" | "failback" | string;
+  reason?: string | null;
+  ok: boolean;
+  synced?: number;
+  errors?: number;
+  duration?: string;
+  message?: string;
+  details?: Array<{
+    operation?: "insert" | "update" | "delete" | string;
+    table?: string;
+    tableLabel?: string;
+    id?: number | string | null;
+    rowCount?: number;
+  }>;
 }
 
 function formatUptime(seconds: number): string {
@@ -140,6 +159,10 @@ export function DbStatusIndicator() {
 
   // Confirm dialog
   const [confirmRestore, setConfirmRestore] = useState(false);
+  const [syncLogsOpen, setSyncLogsOpen] = useState(false);
+  const [syncLogs, setSyncLogs] = useState<SyncLogEntry[]>([]);
+  const [syncLogsLoading, setSyncLogsLoading] = useState(false);
+  const [syncLogsError, setSyncLogsError] = useState<string | null>(null);
 
   const fetchHealth = useCallback(async () => {
     try {
@@ -318,6 +341,48 @@ export function DbStatusIndicator() {
     }
   };
 
+  const fetchSyncLogs = useCallback(async () => {
+    setSyncLogsLoading(true);
+    setSyncLogsError(null);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_URL}/admin/sync-logs?limit=120`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        cache: "no-store",
+      });
+      const data = await res.json();
+      if (!res.ok || data?.ok === false) {
+        throw new Error(data?.error || "فشل تحميل سجل المزامنة");
+      }
+      setSyncLogs(Array.isArray(data?.logs) ? data.logs : []);
+    } catch (err: any) {
+      setSyncLogsError(err.message || "فشل تحميل سجل المزامنة");
+      setSyncLogs([]);
+    } finally {
+      setSyncLogsLoading(false);
+    }
+  }, []);
+
+  const handleOpenSyncLogs = async () => {
+    setSyncLogsOpen(true);
+    await fetchSyncLogs();
+  };
+
+  const getTriggerLabel = (trigger: string) => {
+    if (trigger === "realtime") return "لحظية";
+    if (trigger === "periodic") return "دورية";
+    if (trigger === "manual") return "يدوية";
+    if (trigger === "failback") return "قبل الرجوع للمحلي";
+    return trigger;
+  };
+
+  const getOperationLabel = (operation?: string) => {
+    if (operation === "insert") return "إضافة";
+    if (operation === "update") return "تعديل";
+    if (operation === "delete") return "حذف";
+    return operation || "عملية";
+  };
+
   if (loading) {
     return (
       <Card className="animate-pulse">
@@ -355,7 +420,11 @@ export function DbStatusIndicator() {
     ? getSyncCountdown(health.nextPeriodicSyncAt, nowMs)
     : null;
   const syncProgress = health.nextPeriodicSyncAt
-    ? getSyncProgressPercent(health.nextPeriodicSyncAt, periodicIntervalMs, nowMs)
+    ? getSyncProgressPercent(
+        health.nextPeriodicSyncAt,
+        periodicIntervalMs,
+        nowMs,
+      )
     : null;
 
   return (
@@ -466,11 +535,16 @@ export function DbStatusIndicator() {
                 )}
               </div>
               {!health.syncInProgress && syncProgress !== null && (
-                <div className="mt-1 h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all duration-500"
-                    style={{ width: `${syncProgress}%` }}
-                  />
+                <div className="mt-1 flex items-center gap-2">
+                  <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all duration-500"
+                      style={{ width: `${syncProgress}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground tabular-nums min-w-10 text-left">
+                    {Math.round(syncProgress)}%
+                  </span>
                 </div>
               )}
             </div>
@@ -763,6 +837,16 @@ export function DbStatusIndicator() {
                   )}
                   ريستور من Drive
                 </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-xs"
+                  onClick={handleOpenSyncLogs}
+                >
+                  <List className="h-3.5 w-3.5" />
+                  سجل المزامنة
+                </Button>
               </div>
             </div>
           )}
@@ -793,6 +877,107 @@ export function DbStatusIndicator() {
             <Button size="sm" variant="destructive" onClick={handleRestore}>
               تأكيد الريستور
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={syncLogsOpen} onOpenChange={setSyncLogsOpen}>
+        <DialogContent dir="rtl" className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <List className="h-5 w-5" />
+              سجل المزامنة (لحظية / دورية)
+            </DialogTitle>
+            <DialogDescription>
+              آخر محاولات المزامنة والنتيجة لكل محاولة.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                onClick={fetchSyncLogs}
+                disabled={syncLogsLoading}
+              >
+                {syncLogsLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" />
+                )}
+                تحديث
+              </Button>
+            </div>
+
+            {syncLogsError && (
+              <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-600 dark:text-red-400">
+                {syncLogsError}
+              </div>
+            )}
+
+            <div className="max-h-[55vh] overflow-auto space-y-2 pr-1">
+              {!syncLogsLoading && syncLogs.length === 0 && !syncLogsError && (
+                <div className="text-xs text-muted-foreground text-center py-6">
+                  لا يوجد سجل مزامنة بعد.
+                </div>
+              )}
+
+              {syncLogs.map((log, idx) => (
+                <div key={`${log.time}_${idx}`} className="rounded-md border p-2 text-xs space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                      {getTriggerLabel(log.trigger)}
+                    </Badge>
+                    <span
+                      className={
+                        log.ok
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-red-600 dark:text-red-400"
+                      }
+                    >
+                      {log.ok ? "✅ ناجحة" : "❌ فشلت"}
+                    </span>
+                    <span className="text-muted-foreground">{formatTime(log.time)}</span>
+                  </div>
+
+                  <div className="flex items-center gap-3 flex-wrap text-muted-foreground">
+                    {typeof log.synced === "number" && <span>{log.synced} صف</span>}
+                    {typeof log.errors === "number" && <span>أخطاء: {log.errors}</span>}
+                    {log.duration && <span>{log.duration}</span>}
+                  </div>
+
+                  {log.message && (
+                    <div
+                      className={
+                        log.ok
+                          ? "text-green-700 dark:text-green-400"
+                          : "text-red-700 dark:text-red-400"
+                      }
+                    >
+                      {log.message}
+                    </div>
+                  )}
+
+                  {Array.isArray(log.details) && log.details.length > 0 && (
+                    <div className="rounded-md bg-muted/40 px-2 py-1.5 space-y-1">
+                      {log.details.slice(0, 8).map((detail, dIdx) => (
+                        <div key={`${log.time}_${idx}_${dIdx}`} className="text-[11px] text-muted-foreground">
+                          • {getOperationLabel(detail.operation)} {detail.tableLabel || detail.table || "-"}
+                          {detail.id != null ? ` رقم ${detail.id}` : ""}
+                        </div>
+                      ))}
+                      {log.details.length > 8 && (
+                        <div className="text-[11px] text-muted-foreground">
+                          + {log.details.length - 8} تفاصيل إضافية
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
