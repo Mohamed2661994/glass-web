@@ -41,6 +41,12 @@ interface Invoice {
   supplier_name?: string;
   subtotal: number;
   total: number;
+  total_before_discount?: number;
+  final_total?: number;
+  items_discount?: number;
+  extra_discount?: number;
+  manual_discount?: number;
+  discount_total?: number;
   previous_balance: number;
   paid_amount: number;
   remaining_amount: number;
@@ -58,22 +64,45 @@ const toNumber = (value: unknown) => {
   return Number.isFinite(num) ? num : 0;
 };
 
-const getInvoiceComputedStatus = (invoice: Invoice): "paid" | "partial" | "unpaid" => {
-  const paid = toNumber(invoice.paid_amount);
-  const total = toNumber(invoice.total);
-  const previousBalance = toNumber(invoice.previous_balance);
-  const rawRemaining = Number(invoice.remaining_amount);
+const hasFiniteNumber = (value: unknown) => Number.isFinite(Number(value));
 
-  const remaining = Number.isFinite(rawRemaining)
-    ? rawRemaining
-    : total + previousBalance - paid;
+const getInvoiceComputedFinancials = (invoice: Invoice) => {
+  const paid = toNumber(invoice.paid_amount);
+  const previousBalance = toNumber(invoice.previous_balance);
+  const totalBeforeDiscount = hasFiniteNumber(invoice.total_before_discount)
+    ? toNumber(invoice.total_before_discount)
+    : toNumber(invoice.subtotal);
+
+  const totalDiscount = hasFiniteNumber(invoice.discount_total)
+    ? toNumber(invoice.discount_total)
+    : hasFiniteNumber(invoice.manual_discount)
+      ? toNumber(invoice.manual_discount)
+      : toNumber(invoice.extra_discount);
+
+  const netInvoiceTotal = hasFiniteNumber(invoice.final_total)
+    ? toNumber(invoice.final_total)
+    : Math.max(0, totalBeforeDiscount - totalDiscount);
+
+  const totalWithPrevious = netInvoiceTotal + previousBalance;
+  const remaining = totalWithPrevious - paid;
+  const normalizedRemaining = Math.round(remaining * 100) / 100;
 
   const epsilon = 0.01;
+  const status: "paid" | "partial" | "unpaid" =
+    normalizedRemaining <= epsilon
+      ? "paid"
+      : paid > epsilon
+        ? "partial"
+        : "unpaid";
 
-  if (remaining <= epsilon) return "paid";
-  if (paid > epsilon) return "partial";
-  return "unpaid";
+  return {
+    remaining: normalizedRemaining,
+    status,
+  };
 };
+
+const getInvoiceComputedStatus = (invoice: Invoice): "paid" | "partial" | "unpaid" =>
+  getInvoiceComputedFinancials(invoice).status;
 
 export default function InvoicesPage() {
   const [data, setData] = useState<Invoice[]>([]);
@@ -393,7 +422,9 @@ export default function InvoicesPage() {
                     </td>
                   </tr>
                 ) : (
-                  data.map((invoice) => (
+                  data.map((invoice) => {
+                    const computed = getInvoiceComputedFinancials(invoice);
+                    return (
                     <tr key={invoice.id} className="border-b hover:bg-muted/50">
                       <td className="p-3">{invoice.id}</td>
                       <td className="p-3">
@@ -421,10 +452,10 @@ export default function InvoicesPage() {
                         {Number(invoice.paid_amount).toFixed(2)}
                       </td>
                       <td className="p-3">
-                        {Number(invoice.remaining_amount).toFixed(2)}
+                        {computed.remaining.toFixed(2)}
                       </td>
                       <td className="p-3">
-                        {getStatusBadge(getInvoiceComputedStatus(invoice))}
+                        {getStatusBadge(computed.status)}
                       </td>
                       <td className="p-3 text-xs text-muted-foreground">
                         {invoice.created_by_name || "—"}
@@ -473,7 +504,8 @@ export default function InvoicesPage() {
                         </Button>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -501,7 +533,9 @@ export default function InvoicesPage() {
             </CardContent>
           </Card>
         ) : (
-          data.map((invoice) => (
+          data.map((invoice) => {
+            const computed = getInvoiceComputedFinancials(invoice);
+            return (
             <Card
               key={invoice.id}
               className="overflow-hidden"
@@ -524,7 +558,7 @@ export default function InvoicesPage() {
                       </Badge>
                     )}
                   </div>
-                  {getStatusBadge(getInvoiceComputedStatus(invoice))}
+                  {getStatusBadge(computed.status)}
                 </div>
 
                 {/* Customer name */}
@@ -565,12 +599,12 @@ export default function InvoicesPage() {
                     <p className="text-[9px] text-muted-foreground">باقي</p>
                     <p
                       className={`text-xs font-bold ${
-                        Number(invoice.remaining_amount) > 0
+                        computed.remaining > 0.01
                           ? "text-red-500"
                           : ""
                       }`}
                     >
-                      {Number(invoice.remaining_amount).toFixed(0)}
+                      {computed.remaining.toFixed(0)}
                     </p>
                   </div>
                 </div>
@@ -632,7 +666,8 @@ export default function InvoicesPage() {
                 </div>
               </CardContent>
             </Card>
-          ))
+            );
+          })
         )}
       </div>
 
