@@ -1311,7 +1311,9 @@ export default function CreateWholesaleInvoicePage() {
                         </td>
                         <td className="p-3 text-center">
                           <Input
-                            type="number"
+                            type="text"
+                            inputMode="numeric"
+                            dir="ltr"
                             data-discount-id={item.uid}
                             className="w-20 mx-auto text-center"
                             value={item.discount}
@@ -1321,21 +1323,19 @@ export default function CreateWholesaleInvoicePage() {
                                 setShowProductModal(true);
                               }
                             }}
-                            onChange={(e) =>
+                            onChange={(e) => {
+                              const raw = e.target.value.replace(/[^0-9.\-]/g, "");
+                              const hasMinus = raw.includes("-");
+                              const digits = raw.replace(/-/g, "");
+                              const num = digits === "" ? "" : (hasMinus ? -1 : 1) * Number(digits);
                               setItems((prev) =>
                                 prev.map((i) =>
                                   i.uid === item.uid
-                                    ? {
-                                        ...i,
-                                        discount:
-                                          e.target.value === ""
-                                            ? ""
-                                            : Number(e.target.value),
-                                      }
+                                    ? { ...i, discount: num }
                                     : i,
                                 ),
-                              )
-                            }
+                              );
+                            }}
                           />
                         </td>
                         <td className="p-3 text-center font-semibold">
@@ -1550,9 +1550,11 @@ export default function CreateWholesaleInvoicePage() {
                           الخصم
                         </label>
                         <Input
-                          type="number"
+                          type="text"
+                          inputMode="numeric"
                           data-mobile-discount-id={item.uid}
                           className="text-center"
+                          dir="ltr"
                           value={item.discount || 0}
                           onFocus={(e) => e.target.select()}
                           onKeyDown={(e) => {
@@ -1562,21 +1564,19 @@ export default function CreateWholesaleInvoicePage() {
                               setShowProductModal(true);
                             }
                           }}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/[^0-9.\-]/g, "");
+                            const hasMinus = raw.includes("-");
+                            const digits = raw.replace(/-/g, "");
+                            const num = digits === "" ? 0 : (hasMinus ? -1 : 1) * Number(digits);
                             setItems((prev) =>
                               prev.map((i) =>
                                 i.uid === item.uid
-                                  ? {
-                                      ...i,
-                                      discount:
-                                        e.target.value === ""
-                                          ? 0
-                                          : Number(e.target.value),
-                                    }
+                                  ? { ...i, discount: num }
                                   : i,
                               ),
-                            )
-                          }
+                            );
+                          }}
                         />
                       </div>
                     </div>
