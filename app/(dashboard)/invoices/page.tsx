@@ -53,6 +53,28 @@ interface Invoice {
   updated_by_name?: string;
 }
 
+const toNumber = (value: unknown) => {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
+};
+
+const getInvoiceComputedStatus = (invoice: Invoice): "paid" | "partial" | "unpaid" => {
+  const paid = toNumber(invoice.paid_amount);
+  const total = toNumber(invoice.total);
+  const previousBalance = toNumber(invoice.previous_balance);
+  const rawRemaining = Number(invoice.remaining_amount);
+
+  const remaining = Number.isFinite(rawRemaining)
+    ? rawRemaining
+    : total + previousBalance - paid;
+
+  const epsilon = 0.01;
+
+  if (remaining <= epsilon) return "paid";
+  if (paid > epsilon) return "partial";
+  return "unpaid";
+};
+
 export default function InvoicesPage() {
   const [data, setData] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(false);
@@ -181,7 +203,7 @@ export default function InvoicesPage() {
     dateTo,
   ]);
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: "paid" | "partial" | "unpaid") => {
     if (status === "paid")
       return <Badge className="bg-green-600">مدفوعة</Badge>;
     if (status === "partial")
@@ -402,7 +424,7 @@ export default function InvoicesPage() {
                         {Number(invoice.remaining_amount).toFixed(2)}
                       </td>
                       <td className="p-3">
-                        {getStatusBadge(invoice.payment_status)}
+                        {getStatusBadge(getInvoiceComputedStatus(invoice))}
                       </td>
                       <td className="p-3 text-xs text-muted-foreground">
                         {invoice.created_by_name || "—"}
@@ -502,7 +524,7 @@ export default function InvoicesPage() {
                       </Badge>
                     )}
                   </div>
-                  {getStatusBadge(invoice.payment_status)}
+                  {getStatusBadge(getInvoiceComputedStatus(invoice))}
                 </div>
 
                 {/* Customer name */}
