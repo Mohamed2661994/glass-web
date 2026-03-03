@@ -127,8 +127,7 @@ body { background: #e5e5e5; font-family: Tahoma, Arial; }
 }
 
 .page {
-  width: 210mm;
-  min-height: 297mm;
+  width: 148mm;
   background: white;
   color: #000 !important;
   padding: 12mm 10mm;
@@ -196,7 +195,7 @@ td.name-cell { text-align: right; font-weight: 500; }
   color: #999 !important;
 }
 
-@page { size: A4 portrait; margin: 0; }
+@page { size: A5 portrait; margin: 0; }
 
 @media print {
   body * { visibility: hidden; }
@@ -217,8 +216,9 @@ td.name-cell { text-align: right; font-weight: 500; }
 
   .page {
     display: block;
-    width: 210mm;
-    height: 297mm;
+    width: 148mm;
+    height: auto;
+    min-height: 0;
     margin: 0 auto;
     box-shadow: none;
     page-break-after: always;
