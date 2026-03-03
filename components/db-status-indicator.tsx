@@ -45,6 +45,8 @@ interface HealthData {
   localAlive: boolean;
   cloudAlive: boolean;
   syncInProgress: boolean;
+  periodicSyncIntervalMs?: number;
+  nextPeriodicSyncAt?: string | null;
   lastSync: {
     ok: boolean;
     synced: number;
@@ -91,7 +93,7 @@ function timeAgo(iso: string): string {
   return `منذ ${Math.floor(hrs / 24)} يوم`;
 }
 
-const SYNC_INTERVAL_MS = 15 * 60 * 1000;
+const DEFAULT_SYNC_INTERVAL_MS = 15 * 60 * 1000;
 
 function formatCountdown(ms: number): string {
   const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
@@ -102,16 +104,19 @@ function formatCountdown(ms: number): string {
   return `${minutes}:${seconds}`;
 }
 
-function getSyncCountdown(lastSyncIso: string, nowMs: number): string {
-  const diff = Math.max(0, nowMs - new Date(lastSyncIso).getTime());
-  const remaining = SYNC_INTERVAL_MS - (diff % SYNC_INTERVAL_MS || 0);
+function getSyncCountdown(nextSyncIso: string, nowMs: number): string {
+  const remaining = Math.max(0, new Date(nextSyncIso).getTime() - nowMs);
   return formatCountdown(remaining);
 }
 
-function getSyncProgressPercent(lastSyncIso: string, nowMs: number): number {
-  const diff = Math.max(0, nowMs - new Date(lastSyncIso).getTime());
-  const elapsed = diff % SYNC_INTERVAL_MS;
-  return Math.min(100, Math.max(0, (elapsed / SYNC_INTERVAL_MS) * 100));
+function getSyncProgressPercent(
+  nextSyncIso: string,
+  intervalMs: number,
+  nowMs: number,
+): number {
+  const remaining = Math.max(0, new Date(nextSyncIso).getTime() - nowMs);
+  const elapsed = Math.max(0, intervalMs - remaining);
+  return Math.min(100, Math.max(0, (elapsed / intervalMs) * 100));
 }
 
 export function DbStatusIndicator() {
@@ -344,11 +349,13 @@ export function DbStatusIndicator() {
     );
   }
 
-  const syncCountdown = health.lastSync?.time
-    ? getSyncCountdown(health.lastSync.time, nowMs)
+  const periodicIntervalMs =
+    Number(health.periodicSyncIntervalMs) || DEFAULT_SYNC_INTERVAL_MS;
+  const syncCountdown = health.nextPeriodicSyncAt
+    ? getSyncCountdown(health.nextPeriodicSyncAt, nowMs)
     : null;
-  const syncProgress = health.lastSync?.time
-    ? getSyncProgressPercent(health.lastSync.time, nowMs)
+  const syncProgress = health.nextPeriodicSyncAt
+    ? getSyncProgressPercent(health.nextPeriodicSyncAt, periodicIntervalMs, nowMs)
     : null;
 
   return (
