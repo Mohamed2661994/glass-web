@@ -9,7 +9,11 @@ export type UpdateEvent =
   | "invoice_created"
   | "invoice_updated"
   | "invoice_deleted"
-  | "transfer_created";
+  | "transfer_created"
+  | "transfer_updated"
+  | "transfer_cancelled"
+  | "cash_in_created"
+  | "cash_out_created";
 
 let channel: BroadcastChannel | null = null;
 
