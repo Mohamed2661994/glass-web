@@ -67,6 +67,8 @@ function CashOutPage() {
   >([]);
   const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
   const [supplierSearching, setSupplierSearching] = useState(false);
+  const [supplierBalance, setSupplierBalance] = useState<number | null>(null);
+  const [balanceLoading, setBalanceLoading] = useState(false);
   const [date, setDate] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -136,6 +138,25 @@ function CashOutPage() {
   };
 
   /* ========== Supplier Search ========== */
+  const fetchSupplierBalance = async (supplierName: string) => {
+    try {
+      setBalanceLoading(true);
+      const res = await api.get("/reports/supplier-balances", {
+        params: { supplier_name: supplierName },
+      });
+      const rows: any[] = Array.isArray(res.data) ? res.data : [];
+      if (rows.length > 0) {
+        setSupplierBalance(Number(rows[0].balance_due) || 0);
+      } else {
+        setSupplierBalance(0);
+      }
+    } catch {
+      setSupplierBalance(null);
+    } finally {
+      setBalanceLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (entryType !== "supplier_payment" || !supplierSearch.trim()) {
       setSupplierResults([]);
@@ -172,6 +193,7 @@ function CashOutPage() {
         if (data.supplier_id) {
           setSupplierId(data.supplier_id);
           setSupplierSearch(data.supplier_name || data.name);
+          fetchSupplierBalance(data.supplier_name || data.name);
         }
         if (data.transaction_date) {
           setDate(data.transaction_date.substring(0, 10));
@@ -223,6 +245,7 @@ function CashOutPage() {
         setNotes("");
         setSupplierId(null);
         setSupplierSearch("");
+        setSupplierBalance(null);
       }
     } catch (err: any) {
       toast.error(err.response?.data?.error || "فشل حفظ إذن الصرف");
@@ -279,6 +302,7 @@ function CashOutPage() {
                     onChange={(e) => {
                       setSupplierSearch(e.target.value);
                       setSupplierId(null);
+                      setSupplierBalance(null);
                       setShowSupplierDropdown(true);
                     }}
                     onFocus={() =>
@@ -312,6 +336,7 @@ function CashOutPage() {
                             setSupplierId(s.id);
                             setSupplierSearch(s.name);
                             setShowSupplierDropdown(false);
+                            fetchSupplierBalance(s.name);
                           }}
                         >
                           {s.name}
@@ -340,6 +365,7 @@ function CashOutPage() {
                 if (v !== "supplier_payment") {
                   setSupplierId(null);
                   setSupplierSearch("");
+                  setSupplierBalance(null);
                 }
               }}
               className="flex flex-wrap gap-4 mt-3"
@@ -380,6 +406,59 @@ function CashOutPage() {
           </div>
 
           {/* المبلغ */}
+          {entryType === "supplier_payment" && balanceLoading && (
+            <p className="text-xs text-muted-foreground text-center">
+              جاري تحميل حساب المورد...
+            </p>
+          )}
+          {entryType === "supplier_payment" &&
+            supplierBalance !== null &&
+            supplierId && (
+              <Card className="border-dashed bg-muted/30">
+                <CardContent className="p-3 space-y-1.5 text-sm text-center">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">
+                      حساب المورد
+                    </span>
+                    <span
+                      className={`font-bold ${
+                        supplierBalance > 0
+                          ? "text-red-500"
+                          : supplierBalance < 0
+                            ? "text-green-600"
+                            : ""
+                      }`}
+                    >
+                      {supplierBalance.toLocaleString()} ج.م
+                    </span>
+                  </div>
+                  {Number(amount) > 0 && supplierBalance > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        المتبقي بعد الدفع
+                      </span>
+                      <span
+                        className={`font-black text-lg ${
+                          supplierBalance - Number(amount) > 0
+                            ? "text-red-500"
+                            : "text-green-600"
+                        }`}
+                      >
+                        {(supplierBalance - Number(amount)).toLocaleString()} ج.م
+                      </span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          {entryType === "supplier_payment" &&
+            supplierBalance !== null &&
+            supplierBalance === 0 &&
+            supplierId && (
+              <p className="text-xs text-green-600 text-center font-medium">
+                ✓ لا يوجد رصيد مستحق على هذا المورد
+              </p>
+            )}
           <div>
             <Label>المبلغ</Label>
             <Input
