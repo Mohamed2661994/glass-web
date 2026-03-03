@@ -44,6 +44,7 @@ interface HealthData {
   activeDb: string;
   localAlive: boolean;
   cloudAlive: boolean;
+  syncInProgress: boolean;
   lastSync: {
     ok: boolean;
     synced: number;
@@ -400,12 +401,20 @@ export function DbStatusIndicator() {
               </div>
               <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                 <span>تشغيل: {formatUptime(health.uptime)}</span>
-                {health.lastSync?.time && (
+                {health.syncInProgress ? (
+                  <>
+                    <span>•</span>
+                    <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400 font-medium animate-pulse">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      جاري المزامنة...
+                    </span>
+                  </>
+                ) : health.lastSync?.time ? (
                   <>
                     <span>•</span>
                     <span>مزامنة: {timeAgo(health.lastSync.time)}</span>
                   </>
-                )}
+                ) : null}
                 {health.lastBackup && (
                   <>
                     <span>•</span>
