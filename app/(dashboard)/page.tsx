@@ -985,7 +985,7 @@ export default function DashboardPage() {
     [widgets],
   );
 
-  /* fetch invoices – filter by created_at (invoices created today) */
+  /* fetch invoices – filter by invoice_date (today's invoices only) */
   useEffect(() => {
     if (!branchId) return;
     setLoadingInv(true);
@@ -995,16 +995,16 @@ export default function DashboardPage() {
         const { data } = await api.get("/invoices", {
           params: {
             invoice_type: invoiceType,
-            limit: 200,
-            offset: 0,
+            date_from: today,
+            date_to: today,
             _t: Date.now(),
           },
         });
         const all: Invoice[] = Array.isArray(data) ? data : (data.data ?? []);
-        // Keep only invoices created today (regardless of invoice_date)
+        // Keep only invoices whose invoice_date matches today
         const filtered = all
           .filter((inv) => {
-            const d = (inv.created_at || "").slice(0, 10);
+            const d = (inv.invoice_date || "").slice(0, 10);
             return d === today;
           })
           .sort((a, b) => b.id - a.id);
