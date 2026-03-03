@@ -102,6 +102,16 @@ export function CashCounterModal() {
     return () => window.removeEventListener("keydown", handler);
   }, [open, openFromKeyboard, closeModal]);
 
+  useEffect(() => {
+    if (!open || denominations.length === 0) return;
+    const firstDenom = denominations[0];
+    const timer = setTimeout(() => {
+      inputRefs.current[firstDenom]?.focus();
+      inputRefs.current[firstDenom]?.select();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [open, denominations]);
+
   /* ───── Helper: persist to user preferences ───── */
 
   const saveCashCounter = useCallback(
