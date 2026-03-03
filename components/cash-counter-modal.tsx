@@ -222,6 +222,26 @@ export function CashCounterModal() {
         inputRefs.current[nextDenom]?.focus();
         inputRefs.current[nextDenom]?.select();
       }
+      return;
+    }
+
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      const prevDenom = denominations[index - 1];
+      if (prevDenom !== undefined) {
+        inputRefs.current[prevDenom]?.focus();
+        inputRefs.current[prevDenom]?.select();
+      }
+      return;
+    }
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      const nextDenom = denominations[index + 1];
+      if (nextDenom !== undefined) {
+        inputRefs.current[nextDenom]?.focus();
+        inputRefs.current[nextDenom]?.select();
+      }
     }
   };
 
