@@ -1209,11 +1209,11 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">فواتير اليوم</p>
-                  {loadingStats ? (
+                  {loadingInv ? (
                     <Skeleton className="h-6 w-12 mt-1 mx-auto" />
                   ) : (
                     <p className="text-lg font-bold mt-0.5">
-                      {stats?.today_invoices_count ?? 0}
+                      {invoices.length}
                     </p>
                   )}
                 </div>
