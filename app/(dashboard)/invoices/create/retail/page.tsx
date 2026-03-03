@@ -2238,6 +2238,7 @@ export default function CreateRetailInvoicePage() {
                       paid_amount: Number(paidAmount) || 0,
                       remaining_amount: remaining,
                       extra_discount: Number(extraDiscount) || 0,
+                      previous_balance: Number(previousBalance) || 0,
                       items: items.map((it: any) => ({
                         product_name: it.product_name,
                         package: it.package,
@@ -2357,6 +2358,7 @@ export default function CreateRetailInvoicePage() {
                       paid_amount: Number(paidAmount) || 0,
                       remaining_amount: remaining,
                       extra_discount: Number(extraDiscount) || 0,
+                      previous_balance: Number(previousBalance) || 0,
                       items: items.map((it: any) => ({
                         product_name: it.product_name,
                         package: it.package,

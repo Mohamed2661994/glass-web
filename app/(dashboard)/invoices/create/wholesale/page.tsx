@@ -1324,10 +1324,16 @@ export default function CreateWholesaleInvoicePage() {
                               }
                             }}
                             onChange={(e) => {
-                              const raw = e.target.value.replace(/[^0-9.\-]/g, "");
+                              const raw = e.target.value.replace(
+                                /[^0-9.\-]/g,
+                                "",
+                              );
                               const hasMinus = raw.includes("-");
                               const digits = raw.replace(/-/g, "");
-                              const num = digits === "" ? "" : (hasMinus ? -1 : 1) * Number(digits);
+                              const num =
+                                digits === ""
+                                  ? ""
+                                  : (hasMinus ? -1 : 1) * Number(digits);
                               setItems((prev) =>
                                 prev.map((i) =>
                                   i.uid === item.uid
@@ -1565,10 +1571,16 @@ export default function CreateWholesaleInvoicePage() {
                             }
                           }}
                           onChange={(e) => {
-                            const raw = e.target.value.replace(/[^0-9.\-]/g, "");
+                            const raw = e.target.value.replace(
+                              /[^0-9.\-]/g,
+                              "",
+                            );
                             const hasMinus = raw.includes("-");
                             const digits = raw.replace(/-/g, "");
-                            const num = digits === "" ? 0 : (hasMinus ? -1 : 1) * Number(digits);
+                            const num =
+                              digits === ""
+                                ? 0
+                                : (hasMinus ? -1 : 1) * Number(digits);
                             setItems((prev) =>
                               prev.map((i) =>
                                 i.uid === item.uid
@@ -1845,6 +1857,7 @@ export default function CreateWholesaleInvoicePage() {
                       paid_amount: Number(paidAmount) || 0,
                       remaining_amount: remaining,
                       extra_discount: Number(extraDiscount) || 0,
+                      previous_balance: Number(previousBalance) || 0,
                       items: items.map((it: any) => ({
                         product_name: it.product_name,
                         package: it.package,
@@ -1983,6 +1996,7 @@ export default function CreateWholesaleInvoicePage() {
                           paid_amount: Number(paidAmount) || 0,
                           remaining_amount: remaining,
                           extra_discount: Number(extraDiscount) || 0,
+                          previous_balance: Number(previousBalance) || 0,
                           items: items.map((it: any) => ({
                             product_name: it.product_name,
                             package: it.package,

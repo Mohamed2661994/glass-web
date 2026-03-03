@@ -164,6 +164,7 @@ export interface WhatsAppInvoice {
   remaining_amount: number;
   extra_discount?: number;
   manual_discount?: number;
+  previous_balance?: number;
   items?: {
     product_name: string;
     package?: string;
@@ -264,6 +265,7 @@ function buildInvoiceHtml(invoice: WhatsAppInvoice): string {
         <strong>${Number(invoice.total).toFixed(2)} جنيه</strong>
       </div>
       ${extraDiscount > 0 ? `<div class="summary-row red"><span>الخصم</span><span>-${extraDiscount.toFixed(2)}</span></div>` : ""}
+      ${Number(invoice.previous_balance || 0) !== 0 ? `<div class="summary-row"><span>حساب سابق</span><span>${Number(invoice.previous_balance).toFixed(2)} جنيه</span></div>` : ""}
       <div class="summary-row">
         <span>المدفوع</span>
         <span>${Number(invoice.paid_amount).toFixed(2)} جنيه</span>
