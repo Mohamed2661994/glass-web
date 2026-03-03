@@ -108,6 +108,12 @@ function getSyncCountdown(lastSyncIso: string, nowMs: number): string {
   return formatCountdown(remaining);
 }
 
+function getSyncProgressPercent(lastSyncIso: string, nowMs: number): number {
+  const diff = Math.max(0, nowMs - new Date(lastSyncIso).getTime());
+  const elapsed = diff % SYNC_INTERVAL_MS;
+  return Math.min(100, Math.max(0, (elapsed / SYNC_INTERVAL_MS) * 100));
+}
+
 export function DbStatusIndicator() {
   const [health, setHealth] = useState<HealthData | null>(null);
   const [error, setError] = useState(false);
@@ -338,6 +344,13 @@ export function DbStatusIndicator() {
     );
   }
 
+  const syncCountdown = health.lastSync?.time
+    ? getSyncCountdown(health.lastSync.time, nowMs)
+    : null;
+  const syncProgress = health.lastSync?.time
+    ? getSyncProgressPercent(health.lastSync.time, nowMs)
+    : null;
+
   return (
     <TooltipProvider>
       <Card
@@ -435,9 +448,7 @@ export function DbStatusIndicator() {
                 ) : health.lastSync?.time ? (
                   <>
                     <span>•</span>
-                    <span>
-                      المزامنة القادمة: {getSyncCountdown(health.lastSync.time, nowMs)}
-                    </span>
+                    <span>المزامنة القادمة: {syncCountdown}</span>
                   </>
                 ) : null}
                 {health.lastBackup && (
@@ -447,6 +458,14 @@ export function DbStatusIndicator() {
                   </>
                 )}
               </div>
+              {!health.syncInProgress && syncProgress !== null && (
+                <div className="mt-1 h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all duration-500"
+                    style={{ width: `${syncProgress}%` }}
+                  />
+                </div>
+              )}
             </div>
 
             {/* أزرار */}
@@ -652,10 +671,15 @@ export function DbStatusIndicator() {
                     )}
                     {health.lastSync.time && (
                       <span className="text-muted-foreground">
-                        القادم بعد: {getSyncCountdown(health.lastSync.time, nowMs)}
+                        القادم بعد: {syncCountdown}
                       </span>
                     )}
                   </div>
+                  {!health.lastSync.ok && health.lastSync.message && (
+                    <div className="text-red-600 dark:text-red-400 text-[11px]">
+                      السبب: {health.lastSync.message}
+                    </div>
+                  )}
                 </div>
               )}
 
