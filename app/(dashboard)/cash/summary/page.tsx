@@ -86,6 +86,7 @@ const effectivePaid = (i: CashInItem) => {
 export default function CashSummaryPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const isWholesaleUser = Number(user?.branch_id) === 2;
 
   const [cashIn, setCashIn] = useState<CashInItem[]>([]);
   const [cashOut, setCashOut] = useState<CashOutItem[]>([]);
@@ -129,6 +130,12 @@ export default function CashSummaryPage() {
       }
     })();
   }, [user?.branch_id, cashRefreshKey]);
+
+  useEffect(() => {
+    if (isWholesaleUser) {
+      setIncludeOpeningBalance(false);
+    }
+  }, [isWholesaleUser]);
 
   /* ================= FILTER ================= */
 
@@ -299,8 +306,15 @@ export default function CashSummaryPage() {
             </div>
           </div>
           <div
-            className="p-4 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors"
-            onClick={() => setIncludeOpeningBalance((v) => !v)}
+            className={`p-4 flex items-center justify-between transition-colors ${
+              isWholesaleUser
+                ? "cursor-not-allowed opacity-70"
+                : "cursor-pointer hover:bg-muted/50"
+            }`}
+            onClick={() => {
+              if (isWholesaleUser) return;
+              setIncludeOpeningBalance((v) => !v);
+            }}
           >
             <div className="flex items-center gap-2">
               <History className="h-4 w-4 text-muted-foreground" />
@@ -308,6 +322,11 @@ export default function CashSummaryPage() {
                 <p className="font-semibold text-sm">
                   احتساب رصيد اليومية السابقة
                 </p>
+                {isWholesaleUser && (
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    غير متاح لمستخدم الجملة
+                  </p>
+                )}
                 {!includeOpeningBalance && (
                   <p className="text-[11px] text-muted-foreground mt-0.5">
                     سيتم تجاهل رصيد اليوم السابق
@@ -317,7 +336,11 @@ export default function CashSummaryPage() {
             </div>
             <Switch
               checked={includeOpeningBalance}
-              onCheckedChange={setIncludeOpeningBalance}
+              disabled={isWholesaleUser}
+              onCheckedChange={(checked) => {
+                if (isWholesaleUser) return;
+                setIncludeOpeningBalance(checked);
+              }}
             />
           </div>
         </CardContent>
