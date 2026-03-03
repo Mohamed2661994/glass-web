@@ -252,7 +252,7 @@ export default function InventorySummaryPage() {
         {!loading && filteredData.length > 0 && (
           <Card>
             <CardContent className="p-0">
-              <div className="overflow-x-auto" ref={tableRef}>
+              <div className="hidden md:block overflow-x-auto" ref={tableRef}>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -322,6 +322,84 @@ export default function InventorySummaryPage() {
                     })}
                   </TableBody>
                 </Table>
+              </div>
+
+              <div className="md:hidden p-3 space-y-2" dir="rtl">
+                {filteredData.map((item, idx) => {
+                  const totalIn = Number(item.total_in || 0);
+                  const totalOut = Number(item.total_out || 0);
+                  const currentStock = Number(item.current_stock || 0);
+                  const expectedStock = totalIn - totalOut;
+                  const difference = currentStock - expectedStock;
+                  const hasProblem = difference !== 0;
+
+                  return (
+                    <div
+                      key={`m-${item.product_id}-${item.warehouse_name}-${idx}`}
+                      className={`rounded-lg border p-3 space-y-2 ${
+                        hasProblem
+                          ? "bg-red-50 dark:bg-red-950/20 border-red-500/30"
+                          : "bg-card"
+                      }`}
+                    >
+                      <div className="text-sm font-semibold leading-6">
+                        {item.product_name}
+                        {item.manufacturer_name && (
+                          <span className="text-muted-foreground font-normal">
+                            {" "}- {item.manufacturer_name}
+                          </span>
+                        )}
+                      </div>
+
+                      {item.barcode && (
+                        <div className="text-xs text-muted-foreground font-mono">
+                          {item.barcode}
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="rounded-md bg-muted/40 p-2">
+                          <div className="text-muted-foreground">المخزن</div>
+                          <div className="font-medium mt-0.5">
+                            {item.warehouse_name || "—"}
+                          </div>
+                        </div>
+                        <div className="rounded-md bg-muted/40 p-2">
+                          <div className="text-muted-foreground">العبوات</div>
+                          <div className="font-medium mt-0.5">
+                            {item.package_name || "—"}
+                          </div>
+                        </div>
+                        <div className="rounded-md bg-muted/40 p-2">
+                          <div className="text-muted-foreground">وارد</div>
+                          <div className="font-bold text-green-600 mt-0.5">
+                            {totalIn}
+                          </div>
+                        </div>
+                        <div className="rounded-md bg-muted/40 p-2">
+                          <div className="text-muted-foreground">صادر</div>
+                          <div className="font-bold text-red-600 mt-0.5">
+                            {totalOut}
+                          </div>
+                        </div>
+                        <div className="rounded-md bg-muted/40 p-2">
+                          <div className="text-muted-foreground">الرصيد</div>
+                          <div className="font-bold mt-0.5">{currentStock}</div>
+                        </div>
+                        <div className="rounded-md bg-muted/40 p-2">
+                          <div className="text-muted-foreground">الفرق</div>
+                          <div
+                            className={`font-bold mt-0.5 ${
+                              hasProblem ? "text-red-600" : "text-green-600"
+                            }`}
+                          >
+                            {difference}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
