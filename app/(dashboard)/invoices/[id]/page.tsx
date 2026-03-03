@@ -131,6 +131,12 @@ export default function InvoiceDetailsPage() {
           <p>
             <strong>الإجمالي:</strong> {Number(invoice.total).toFixed(2)}
           </p>
+          {Number(invoice.previous_balance || 0) !== 0 && (
+            <p>
+              <strong>حساب سابق:</strong>{" "}
+              {Number(invoice.previous_balance).toFixed(2)}
+            </p>
+          )}
           <p>
             <strong>المدفوع:</strong> {Number(invoice.paid_amount).toFixed(2)}
           </p>
