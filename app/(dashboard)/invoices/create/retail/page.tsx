@@ -434,7 +434,10 @@ export default function CreateRetailInvoicePage() {
         const spaceIdx = pkg.indexOf(" ");
         const qtyPart = spaceIdx > -1 ? pkg.substring(0, spaceIdx) : pkg;
         const type = spaceIdx > -1 ? pkg.substring(spaceIdx + 1).trim() : "";
-        const qtys = qtyPart.split(",").map((q: string) => q.trim()).filter(Boolean);
+        const qtys = qtyPart
+          .split(",")
+          .map((q: string) => q.trim())
+          .filter(Boolean);
 
         for (const q of qtys) {
           options.push({
@@ -1126,6 +1129,10 @@ export default function CreateRetailInvoicePage() {
     );
 
     return filtered.sort((a, b) => {
+      const aInStock = Number(a.available_quantity) > 0 ? 1 : 0;
+      const bInStock = Number(b.available_quantity) > 0 ? 1 : 0;
+      if (aInStock !== bInStock) return bInStock - aInStock;
+
       if (search.trim()) {
         const scoreA = multiWordScore(
           search,
@@ -1145,9 +1152,6 @@ export default function CreateRetailInvoicePage() {
         );
         if (scoreA !== scoreB) return scoreB - scoreA;
       }
-      const aInStock = Number(a.available_quantity) > 0 ? 1 : 0;
-      const bInStock = Number(b.available_quantity) > 0 ? 1 : 0;
-      if (aInStock !== bInStock) return bInStock - aInStock;
       return String(a.name || "").localeCompare(String(b.name || ""), "ar");
     });
   }, [products, search]);

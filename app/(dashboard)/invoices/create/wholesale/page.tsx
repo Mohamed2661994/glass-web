@@ -827,6 +827,10 @@ export default function CreateWholesaleInvoicePage() {
     });
 
     return filtered.sort((a, b) => {
+      const aInStock = Number(a.available_quantity) > 0 ? 1 : 0;
+      const bInStock = Number(b.available_quantity) > 0 ? 1 : 0;
+      if (aInStock !== bInStock) return bInStock - aInStock;
+
       if (search.trim()) {
         const scoreA = multiWordScore(
           search,
@@ -846,9 +850,6 @@ export default function CreateWholesaleInvoicePage() {
         );
         if (scoreA !== scoreB) return scoreB - scoreA;
       }
-      const aInStock = Number(a.available_quantity) > 0 ? 1 : 0;
-      const bInStock = Number(b.available_quantity) > 0 ? 1 : 0;
-      if (aInStock !== bInStock) return bInStock - aInStock;
       return String(a.name || "").localeCompare(String(b.name || ""), "ar");
     });
   }, [products, search]);
