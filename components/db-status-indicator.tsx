@@ -91,11 +91,29 @@ function timeAgo(iso: string): string {
   return `منذ ${Math.floor(hrs / 24)} يوم`;
 }
 
+const SYNC_INTERVAL_MS = 5 * 60 * 1000;
+
+function formatCountdown(ms: number): string {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60)
+    .toString()
+    .padStart(2, "0");
+  const seconds = (totalSeconds % 60).toString().padStart(2, "0");
+  return `${minutes}:${seconds}`;
+}
+
+function getSyncCountdown(lastSyncIso: string, nowMs: number): string {
+  const diff = Math.max(0, nowMs - new Date(lastSyncIso).getTime());
+  const remaining = SYNC_INTERVAL_MS - (diff % SYNC_INTERVAL_MS || 0);
+  return formatCountdown(remaining);
+}
+
 export function DbStatusIndicator() {
   const [health, setHealth] = useState<HealthData | null>(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
+  const [nowMs, setNowMs] = useState(Date.now());
 
   // Action states
   const [backingUp, setBackingUp] = useState(false);
@@ -130,6 +148,11 @@ export function DbStatusIndicator() {
     const interval = setInterval(fetchHealth, 30_000);
     return () => clearInterval(interval);
   }, [fetchHealth]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Clear action message after 5s
   useEffect(() => {
@@ -412,7 +435,9 @@ export function DbStatusIndicator() {
                 ) : health.lastSync?.time ? (
                   <>
                     <span>•</span>
-                    <span>مزامنة: {timeAgo(health.lastSync.time)}</span>
+                    <span>
+                      المزامنة القادمة: {getSyncCountdown(health.lastSync.time, nowMs)}
+                    </span>
                   </>
                 ) : null}
                 {health.lastBackup && (
@@ -451,23 +476,6 @@ export function DbStatusIndicator() {
                 <TooltipContent>
                   تبديل إلى {health.activeDb === "local" ? "الكلاود" : "المحلي"}
                 </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      fetchHealth();
-                    }}
-                  >
-                    <RefreshCw className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>تحديث الحالة</TooltipContent>
               </Tooltip>
 
               {expanded ? (
@@ -644,7 +652,7 @@ export function DbStatusIndicator() {
                     )}
                     {health.lastSync.time && (
                       <span className="text-muted-foreground">
-                        {timeAgo(health.lastSync.time)}
+                        القادم بعد: {getSyncCountdown(health.lastSync.time, nowMs)}
                       </span>
                     )}
                   </div>
