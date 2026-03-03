@@ -423,13 +423,12 @@ export function DbStatusIndicator() {
                   <Button
                     variant="outline"
                     size="icon"
-                    className={`h-8 w-8 ${
-                      switching ? "animate-pulse" : ""
-                    }`}
+                    className={`h-8 w-8 ${switching ? "animate-pulse" : ""}`}
                     disabled={switching}
                     onClick={(e) => {
                       e.stopPropagation();
-                      const target = health.activeDb === "local" ? "cloud" : "local";
+                      const target =
+                        health.activeDb === "local" ? "cloud" : "local";
                       handleSwitch(target);
                     }}
                   >
