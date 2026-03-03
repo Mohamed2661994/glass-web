@@ -1029,34 +1029,40 @@ export default function EditWholesaleInvoicePage() {
                           })()}
                         </td>
                         <td className="p-3 text-center">
-                            <Input
-                              type="text"
-                              inputMode="numeric"
-                              dir="ltr"
-                              data-discount-id={item.uid}
-                              className="w-20 mx-auto text-center"
-                              value={item.discount}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  setShowProductModal(true);
-                                }
-                              }}
-                              onChange={(e) => {
-                                const raw = e.target.value.replace(/[^0-9.\-]/g, "");
-                                const hasMinus = raw.includes("-");
-                                const digits = raw.replace(/-/g, "");
-                                const num = digits === "" ? "" : (hasMinus ? -1 : 1) * Number(digits);
-                                setItems((prev) =>
-                                  prev.map((i) =>
-                                    i.uid === item.uid
-                                      ? { ...i, discount: num }
-                                      : i,
-                                  ),
-                                );
-                              }}
-                            />
-                          </td>
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            dir="ltr"
+                            data-discount-id={item.uid}
+                            className="w-20 mx-auto text-center"
+                            value={item.discount}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                setShowProductModal(true);
+                              }
+                            }}
+                            onChange={(e) => {
+                              const raw = e.target.value.replace(
+                                /[^0-9.\-]/g,
+                                "",
+                              );
+                              const hasMinus = raw.includes("-");
+                              const digits = raw.replace(/-/g, "");
+                              const num =
+                                digits === ""
+                                  ? ""
+                                  : (hasMinus ? -1 : 1) * Number(digits);
+                              setItems((prev) =>
+                                prev.map((i) =>
+                                  i.uid === item.uid
+                                    ? { ...i, discount: num }
+                                    : i,
+                                ),
+                              );
+                            }}
+                          />
+                        </td>
                         <td className="p-3 text-center font-semibold">
                           {(() => {
                             const qty = Number(item.quantity) || 0;
@@ -1265,39 +1271,45 @@ export default function EditWholesaleInvoicePage() {
                         })()}
                       </div>
                       <div className="space-y-1">
-                          <label className="text-xs text-muted-foreground">
-                            الخصم
-                          </label>
-                          <Input
-                            type="text"
-                            inputMode="numeric"
-                            dir="ltr"
-                            data-mobile-discount-id={item.uid}
-                            className="text-center"
-                            value={item.discount || 0}
-                            onFocus={(e) => e.target.select()}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                setExpandedItemUid(null);
-                                setShowProductModal(true);
-                              }
-                            }}
-                            onChange={(e) => {
-                              const raw = e.target.value.replace(/[^0-9.\-]/g, "");
-                              const hasMinus = raw.includes("-");
-                              const digits = raw.replace(/-/g, "");
-                              const num = digits === "" ? 0 : (hasMinus ? -1 : 1) * Number(digits);
-                              setItems((prev) =>
-                                prev.map((i) =>
-                                  i.uid === item.uid
-                                    ? { ...i, discount: num }
-                                    : i,
-                                ),
-                              );
-                            }}
-                          />
-                        </div>
+                        <label className="text-xs text-muted-foreground">
+                          الخصم
+                        </label>
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          dir="ltr"
+                          data-mobile-discount-id={item.uid}
+                          className="text-center"
+                          value={item.discount || 0}
+                          onFocus={(e) => e.target.select()}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              setExpandedItemUid(null);
+                              setShowProductModal(true);
+                            }
+                          }}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(
+                              /[^0-9.\-]/g,
+                              "",
+                            );
+                            const hasMinus = raw.includes("-");
+                            const digits = raw.replace(/-/g, "");
+                            const num =
+                              digits === ""
+                                ? 0
+                                : (hasMinus ? -1 : 1) * Number(digits);
+                            setItems((prev) =>
+                              prev.map((i) =>
+                                i.uid === item.uid
+                                  ? { ...i, discount: num }
+                                  : i,
+                              ),
+                            );
+                          }}
+                        />
+                      </div>
                     </div>
 
                     {/* Total */}
