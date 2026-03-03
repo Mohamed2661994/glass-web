@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRealtime } from "@/hooks/use-realtime";
+import { onUpdate } from "@/lib/broadcast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -752,6 +753,23 @@ export default function DashboardPage() {
     () => setRefreshKey((k) => k + 1),
     5000,
   );
+
+  useEffect(() => {
+    const cleanup = onUpdate(
+      [
+        "invoice_created",
+        "invoice_updated",
+        "invoice_deleted",
+        "transfer_created",
+        "transfer_updated",
+        "transfer_cancelled",
+        "cash_in_created",
+        "cash_out_created",
+      ],
+      () => setRefreshKey((k) => k + 1),
+    );
+    return cleanup;
+  }, []);
 
   /* cash summary */
   const [cashInTotal, setCashInTotal] = useState(0);

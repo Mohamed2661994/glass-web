@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import axios from "@/services/api";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,6 +15,8 @@ import {
   shareViaWhatsApp,
   type WhatsAppInvoice,
 } from "@/lib/export-utils";
+import { useRealtime } from "@/hooks/use-realtime";
+import { onUpdate } from "@/lib/broadcast";
 
 interface InvoiceItem {
   product_id: number;
@@ -37,7 +39,7 @@ export default function InvoiceDetailsPage() {
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [sharingWa, setSharingWa] = useState(false);
 
-  const fetchInvoice = async () => {
+  const fetchInvoice = useCallback(async () => {
     try {
       const res = await axios.get(`/invoices/${id}/edit`);
       setInvoice(res.data);
@@ -46,11 +48,25 @@ export default function InvoiceDetailsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     if (id) fetchInvoice();
-  }, [id]);
+  }, [id, fetchInvoice]);
+
+  useRealtime("data:invoices", () => {
+    if (id) fetchInvoice();
+  });
+
+  useEffect(() => {
+    const cleanup = onUpdate(
+      ["invoice_created", "invoice_updated", "invoice_deleted"],
+      () => {
+        if (id) fetchInvoice();
+      },
+    );
+    return cleanup;
+  }, [id, fetchInvoice]);
 
   if (loading)
     return (
