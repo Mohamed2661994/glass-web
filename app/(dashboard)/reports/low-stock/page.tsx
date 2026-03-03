@@ -200,7 +200,7 @@ export default function LowStockReportPage() {
         {!loading && filteredData.length > 0 && (
           <Card>
             <CardContent className="p-0">
-              <div className="overflow-x-auto" ref={tableRef}>
+              <div className="hidden md:block overflow-x-auto" ref={tableRef}>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -249,6 +249,60 @@ export default function LowStockReportPage() {
                     })}
                   </TableBody>
                 </Table>
+              </div>
+
+              <div className="md:hidden p-3 space-y-2" dir="rtl">
+                {filteredData.map((item) => {
+                  const isCritical = Number(item.current_stock || 0) <= 2;
+
+                  return (
+                    <div
+                      key={`m-${item.product_id}-${item.warehouse_name}`}
+                      className={`rounded-lg border p-3 space-y-2 ${
+                        isCritical
+                          ? "bg-red-50 dark:bg-red-950/20 border-red-500/30"
+                          : "bg-card"
+                      }`}
+                    >
+                      <div className="text-sm font-semibold leading-6">
+                        {item.product_name}
+                      </div>
+
+                      {item.manufacturer_name && (
+                        <div className="text-xs text-muted-foreground">
+                          {item.manufacturer_name}
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="rounded-md bg-muted/40 p-2">
+                          <div className="text-muted-foreground">المخزن</div>
+                          <div className="font-medium mt-0.5">
+                            {item.warehouse_name || "—"}
+                          </div>
+                        </div>
+
+                        <div className="rounded-md bg-muted/40 p-2">
+                          <div className="text-muted-foreground">العبوات</div>
+                          <div className="font-medium mt-0.5">
+                            {item.package_name || "—"}
+                          </div>
+                        </div>
+
+                        <div className="rounded-md bg-muted/40 p-2 col-span-2">
+                          <div className="text-muted-foreground">
+                            الرصيد الحالي
+                          </div>
+                          <div
+                            className={`font-bold mt-0.5 ${isCritical ? "text-red-600" : "text-green-600"}`}
+                          >
+                            {item.current_stock}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
