@@ -985,6 +985,14 @@ export default function DashboardPage() {
     [widgets],
   );
 
+  const todaySalesFromInvoices = useMemo(
+    () =>
+      invoices
+        .filter((inv) => inv.movement_type === "sale")
+        .reduce((sum, inv) => sum + Number(inv.total || 0), 0),
+    [invoices],
+  );
+
   /* fetch invoices – filter by invoice_date (today's invoices only) */
   useEffect(() => {
     if (!branchId) return;
@@ -1191,11 +1199,11 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">مبيعات اليوم</p>
-                  {loadingStats ? (
+                  {loadingInv ? (
                     <Skeleton className="h-6 w-20 mt-1 mx-auto" />
                   ) : (
                     <p className="text-lg font-bold mt-0.5">
-                      {Math.round(stats?.today_sales ?? 0).toLocaleString()} ج
+                      {Math.round(todaySalesFromInvoices).toLocaleString()} ج
                     </p>
                   )}
                 </div>
