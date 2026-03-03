@@ -2,16 +2,13 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { API_URL } from "@/services/api";
-import api from "@/services/api";
 import {
-  Cloud,
   Server,
   RefreshCw,
   Clock,
   Wifi,
   WifiOff,
   HardDrive,
-  ArrowLeftRight,
   Download,
   Database,
   Loader2,
@@ -40,21 +37,11 @@ import {
 
 interface HealthData {
   status: string;
-  activeDb: "local" | "neon";
-  manualOverride?: boolean;
-  lastFailoverTime: string | null;
-  lastFailbackTime: string | null;
+  activeDb: string;
   lastBackup: {
     file: string;
     time: string;
     count: number;
-  } | null;
-  lastSync: {
-    time: string;
-    success: boolean;
-    tables: number;
-    rows: number;
-    error: string | null;
   } | null;
   uptime: number;
   timestamp: string;
@@ -95,7 +82,6 @@ export function DbStatusIndicator() {
   const [expanded, setExpanded] = useState(false);
 
   // Action states
-  const [switching, setSwitching] = useState(false);
   const [backingUp, setBackingUp] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -105,11 +91,8 @@ export function DbStatusIndicator() {
     text: string;
   } | null>(null);
 
-  // Confirm dialogs
-  const [confirmSwitch, setConfirmSwitch] = useState(false);
-  const [confirmRestore, setConfirmRestore] = useState<"local" | "neon" | null>(
-    null,
-  );
+  // Confirm dialog
+  const [confirmRestore, setConfirmRestore] = useState(false);
 
   const fetchHealth = useCallback(async () => {
     try {
@@ -212,41 +195,13 @@ export function DbStatusIndicator() {
     [fetchHealth],
   );
 
-  const handleSwitch = async () => {
-    if (!health) return;
-    setSwitching(true);
-    setConfirmSwitch(false);
-    setProgress(30);
-    setProgressMsg("جاري اختبار الاتصال...");
-    try {
-      const target = health.activeDb === "local" ? "neon" : "local";
-      await api.post("/admin/switch-db", { target });
-      setProgress(100);
-      setProgressMsg("تم!");
-      setActionMsg({
-        type: "success",
-        text: `تم التحويل لـ ${target === "local" ? "المحلي" : "Neon"}`,
-      });
-      await fetchHealth();
-    } catch (err: any) {
-      setActionMsg({
-        type: "error",
-        text: err.response?.data?.error || "فشل التحويل",
-      });
-    } finally {
-      setSwitching(false);
-      setProgress(0);
-      setProgressMsg("");
-    }
-  };
-
   const handleBackup = () => {
     streamAction("/admin/backup", null, setBackingUp);
   };
 
-  const handleRestore = (target: "local" | "neon") => {
-    setConfirmRestore(null);
-    streamAction("/admin/restore", { target }, setRestoring);
+  const handleRestore = () => {
+    setConfirmRestore(false);
+    streamAction("/admin/restore", {}, setRestoring);
   };
 
   if (loading) {
@@ -280,17 +235,9 @@ export function DbStatusIndicator() {
     );
   }
 
-  const isLocal = health.activeDb === "local";
-
   return (
     <TooltipProvider>
-      <Card
-        className={`transition-all duration-300 ${
-          isLocal
-            ? "border-green-500/20 bg-gradient-to-l from-green-500/5 to-transparent"
-            : "border-amber-500/20 bg-gradient-to-l from-amber-500/5 to-transparent"
-        }`}
-      >
+      <Card className="transition-all duration-300 border-green-500/20 bg-gradient-to-l from-green-500/5 to-transparent">
         <CardContent className="p-0">
           {/* ── الصف الرئيسي ── */}
           <div
@@ -299,51 +246,23 @@ export function DbStatusIndicator() {
           >
             {/* أيقونة + حالة */}
             <div className="relative">
-              <div
-                className={`rounded-lg p-2 ${
-                  isLocal
-                    ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                    : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                }`}
-              >
-                {isLocal ? (
-                  <Server className="h-5 w-5" />
-                ) : (
-                  <Cloud className="h-5 w-5" />
-                )}
+              <div className="rounded-lg p-2 bg-green-500/10 text-green-600 dark:text-green-400">
+                <Server className="h-5 w-5" />
               </div>
-              <span
-                className={`absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background ${
-                  isLocal ? "bg-green-500" : "bg-amber-500"
-                } animate-pulse`}
-              />
+              <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background bg-green-500 animate-pulse" />
             </div>
 
             {/* معلومات الاتصال */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-sm">
-                  {isLocal ? "السيرفر المحلي" : "Neon Cloud"}
-                </span>
+                <span className="font-semibold text-sm">السيرفر المحلي</span>
                 <Badge
                   variant="outline"
-                  className={`text-[10px] px-1.5 py-0 ${
-                    isLocal
-                      ? "border-green-500/40 text-green-600 dark:text-green-400"
-                      : "border-amber-500/40 text-amber-600 dark:text-amber-400"
-                  }`}
+                  className="text-[10px] px-1.5 py-0 border-green-500/40 text-green-600 dark:text-green-400"
                 >
                   <Wifi className="h-2.5 w-2.5 ml-1" />
                   متصل
                 </Badge>
-                {health.manualOverride && (
-                  <Badge
-                    variant="outline"
-                    className="text-[10px] px-1.5 py-0 border-blue-500/40 text-blue-600 dark:text-blue-400"
-                  >
-                    يدوي
-                  </Badge>
-                )}
               </div>
               <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                 <span>تشغيل: {formatUptime(health.uptime)}</span>
@@ -351,15 +270,6 @@ export function DbStatusIndicator() {
                   <>
                     <span>•</span>
                     <span>باك أب: {timeAgo(health.lastBackup.time)}</span>
-                  </>
-                )}
-                {health.lastSync && (
-                  <>
-                    <span>•</span>
-                    <span>
-                      مزامنة: {timeAgo(health.lastSync.time)}
-                      {!health.lastSync.success && " ⚠️"}
-                    </span>
                   </>
                 )}
               </div>
@@ -411,7 +321,7 @@ export function DbStatusIndicator() {
           )}
 
           {/* ── شريط التقدم ── */}
-          {(backingUp || restoring || switching) && progress > 0 && (
+          {(backingUp || restoring) && progress > 0 && (
             <div className="mx-4 mb-2 space-y-1.5">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground flex items-center gap-1.5">
@@ -444,7 +354,7 @@ export function DbStatusIndicator() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Database className="h-3.5 w-3.5" />
-                    {isLocal ? "PostgreSQL محلي" : "Neon PostgreSQL"}
+                    PostgreSQL محلي
                   </div>
                 </div>
                 <div className="space-y-1.5">
@@ -478,68 +388,10 @@ export function DbStatusIndicator() {
                     </div>
                   </>
                 )}
-                {health.lastFailoverTime && (
-                  <div className="space-y-1.5">
-                    <div className="text-muted-foreground font-medium">
-                      آخر تحويل لـ Neon
-                    </div>
-                    <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
-                      <ArrowLeftRight className="h-3.5 w-3.5" />
-                      {formatTime(health.lastFailoverTime)}
-                    </div>
-                  </div>
-                )}
-                {health.lastFailbackTime && (
-                  <div className="space-y-1.5">
-                    <div className="text-muted-foreground font-medium">
-                      آخر رجوع للمحلي
-                    </div>
-                    <div className="flex items-center gap-1.5 text-green-600 dark:text-green-400">
-                      <ArrowLeftRight className="h-3.5 w-3.5" />
-                      {formatTime(health.lastFailbackTime)}
-                    </div>
-                  </div>
-                )}
-                {health.lastSync && (
-                  <div className="space-y-1.5">
-                    <div className="text-muted-foreground font-medium">
-                      آخر مزامنة تلقائية
-                    </div>
-                    <div
-                      className={`flex items-center gap-1.5 ${
-                        health.lastSync.success
-                          ? "text-green-600 dark:text-green-400"
-                          : "text-red-600 dark:text-red-400"
-                      }`}
-                    >
-                      <RefreshCw className="h-3.5 w-3.5" />
-                      {formatTime(health.lastSync.time)}
-                      {health.lastSync.success
-                        ? ` (${health.lastSync.tables} جدول)`
-                        : " (فشل)"}
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* أزرار الإجراءات */}
               <div className="flex flex-wrap gap-2 pt-1">
-                {/* تحويل */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 text-xs"
-                  disabled={switching}
-                  onClick={() => setConfirmSwitch(true)}
-                >
-                  {switching ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <ArrowLeftRight className="h-3.5 w-3.5" />
-                  )}
-                  تحويل لـ {isLocal ? "Neon" : "المحلي"}
-                </Button>
-
                 {/* باك أب */}
                 <Button
                   variant="outline"
@@ -556,36 +408,20 @@ export function DbStatusIndicator() {
                   باك أب يدوي
                 </Button>
 
-                {/* ريستور المحلي */}
+                {/* ريستور */}
                 <Button
                   variant="outline"
                   size="sm"
                   className="gap-1.5 text-xs"
                   disabled={restoring}
-                  onClick={() => setConfirmRestore("local")}
+                  onClick={() => setConfirmRestore(true)}
                 >
                   {restoring ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
                     <Download className="h-3.5 w-3.5" />
                   )}
-                  ريستور على المحلي
-                </Button>
-
-                {/* ريستور Neon */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 text-xs"
-                  disabled={restoring}
-                  onClick={() => setConfirmRestore("neon")}
-                >
-                  {restoring ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Download className="h-3.5 w-3.5" />
-                  )}
-                  ريستور على Neon
+                  ريستور من Drive
                 </Button>
               </div>
             </div>
@@ -593,39 +429,10 @@ export function DbStatusIndicator() {
         </CardContent>
       </Card>
 
-      {/* ── تأكيد التحويل ── */}
-      <Dialog open={confirmSwitch} onOpenChange={setConfirmSwitch}>
-        <DialogContent dir="rtl" className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ArrowLeftRight className="h-5 w-5" />
-              تأكيد التحويل
-            </DialogTitle>
-            <DialogDescription>
-              {isLocal
-                ? "هل تريد التحويل من السيرفر المحلي إلى Neon Cloud؟"
-                : "هل تريد التحويل من Neon Cloud إلى السيرفر المحلي؟"}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex gap-2 justify-end">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setConfirmSwitch(false)}
-            >
-              إلغاء
-            </Button>
-            <Button size="sm" onClick={handleSwitch}>
-              تأكيد التحويل
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       {/* ── تأكيد الريستور ── */}
       <Dialog
-        open={!!confirmRestore}
-        onOpenChange={() => setConfirmRestore(null)}
+        open={confirmRestore}
+        onOpenChange={setConfirmRestore}
       >
         <DialogContent dir="rtl" className="max-w-sm">
           <DialogHeader>
@@ -634,25 +441,22 @@ export function DbStatusIndicator() {
               تأكيد الريستور
             </DialogTitle>
             <DialogDescription>
-              سيتم استعادة آخر نسخة احتياطية على{" "}
-              <strong>
-                {confirmRestore === "local" ? "السيرفر المحلي" : "Neon Cloud"}
-              </strong>
-              . هذا سيستبدل كل البيانات الحالية!
+              سيتم استعادة آخر نسخة احتياطية من Google Drive على{" "}
+              <strong>السيرفر المحلي</strong>. هذا سيستبدل كل البيانات الحالية!
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-2 justify-end">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setConfirmRestore(null)}
+              onClick={() => setConfirmRestore(false)}
             >
               إلغاء
             </Button>
             <Button
               size="sm"
               variant="destructive"
-              onClick={() => confirmRestore && handleRestore(confirmRestore)}
+              onClick={handleRestore}
             >
               تأكيد الريستور
             </Button>
