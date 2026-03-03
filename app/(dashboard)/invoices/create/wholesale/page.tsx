@@ -193,7 +193,7 @@ export default function CreateWholesaleInvoicePage() {
 
   const [extraDiscount, setExtraDiscount] = useState("0");
   const [paidAmount, setPaidAmount] = useState("0");
-  const [applyItemsDiscount, setApplyItemsDiscount] = useState(false);
+  const [applyItemsDiscount, setApplyItemsDiscount] = useState(true);
 
   /* =========================================================
      4.5 Draft Auto-Save & Restore
@@ -269,7 +269,7 @@ export default function CreateWholesaleInvoicePage() {
     setPreviousBalance("0");
     setExtraDiscount("0");
     setPaidAmount("0");
-    setApplyItemsDiscount(false);
+    setApplyItemsDiscount(true);
     setMovementType("sale");
     setInvoiceDate(getTodayDate());
     clearDraft();
@@ -689,7 +689,11 @@ export default function CreateWholesaleInvoicePage() {
     setSaving(true);
     try {
       const itemsDiscount = applyItemsDiscount
-        ? items.reduce((sum, item) => sum + (Number(item.discount) || 0) * (Number(item.quantity) || 0), 0)
+        ? items.reduce(
+            (sum, item) =>
+              sum + (Number(item.discount) || 0) * (Number(item.quantity) || 0),
+            0,
+          )
         : 0;
 
       const res = await api.post("/invoices", {
@@ -1241,9 +1245,7 @@ export default function CreateWholesaleInvoicePage() {
                       <th className="p-3 text-right">الصنف</th>
                       <th className="p-3 text-center">السعر</th>
                       <th className="p-3 text-center">الكمية</th>
-                      {!applyItemsDiscount && (
-                        <th className="p-3 text-center">الخصم</th>
-                      )}
+                      <th className="p-3 text-center">الخصم</th>
                       <th className="p-3 text-center">الإجمالي</th>
                       <th className="p-3 text-center">مرتجع</th>
                       <th className="p-3 text-center">إجراءات</th>
@@ -1311,8 +1313,7 @@ export default function CreateWholesaleInvoicePage() {
                             ) : null;
                           })()}
                         </td>
-                        {!applyItemsDiscount && (
-                          <td className="p-3 text-center">
+                        <td className="p-3 text-center">
                             <Input
                               type="number"
                               data-discount-id={item.uid}
@@ -1341,12 +1342,13 @@ export default function CreateWholesaleInvoicePage() {
                               }
                             />
                           </td>
-                        )}
                         <td className="p-3 text-center font-semibold">
                           {(() => {
                             const qty = Number(item.quantity) || 0;
                             const raw = applyItemsDiscount
-                              ? (Number(item.price) - (Number(item.discount) || 0)) * qty
+                              ? (Number(item.price) -
+                                  (Number(item.discount) || 0)) *
+                                qty
                               : Number(item.price) * qty;
                             return item.is_return ? -raw : raw;
                           })()}
@@ -1549,7 +1551,6 @@ export default function CreateWholesaleInvoicePage() {
                           ) : null;
                         })()}
                       </div>
-                      {!applyItemsDiscount && (
                         <div className="space-y-1">
                           <label className="text-xs text-muted-foreground">
                             الخصم
@@ -1584,7 +1585,6 @@ export default function CreateWholesaleInvoicePage() {
                             }
                           />
                         </div>
-                      )}
                     </div>
 
                     {/* Total */}
