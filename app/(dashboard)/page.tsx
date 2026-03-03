@@ -1043,13 +1043,35 @@ export default function DashboardPage() {
               total_from_quantity: 0,
               status: row.transfer_status ?? row.status ?? "completed",
               created_at: row.created_at,
-            });
+            } as Transfer);
           }
-          const tr = map.get(tid)!;
-          tr.items_count += 1;
-          tr.total_from_quantity += Number(row.from_quantity ?? 0);
+          const tr = map.get(tid)! as Transfer & { _hasActive?: boolean };
+          const itemStatus = String(row.status ?? "active").toLowerCase();
+          const transferStatus = String(
+            row.transfer_status ?? row.status ?? "active",
+          ).toLowerCase();
+
+          if (transferStatus === "cancelled") {
+            tr.status = "cancelled";
+          }
+
+          if (itemStatus !== "cancelled") {
+            tr.items_count += 1;
+            tr.total_from_quantity += Number(row.from_quantity ?? 0);
+            tr._hasActive = true;
+          }
         }
-        setTransfers(Array.from(map.values()));
+
+        const grouped = Array.from(map.values()).map((tr) => {
+          const withMeta = tr as Transfer & { _hasActive?: boolean };
+          if (!withMeta._hasActive) {
+            withMeta.status = "cancelled";
+          }
+          delete withMeta._hasActive;
+          return tr;
+        });
+
+        setTransfers(grouped);
       } catch {
         /* silent */
       } finally {
