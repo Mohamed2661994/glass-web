@@ -783,6 +783,10 @@ export default function DashboardPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loadingNotifs, setLoadingNotifs] = useState(true);
 
+  /* pending wholesale invoices (retail user only) */
+  const [pendingWholesale, setPendingWholesale] = useState<Invoice[]>([]);
+  const [loadingPendingWS, setLoadingPendingWS] = useState(true);
+
   /* ---------- user preferences ---------- */
   const {
     prefs,
@@ -1173,6 +1177,40 @@ export default function DashboardPage() {
       }
     })();
   }, [refreshKey]);
+
+  /* fetch pending wholesale invoices (retail user only) */
+  useEffect(() => {
+    if (branchId !== 1) {
+      setLoadingPendingWS(false);
+      return;
+    }
+    setLoadingPendingWS(true);
+    (async () => {
+      try {
+        const { data } = await api.get("/invoices", {
+          params: {
+            invoice_type: "wholesale",
+            limit: 100,
+            _t: Date.now(),
+          },
+        });
+        const all: Invoice[] = Array.isArray(data) ? data : (data.data ?? []);
+        // Show only unpaid/partial invoices that this user created
+        const pending = all
+          .filter(
+            (inv) =>
+              inv.created_by === user?.id &&
+              inv.payment_status !== "paid",
+          )
+          .sort((a, b) => b.id - a.id);
+        setPendingWholesale(pending);
+      } catch {
+        /* silent */
+      } finally {
+        setLoadingPendingWS(false);
+      }
+    })();
+  }, [branchId, user?.id, refreshKey]);
 
   /* ---------- skeleton rows ---------- */
   const skelRows = (cols: number) =>
@@ -1993,6 +2031,94 @@ export default function DashboardPage() {
 
       {/* ====== DB Status ====== */}
       <DbStatusIndicator />
+
+      {/* ====== Pending Wholesale Invoices (retail user only) ====== */}
+      {branchId === 1 && (
+        <Card className="border-t-2 border-t-amber-500/60 dark:border-t-amber-400/40 animate-in fade-in slide-in-from-bottom-3 duration-400">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Truck className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              فواتير الجملة المعلقة
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setRefreshKey((k) => k + 1)}
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+              {!loadingPendingWS && (
+                <Badge
+                  variant="outline"
+                  className="border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300"
+                >
+                  {pendingWholesale.length} فاتورة
+                </Badge>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="overflow-x-auto overflow-y-auto max-h-[400px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden p-0">
+            <Table className="text-xs sm:text-sm">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-right">#</TableHead>
+                  <TableHead className="text-right">العميل</TableHead>
+                  <TableHead className="text-right">الإجمالي</TableHead>
+                  <TableHead className="text-right">المدفوع</TableHead>
+                  <TableHead className="text-right">الباقي</TableHead>
+                  <TableHead className="text-right">الحالة</TableHead>
+                  <TableHead className="text-right hidden sm:table-cell">التاريخ</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loadingPendingWS ? (
+                  skelRows(6)
+                ) : pendingWholesale.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={7}
+                      className="text-center py-8 text-muted-foreground"
+                    >
+                      لا توجد فواتير جملة معلقة
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  pendingWholesale.map((inv) => (
+                    <TableRow
+                      key={inv.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => {
+                        startNavigation();
+                        router.push(`/invoices/${inv.id}/edit/wholesale`);
+                      }}
+                    >
+                      <TableCell className="font-medium">{inv.id}</TableCell>
+                      <TableCell className="max-w-[100px] truncate">
+                        {inv.customer_name || "—"}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {Math.round(inv.total).toLocaleString()} ج
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-green-600 dark:text-green-400">
+                        {Math.round(Number(inv.paid_amount || 0)).toLocaleString()} ج
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-red-600 dark:text-red-400">
+                        {Math.round(Number(inv.remaining_amount || 0)).toLocaleString()} ج
+                      </TableCell>
+                      <TableCell>{paymentBadge(inv.payment_status)}</TableCell>
+                      <TableCell className="text-muted-foreground text-xs hidden sm:table-cell">
+                        {formatDate(inv.created_at || inv.invoice_date)}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ====== Render widgets in grid layout ====== */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
