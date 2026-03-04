@@ -628,10 +628,11 @@ export default function CreateWholesaleInvoicePage() {
   const totalBeforeDiscount = useMemo(() => {
     return items.reduce((sum, item) => {
       const qty = Number(item.quantity) || 0;
-      const raw = (Number(item.price) - (Number(item.discount) || 0)) * qty;
+      const disc = applyItemsDiscount ? (Number(item.discount) || 0) : 0;
+      const raw = (Number(item.price) - disc) * qty;
       return sum + (item.is_return ? -raw : raw);
     }, 0);
-  }, [items]);
+  }, [items, applyItemsDiscount]);
 
   /* preview: total WITH discount (for eye icon) */
   const discountPreviewTotal = useMemo(() => {
@@ -1349,10 +1350,8 @@ export default function CreateWholesaleInvoicePage() {
                         <td className="p-3 text-center font-semibold">
                           {(() => {
                             const qty = Number(item.quantity) || 0;
-                            const raw =
-                              (Number(item.price) -
-                                (Number(item.discount) || 0)) *
-                              qty;
+                            const disc = applyItemsDiscount ? (Number(item.discount) || 0) : 0;
+                            const raw = (Number(item.price) - disc) * qty;
                             return item.is_return ? -raw : raw;
                           })()}
                         </td>
@@ -1429,8 +1428,8 @@ export default function CreateWholesaleInvoicePage() {
               {items.map((item, index) => {
                 const itemTotal = (() => {
                   const qty = Number(item.quantity) || 0;
-                  const raw =
-                    (Number(item.price) - (Number(item.discount) || 0)) * qty;
+                  const disc = applyItemsDiscount ? (Number(item.discount) || 0) : 0;
+                  const raw = (Number(item.price) - disc) * qty;
                   return item.is_return ? -raw : raw;
                 })();
                 const isExpanded = expandedItemUid === item.uid;
