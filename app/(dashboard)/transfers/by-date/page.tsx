@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Loader2, Printer } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -43,6 +44,7 @@ interface TransferRow {
   transfer_status: string;
   wholesale_package: string;
   created_at: string;
+  received?: boolean;
 }
 
 export default function TransfersByDatePage() {
@@ -62,6 +64,9 @@ export default function TransfersByDatePage() {
   const [showCancelConfirm, setShowCancelConfirm] = useState<number | null>(
     null,
   );
+  const [togglingReceived, setTogglingReceived] = useState<number | null>(null);
+
+  const isRetail = user?.branch_id === 1;
 
   /* ========== Fetch ========== */
   const fetchTransfers = useCallback(async () => {
@@ -102,6 +107,25 @@ export default function TransfersByDatePage() {
       );
     } finally {
       setCancellingItem(null);
+    }
+  };
+
+  /* ========== Toggle Received ========== */
+  const toggleReceived = async (itemId: number, current: boolean) => {
+    try {
+      setTogglingReceived(itemId);
+      await api.patch(`/stock-transfers/items/${itemId}`, {
+        received: !current,
+      });
+      setRows((prev) =>
+        prev.map((r) =>
+          r.id === itemId ? { ...r, received: !current } : r,
+        ),
+      );
+    } catch {
+      toast.error("فشل تحديث حالة الاستلام");
+    } finally {
+      setTogglingReceived(null);
     }
   };
 
@@ -194,6 +218,7 @@ export default function TransfersByDatePage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="text-center w-10">✓</TableHead>
                     <TableHead className="text-right">اسم الصنف</TableHead>
                     <TableHead className="text-center">مصنع</TableHead>
                     <TableHead className="text-center">من المخزن</TableHead>
@@ -213,6 +238,13 @@ export default function TransfersByDatePage() {
                         key={row.id}
                         className={isCancelled ? "opacity-40 line-through" : ""}
                       >
+                        <TableCell className="text-center">
+                          <Checkbox
+                            checked={!!row.received}
+                            disabled={!isRetail || isCancelled || togglingReceived === row.id}
+                            onCheckedChange={() => toggleReceived(row.id, !!row.received)}
+                          />
+                        </TableCell>
                         <TableCell className="text-right font-medium">
                           {row.product_name}
                         </TableCell>

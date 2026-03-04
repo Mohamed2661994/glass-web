@@ -1369,7 +1369,9 @@ export default function DashboardPage() {
                     <TableHead className="text-right">المدفوع</TableHead>
                     <TableHead className="text-right">الباقي</TableHead>
                     <TableHead className="text-right">الحالة</TableHead>
-                    <TableHead className="text-right hidden sm:table-cell">التاريخ</TableHead>
+                    <TableHead className="text-right hidden sm:table-cell">
+                      التاريخ
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1402,12 +1404,20 @@ export default function DashboardPage() {
                           {Math.round(inv.total).toLocaleString()} ج
                         </TableCell>
                         <TableCell className="whitespace-nowrap text-green-600 dark:text-green-400">
-                          {Math.round(Number(inv.paid_amount || 0)).toLocaleString()} ج
+                          {Math.round(
+                            Number(inv.paid_amount || 0),
+                          ).toLocaleString()}{" "}
+                          ج
                         </TableCell>
                         <TableCell className="whitespace-nowrap text-red-600 dark:text-red-400">
-                          {Math.round(Number(inv.remaining_amount || 0)).toLocaleString()} ج
+                          {Math.round(
+                            Number(inv.remaining_amount || 0),
+                          ).toLocaleString()}{" "}
+                          ج
                         </TableCell>
-                        <TableCell>{paymentBadge(inv.payment_status)}</TableCell>
+                        <TableCell>
+                          {paymentBadge(inv.payment_status)}
+                        </TableCell>
                         <TableCell className="text-muted-foreground text-xs hidden sm:table-cell">
                           {formatDate(inv.created_at || inv.invoice_date)}
                         </TableCell>
