@@ -1198,16 +1198,15 @@ export default function DashboardPage() {
         });
         const all: Invoice[] = Array.isArray(data) ? data : (data.data ?? []);
         const wsInvoices = all.filter(i => i.invoice_type === "wholesale");
-        console.log("[pending-ws] user.id=", user?.id, "wholesale invoices detail:", wsInvoices.map(i => ({ id: i.id, created_by: i.created_by, created_by_name: i.created_by_name, payment_status: i.payment_status, type: typeof i.created_by })));
-        // Show only wholesale unpaid/partial invoices that this user created
+        // Log first wholesale invoice keys and values to debug
+        if (wsInvoices.length > 0) {
+          console.log("[pending-ws] first wholesale invoice FULL:", JSON.stringify(wsInvoices[0]));
+        }
+        // Show all unpaid wholesale invoices (created_by may not be returned by list API)
         const pending = wsInvoices
-          .filter(
-            (inv) =>
-              Number(inv.created_by) === Number(user?.id) &&
-              inv.payment_status !== "paid",
-          )
+          .filter((inv) => inv.payment_status !== "paid")
           .sort((a, b) => b.id - a.id);
-        console.log("[pending-ws] pending=", pending.length);
+        console.log("[pending-ws] user.id=", user?.id, "wholesale=", wsInvoices.length, "unpaid=", pending.length);
         setPendingWholesale(pending);
       } catch (err) {
         console.error("[pending-ws] error:", err);
