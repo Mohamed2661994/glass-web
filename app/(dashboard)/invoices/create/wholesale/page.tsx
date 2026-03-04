@@ -19,6 +19,7 @@ import {
   FileText,
   ChevronDown,
   Eye,
+  Calculator,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -1723,23 +1724,46 @@ export default function CreateWholesaleInvoicePage() {
             {/* خصم إضافي */}
             <div className="grid grid-cols-3 items-center gap-3">
               <label className="text-sm text-muted-foreground">خصم إضافي</label>
-              <Input
-                data-field="extra-discount"
-                type="number"
-                className="text-center"
-                value={extraDiscount}
-                onChange={(e) => setExtraDiscount(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    const el = document.querySelector(
-                      '[data-field="previous-balance"]',
-                    ) as HTMLInputElement;
-                    el?.focus();
-                    el?.select();
-                  }
-                }}
-              />
+              <div className="flex items-center gap-1">
+                <Input
+                  data-field="extra-discount"
+                  type="number"
+                  className="text-center"
+                  value={extraDiscount}
+                  onChange={(e) => setExtraDiscount(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const el = document.querySelector(
+                        '[data-field="previous-balance"]',
+                      ) as HTMLInputElement;
+                      el?.focus();
+                      el?.select();
+                    }
+                  }}
+                />
+                {!applyItemsDiscount && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
+                    title="تجميع خصم الأصناف"
+                    onClick={() => {
+                      const total = items.reduce(
+                        (sum, item) =>
+                          sum +
+                          (Number(item.discount) || 0) *
+                            (Number(item.quantity) || 0),
+                        0,
+                      );
+                      setExtraDiscount(String(Math.round(total * 100) / 100));
+                    }}
+                  >
+                    <Calculator className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
               <span />
             </div>
 
