@@ -33,14 +33,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ar" dir="rtl" className="light" style={{ colorScheme: "light" }} suppressHydrationWarning>
+    <html lang="ar" dir="rtl" suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 try {
-                  var theme = null;
+                  var theme = 'light';
                   var raw = localStorage.getItem('user');
                   if (raw) {
                     var u = JSON.parse(raw);
@@ -48,17 +48,32 @@ export default function RootLayout({
                       var p = localStorage.getItem('user_prefs_' + u.id);
                       if (p) {
                         var prefs = JSON.parse(p);
-                        if (prefs && prefs.theme) theme = prefs.theme;
+                        if (prefs && (prefs.theme === 'light' || prefs.theme === 'dark')) {
+                          theme = prefs.theme;
+                        }
+                      }
+                      var legacyKey = 'theme_user_' + u.id;
+                      var legacy = localStorage.getItem(legacyKey);
+                      if (!theme || theme === 'light') {
+                        if (legacy === 'dark') theme = 'dark';
                       }
                     }
                   }
-                  if (!theme) theme = localStorage.getItem('theme');
-                  if (theme === 'dark') {
-                    document.documentElement.classList.replace('light', 'dark');
-                    document.documentElement.style.colorScheme = 'dark';
+                  if (theme !== 'dark' && theme !== 'light') {
+                    var stored = localStorage.getItem('theme');
+                    if (stored === 'dark' || stored === 'light') theme = stored;
+                    else theme = 'light';
                   }
-                  if (theme) localStorage.setItem('theme', theme);
-                } catch (e) {}
+                  var d = document.documentElement;
+                  d.classList.remove('light', 'dark');
+                  d.classList.add(theme);
+                  d.style.colorScheme = theme;
+                  localStorage.setItem('theme', theme);
+                } catch (e) {
+                  document.documentElement.classList.add('light');
+                  document.documentElement.style.colorScheme = 'light';
+                  localStorage.setItem('theme', 'light');
+                }
               })();
             `,
           }}

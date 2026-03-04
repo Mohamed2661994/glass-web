@@ -20,28 +20,24 @@ export function ThemeToggle() {
   /* ── Sync server-side theme pref to next-themes on load ── */
   useEffect(() => {
     if (!loaded || !prefs.theme || !mounted) return;
-    // Only apply if different from current to avoid loops
+    // Only sync next-themes internal state — don't touch DOM directly
+    // The head script already applied the correct class before first paint
     if (prefs.theme !== resolvedTheme) {
       setTheme(prefs.theme);
-      document.documentElement.classList.remove("light", "dark");
-      document.documentElement.classList.add(prefs.theme);
-      document.documentElement.style.colorScheme = prefs.theme;
     }
+    // Also sync localStorage.theme so next-themes finds the right value on next load
+    localStorage.setItem("theme", prefs.theme);
   }, [loaded, prefs.theme, mounted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleToggle = () => {
     const current = resolvedTheme || "light";
     const newTheme = current === "dark" ? "light" : "dark";
 
-    // 1. Update next-themes
+    // 1. Update next-themes (handles DOM class + colorScheme)
     setTheme(newTheme);
 
-    // 2. Force DOM class immediately (safety net if next-themes is slow)
-    document.documentElement.classList.remove("light", "dark");
-    document.documentElement.classList.add(newTheme);
-    document.documentElement.style.colorScheme = newTheme;
-
-    // 3. Save for user
+    // 2. Sync all storage keys immediately
+    localStorage.setItem("theme", newTheme);
     if (user?.id) {
       localStorage.setItem(`theme_user_${user.id}`, newTheme);
       setThemePref(newTheme);
