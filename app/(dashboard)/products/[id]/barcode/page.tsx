@@ -185,10 +185,6 @@ body {
     fill: #000 !important;
   }
 
-  .barcode-svg rect {
-    fill: #000 !important;
-  }
-
   .barcode-item {
     border: none;
     page-break-inside: avoid;
