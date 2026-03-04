@@ -98,7 +98,15 @@ export default function CustomerDebtDetailsPage() {
     () =>
       data
         .filter((i) => i.record_type === "invoice")
-        .reduce((s, i) => s + Number(i.total), 0),
+        .reduce((s, i) => s + Number(i.subtotal), 0),
+    [data],
+  );
+
+  const totalDiscount = useMemo(
+    () =>
+      data
+        .filter((i) => i.record_type === "invoice")
+        .reduce((s, i) => s + Number(i.discount_total), 0),
     [data],
   );
 
@@ -134,8 +142,8 @@ export default function CustomerDebtDetailsPage() {
     return balances;
   }, [data, openingBalance]);
 
-  // صافي المديونية = الإجمالي + الرصيد الافتتاحي - المدفوع
-  const netDebt = totalAll + openingBalance - totalPaid;
+  // صافي المديونية = الإجمالي - الخصم + الرصيد الافتتاحي - المدفوع
+  const netDebt = totalAll - totalDiscount + openingBalance - totalPaid;
 
   return (
     <PageContainer size="xl">
@@ -272,11 +280,12 @@ export default function CustomerDebtDetailsPage() {
                           </TableCell>
                           <TableCell className="text-center">
                             {inv.record_type === "invoice"
-                              ? Number(inv.total).toLocaleString()
+                              ? Number(inv.subtotal).toLocaleString()
                               : "—"}
                           </TableCell>
                           <TableCell className="text-center text-red-500">
-                            {inv.record_type === "invoice" && Number(inv.discount_total) > 0
+                            {inv.record_type === "invoice" &&
+                            Number(inv.discount_total) > 0
                               ? Number(inv.discount_total).toLocaleString()
                               : "—"}
                           </TableCell>
@@ -370,14 +379,15 @@ export default function CustomerDebtDetailsPage() {
                         <p className="text-muted-foreground">الإجمالي</p>
                         <p className="font-medium">
                           {inv.record_type === "invoice"
-                            ? Number(inv.total).toLocaleString()
+                            ? Number(inv.subtotal).toLocaleString()
                             : "—"}
                         </p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">الخصم</p>
                         <p className="font-medium text-red-500">
-                          {inv.record_type === "invoice" && Number(inv.discount_total) > 0
+                          {inv.record_type === "invoice" &&
+                          Number(inv.discount_total) > 0
                             ? Number(inv.discount_total).toLocaleString()
                             : "—"}
                         </p>
@@ -428,6 +438,14 @@ export default function CustomerDebtDetailsPage() {
                   <p className="text-muted-foreground">إجمالي الفواتير</p>
                   <p className="font-bold">{totalAll.toLocaleString()}</p>
                 </div>
+                {totalDiscount > 0 && (
+                  <div className="text-center">
+                    <p className="text-muted-foreground">إجمالي الخصم</p>
+                    <p className="font-bold text-red-500">
+                      {totalDiscount.toLocaleString()}
+                    </p>
+                  </div>
+                )}
                 <div className="text-center">
                   <p className="text-muted-foreground">إجمالي المدفوع</p>
                   <p className="font-bold text-green-600">

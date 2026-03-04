@@ -66,7 +66,15 @@ function CustomerStatementPrintInner() {
     () =>
       data
         .filter((i) => i.record_type === "invoice")
-        .reduce((s, i) => s + Number(i.total), 0),
+        .reduce((s, i) => s + Number(i.subtotal), 0),
+    [data],
+  );
+
+  const totalDiscount = useMemo(
+    () =>
+      data
+        .filter((i) => i.record_type === "invoice")
+        .reduce((s, i) => s + Number(i.discount_total), 0),
     [data],
   );
 
@@ -75,7 +83,7 @@ function CustomerStatementPrintInner() {
     [data],
   );
 
-  const netDebt = totalAll - totalPaid;
+  const netDebt = totalAll - totalDiscount - totalPaid;
 
   /* ========== Running Balance ========== */
   const runningBalances = useMemo(() => {
@@ -192,11 +200,18 @@ function CustomerStatementPrintInner() {
                   </td>
                   <td style={tdStyle}>
                     {inv.record_type === "invoice"
-                      ? formatMoney(Number(inv.total))
+                      ? formatMoney(Number(inv.subtotal))
                       : "—"}
                   </td>
-                  <td style={{ ...tdStyle, color: Number(inv.discount_total) > 0 ? "#dc2626" : undefined }}>
-                    {inv.record_type === "invoice" && Number(inv.discount_total) > 0
+                  <td
+                    style={{
+                      ...tdStyle,
+                      color:
+                        Number(inv.discount_total) > 0 ? "#dc2626" : undefined,
+                    }}
+                  >
+                    {inv.record_type === "invoice" &&
+                    Number(inv.discount_total) > 0
                       ? formatMoney(Number(inv.discount_total))
                       : "—"}
                   </td>
@@ -225,6 +240,12 @@ function CustomerStatementPrintInner() {
               <span style={{ fontWeight: "bold" }}>إجمالي الفواتير:</span>{" "}
               {formatMoney(totalAll)}
             </p>
+            {totalDiscount > 0 && (
+              <p style={{ marginBottom: 4, color: "#dc2626" }}>
+                <span style={{ fontWeight: "bold" }}>إجمالي الخصم:</span>{" "}
+                {formatMoney(totalDiscount)}
+              </p>
+            )}
             <p style={{ marginBottom: 4 }}>
               <span style={{ fontWeight: "bold" }}>إجمالي المدفوع:</span>{" "}
               {formatMoney(totalPaid)}
