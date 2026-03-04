@@ -598,12 +598,24 @@ export default function EditWholesaleInvoicePage() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isInput = target instanceof HTMLInputElement;
+      const isTextArea = target instanceof HTMLTextAreaElement;
+      const isSelect = target instanceof HTMLSelectElement;
+      const isEditable = !!target?.isContentEditable;
+
+      const isQtyOrDiscountField =
+        isInput &&
+        (target.hasAttribute("data-quantity-id") ||
+          target.hasAttribute("data-discount-id") ||
+          target.hasAttribute("data-mobile-quantity-id") ||
+          target.hasAttribute("data-mobile-discount-id"));
+
       if (
         e.code === "Space" &&
         !showProductModal &&
-        !(e.target instanceof HTMLInputElement) &&
-        !(e.target instanceof HTMLTextAreaElement) &&
-        !(e.target instanceof HTMLSelectElement)
+        ((!isInput && !isTextArea && !isSelect && !isEditable) ||
+          isQtyOrDiscountField)
       ) {
         e.preventDefault();
         setShowProductModal(true);
