@@ -970,7 +970,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             {/* Messages */}
             <ScrollArea className="flex-1 min-h-0 p-4">
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {messages.map((msg) => {
                   const isMine = msg.sender_id === userId;
                   return (
@@ -991,7 +991,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                             setReplyTo(msg);
                             textareaRef.current?.focus();
                           }}
-                          className="p-1 rounded-full hover:bg-muted mb-1 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                          className="p-1 rounded-full hover:bg-muted mb-1 text-muted-foreground/30 hover:text-muted-foreground hover:opacity-100 opacity-60 transition-all"
                           title="رد"
                         >
                           <Reply className="h-3.5 w-3.5" />
@@ -999,8 +999,8 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                       )}
                       <div
                         className={cn(
-                          "max-w-[80%] rounded-2xl text-sm",
-                          msg.type === "image" ? "p-1" : "px-4 py-2",
+                          "max-w-[85%] rounded-2xl text-sm",
+                          msg.type === "image" ? "p-1" : "px-3.5 py-1.5",
                           isMine
                             ? "text-white rounded-br-sm"
                             : otherColor
@@ -1119,7 +1119,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                           </a>
                         ) : (
                           <p
-                            className="whitespace-pre-wrap break-words leading-6 text-start [unicode-bidi:plaintext]"
+                            className="whitespace-pre-wrap break-words leading-5 text-start [unicode-bidi:plaintext]"
                             dir="auto"
                           >
                             {msg.content}
@@ -1127,7 +1127,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                         )}
                         <div
                           className={cn(
-                            "flex items-center gap-1 mt-1",
+                            "flex items-center gap-1 mt-0.5",
                             isMine ? "justify-end" : "justify-start",
                           )}
                         >
@@ -1156,7 +1156,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                             setReplyTo(msg);
                             textareaRef.current?.focus();
                           }}
-                          className="p-1 rounded-full hover:bg-muted mb-1 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                          className="p-1 rounded-full hover:bg-muted mb-1 text-muted-foreground/30 hover:text-muted-foreground hover:opacity-100 opacity-60 transition-all"
                           title="رد"
                         >
                           <Reply className="h-3.5 w-3.5" />
