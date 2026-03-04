@@ -26,6 +26,7 @@ function CustomerStatementPrintInner() {
   const customerName = decodeURIComponent(params.name as string);
   const from = searchParams.get("from");
   const to = searchParams.get("to");
+  const warehouseId = searchParams.get("warehouse_id");
 
   const [data, setData] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,6 +40,7 @@ function CustomerStatementPrintInner() {
           customer_name: customerName,
           from: from || undefined,
           to: to || undefined,
+          warehouse_id: warehouseId || undefined,
         },
       });
       setData(res.data || []);
@@ -47,7 +49,7 @@ function CustomerStatementPrintInner() {
     } finally {
       setLoading(false);
     }
-  }, [customerName, from, to]);
+  }, [customerName, from, to, warehouseId]);
 
   useEffect(() => {
     fetchDetails();

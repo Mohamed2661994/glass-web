@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/services/api";
+import { useAuth } from "@/app/context/auth-context";
 import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -42,6 +43,7 @@ type Invoice = {
 export default function CustomerDebtDetailsPage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const customerName = decodeURIComponent(params.name as string);
 
   const [data, setData] = useState<Invoice[]>([]);
@@ -77,6 +79,7 @@ export default function CustomerDebtDetailsPage() {
           customer_name: customerName,
           from: fromDate || undefined,
           to: toDate || undefined,
+          warehouse_id: user?.branch_id || undefined,
         },
       });
       setData(res.data || []);
@@ -85,7 +88,7 @@ export default function CustomerDebtDetailsPage() {
     } finally {
       setLoading(false);
     }
-  }, [customerName, fromDate, toDate]);
+  }, [customerName, fromDate, toDate, user?.branch_id]);
 
   useEffect(() => {
     fetchDetails();
@@ -164,6 +167,8 @@ export default function CustomerDebtDetailsPage() {
                   const params = new URLSearchParams();
                   if (fromDate) params.set("from", fromDate);
                   if (toDate) params.set("to", toDate);
+                  if (user?.branch_id)
+                    params.set("warehouse_id", String(user.branch_id));
                   const qs = params.toString();
                   router.push(
                     `/reports/customer-balances/${encodeURIComponent(customerName)}/print${qs ? `?${qs}` : ""}`,
