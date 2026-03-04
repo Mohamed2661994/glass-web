@@ -44,6 +44,7 @@ import {
   Pencil,
   Printer,
   Check,
+  Camera,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -140,6 +141,12 @@ export default function ProductsPage() {
     useState<Product | null>(null);
   const [barcodePrintCount, setBarcodePrintCount] = useState("1");
   const [showBarcodePrintModal, setShowBarcodePrintModal] = useState(false);
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const [scannerError, setScannerError] = useState("");
+  const scannerVideoRef = useRef<HTMLVideoElement | null>(null);
+  const scannerStreamRef = useRef<MediaStream | null>(null);
+  const scannerFrameRef = useRef<number | null>(null);
+  const scannerActiveRef = useRef(false);
 
   // Variants
   const [variantsMap, setVariantsMap] = useState<Record<number, any[]>>({});
@@ -202,6 +209,120 @@ export default function ProductsPage() {
   useRealtime(["data:products", "data:invoices", "data:stock"], () =>
     fetchProducts(),
   );
+
+  const stopBarcodeScanner = useCallback(() => {
+    scannerActiveRef.current = false;
+
+    if (scannerFrameRef.current !== null) {
+      cancelAnimationFrame(scannerFrameRef.current);
+      scannerFrameRef.current = null;
+    }
+
+    if (scannerStreamRef.current) {
+      scannerStreamRef.current.getTracks().forEach((t) => t.stop());
+      scannerStreamRef.current = null;
+    }
+
+    if (scannerVideoRef.current) {
+      scannerVideoRef.current.pause();
+      scannerVideoRef.current.srcObject = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!showBarcodeScanner) return;
+
+    let cancelled = false;
+
+    const startScanner = async () => {
+      setScannerError("");
+      try {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          setScannerError("الكاميرا غير مدعومة على هذا الجهاز");
+          return;
+        }
+
+        const BarcodeDetectorCtor = (window as any).BarcodeDetector;
+        if (!BarcodeDetectorCtor) {
+          setScannerError("المتصفح لا يدعم قراءة الباركود المباشرة");
+          return;
+        }
+
+        const detector = new BarcodeDetectorCtor({
+          formats: ["ean_13", "ean_8", "code_128", "upc_a", "upc_e"],
+        });
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" } },
+          audio: false,
+        });
+
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+
+        scannerStreamRef.current = stream;
+
+        if (!scannerVideoRef.current) return;
+        scannerVideoRef.current.srcObject = stream;
+        await scannerVideoRef.current.play();
+
+        scannerActiveRef.current = true;
+
+        const scanLoop = async () => {
+          if (
+            !scannerActiveRef.current ||
+            cancelled ||
+            !scannerVideoRef.current
+          ) {
+            return;
+          }
+
+          try {
+            const results = await detector.detect(scannerVideoRef.current);
+            const hit = results?.find(
+              (item: any) =>
+                typeof item?.rawValue === "string" && item.rawValue.trim(),
+            );
+
+            if (hit?.rawValue) {
+              const code = hit.rawValue.trim();
+              setSearch(code);
+              setPage(1);
+              fetchProducts({ searchQuery: code });
+              toast.success("تم قراءة الباركود");
+              setShowBarcodeScanner(false);
+              return;
+            }
+          } catch {
+            // keep scanning
+          }
+
+          scannerFrameRef.current = requestAnimationFrame(() => {
+            void scanLoop();
+          });
+        };
+
+        void scanLoop();
+      } catch {
+        setScannerError("تعذر تشغيل الكاميرا. تأكد من صلاحية الكاميرا");
+      }
+    };
+
+    void startScanner();
+
+    return () => {
+      cancelled = true;
+      stopBarcodeScanner();
+    };
+  }, [showBarcodeScanner, fetchProducts, stopBarcodeScanner]);
+
+  useEffect(() => {
+    return () => {
+      stopBarcodeScanner();
+    };
+  }, [stopBarcodeScanner]);
 
   // استخراج المصانع
   const manufacturers = [
@@ -429,27 +550,40 @@ export default function ProductsPage() {
       <Card>
         <CardContent className="p-4 space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input
-              placeholder="ابحث باسم المنتج أو الباركود..."
-              value={search}
-              onChange={(e) => {
-                const val = e.target.value;
-                setSearch(val);
-                setPage(1);
-                // Debounced server search
-                if (searchTimerRef.current)
-                  clearTimeout(searchTimerRef.current);
-                if (val.trim().length >= 2) {
-                  searchTimerRef.current = setTimeout(() => {
-                    fetchProducts({ searchQuery: val.trim() });
-                  }, 400);
-                } else if (val.trim().length === 0) {
-                  fetchProducts({
-                    activeFilter,
-                  });
-                }
-              }}
-            />
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="ابحث باسم المنتج أو الباركود..."
+                value={search}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSearch(val);
+                  setPage(1);
+                  // Debounced server search
+                  if (searchTimerRef.current)
+                    clearTimeout(searchTimerRef.current);
+                  if (val.trim().length >= 2) {
+                    searchTimerRef.current = setTimeout(() => {
+                      fetchProducts({ searchQuery: val.trim() });
+                    }, 400);
+                  } else if (val.trim().length === 0) {
+                    fetchProducts({
+                      activeFilter,
+                    });
+                  }
+                }}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="shrink-0 sm:hidden"
+                title="مسح باركود بالكاميرا"
+                onClick={() => setShowBarcodeScanner(true)}
+              >
+                <Camera className="h-4 w-4" />
+              </Button>
+            </div>
             {manufacturers.length > 2 && (
               <Select
                 value={selectedManufacturer}
@@ -1633,6 +1767,53 @@ export default function ProductsPage() {
                 إلغاء
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mobile Barcode Scanner */}
+      <Dialog
+        open={showBarcodeScanner}
+        onOpenChange={(open) => {
+          setShowBarcodeScanner(open);
+          if (!open) stopBarcodeScanner();
+        }}
+      >
+        <DialogContent dir="rtl" className="max-w-md p-4">
+          <DialogHeader>
+            <DialogTitle>مسح الباركود بالكاميرا</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="relative overflow-hidden rounded-lg border bg-black">
+              <video
+                ref={scannerVideoRef}
+                className="w-full h-64 object-cover"
+                autoPlay
+                muted
+                playsInline
+              />
+              <div className="pointer-events-none absolute inset-x-6 top-1/2 h-16 -translate-y-1/2 rounded border-2 border-green-400/80" />
+            </div>
+
+            {scannerError ? (
+              <p className="text-sm text-destructive">{scannerError}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                وجّه الكاميرا نحو الباركود وسيتم البحث تلقائيًا
+              </p>
+            )}
+
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setShowBarcodeScanner(false);
+                stopBarcodeScanner();
+              }}
+            >
+              إغلاق
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

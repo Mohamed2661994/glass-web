@@ -460,9 +460,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
               ? "📷 صورة"
               : message.type === "file"
                 ? "📄 ملف"
-                : message.content?.length > 60
-                  ? message.content.slice(0, 60) + "…"
-                  : message.content;
+                : message.content;
 
           if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
           setPopup({ senderName, preview, conversationId: conversation_id });
@@ -731,7 +729,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                 {popup.senderName}
               </p>
               <p
-                className="text-xs text-muted-foreground truncate mt-0.5"
+                className="text-xs text-muted-foreground mt-0.5 line-clamp-2 break-words"
                 dir="auto"
               >
                 {popup.preview}
@@ -869,11 +867,12 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                       <div className="flex items-center justify-between mt-1 gap-2">
                         <p
                           className={cn(
-                            "text-xs truncate flex-1",
+                            "text-xs flex-1 leading-5 break-words [overflow-wrap:anywhere]",
                             conv.unread_count > 0
                               ? "text-foreground font-medium"
                               : "text-muted-foreground",
                           )}
+                          dir="auto"
                         >
                           {conv.last_message
                             ? (conv.last_message.sender_id === userId
@@ -1000,7 +999,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                       )}
                       <div
                         className={cn(
-                          "max-w-[80%] rounded-2xl text-sm overflow-hidden",
+                          "max-w-[80%] rounded-2xl text-sm",
                           msg.type === "image" ? "p-1" : "px-4 py-2",
                           isMine
                             ? "text-white rounded-br-sm"
@@ -1119,7 +1118,10 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                             </span>
                           </a>
                         ) : (
-                          <p className="whitespace-pre-wrap break-words">
+                          <p
+                            className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
+                            dir="auto"
+                          >
                             {msg.content}
                           </p>
                         )}
