@@ -140,8 +140,7 @@ export default function InventorySummaryPage() {
     { header: "العبوات", key: "package_name", width: 14 },
     { header: "وارد", key: "total_in", width: 10 },
     { header: "صادر", key: "total_out", width: 10 },
-    { header: "الرصيد", key: "current_stock", width: 10 },
-    { header: "أخرى", key: "other_movements", width: 10 },
+    { header: "الرصيد", key: "balance", width: 10 },
   ];
 
   const exportData = filteredData.map((item) => ({
@@ -152,10 +151,7 @@ export default function InventorySummaryPage() {
     package_name: item.package_name || "—",
     total_in: Number(item.total_in || 0),
     total_out: Number(item.total_out || 0),
-    current_stock: Number(item.current_stock || 0),
-    other_movements:
-      Number(item.current_stock || 0) -
-      (Number(item.total_in || 0) - Number(item.total_out || 0)),
+    balance: Number(item.total_in || 0) - Number(item.total_out || 0),
   }));
 
   /* ========== Warehouse buttons (only if not locked) ========== */
@@ -231,15 +227,13 @@ export default function InventorySummaryPage() {
                       <TableHead className="text-center">وارد</TableHead>
                       <TableHead className="text-center">صادر</TableHead>
                       <TableHead className="text-center">الرصيد</TableHead>
-                      <TableHead className="text-center">أخرى</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredData.map((item, idx) => {
                       const totalIn = Number(item.total_in || 0);
                       const totalOut = Number(item.total_out || 0);
-                      const currentStock = Number(item.current_stock || 0);
-                      const otherMovements = currentStock - (totalIn - totalOut);
+                      const balance = totalIn - totalOut;
 
                       return (
                         <TableRow
@@ -274,12 +268,7 @@ export default function InventorySummaryPage() {
                             {totalOut}
                           </TableCell>
                           <TableCell className="text-center font-bold">
-                            {currentStock}
-                          </TableCell>
-                          <TableCell
-                            className={`text-center ${otherMovements !== 0 ? "text-muted-foreground" : ""}`}
-                          >
-                            {otherMovements}
+                            {balance}
                           </TableCell>
                         </TableRow>
                       );
@@ -292,8 +281,7 @@ export default function InventorySummaryPage() {
                 {filteredData.map((item, idx) => {
                   const totalIn = Number(item.total_in || 0);
                   const totalOut = Number(item.total_out || 0);
-                  const currentStock = Number(item.current_stock || 0);
-                  const otherMovements = currentStock - (totalIn - totalOut);
+                  const balance = totalIn - totalOut;
 
                   return (
                     <div
@@ -341,15 +329,9 @@ export default function InventorySummaryPage() {
                             {totalOut}
                           </div>
                         </div>
-                        <div className="rounded-md bg-muted/40 p-2">
+                        <div className="rounded-md bg-muted/40 p-2 col-span-2">
                           <div className="text-muted-foreground">الرصيد</div>
-                          <div className="font-bold mt-0.5">{currentStock}</div>
-                        </div>
-                        <div className="rounded-md bg-muted/40 p-2">
-                          <div className="text-muted-foreground">أخرى</div>
-                          <div className="font-medium text-muted-foreground mt-0.5">
-                            {otherMovements}
-                          </div>
+                          <div className="font-bold mt-0.5">{balance}</div>
                         </div>
                       </div>
                     </div>
