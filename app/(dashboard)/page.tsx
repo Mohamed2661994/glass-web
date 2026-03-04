@@ -1198,11 +1198,11 @@ export default function DashboardPage() {
         });
         const all: Invoice[] = Array.isArray(data) ? data : (data.data ?? []);
         // Show only unpaid/partial invoices that this user created
+        console.log("[pending-ws] user.id=", user?.id, "invoices=", all.map(i => ({ id: i.id, created_by: i.created_by, created_by_name: i.created_by_name, payment_status: i.payment_status })));
         const pending = all
           .filter(
             (inv) =>
-              inv.created_by === user?.id &&
-              inv.payment_status !== "paid",
+              inv.created_by === user?.id && inv.payment_status !== "paid",
           )
           .sort((a, b) => b.id - a.id);
         setPendingWholesale(pending);
@@ -2071,7 +2071,9 @@ export default function DashboardPage() {
                   <TableHead className="text-right">المدفوع</TableHead>
                   <TableHead className="text-right">الباقي</TableHead>
                   <TableHead className="text-right">الحالة</TableHead>
-                  <TableHead className="text-right hidden sm:table-cell">التاريخ</TableHead>
+                  <TableHead className="text-right hidden sm:table-cell">
+                    التاريخ
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -2104,10 +2106,16 @@ export default function DashboardPage() {
                         {Math.round(inv.total).toLocaleString()} ج
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-green-600 dark:text-green-400">
-                        {Math.round(Number(inv.paid_amount || 0)).toLocaleString()} ج
+                        {Math.round(
+                          Number(inv.paid_amount || 0),
+                        ).toLocaleString()}{" "}
+                        ج
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-red-600 dark:text-red-400">
-                        {Math.round(Number(inv.remaining_amount || 0)).toLocaleString()} ج
+                        {Math.round(
+                          Number(inv.remaining_amount || 0),
+                        ).toLocaleString()}{" "}
+                        ج
                       </TableCell>
                       <TableCell>{paymentBadge(inv.payment_status)}</TableCell>
                       <TableCell className="text-muted-foreground text-xs hidden sm:table-cell">
