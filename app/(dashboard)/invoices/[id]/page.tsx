@@ -99,6 +99,11 @@ export default function InvoiceDetailsPage() {
   const items: InvoiceItem[] = invoice.items || [];
   const isWholesale = invoice.invoice_type === "wholesale";
 
+  const toNumber = (value: unknown) => {
+    const numberValue = Number(value);
+    return Number.isFinite(numberValue) ? numberValue : 0;
+  };
+
   const calcUnitPrice = (it: InvoiceItem) =>
     isWholesale || invoice.apply_items_discount
       ? Number(it.price) - Number(it.discount || 0)
@@ -106,6 +111,24 @@ export default function InvoiceDetailsPage() {
 
   const calcItemTotal = (it: InvoiceItem) =>
     calcUnitPrice(it) * Number(it.quantity || 0);
+
+  const totalBeforeDiscount =
+    Number.isFinite(Number(invoice.total_before_discount))
+      ? toNumber(invoice.total_before_discount)
+      : toNumber(invoice.total);
+
+  const invoiceDiscount = isWholesale
+    ? toNumber(invoice.manual_discount ?? invoice.extra_discount)
+    : toNumber(invoice.extra_discount ?? invoice.manual_discount);
+
+  const netTotal =
+    Number.isFinite(Number(invoice.final_total))
+      ? toNumber(invoice.final_total)
+      : totalBeforeDiscount - invoiceDiscount;
+
+  const totalWithPrevious = netTotal + toNumber(invoice.previous_balance);
+  const computedRemaining =
+    Math.round((totalWithPrevious - toNumber(invoice.paid_amount)) * 100) / 100;
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto" dir="rtl">
@@ -145,7 +168,7 @@ export default function InvoiceDetailsPage() {
             </>
           )}
           <p>
-            <strong>الإجمالي:</strong> {Number(invoice.total).toFixed(2)}
+            <strong>الإجمالي:</strong> {netTotal.toFixed(2)}
           </p>
           {Number(invoice.previous_balance || 0) !== 0 && (
             <p>
@@ -158,7 +181,7 @@ export default function InvoiceDetailsPage() {
           </p>
           <p>
             <strong>المتبقي:</strong>{" "}
-            {Number(invoice.remaining_amount).toFixed(2)}
+            {computedRemaining.toFixed(2)}
           </p>
           {invoice.created_by_name && (
             <p>
@@ -314,9 +337,9 @@ export default function InvoiceDetailsPage() {
                 supplier_phone: invoice.supplier_phone,
                 movement_type: invoice.movement_type,
                 invoice_date: invoice.invoice_date,
-                total: invoice.total,
+                total: netTotal,
                 paid_amount: invoice.paid_amount,
-                remaining_amount: invoice.remaining_amount,
+                remaining_amount: computedRemaining,
                 extra_discount: invoice.extra_discount,
                 manual_discount: invoice.manual_discount,
                 previous_balance: invoice.previous_balance,
@@ -364,9 +387,9 @@ export default function InvoiceDetailsPage() {
                   supplier_phone: invoice.supplier_phone,
                   movement_type: invoice.movement_type,
                   invoice_date: invoice.invoice_date,
-                  total: invoice.total,
+                  total: netTotal,
                   paid_amount: invoice.paid_amount,
-                  remaining_amount: invoice.remaining_amount,
+                  remaining_amount: computedRemaining,
                   extra_discount: invoice.extra_discount,
                   manual_discount: invoice.manual_discount,
                   previous_balance: invoice.previous_balance,

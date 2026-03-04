@@ -549,10 +549,13 @@ export default function EditWholesaleInvoicePage() {
         customer_name: movementType === "purchase" ? null : customerName,
         customer_phone:
           movementType === "purchase" ? null : customerPhone || null,
+        total_before_discount: totalBeforeDiscount,
         manual_discount: Number(extraDiscount) || 0,
+        final_total: finalTotal,
         items,
         paid_amount: Number(paidAmount) || 0,
         previous_balance: Number(previousBalance) ?? 0,
+        remaining_amount: remaining,
         apply_items_discount: applyItemsDiscount,
         invoice_date: invoiceDate || undefined,
         updated_by: user?.id,
