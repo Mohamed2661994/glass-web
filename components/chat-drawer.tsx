@@ -970,7 +970,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             {/* Messages */}
             <ScrollArea className="flex-1 min-h-0 p-4">
-              <div className="space-y-2">
+              <div className="space-y-2 w-full overflow-hidden">
                 {messages.map((msg) => {
                   const isMine = msg.sender_id === userId;
                   return (
@@ -999,7 +999,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                       )}
                       <div
                         className={cn(
-                          "max-w-[85%] rounded-2xl text-sm",
+                          "max-w-[85%] rounded-2xl text-sm overflow-hidden",
                           msg.type === "image" ? "p-1" : "px-3.5 py-1.5",
                           isMine
                             ? "text-white rounded-br-sm"
@@ -1119,7 +1119,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                           </a>
                         ) : (
                           <p
-                            className="whitespace-pre-wrap break-words leading-5 text-start [unicode-bidi:plaintext]"
+                            className="whitespace-pre-wrap break-words leading-5 [unicode-bidi:plaintext] [word-break:break-word]"
                             dir="auto"
                           >
                             {msg.content}
