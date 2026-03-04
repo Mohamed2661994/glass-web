@@ -31,6 +31,8 @@ type Invoice = {
   record_type: "invoice" | "payment";
   invoice_id: number;
   invoice_date: string;
+  subtotal: number;
+  discount_total: number;
   total: number;
   paid_amount: number;
   remaining_amount: number;
@@ -233,6 +235,7 @@ export default function CustomerDebtDetailsPage() {
                           الحساب السابق
                         </TableHead>
                         <TableHead className="text-center">الإجمالي</TableHead>
+                        <TableHead className="text-center">الخصم</TableHead>
                         <TableHead className="text-center">المدفوع</TableHead>
                         <TableHead className="text-center">الباقي</TableHead>
                         <TableHead className="text-center w-12"></TableHead>
@@ -270,6 +273,11 @@ export default function CustomerDebtDetailsPage() {
                           <TableCell className="text-center">
                             {inv.record_type === "invoice"
                               ? Number(inv.total).toLocaleString()
+                              : "—"}
+                          </TableCell>
+                          <TableCell className="text-center text-red-500">
+                            {inv.record_type === "invoice" && Number(inv.discount_total) > 0
+                              ? Number(inv.discount_total).toLocaleString()
                               : "—"}
                           </TableCell>
                           <TableCell className="text-center">
@@ -349,7 +357,7 @@ export default function CustomerDebtDetailsPage() {
                     </div>
 
                     {/* Row 2: Numbers grid */}
-                    <div className="grid grid-cols-4 gap-1 text-center text-xs">
+                    <div className="grid grid-cols-5 gap-1 text-center text-xs">
                       <div>
                         <p className="text-muted-foreground">الحساب السابق</p>
                         <p className="font-medium">
@@ -363,6 +371,14 @@ export default function CustomerDebtDetailsPage() {
                         <p className="font-medium">
                           {inv.record_type === "invoice"
                             ? Number(inv.total).toLocaleString()
+                            : "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">الخصم</p>
+                        <p className="font-medium text-red-500">
+                          {inv.record_type === "invoice" && Number(inv.discount_total) > 0
+                            ? Number(inv.discount_total).toLocaleString()
                             : "—"}
                         </p>
                       </div>

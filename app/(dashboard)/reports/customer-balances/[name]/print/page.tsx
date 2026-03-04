@@ -9,6 +9,8 @@ type Invoice = {
   record_type: "invoice" | "payment";
   invoice_id: number;
   invoice_date: string;
+  subtotal: number;
+  discount_total: number;
   total: number;
   paid_amount: number;
   remaining_amount: number;
@@ -162,6 +164,7 @@ function CustomerStatementPrintInner() {
                 <th style={thStyle}>التاريخ</th>
                 <th style={thStyle}>الحساب السابق</th>
                 <th style={thStyle}>الإجمالي</th>
+                <th style={thStyle}>الخصم</th>
                 <th style={thStyle}>المدفوع</th>
                 <th style={thStyle}>الباقي</th>
               </tr>
@@ -190,6 +193,11 @@ function CustomerStatementPrintInner() {
                   <td style={tdStyle}>
                     {inv.record_type === "invoice"
                       ? formatMoney(Number(inv.total))
+                      : "—"}
+                  </td>
+                  <td style={{ ...tdStyle, color: Number(inv.discount_total) > 0 ? "#dc2626" : undefined }}>
+                    {inv.record_type === "invoice" && Number(inv.discount_total) > 0
+                      ? formatMoney(Number(inv.discount_total))
                       : "—"}
                   </td>
                   <td style={tdStyle}>
