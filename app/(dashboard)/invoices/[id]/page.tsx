@@ -112,21 +112,21 @@ export default function InvoiceDetailsPage() {
   const calcItemTotal = (it: InvoiceItem) =>
     calcUnitPrice(it) * Number(it.quantity || 0);
 
-  const totalBeforeDiscount =
-    Number.isFinite(Number(invoice.total_before_discount))
-      ? toNumber(invoice.total_before_discount)
-      : toNumber(invoice.total);
+  const itemsTotal =
+    Math.round(
+      items.reduce((sum, item) => {
+        const itemTotal = calcItemTotal(item);
+        return sum + (item.is_return ? -itemTotal : itemTotal);
+      }, 0) * 100,
+    ) / 100;
 
   const invoiceDiscount = isWholesale
     ? toNumber(invoice.manual_discount ?? invoice.extra_discount)
     : toNumber(invoice.extra_discount ?? invoice.manual_discount);
 
-  const netTotal =
-    Number.isFinite(Number(invoice.final_total))
-      ? toNumber(invoice.final_total)
-      : totalBeforeDiscount - invoiceDiscount;
-
-  const totalWithPrevious = netTotal + toNumber(invoice.previous_balance);
+  const netTotal = Math.round((itemsTotal - invoiceDiscount) * 100) / 100;
+  const totalWithPrevious =
+    Math.round((netTotal + toNumber(invoice.previous_balance)) * 100) / 100;
   const computedRemaining =
     Math.round((totalWithPrevious - toNumber(invoice.paid_amount)) * 100) / 100;
 
@@ -168,7 +168,7 @@ export default function InvoiceDetailsPage() {
             </>
           )}
           <p>
-            <strong>الإجمالي:</strong> {netTotal.toFixed(2)}
+            <strong>الإجمالي:</strong> {totalWithPrevious.toFixed(2)}
           </p>
           {Number(invoice.previous_balance || 0) !== 0 && (
             <p>
