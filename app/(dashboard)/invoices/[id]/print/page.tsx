@@ -1092,6 +1092,7 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                       <td>{fmt(extraDiscount)}</td>
                     </tr>
                   )}
+                  {(previousBalance !== 0 || extraDiscount > 0) && (
                   <tr className="summary-row">
                     <td></td>
                     <td></td>
@@ -1104,6 +1105,7 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                       <b>{fmt(netTotal)}</b>
                     </td>
                   </tr>
+                  )}
                   {paidAmount !== 0 && (
                     <tr className="summary-row">
                       <td></td>

@@ -214,7 +214,8 @@ function buildInvoiceHtml(invoice: WhatsAppInvoice): string {
 
   const items = invoice.items || [];
   const applyDiscount = invoice.apply_items_discount ?? true;
-  const hasDiscount = applyDiscount && items.some((it) => Number(it.discount || 0) > 0);
+  const hasDiscount =
+    applyDiscount && items.some((it) => Number(it.discount || 0) > 0);
   const extraDiscount =
     Number(invoice.extra_discount || 0) + Number(invoice.manual_discount || 0);
 
