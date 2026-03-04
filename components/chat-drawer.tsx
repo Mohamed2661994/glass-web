@@ -729,7 +729,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                 {popup.senderName}
               </p>
               <p
-                className="text-xs text-muted-foreground mt-0.5 line-clamp-2 break-words"
+                className="text-xs text-muted-foreground mt-0.5 line-clamp-2 break-words [unicode-bidi:plaintext]"
                 dir="auto"
               >
                 {popup.preview}
@@ -867,7 +867,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                       <div className="flex items-center justify-between mt-1 gap-2">
                         <p
                           className={cn(
-                            "text-xs flex-1 leading-5 break-words [overflow-wrap:anywhere]",
+                            "text-xs flex-1 leading-5 line-clamp-2 break-words [unicode-bidi:plaintext]",
                             conv.unread_count > 0
                               ? "text-foreground font-medium"
                               : "text-muted-foreground",
@@ -1119,7 +1119,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                           </a>
                         ) : (
                           <p
-                            className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
+                            className="whitespace-pre-wrap break-words leading-6 text-start [unicode-bidi:plaintext]"
                             dir="auto"
                           >
                             {msg.content}
