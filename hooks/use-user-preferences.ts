@@ -65,9 +65,19 @@ export interface NotifSettings {
   notifTransfers?: boolean;
 }
 
+export interface CashCounterTabPref {
+  id: string;
+  name: string;
+  color: string;
+  denominations: number[];
+  counts: Record<number, number>;
+}
+
 export interface CashCounterPref {
   denominations: number[];
   counts: Record<number, number>;
+  tabs?: CashCounterTabPref[];
+  activeTabId?: string;
 }
 
 export interface UserPreferences {

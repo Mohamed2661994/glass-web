@@ -10,7 +10,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useUserPreferences } from "@/hooks/use-user-preferences";
+import {
+  useUserPreferences,
+  type CashCounterPref,
+  type CashCounterTabPref,
+} from "@/hooks/use-user-preferences";
 
 /* ═══════════════════════════════════════════════════════════
    Types
@@ -19,6 +23,12 @@ import { useUserPreferences } from "@/hooks/use-user-preferences";
 type OpenSource = "icon" | "keyboard" | null;
 
 const DEFAULT_DENOMINATIONS = [200, 100, 50, 20, 10, 5, 1];
+const DEFAULT_TAB_COLOR = "#111827";
+
+type CashCounterTab = CashCounterTabPref;
+
+const createTabId = () =>
+  `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 /* ═══════════════════════════════════════════════════════════
    Component
@@ -29,13 +39,14 @@ export function CashCounterModal() {
   const [open, setOpen] = useState(false);
   const [source, setSource] = useState<OpenSource>(null);
 
-  // Denominations (editable)
-  const [denominations, setDenominations] = useState<number[]>(
-    DEFAULT_DENOMINATIONS,
-  );
-  const [counts, setCounts] = useState<Record<number, number>>({});
+  const [tabs, setTabs] = useState<CashCounterTab[]>([]);
+  const [activeTabId, setActiveTabId] = useState("");
   const [editingDenominations, setEditingDenominations] = useState(false);
   const [tempDenominations, setTempDenominations] = useState("");
+
+  const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
+  const denominations = activeTab?.denominations ?? DEFAULT_DENOMINATIONS;
+  const counts = activeTab?.counts ?? {};
 
   /* ───── Load saved data from user preferences (synced to server) ───── */
 
@@ -43,13 +54,58 @@ export function CashCounterModal() {
 
   useEffect(() => {
     if (!prefsLoaded || loadedRef.current) return;
-    const saved = prefs.cashCounter as
-      | { denominations?: number[]; counts?: Record<number, number> }
-      | undefined;
-    if (saved) {
-      if (saved.denominations?.length) setDenominations(saved.denominations);
-      if (saved.counts) setCounts(saved.counts);
-    }
+    const saved = prefs.cashCounter as CashCounterPref | undefined;
+
+    const normalizedTabs: CashCounterTab[] =
+      saved?.tabs?.length
+        ? saved.tabs
+            .filter((tab) => tab && Array.isArray(tab.denominations))
+            .map((tab, idx) => ({
+              id: tab.id || createTabId(),
+              name: tab.name?.trim() || `عد ${idx + 1}`,
+              color: tab.color || DEFAULT_TAB_COLOR,
+              denominations:
+                tab.denominations.length > 0
+                  ? [...new Set(tab.denominations)]
+                      .filter((n) => Number(n) > 0)
+                      .sort((a, b) => b - a)
+                  : [...DEFAULT_DENOMINATIONS],
+              counts: tab.counts ?? {},
+            }))
+        : [
+            {
+              id: createTabId(),
+              name: "عد 1",
+              color: DEFAULT_TAB_COLOR,
+              denominations:
+                saved?.denominations?.length
+                  ? [...new Set(saved.denominations)]
+                      .filter((n) => Number(n) > 0)
+                      .sort((a, b) => b - a)
+                  : [...DEFAULT_DENOMINATIONS],
+              counts: saved?.counts ?? {},
+            },
+          ];
+
+    const safeTabs = normalizedTabs.length
+      ? normalizedTabs
+      : [
+          {
+            id: createTabId(),
+            name: "عد 1",
+            color: DEFAULT_TAB_COLOR,
+            denominations: [...DEFAULT_DENOMINATIONS],
+            counts: {},
+          },
+        ];
+
+    const safeActiveId =
+      saved?.activeTabId && safeTabs.some((tab) => tab.id === saved.activeTabId)
+        ? saved.activeTabId
+        : safeTabs[0].id;
+
+    setTabs(safeTabs);
+    setActiveTabId(safeActiveId);
     loadedRef.current = true;
   }, [prefsLoaded, prefs.cashCounter]);
 
@@ -115,25 +171,73 @@ export function CashCounterModal() {
   /* ───── Helper: persist to user preferences ───── */
 
   const saveCashCounter = useCallback(
-    (d: number[], c: Record<number, number>) => {
+    (nextTabs: CashCounterTab[], nextActiveTabId: string) => {
+      const active =
+        nextTabs.find((tab) => tab.id === nextActiveTabId) ?? nextTabs[0];
+      if (!active) return;
+
       setPrefs((prev) => ({
         ...prev,
-        cashCounter: { denominations: d, counts: c },
+        cashCounter: {
+          denominations: active.denominations,
+          counts: active.counts,
+          tabs: nextTabs,
+          activeTabId: active.id,
+        },
       }));
     },
     [setPrefs],
   );
+
+  const updateActiveTab = useCallback(
+    (updater: (tab: CashCounterTab) => CashCounterTab) => {
+      if (!activeTabId) return;
+
+      setTabs((prev) => {
+        const index = prev.findIndex((tab) => tab.id === activeTabId);
+        if (index === -1) return prev;
+
+        const next = [...prev];
+        next[index] = updater(prev[index]);
+        saveCashCounter(next, activeTabId);
+        return next;
+      });
+    },
+    [activeTabId, saveCashCounter],
+  );
+
+  const addTab = () => {
+    const newTab: CashCounterTab = {
+      id: createTabId(),
+      name: `عد ${tabs.length + 1}`,
+      color: DEFAULT_TAB_COLOR,
+      denominations: [...DEFAULT_DENOMINATIONS],
+      counts: {},
+    };
+
+    setTabs((prev) => {
+      const next = [...prev, newTab];
+      saveCashCounter(next, newTab.id);
+      return next;
+    });
+    setActiveTabId(newTab.id);
+    setEditingDenominations(false);
+  };
+
+  const changeActiveTab = (nextId: string) => {
+    setActiveTabId(nextId);
+    setEditingDenominations(false);
+  };
 
   /* ───── Counts ───── */
 
   const setCount = (denom: number, val: string) => {
     const n = val === "" ? 0 : parseInt(val, 10);
     if (isNaN(n) || n < 0) return;
-    setCounts((prev) => {
-      const next = { ...prev, [denom]: n };
-      saveCashCounter(denominations, next);
-      return next;
-    });
+    updateActiveTab((tab) => ({
+      ...tab,
+      counts: { ...tab.counts, [denom]: n },
+    }));
   };
 
   const rowTotal = (denom: number) => denom * (counts[denom] || 0);
@@ -141,8 +245,7 @@ export function CashCounterModal() {
   const grandTotal = denominations.reduce((s, d) => s + rowTotal(d), 0);
 
   const clearAll = () => {
-    setCounts({});
-    saveCashCounter(denominations, {});
+    updateActiveTab((tab) => ({ ...tab, counts: {} }));
   };
 
   /* ───── Edit denominations ───── */
@@ -161,9 +264,11 @@ export function CashCounterModal() {
     if (parsed.length === 0) return;
 
     const sorted = [...new Set(parsed)].sort((a, b) => b - a);
-    setDenominations(sorted);
-    setCounts({});
-    saveCashCounter(sorted, {});
+    updateActiveTab((tab) => ({
+      ...tab,
+      denominations: sorted,
+      counts: {},
+    }));
     setEditingDenominations(false);
   };
 
@@ -288,6 +393,91 @@ export function CashCounterModal() {
               عدّ النقدية
             </DialogTitle>
           </DialogHeader>
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              {tabs.map((tab) => {
+                const isActive = tab.id === activeTabId;
+
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => changeActiveTab(tab.id)}
+                    className={`shrink-0 rounded-md border px-3 py-1.5 text-xs font-medium transition ${
+                      isActive
+                        ? "border-foreground text-foreground"
+                        : "border-border text-muted-foreground"
+                    }`}
+                    style={
+                      isActive
+                        ? {
+                            borderColor: tab.color,
+                            backgroundColor: `${tab.color}22`,
+                          }
+                        : undefined
+                    }
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: tab.color }}
+                      />
+                      {tab.name}
+                    </span>
+                  </button>
+                );
+              })}
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0 text-xs"
+                onClick={addTab}
+              >
+                + تاب
+              </Button>
+            </div>
+
+            {activeTab && (
+              <div className="grid grid-cols-[1fr_auto] gap-2">
+                <Input
+                  value={activeTab.name}
+                  onChange={(e) => {
+                    const nextName = e.target.value;
+                    updateActiveTab((tab) => ({
+                      ...tab,
+                      name: nextName,
+                    }));
+                  }}
+                  onBlur={() => {
+                    if (!activeTab.name.trim()) {
+                      updateActiveTab((tab) => ({
+                        ...tab,
+                        name: "بدون اسم",
+                      }));
+                    }
+                  }}
+                  placeholder="اسم التاب"
+                  className="text-sm"
+                />
+                <Input
+                  type="color"
+                  value={activeTab.color}
+                  onChange={(e) => {
+                    const nextColor = e.target.value;
+                    updateActiveTab((tab) => ({
+                      ...tab,
+                      color: nextColor,
+                    }));
+                  }}
+                  className="h-9 w-14 p-1"
+                  title="لون التاب"
+                />
+              </div>
+            )}
+          </div>
 
           {/* Action Buttons */}
           <div className="flex items-center justify-between">
