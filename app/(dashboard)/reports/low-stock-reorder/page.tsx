@@ -58,9 +58,9 @@ export default function LowStockReorderPage() {
   const router = useRouter();
 
   const [data, setData] = useState<LowStockItem[]>([]);
-  const [wholesaleStock, setWholesaleStock] = useState<
-    Record<number, number>
-  >({});
+  const [wholesaleStock, setWholesaleStock] = useState<Record<number, number>>(
+    {},
+  );
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -117,7 +117,8 @@ export default function LowStockReorderPage() {
       (i) =>
         i.warehouse_name === "مخزن المعرض" &&
         i.current_stock <= 5 &&
-        i.current_stock >= 0,
+        i.current_stock >= 0 &&
+        !!i.wholesale_package,
     );
 
     if (search.trim()) {
@@ -212,11 +213,7 @@ export default function LowStockReorderPage() {
             <Badge variant="secondary">
               {filteredData.length} صنف رصيده 5 أو أقل
             </Badge>
-            {cart.length > 0 && (
-              <Badge>
-                {cart.length} في العربة
-              </Badge>
-            )}
+            {cart.length > 0 && <Badge>{cart.length} في العربة</Badge>}
           </CardContent>
         </Card>
       )}
@@ -248,7 +245,9 @@ export default function LowStockReorderPage() {
                     const wsQty = wholesaleStock[item.product_id] ?? 0;
                     const inCart = isInCart(item.product_id);
                     return (
-                      <TableRow key={`${item.product_id}-${item.variant_id || 0}`}>
+                      <TableRow
+                        key={`${item.product_id}-${item.variant_id || 0}`}
+                      >
                         <TableCell className="text-right font-medium">
                           {item.product_name}
                         </TableCell>
@@ -257,7 +256,11 @@ export default function LowStockReorderPage() {
                         </TableCell>
                         <TableCell className="text-center">
                           <Badge
-                            variant={item.current_stock === 0 ? "destructive" : "secondary"}
+                            variant={
+                              item.current_stock === 0
+                                ? "destructive"
+                                : "secondary"
+                            }
                           >
                             {item.current_stock}
                           </Badge>
@@ -266,7 +269,9 @@ export default function LowStockReorderPage() {
                           {wsQty > 0 ? (
                             <Badge variant="outline">{wsQty}</Badge>
                           ) : (
-                            <span className="text-xs text-muted-foreground">0</span>
+                            <span className="text-xs text-muted-foreground">
+                              0
+                            </span>
                           )}
                         </TableCell>
                         <TableCell className="text-center">
