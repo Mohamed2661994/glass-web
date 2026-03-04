@@ -435,26 +435,26 @@ export default function InventorySummaryPage() {
                 <Button
                   size="sm"
                   variant="destructive"
-                  disabled={reconciling}
+                  disabled={reconciling || discrepancyItems.length === 0}
                   onClick={async () => {
                     setReconciling(true);
                     try {
-                      const branchId =
-                        selectedWarehouse === "مخزن المعرض"
-                          ? 1
-                          : selectedWarehouse === "المخزن الرئيسي"
-                            ? 2
-                            : isShowroomUser
-                              ? 1
-                              : isWarehouseUser
-                                ? 2
-                                : undefined;
+                      const items = discrepancyItems.map((item) => ({
+                        product_id: item.product_id,
+                        warehouse_name: item.warehouse_name,
+                        expected_stock:
+                          Number(item.total_in || 0) -
+                          Number(item.total_out || 0),
+                        current_stock: Number(item.current_stock || 0),
+                      }));
 
-                      const payload =
-                        typeof branchId === "number" ? { branch_id: branchId } : {};
-
-                      const { data } = await api.post("/stock/reconcile", payload);
-                      toast.success(data.message || "تم تصحيح الأرصدة");
+                      const { data } = await api.post("/stock/reconcile", {
+                        items,
+                      });
+                      toast.success(
+                        data.message ||
+                          `تم تصحيح ${items.length} صنف`,
+                      );
                       setDiscrepancyOpen(false);
                       fetchReport();
                     } catch {
