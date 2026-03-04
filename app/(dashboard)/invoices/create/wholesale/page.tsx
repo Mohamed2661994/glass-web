@@ -1272,11 +1272,28 @@ export default function CreateWholesaleInvoicePage() {
                             className="w-20 mx-auto text-center"
                             value={item.quantity}
                             onKeyDown={(e) => {
-                              if (e.key === "Enter") {
+                              if (e.key === "Enter" || e.key === "Tab") {
                                 e.preventDefault();
+
+                                if (e.key === "Tab" && e.shiftKey) {
+                                  const currentIndex = items.findIndex(
+                                    (i) => i.uid === item.uid,
+                                  );
+                                  const prevItem =
+                                    currentIndex > 0
+                                      ? items[currentIndex - 1]
+                                      : items[items.length - 1];
+                                  const prevEl = document.querySelector(
+                                    `[data-discount-id="${prevItem?.uid}"]`,
+                                  ) as HTMLInputElement | null;
+                                  prevEl?.focus();
+                                  prevEl?.select();
+                                  return;
+                                }
+
                                 const el = document.querySelector(
                                   `[data-discount-id="${item.uid}"]`,
-                                ) as HTMLInputElement;
+                                ) as HTMLInputElement | null;
                                 el?.focus();
                                 el?.select();
                               }
@@ -1321,9 +1338,32 @@ export default function CreateWholesaleInvoicePage() {
                             className="w-20 mx-auto text-center"
                             value={item.discount}
                             onKeyDown={(e) => {
-                              if (e.key === "Enter") {
+                              if (e.key === "Enter" || e.key === "Tab") {
                                 e.preventDefault();
-                                setShowProductModal(true);
+
+                                if (e.key === "Tab" && e.shiftKey) {
+                                  const qtyEl = document.querySelector(
+                                    `[data-quantity-id="${item.uid}"]`,
+                                  ) as HTMLInputElement | null;
+                                  qtyEl?.focus();
+                                  qtyEl?.select();
+                                  return;
+                                }
+
+                                const currentIndex = items.findIndex(
+                                  (i) => i.uid === item.uid,
+                                );
+                                const nextItem =
+                                  currentIndex >= 0 &&
+                                  currentIndex < items.length - 1
+                                    ? items[currentIndex + 1]
+                                    : items[0];
+
+                                const nextQtyEl = document.querySelector(
+                                  `[data-quantity-id="${nextItem?.uid}"]`,
+                                ) as HTMLInputElement | null;
+                                nextQtyEl?.focus();
+                                nextQtyEl?.select();
                               }
                             }}
                             onChange={(e) => {
@@ -1359,6 +1399,7 @@ export default function CreateWholesaleInvoicePage() {
                         </td>
                         <td className="p-3 text-center">
                           <Checkbox
+                            tabIndex={-1}
                             checked={item.is_return || false}
                             onCheckedChange={(checked) =>
                               setItems((prev) =>
@@ -1376,6 +1417,7 @@ export default function CreateWholesaleInvoicePage() {
                             <Button
                               variant="ghost"
                               size="icon-xs"
+                              tabIndex={-1}
                               onClick={() => {
                                 const prod = products.find(
                                   (p) => p.id === item.product_id,
@@ -1391,6 +1433,7 @@ export default function CreateWholesaleInvoicePage() {
                               <Button
                                 variant="destructive"
                                 size="icon-xs"
+                                tabIndex={-1}
                                 onClick={() => {
                                   removeItem(item.uid);
                                   setConfirmDeleteId(null);
@@ -1402,6 +1445,7 @@ export default function CreateWholesaleInvoicePage() {
                               <Button
                                 variant="ghost"
                                 size="icon-xs"
+                                tabIndex={-1}
                                 onClick={() => {
                                   setConfirmDeleteId(item.uid);
                                   setTimeout(
@@ -1516,11 +1560,28 @@ export default function CreateWholesaleInvoicePage() {
                           value={item.quantity}
                           onFocus={(e) => e.target.select()}
                           onKeyDown={(e) => {
-                            if (e.key === "Enter") {
+                            if (e.key === "Enter" || e.key === "Tab") {
                               e.preventDefault();
+
+                              if (e.key === "Tab" && e.shiftKey) {
+                                const currentIndex = items.findIndex(
+                                  (i) => i.uid === item.uid,
+                                );
+                                const prevItem =
+                                  currentIndex > 0
+                                    ? items[currentIndex - 1]
+                                    : items[items.length - 1];
+                                const prevEl = document.querySelector(
+                                  `[data-mobile-discount-id="${prevItem?.uid}"]`,
+                                ) as HTMLInputElement | null;
+                                prevEl?.focus();
+                                prevEl?.select();
+                                return;
+                              }
+
                               const el = document.querySelector(
                                 `[data-mobile-discount-id="${item.uid}"]`,
-                              ) as HTMLInputElement;
+                              ) as HTMLInputElement | null;
                               el?.focus();
                               el?.select();
                             }
@@ -1569,10 +1630,32 @@ export default function CreateWholesaleInvoicePage() {
                           value={item.discount || 0}
                           onFocus={(e) => e.target.select()}
                           onKeyDown={(e) => {
-                            if (e.key === "Enter") {
+                            if (e.key === "Enter" || e.key === "Tab") {
                               e.preventDefault();
-                              setExpandedItemUid(null);
-                              setShowProductModal(true);
+
+                              if (e.key === "Tab" && e.shiftKey) {
+                                const qtyEl = document.querySelector(
+                                  `[data-mobile-quantity-id="${item.uid}"]`,
+                                ) as HTMLInputElement | null;
+                                qtyEl?.focus();
+                                qtyEl?.select();
+                                return;
+                              }
+
+                              const currentIndex = items.findIndex(
+                                (i) => i.uid === item.uid,
+                              );
+                              const nextItem =
+                                currentIndex >= 0 &&
+                                currentIndex < items.length - 1
+                                  ? items[currentIndex + 1]
+                                  : items[0];
+
+                              const nextQtyEl = document.querySelector(
+                                `[data-mobile-quantity-id="${nextItem?.uid}"]`,
+                              ) as HTMLInputElement | null;
+                              nextQtyEl?.focus();
+                              nextQtyEl?.select();
                             }
                           }}
                           onChange={(e) => {
