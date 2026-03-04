@@ -104,6 +104,45 @@ export default function StockTransferPage() {
             /* silent */
           }
         }
+
+        // Auto-add reorder products from low-stock-reorder page
+        try {
+          const reorderRaw = sessionStorage.getItem("reorder_product_ids");
+          if (reorderRaw) {
+            sessionStorage.removeItem("reorder_product_ids");
+            const reorderIds: number[] = JSON.parse(reorderRaw);
+            if (reorderIds.length > 0) {
+              const autoItems: TransferItem[] = [];
+              for (const pid of reorderIds) {
+                const product = prods.find((p: Product) => p.id === pid);
+                if (product && product.available_quantity > 0) {
+                  const uid = `${product.id}_0`;
+                  const pct = pMap[product.manufacturer] || 0;
+                  autoItems.push({
+                    uid,
+                    product_id: product.id,
+                    variant_id: 0,
+                    product_name: product.name,
+                    manufacturer: product.manufacturer,
+                    quantity: 1,
+                    percent: pct,
+                    price_addition: pct ? 0 : 5,
+                    wholesale_package: product.wholesale_package,
+                    retail_package: product.retail_package,
+                    wholesale_price: product.wholesale_price,
+                    available_quantity: product.available_quantity,
+                  });
+                }
+              }
+              if (autoItems.length > 0) {
+                setItems(autoItems);
+                toast.success(`تم إضافة ${autoItems.length} صنف تلقائياً`);
+              }
+            }
+          }
+        } catch {
+          /* silent */
+        }
       } catch {
         toast.error("فشل تحميل الأصناف");
       } finally {

@@ -1301,29 +1301,55 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card
-              className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => {
-                startNavigation();
-                router.push("/reports/negative-stock");
-              }}
-            >
-              <CardContent className="p-4 flex flex-col items-center text-center gap-2">
-                <div className="rounded-lg bg-red-100 dark:bg-red-900/30 p-2.5">
-                  <TrendingDown className="h-5 w-5 text-red-600 dark:text-red-400" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">أصناف سالبة</p>
-                  {loadingStats ? (
-                    <Skeleton className="h-6 w-12 mt-1 mx-auto" />
-                  ) : (
-                    <p className="text-lg font-bold mt-0.5 text-red-600">
-                      {stats?.negative_stock_count ?? 0}
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            {branchId === 1 ? (
+              <Card
+                className="cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => {
+                  startNavigation();
+                  router.push("/reports/low-stock-reorder");
+                }}
+              >
+                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                  <div className="rounded-lg bg-orange-100 dark:bg-orange-900/30 p-2.5">
+                    <Package className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">طلب تحويل</p>
+                    {loadingStats ? (
+                      <Skeleton className="h-6 w-12 mt-1 mx-auto" />
+                    ) : (
+                      <p className="text-lg font-bold mt-0.5 text-orange-600">
+                        {stats?.low_stock_count ?? 0}
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card
+                className="cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => {
+                  startNavigation();
+                  router.push("/reports/negative-stock");
+                }}
+              >
+                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                  <div className="rounded-lg bg-red-100 dark:bg-red-900/30 p-2.5">
+                    <TrendingDown className="h-5 w-5 text-red-600 dark:text-red-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">أصناف سالبة</p>
+                    {loadingStats ? (
+                      <Skeleton className="h-6 w-12 mt-1 mx-auto" />
+                    ) : (
+                      <p className="text-lg font-bold mt-0.5 text-red-600">
+                        {stats?.negative_stock_count ?? 0}
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         );
 

@@ -118,9 +118,7 @@ export default function TransfersByDatePage() {
         received: !current,
       });
       setRows((prev) =>
-        prev.map((r) =>
-          r.id === itemId ? { ...r, received: !current } : r,
-        ),
+        prev.map((r) => (r.id === itemId ? { ...r, received: !current } : r)),
       );
     } catch {
       toast.error("فشل تحديث حالة الاستلام");
@@ -241,8 +239,14 @@ export default function TransfersByDatePage() {
                         <TableCell className="text-center">
                           <Checkbox
                             checked={!!row.received}
-                            disabled={!isRetail || isCancelled || togglingReceived === row.id}
-                            onCheckedChange={() => toggleReceived(row.id, !!row.received)}
+                            disabled={
+                              !isRetail ||
+                              isCancelled ||
+                              togglingReceived === row.id
+                            }
+                            onCheckedChange={() =>
+                              toggleReceived(row.id, !!row.received)
+                            }
                           />
                         </TableCell>
                         <TableCell className="text-right font-medium">
