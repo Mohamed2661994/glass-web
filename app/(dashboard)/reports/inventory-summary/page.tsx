@@ -10,12 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Table,
   TableBody,
   TableCell,
@@ -23,9 +17,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Search, AlertTriangle, Wrench } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import { ExportButtons, type ExportColumn } from "@/components/export-buttons";
-import { toast } from "sonner";
 import { useRealtime } from "@/hooks/use-realtime";
 
 /* ========== Types ========== */
@@ -52,8 +45,6 @@ export default function InventorySummaryPage() {
   const [data, setData] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
-  const [discrepancyOpen, setDiscrepancyOpen] = useState(false);
-  const [reconciling, setReconciling] = useState(false);
   const tableRef = useRef<HTMLDivElement>(null);
   const [selectedWarehouse, setSelectedWarehouse] = useState<WarehouseFilter>(
     isShowroomUser
@@ -142,18 +133,6 @@ export default function InventorySummaryPage() {
     return result;
   }, [data, selectedWarehouse, searchText, isShowroomUser, isWarehouseUser]);
 
-  /* ========== Problem count ========== */
-  const discrepancyItems = useMemo(() => {
-    return filteredData.filter((item) => {
-      const diff =
-        Number(item.current_stock || 0) -
-        (Number(item.total_in || 0) - Number(item.total_out || 0));
-      return diff !== 0;
-    });
-  }, [filteredData]);
-
-  const problemCount = discrepancyItems.length;
-
   /* ========== Export columns ========== */
   const exportColumns: ExportColumn[] = [
     { header: "الصنف", key: "product_name_full", width: 30 },
@@ -162,7 +141,7 @@ export default function InventorySummaryPage() {
     { header: "وارد", key: "total_in", width: 10 },
     { header: "صادر", key: "total_out", width: 10 },
     { header: "الرصيد", key: "current_stock", width: 10 },
-    { header: "الفرق", key: "difference", width: 10 },
+    { header: "أخرى", key: "other_movements", width: 10 },
   ];
 
   const exportData = filteredData.map((item) => ({
@@ -174,7 +153,7 @@ export default function InventorySummaryPage() {
     total_in: Number(item.total_in || 0),
     total_out: Number(item.total_out || 0),
     current_stock: Number(item.current_stock || 0),
-    difference:
+    other_movements:
       Number(item.current_stock || 0) -
       (Number(item.total_in || 0) - Number(item.total_out || 0)),
   }));
@@ -217,16 +196,6 @@ export default function InventorySummaryPage() {
           </div>
         )}
 
-        {/* Problem badge */}
-        {!loading && problemCount > 0 && (
-          <button
-            className="mx-auto block text-center text-red-500 font-bold text-sm hover:underline cursor-pointer"
-            onClick={() => setDiscrepancyOpen(true)}
-          >
-            ⚠️ يوجد {problemCount} صنف به فرق في الرصيد
-          </button>
-        )}
-
         {/* Export buttons */}
         {!loading && filteredData.length > 0 && (
           <div className="flex justify-center">
@@ -262,7 +231,7 @@ export default function InventorySummaryPage() {
                       <TableHead className="text-center">وارد</TableHead>
                       <TableHead className="text-center">صادر</TableHead>
                       <TableHead className="text-center">الرصيد</TableHead>
-                      <TableHead className="text-center">الفرق</TableHead>
+                      <TableHead className="text-center">أخرى</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -270,16 +239,11 @@ export default function InventorySummaryPage() {
                       const totalIn = Number(item.total_in || 0);
                       const totalOut = Number(item.total_out || 0);
                       const currentStock = Number(item.current_stock || 0);
-                      const expectedStock = totalIn - totalOut;
-                      const difference = currentStock - expectedStock;
-                      const hasProblem = difference !== 0;
+                      const otherMovements = currentStock - (totalIn - totalOut);
 
                       return (
                         <TableRow
                           key={`${item.product_id}-${item.warehouse_name}-${idx}`}
-                          className={
-                            hasProblem ? "bg-red-50 dark:bg-red-950/20" : ""
-                          }
                         >
                           <TableCell className="text-right">
                             <div className="font-medium">
@@ -313,9 +277,9 @@ export default function InventorySummaryPage() {
                             {currentStock}
                           </TableCell>
                           <TableCell
-                            className={`text-center font-bold ${hasProblem ? "text-red-600" : "text-green-600"}`}
+                            className={`text-center ${otherMovements !== 0 ? "text-muted-foreground" : ""}`}
                           >
-                            {difference}
+                            {otherMovements}
                           </TableCell>
                         </TableRow>
                       );
@@ -329,18 +293,12 @@ export default function InventorySummaryPage() {
                   const totalIn = Number(item.total_in || 0);
                   const totalOut = Number(item.total_out || 0);
                   const currentStock = Number(item.current_stock || 0);
-                  const expectedStock = totalIn - totalOut;
-                  const difference = currentStock - expectedStock;
-                  const hasProblem = difference !== 0;
+                  const otherMovements = currentStock - (totalIn - totalOut);
 
                   return (
                     <div
                       key={`m-${item.product_id}-${item.warehouse_name}-${idx}`}
-                      className={`rounded-lg border p-3 space-y-2 ${
-                        hasProblem
-                          ? "bg-red-50 dark:bg-red-950/20 border-red-500/30"
-                          : "bg-card"
-                      }`}
+                      className="rounded-lg border p-3 space-y-2 bg-card"
                     >
                       <div className="text-sm font-semibold leading-6">
                         {item.product_name}
@@ -388,13 +346,9 @@ export default function InventorySummaryPage() {
                           <div className="font-bold mt-0.5">{currentStock}</div>
                         </div>
                         <div className="rounded-md bg-muted/40 p-2">
-                          <div className="text-muted-foreground">الفرق</div>
-                          <div
-                            className={`font-bold mt-0.5 ${
-                              hasProblem ? "text-red-600" : "text-green-600"
-                            }`}
-                          >
-                            {difference}
+                          <div className="text-muted-foreground">أخرى</div>
+                          <div className="font-medium text-muted-foreground mt-0.5">
+                            {otherMovements}
                           </div>
                         </div>
                       </div>
@@ -420,132 +374,6 @@ export default function InventorySummaryPage() {
           </div>
         )}
 
-        {/* Discrepancy Modal */}
-        <Dialog open={discrepancyOpen} onOpenChange={setDiscrepancyOpen}>
-          <DialogContent
-            dir="rtl"
-            className="sm:max-w-4xl max-h-[85vh] flex flex-col p-0"
-          >
-            <DialogHeader className="p-4 border-b shrink-0">
-              <div className="flex items-center justify-between">
-                <DialogTitle className="flex items-center gap-2 text-red-600">
-                  <AlertTriangle className="h-5 w-5" />
-                  أصناف بها فرق في الرصيد ({discrepancyItems.length})
-                </DialogTitle>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  disabled={reconciling || discrepancyItems.length === 0}
-                  onClick={async () => {
-                    setReconciling(true);
-                    try {
-                      const items = discrepancyItems.map((item) => ({
-                        product_id: item.product_id,
-                        warehouse_name: item.warehouse_name,
-                        expected_stock:
-                          Number(item.total_in || 0) -
-                          Number(item.total_out || 0),
-                        current_stock: Number(item.current_stock || 0),
-                      }));
-
-                      const { data } = await api.post("/stock/reconcile", {
-                        items,
-                      });
-                      toast.success(
-                        data.message ||
-                          `تم تصحيح ${items.length} صنف`,
-                      );
-                      setDiscrepancyOpen(false);
-                      fetchReport();
-                    } catch {
-                      toast.error("فشل تصحيح الأرصدة");
-                    } finally {
-                      setReconciling(false);
-                    }
-                  }}
-                >
-                  {reconciling ? (
-                    <Loader2 className="h-4 w-4 ml-1 animate-spin" />
-                  ) : (
-                    <Wrench className="h-4 w-4 ml-1" />
-                  )}
-                  تصحيح الأرصدة
-                </Button>
-              </div>
-            </DialogHeader>
-            <div className="flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {discrepancyItems.length === 0 ? (
-                <p className="text-center py-12 text-muted-foreground">
-                  لا توجد أصناف بها فرق
-                </p>
-              ) : (
-                <Table className="text-xs sm:text-sm">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-right">الصنف</TableHead>
-                      <TableHead className="text-center">المخزن</TableHead>
-                      <TableHead className="text-center">وارد</TableHead>
-                      <TableHead className="text-center">صادر</TableHead>
-                      <TableHead className="text-center">الرصيد</TableHead>
-                      <TableHead className="text-center">المتوقع</TableHead>
-                      <TableHead className="text-center">الفرق</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {discrepancyItems.map((item, idx) => {
-                      const totalIn = Number(item.total_in || 0);
-                      const totalOut = Number(item.total_out || 0);
-                      const currentStock = Number(item.current_stock || 0);
-                      const expectedStock = totalIn - totalOut;
-                      const difference = currentStock - expectedStock;
-                      return (
-                        <TableRow
-                          key={`disc-${item.product_id}-${item.warehouse_name}-${idx}`}
-                          className="bg-red-50 dark:bg-red-950/20"
-                        >
-                          <TableCell className="text-right">
-                            <div className="font-medium">
-                              {item.product_name}
-                              {item.manufacturer_name && (
-                                <span className="text-muted-foreground font-normal">
-                                  {" "}
-                                  - {item.manufacturer_name}
-                                </span>
-                              )}
-                            </div>
-                            {item.barcode && (
-                              <div className="text-xs text-muted-foreground font-mono">
-                                {item.barcode}
-                              </div>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-center text-xs">
-                            {item.warehouse_name}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {totalIn}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {totalOut}
-                          </TableCell>
-                          <TableCell className="text-center font-bold">
-                            {currentStock}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {expectedStock}
-                          </TableCell>
-                          <TableCell className="text-center font-bold text-red-600">
-                            {difference}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
     </PageContainer>
   );
