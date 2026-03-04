@@ -1093,18 +1093,18 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                     </tr>
                   )}
                   {(previousBalance !== 0 || extraDiscount > 0) && (
-                  <tr className="summary-row">
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td style={{ textAlign: "left" }}>
-                      <b>الصافي:</b>
-                    </td>
-                    <td>
-                      <b>{fmt(netTotal)}</b>
-                    </td>
-                  </tr>
+                    <tr className="summary-row">
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td style={{ textAlign: "left" }}>
+                        <b>الصافي:</b>
+                      </td>
+                      <td>
+                        <b>{fmt(netTotal)}</b>
+                      </td>
+                    </tr>
                   )}
                   {paidAmount !== 0 && (
                     <tr className="summary-row">

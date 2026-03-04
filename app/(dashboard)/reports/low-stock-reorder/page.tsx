@@ -118,7 +118,8 @@ export default function LowStockReorderPage() {
         i.warehouse_name === "مخزن المعرض" &&
         i.current_stock <= 5 &&
         i.current_stock >= 0 &&
-        !!i.wholesale_package,
+        !!i.wholesale_package &&
+        (i.current_stock > 0 || (wholesaleStock[i.product_id] ?? 0) > 0),
     );
 
     if (search.trim()) {
@@ -133,7 +134,7 @@ export default function LowStockReorderPage() {
     }
 
     return result.sort((a, b) => a.current_stock - b.current_stock);
-  }, [data, search]);
+  }, [data, search, wholesaleStock]);
 
   /* ========== Cart actions ========== */
   const addToCart = (item: LowStockItem) => {
