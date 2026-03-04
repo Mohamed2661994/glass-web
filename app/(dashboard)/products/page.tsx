@@ -86,7 +86,6 @@ export default function ProductsPage() {
   const [activeFilter, setActiveFilter] = useState<"all" | "true" | "false">(
     "true",
   );
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedManufacturer, setSelectedManufacturer] =
     useState<string>("الكل");
   const {
@@ -163,17 +162,12 @@ export default function ProductsPage() {
   const [page, setPage] = useState(1);
   const limit = 30;
 
-  const fetchProducts = async (opts?: {
-    searchQuery?: string;
-    activeFilter?: string;
-  }) => {
+  const fetchProducts = async (opts?: { activeFilter?: string }) => {
     try {
       setLoading(true);
       const params: Record<string, string> = {};
-      const sq = opts?.searchQuery ?? "";
       const af = opts?.activeFilter ?? activeFilter;
-      if (sq) params.search = sq;
-      params.active = sq ? "all" : af; // search always searches all
+      params.active = af;
       const res = await api.get("/admin/products", { params });
       const prods = res.data;
       setAllProducts(prods);
@@ -290,7 +284,6 @@ export default function ProductsPage() {
               const code = hit.rawValue.trim();
               setSearch(code);
               setPage(1);
-              fetchProducts({ searchQuery: code });
               toast.success("تم قراءة الباركود");
               setShowBarcodeScanner(false);
               return;
@@ -337,6 +330,7 @@ export default function ProductsPage() {
     .filter((product) => {
       const matchesSearch = multiWordMatch(
         search,
+        String(product.id),
         product.name,
         product.barcode,
         product.description,
@@ -353,6 +347,7 @@ export default function ProductsPage() {
         const scoreA = multiWordScore(
           search,
           a.name,
+          String(a.id),
           a.barcode,
           a.description,
           a.manufacturer,
@@ -360,6 +355,7 @@ export default function ProductsPage() {
         const scoreB = multiWordScore(
           search,
           b.name,
+          String(b.id),
           b.barcode,
           b.description,
           b.manufacturer,
@@ -555,21 +551,8 @@ export default function ProductsPage() {
                 placeholder="ابحث باسم المنتج أو الباركود..."
                 value={search}
                 onChange={(e) => {
-                  const val = e.target.value;
-                  setSearch(val);
+                  setSearch(e.target.value);
                   setPage(1);
-                  // Debounced server search
-                  if (searchTimerRef.current)
-                    clearTimeout(searchTimerRef.current);
-                  if (val.trim().length >= 2) {
-                    searchTimerRef.current = setTimeout(() => {
-                      fetchProducts({ searchQuery: val.trim() });
-                    }, 400);
-                  } else if (val.trim().length === 0) {
-                    fetchProducts({
-                      activeFilter,
-                    });
-                  }
                 }}
                 className="flex-1"
               />
