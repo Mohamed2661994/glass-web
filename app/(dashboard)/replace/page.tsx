@@ -26,6 +26,80 @@ interface Product {
   wholesale_package?: string;
 }
 
+/* ========== Product Dropdown (outside component to avoid re-mount) ========== */
+function ProductDropdown({
+  refEl,
+  search,
+  setSearch,
+  showDropdown,
+  setShowDropdown,
+  selectedName,
+  onSelect,
+  placeholder,
+  products,
+}: {
+  refEl: React.RefObject<HTMLDivElement | null>;
+  search: string;
+  setSearch: (v: string) => void;
+  showDropdown: boolean;
+  setShowDropdown: (v: boolean) => void;
+  selectedName: string;
+  onSelect: (p: Product) => void;
+  placeholder: string;
+  products: Product[];
+}) {
+  const filtered = products.filter((p) =>
+    multiWordMatch(search, String(p.id), p.name, p.manufacturer),
+  );
+
+  return (
+    <div ref={refEl} className="relative">
+      <div className="relative">
+        <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder={placeholder}
+          value={showDropdown ? search : selectedName || ""}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setShowDropdown(true);
+          }}
+          onFocus={() => setShowDropdown(true)}
+          className="pr-9"
+        />
+      </div>
+
+      {showDropdown && (
+        <div className="absolute top-full mt-1 left-0 right-0 z-50 bg-popover border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <div className="p-3 text-sm text-muted-foreground text-center">
+              لا توجد نتائج
+            </div>
+          ) : (
+            filtered.map((p) => (
+              <button
+                key={p.id}
+                className="w-full text-right px-3 py-2 hover:bg-muted transition-colors border-b last:border-b-0"
+                onClick={() => onSelect(p)}
+              >
+                <div className="font-medium text-sm">
+                  {highlightText(p.name, search)}
+                </div>
+                {(p.manufacturer || p.wholesale_package) && (
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {highlightText(p.manufacturer, search)}
+                    {p.manufacturer && p.wholesale_package ? " | " : ""}
+                    {p.wholesale_package}
+                  </div>
+                )}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ReplacePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,13 +180,6 @@ export default function ReplacePage() {
     fetchLiveQty(p.id, setInLiveQty);
   };
 
-  /* ========== Filter ========== */
-  const filterProducts = (search: string) => {
-    return products.filter((p) =>
-      multiWordMatch(search, String(p.id), p.name, p.manufacturer),
-    );
-  };
-
   /* ========== Close dropdowns on outside click ========== */
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -183,76 +250,6 @@ export default function ReplacePage() {
     }
   };
 
-  /* ========== Product Dropdown ========== */
-  const ProductDropdown = ({
-    refEl,
-    search,
-    setSearch,
-    showDropdown,
-    setShowDropdown,
-    selectedName,
-    onSelect,
-    placeholder,
-  }: {
-    refEl: React.RefObject<HTMLDivElement | null>;
-    search: string;
-    setSearch: (v: string) => void;
-    showDropdown: boolean;
-    setShowDropdown: (v: boolean) => void;
-    selectedName: string;
-    onSelect: (p: Product) => void;
-    placeholder: string;
-  }) => {
-    const filtered = filterProducts(search);
-
-    return (
-      <div ref={refEl} className="relative">
-        <div className="relative">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={placeholder}
-            value={showDropdown ? search : selectedName || ""}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setShowDropdown(true);
-            }}
-            onFocus={() => setShowDropdown(true)}
-            className="pr-9"
-          />
-        </div>
-
-        {showDropdown && (
-          <div className="absolute top-full mt-1 left-0 right-0 z-50 bg-popover border rounded-lg shadow-lg max-h-60 overflow-y-auto">
-            {filtered.length === 0 ? (
-              <div className="p-3 text-sm text-muted-foreground text-center">
-                لا توجد نتائج
-              </div>
-            ) : (
-              filtered.map((p) => (
-                <button
-                  key={p.id}
-                  className="w-full text-right px-3 py-2 hover:bg-muted transition-colors border-b last:border-b-0"
-                  onClick={() => onSelect(p)}
-                >
-                  <div className="font-medium text-sm">
-                    {highlightText(p.name, search)}
-                  </div>
-                  {(p.manufacturer || p.wholesale_package) && (
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                      {highlightText(p.manufacturer, search)}
-                      {p.manufacturer && p.wholesale_package ? " | " : ""}
-                      {p.wholesale_package}
-                    </div>
-                  )}
-                </button>
-              ))
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   /* ========== Render ========== */
   if (loading) {
     return (
@@ -280,6 +277,7 @@ export default function ReplacePage() {
             selectedName={outProductName}
             onSelect={selectOutProduct}
             placeholder="ابحث عن الصنف..."
+            products={products}
           />
 
           {outLiveQty !== null && (
@@ -312,6 +310,7 @@ export default function ReplacePage() {
             selectedName={inProductName}
             onSelect={selectInProduct}
             placeholder="ابحث عن الصنف..."
+            products={products}
           />
 
           {inLiveQty !== null && (

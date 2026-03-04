@@ -628,7 +628,7 @@ export default function CreateWholesaleInvoicePage() {
   const totalBeforeDiscount = useMemo(() => {
     return items.reduce((sum, item) => {
       const qty = Number(item.quantity) || 0;
-      const disc = applyItemsDiscount ? (Number(item.discount) || 0) : 0;
+      const disc = applyItemsDiscount ? Number(item.discount) || 0 : 0;
       const raw = (Number(item.price) - disc) * qty;
       return sum + (item.is_return ? -raw : raw);
     }, 0);
@@ -1350,7 +1350,9 @@ export default function CreateWholesaleInvoicePage() {
                         <td className="p-3 text-center font-semibold">
                           {(() => {
                             const qty = Number(item.quantity) || 0;
-                            const disc = applyItemsDiscount ? (Number(item.discount) || 0) : 0;
+                            const disc = applyItemsDiscount
+                              ? Number(item.discount) || 0
+                              : 0;
                             const raw = (Number(item.price) - disc) * qty;
                             return item.is_return ? -raw : raw;
                           })()}
@@ -1428,7 +1430,9 @@ export default function CreateWholesaleInvoicePage() {
               {items.map((item, index) => {
                 const itemTotal = (() => {
                   const qty = Number(item.quantity) || 0;
-                  const disc = applyItemsDiscount ? (Number(item.discount) || 0) : 0;
+                  const disc = applyItemsDiscount
+                    ? Number(item.discount) || 0
+                    : 0;
                   const raw = (Number(item.price) - disc) * qty;
                   return item.is_return ? -raw : raw;
                 })();
