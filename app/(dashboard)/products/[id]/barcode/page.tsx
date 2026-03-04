@@ -57,7 +57,6 @@ function BarcodePrintPage() {
           fontSize: 13,
           margin: 2,
           lineColor: "#000",
-          textColor: "#000",
         });
       });
 
