@@ -234,6 +234,8 @@ interface Invoice {
   payment_status: "paid" | "partial" | "unpaid";
   invoice_date: string;
   created_at: string;
+  created_by?: number;
+  created_by_name?: string;
 }
 
 interface Transfer {
