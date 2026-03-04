@@ -59,6 +59,11 @@ interface Invoice {
   updated_by_name?: string;
 }
 
+interface InvoiceResolvedFinancials {
+  remaining: number;
+  status: "paid" | "partial" | "unpaid";
+}
+
 const toNumber = (value: unknown) => {
   const num = Number(value);
   return Number.isFinite(num) ? num : 0;
@@ -101,12 +106,12 @@ const getInvoiceComputedFinancials = (invoice: Invoice) => {
   };
 };
 
-const getInvoiceComputedStatus = (invoice: Invoice): "paid" | "partial" | "unpaid" =>
-  getInvoiceComputedFinancials(invoice).status;
-
 export default function InvoicesPage() {
   const [data, setData] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(false);
+  const [resolvedFinancialsById, setResolvedFinancialsById] = useState<
+    Record<number, InvoiceResolvedFinancials>
+  >({});
   const router = useRouter();
   const { user } = useAuth();
 
@@ -231,6 +236,47 @@ export default function InvoicesPage() {
     dateFrom,
     dateTo,
   ]);
+
+  useEffect(() => {
+    if (data.length === 0) {
+      setResolvedFinancialsById({});
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      const nextMap: Record<number, InvoiceResolvedFinancials> = {};
+
+      await Promise.all(
+        data.map(async (invoice) => {
+          try {
+            const res = await axios.get(`/invoices/${invoice.id}/edit`);
+            const details = res.data || {};
+
+            const remaining = Math.round(toNumber(details.remaining_amount) * 100) / 100;
+            const paid = toNumber(details.paid_amount);
+            const epsilon = 0.01;
+
+            const status: "paid" | "partial" | "unpaid" =
+              remaining <= epsilon ? "paid" : paid > epsilon ? "partial" : "unpaid";
+
+            nextMap[invoice.id] = { remaining, status };
+          } catch {
+            // fallback handled from list data
+          }
+        }),
+      );
+
+      if (!cancelled) {
+        setResolvedFinancialsById(nextMap);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [data]);
 
   const getStatusBadge = (status: "paid" | "partial" | "unpaid") => {
     if (status === "paid")
@@ -423,87 +469,92 @@ export default function InvoicesPage() {
                   </tr>
                 ) : (
                   data.map((invoice) => {
-                    const computed = getInvoiceComputedFinancials(invoice);
+                    const computed =
+                      resolvedFinancialsById[invoice.id] ??
+                      getInvoiceComputedFinancials(invoice);
                     return (
-                    <tr key={invoice.id} className="border-b hover:bg-muted/50">
-                      <td className="p-3">{invoice.id}</td>
-                      <td className="p-3">
-                        <span>
-                          {invoice.movement_type === "sale" ? "بيع" : "شراء"}
-                        </span>
-                        {invoice.is_return && (
-                          <Badge className="bg-orange-500 mr-2 text-xs">
-                            مرتجع
-                          </Badge>
-                        )}
-                      </td>
-                      <td className="p-3">
-                        {invoice.movement_type === "purchase"
-                          ? invoice.supplier_name || "—"
-                          : invoice.customer_name || "نقدي"}
-                      </td>
-                      <td className="p-3">
-                        {Number(invoice.subtotal).toFixed(2)}
-                      </td>
-                      <td className="p-3">
-                        {Number(invoice.previous_balance || 0).toFixed(2)}
-                      </td>
-                      <td className="p-3">
-                        {Number(invoice.paid_amount).toFixed(2)}
-                      </td>
-                      <td className="p-3">
-                        {computed.remaining.toFixed(2)}
-                      </td>
-                      <td className="p-3">
-                        {getStatusBadge(computed.status)}
-                      </td>
-                      <td className="p-3 text-xs text-muted-foreground">
-                        {invoice.created_by_name || "—"}
-                      </td>
-                      <td className="p-3 flex gap-2 justify-center">
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={() => router.push(`/invoices/${invoice.id}`)}
-                        >
-                          <Eye size={16} />
-                        </Button>
+                      <tr
+                        key={invoice.id}
+                        className="border-b hover:bg-muted/50"
+                      >
+                        <td className="p-3">{invoice.id}</td>
+                        <td className="p-3">
+                          <span>
+                            {invoice.movement_type === "sale" ? "بيع" : "شراء"}
+                          </span>
+                          {invoice.is_return && (
+                            <Badge className="bg-orange-500 mr-2 text-xs">
+                              مرتجع
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          {invoice.movement_type === "purchase"
+                            ? invoice.supplier_name || "—"
+                            : invoice.customer_name || "نقدي"}
+                        </td>
+                        <td className="p-3">
+                          {Number(invoice.subtotal).toFixed(2)}
+                        </td>
+                        <td className="p-3">
+                          {Number(invoice.previous_balance || 0).toFixed(2)}
+                        </td>
+                        <td className="p-3">
+                          {Number(invoice.paid_amount).toFixed(2)}
+                        </td>
+                        <td className="p-3">{computed.remaining.toFixed(2)}</td>
+                        <td className="p-3">
+                          {getStatusBadge(computed.status)}
+                        </td>
+                        <td className="p-3 text-xs text-muted-foreground">
+                          {invoice.created_by_name || "—"}
+                        </td>
+                        <td className="p-3 flex gap-2 justify-center">
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            onClick={() =>
+                              router.push(`/invoices/${invoice.id}`)
+                            }
+                          >
+                            <Eye size={16} />
+                          </Button>
 
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={() =>
-                            router.push(
-                              `/invoices/${invoice.id}/edit/${invoice.invoice_type}`,
-                            )
-                          }
-                        >
-                          <Pencil size={16} />
-                        </Button>
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            onClick={() =>
+                              router.push(
+                                `/invoices/${invoice.id}/edit/${invoice.invoice_type}`,
+                              )
+                            }
+                          >
+                            <Pencil size={16} />
+                          </Button>
 
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          disabled={deleting === invoice.id}
-                          onClick={() => confirmDelete(invoice.id)}
-                        >
-                          <Trash2 size={16} />
-                        </Button>
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            disabled={deleting === invoice.id}
+                            onClick={() => confirmDelete(invoice.id)}
+                          >
+                            <Trash2 size={16} />
+                          </Button>
 
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={() =>
-                            window.open(
-                              `/invoices/${invoice.id}/print`,
-                              "_blank",
-                            )
-                          }
-                        >
-                          <Printer size={16} />
-                        </Button>
-                      </td>
-                    </tr>
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            onClick={() =>
+                              window.open(
+                                `/invoices/${invoice.id}/print`,
+                                "_blank",
+                              )
+                            }
+                          >
+                            <Printer size={16} />
+                          </Button>
+                        </td>
+                      </tr>
                     );
                   })
                 )}
@@ -534,138 +585,140 @@ export default function InvoicesPage() {
           </Card>
         ) : (
           data.map((invoice) => {
-            const computed = getInvoiceComputedFinancials(invoice);
+            const computed =
+              resolvedFinancialsById[invoice.id] ??
+              getInvoiceComputedFinancials(invoice);
             return (
-            <Card
-              key={invoice.id}
-              className="overflow-hidden"
-              onClick={() => router.push(`/invoices/${invoice.id}`)}
-            >
-              <CardContent className="p-0">
-                {/* Top row: ID + status + movement */}
-                <div className="flex items-center justify-between p-3 pb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base font-bold">#{invoice.id}</span>
-                    <Badge
-                      variant="outline"
-                      className="text-[10px] px-1.5 py-0"
-                    >
-                      {invoice.movement_type === "sale" ? "بيع" : "شراء"}
-                    </Badge>
-                    {invoice.is_return && (
-                      <Badge className="bg-orange-500 text-[10px] px-1.5 py-0">
-                        مرتجع
+              <Card
+                key={invoice.id}
+                className="overflow-hidden"
+                onClick={() => router.push(`/invoices/${invoice.id}`)}
+              >
+                <CardContent className="p-0">
+                  {/* Top row: ID + status + movement */}
+                  <div className="flex items-center justify-between p-3 pb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base font-bold">#{invoice.id}</span>
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] px-1.5 py-0"
+                      >
+                        {invoice.movement_type === "sale" ? "بيع" : "شراء"}
                       </Badge>
+                      {invoice.is_return && (
+                        <Badge className="bg-orange-500 text-[10px] px-1.5 py-0">
+                          مرتجع
+                        </Badge>
+                      )}
+                    </div>
+                    {getStatusBadge(computed.status)}
+                  </div>
+
+                  {/* Customer name */}
+                  <div className="px-3 pb-2">
+                    <p className="text-sm font-medium">
+                      {invoice.movement_type === "purchase"
+                        ? invoice.supplier_name || "—"
+                        : invoice.customer_name || "نقدي"}
+                    </p>
+                    {invoice.created_by_name && (
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        بواسطة: {invoice.created_by_name}
+                      </p>
                     )}
                   </div>
-                  {getStatusBadge(computed.status)}
-                </div>
 
-                {/* Customer name */}
-                <div className="px-3 pb-2">
-                  <p className="text-sm font-medium">
-                    {invoice.movement_type === "purchase"
-                      ? invoice.supplier_name || "—"
-                      : invoice.customer_name || "نقدي"}
-                  </p>
-                  {invoice.created_by_name && (
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
-                      بواسطة: {invoice.created_by_name}
-                    </p>
-                  )}
-                </div>
+                  {/* Financial grid */}
+                  <div className="grid grid-cols-4 text-center border-t border-border/50">
+                    <div className="p-2 border-l border-border/50">
+                      <p className="text-[9px] text-muted-foreground">
+                        الإجمالي
+                      </p>
+                      <p className="text-xs font-bold">
+                        {Number(invoice.subtotal).toFixed(0)}
+                      </p>
+                    </div>
+                    <div className="p-2 border-l border-border/50">
+                      <p className="text-[9px] text-muted-foreground">سابق</p>
+                      <p className="text-xs font-medium">
+                        {Number(invoice.previous_balance || 0).toFixed(0)}
+                      </p>
+                    </div>
+                    <div className="p-2 border-l border-border/50">
+                      <p className="text-[9px] text-muted-foreground">مدفوع</p>
+                      <p className="text-xs font-medium text-green-600 dark:text-green-400">
+                        {Number(invoice.paid_amount).toFixed(0)}
+                      </p>
+                    </div>
+                    <div className="p-2">
+                      <p className="text-[9px] text-muted-foreground">باقي</p>
+                      <p
+                        className={`text-xs font-bold ${
+                          computed.remaining > 0.01 ? "text-red-500" : ""
+                        }`}
+                      >
+                        {computed.remaining.toFixed(0)}
+                      </p>
+                    </div>
+                  </div>
 
-                {/* Financial grid */}
-                <div className="grid grid-cols-4 text-center border-t border-border/50">
-                  <div className="p-2 border-l border-border/50">
-                    <p className="text-[9px] text-muted-foreground">الإجمالي</p>
-                    <p className="text-xs font-bold">
-                      {Number(invoice.subtotal).toFixed(0)}
+                  {/* Actions row */}
+                  <div
+                    className="flex items-center justify-between border-t border-border/50 px-2 py-1.5 bg-muted/30"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <p className="text-[10px] text-muted-foreground">
+                      {new Date(
+                        invoice.invoice_date || invoice.created_at,
+                      ).toLocaleDateString("ar-EG", {
+                        day: "numeric",
+                        month: "short",
+                      })}
                     </p>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7"
+                        onClick={() => router.push(`/invoices/${invoice.id}`)}
+                      >
+                        <Eye size={14} />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7"
+                        onClick={() =>
+                          router.push(
+                            `/invoices/${invoice.id}/edit/${invoice.invoice_type}`,
+                          )
+                        }
+                      >
+                        <Pencil size={14} />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7"
+                        disabled={deleting === invoice.id}
+                        onClick={() => confirmDelete(invoice.id)}
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7"
+                        onClick={() =>
+                          window.open(`/invoices/${invoice.id}/print`, "_blank")
+                        }
+                      >
+                        <Printer size={14} />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="p-2 border-l border-border/50">
-                    <p className="text-[9px] text-muted-foreground">سابق</p>
-                    <p className="text-xs font-medium">
-                      {Number(invoice.previous_balance || 0).toFixed(0)}
-                    </p>
-                  </div>
-                  <div className="p-2 border-l border-border/50">
-                    <p className="text-[9px] text-muted-foreground">مدفوع</p>
-                    <p className="text-xs font-medium text-green-600 dark:text-green-400">
-                      {Number(invoice.paid_amount).toFixed(0)}
-                    </p>
-                  </div>
-                  <div className="p-2">
-                    <p className="text-[9px] text-muted-foreground">باقي</p>
-                    <p
-                      className={`text-xs font-bold ${
-                        computed.remaining > 0.01
-                          ? "text-red-500"
-                          : ""
-                      }`}
-                    >
-                      {computed.remaining.toFixed(0)}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Actions row */}
-                <div
-                  className="flex items-center justify-between border-t border-border/50 px-2 py-1.5 bg-muted/30"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <p className="text-[10px] text-muted-foreground">
-                    {new Date(
-                      invoice.invoice_date || invoice.created_at,
-                    ).toLocaleDateString("ar-EG", {
-                      day: "numeric",
-                      month: "short",
-                    })}
-                  </p>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7"
-                      onClick={() => router.push(`/invoices/${invoice.id}`)}
-                    >
-                      <Eye size={14} />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7"
-                      onClick={() =>
-                        router.push(
-                          `/invoices/${invoice.id}/edit/${invoice.invoice_type}`,
-                        )
-                      }
-                    >
-                      <Pencil size={14} />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7"
-                      disabled={deleting === invoice.id}
-                      onClick={() => confirmDelete(invoice.id)}
-                    >
-                      <Trash2 size={14} />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7"
-                      onClick={() =>
-                        window.open(`/invoices/${invoice.id}/print`, "_blank")
-                      }
-                    >
-                      <Printer size={14} />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
             );
           })
         )}
