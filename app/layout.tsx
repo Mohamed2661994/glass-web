@@ -35,6 +35,49 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var theme = 'light';
+                  var storedUser = localStorage.getItem('user');
+                  if (storedUser) {
+                    var parsedUser = JSON.parse(storedUser);
+                    var userId = parsedUser && parsedUser.id;
+                    if (userId != null) {
+                      var userPrefsRaw = localStorage.getItem('user_prefs_' + userId);
+                      if (userPrefsRaw) {
+                        var userPrefs = JSON.parse(userPrefsRaw);
+                        if (userPrefs && (userPrefs.theme === 'light' || userPrefs.theme === 'dark')) {
+                          theme = userPrefs.theme;
+                        }
+                      }
+                    }
+                  }
+
+                  if (theme !== 'light' && theme !== 'dark') {
+                    var storedTheme = localStorage.getItem('theme');
+                    if (storedTheme === 'light' || storedTheme === 'dark') {
+                      theme = storedTheme;
+                    }
+                  }
+
+                  var root = document.documentElement;
+                  root.classList.remove('light', 'dark');
+                  root.classList.add(theme);
+                  root.style.colorScheme = theme;
+                  localStorage.setItem('theme', theme);
+                } catch (e) {
+                  var root = document.documentElement;
+                  root.classList.remove('dark');
+                  root.classList.add('light');
+                  root.style.colorScheme = 'light';
+                }
+              })();
+            `,
+          }}
+        />
         <link rel="icon" href="/favicon.ico" sizes="32x32" />
         <link
           rel="icon"
