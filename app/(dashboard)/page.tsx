@@ -282,7 +282,8 @@ type WidgetId =
   | "recent_transfers"
   | "cash_summary"
   | "quick_links"
-  | "notifications";
+  | "notifications"
+  | "pending_wholesale";
 
 type WidgetSize = "full" | "half";
 
@@ -317,24 +318,31 @@ const DEFAULT_WIDGETS: WidgetConfig[] = [
     size: "half",
   },
   {
+    id: "pending_wholesale",
+    label: "فواتير الجملة المعلقة",
+    visible: true,
+    order: 3,
+    size: "full",
+  },
+  {
     id: "recent_invoices",
     label: "آخر الفواتير",
     visible: true,
-    order: 3,
+    order: 4,
     size: "full",
   },
   {
     id: "recent_transfers",
     label: "آخر التحويلات",
     visible: true,
-    order: 4,
+    order: 5,
     size: "full",
   },
   {
     id: "notifications",
     label: "آخر الإشعارات",
     visible: true,
-    order: 5,
+    order: 6,
     size: "half",
   },
 ];
@@ -1197,7 +1205,7 @@ export default function DashboardPage() {
           },
         });
         const all: Invoice[] = Array.isArray(data) ? data : (data.data ?? []);
-        const wsInvoices = all.filter(i => i.invoice_type === "wholesale");
+        const wsInvoices = all.filter((i) => i.invoice_type === "wholesale");
         // Show wholesale invoices created by this retail user that are not yet paid
         const pending = wsInvoices
           .filter(
@@ -1317,6 +1325,99 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </div>
+        );
+
+      case "pending_wholesale":
+        // Only show for retail users (branch_id === 1)
+        if (branchId !== 1) return null;
+        return (
+          <Card
+            key={id}
+            className="border-t-2 border-t-amber-500/60 dark:border-t-amber-400/40"
+          >
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Truck className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                فواتير الجملة المعلقة
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => setRefreshKey((k) => k + 1)}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+                {!loadingPendingWS && (
+                  <Badge
+                    variant="outline"
+                    className="border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300"
+                  >
+                    {pendingWholesale.length} فاتورة
+                  </Badge>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="overflow-x-auto overflow-y-auto max-h-[400px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden p-0">
+              <Table className="text-xs sm:text-sm">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right">#</TableHead>
+                    <TableHead className="text-right">العميل</TableHead>
+                    <TableHead className="text-right">الإجمالي</TableHead>
+                    <TableHead className="text-right">المدفوع</TableHead>
+                    <TableHead className="text-right">الباقي</TableHead>
+                    <TableHead className="text-right">الحالة</TableHead>
+                    <TableHead className="text-right hidden sm:table-cell">التاريخ</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loadingPendingWS ? (
+                    skelRows(6)
+                  ) : pendingWholesale.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={7}
+                        className="text-center py-8 text-muted-foreground"
+                      >
+                        لا توجد فواتير جملة معلقة
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    pendingWholesale.map((inv) => (
+                      <TableRow
+                        key={inv.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => {
+                          startNavigation();
+                          router.push(`/invoices/${inv.id}/edit/wholesale`);
+                        }}
+                      >
+                        <TableCell className="font-medium">{inv.id}</TableCell>
+                        <TableCell className="max-w-[100px] truncate">
+                          {inv.customer_name || "—"}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {Math.round(inv.total).toLocaleString()} ج
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-green-600 dark:text-green-400">
+                          {Math.round(Number(inv.paid_amount || 0)).toLocaleString()} ج
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-red-600 dark:text-red-400">
+                          {Math.round(Number(inv.remaining_amount || 0)).toLocaleString()} ج
+                        </TableCell>
+                        <TableCell>{paymentBadge(inv.payment_status)}</TableCell>
+                        <TableCell className="text-muted-foreground text-xs hidden sm:table-cell">
+                          {formatDate(inv.created_at || inv.invoice_date)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         );
 
       case "recent_invoices":
@@ -2034,102 +2135,6 @@ export default function DashboardPage() {
 
       {/* ====== DB Status ====== */}
       <DbStatusIndicator />
-
-      {/* ====== Pending Wholesale Invoices (retail user only) ====== */}
-      {branchId === 1 && (
-        <Card className="border-t-2 border-t-amber-500/60 dark:border-t-amber-400/40 animate-in fade-in slide-in-from-bottom-3 duration-400">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Truck className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-              فواتير الجملة المعلقة
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => setRefreshKey((k) => k + 1)}
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-              {!loadingPendingWS && (
-                <Badge
-                  variant="outline"
-                  className="border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300"
-                >
-                  {pendingWholesale.length} فاتورة
-                </Badge>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="overflow-x-auto overflow-y-auto max-h-[400px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden p-0">
-            <Table className="text-xs sm:text-sm">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-right">#</TableHead>
-                  <TableHead className="text-right">العميل</TableHead>
-                  <TableHead className="text-right">الإجمالي</TableHead>
-                  <TableHead className="text-right">المدفوع</TableHead>
-                  <TableHead className="text-right">الباقي</TableHead>
-                  <TableHead className="text-right">الحالة</TableHead>
-                  <TableHead className="text-right hidden sm:table-cell">
-                    التاريخ
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loadingPendingWS ? (
-                  skelRows(6)
-                ) : pendingWholesale.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={7}
-                      className="text-center py-8 text-muted-foreground"
-                    >
-                      لا توجد فواتير جملة معلقة
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  pendingWholesale.map((inv) => (
-                    <TableRow
-                      key={inv.id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => {
-                        startNavigation();
-                        router.push(`/invoices/${inv.id}/edit/wholesale`);
-                      }}
-                    >
-                      <TableCell className="font-medium">{inv.id}</TableCell>
-                      <TableCell className="max-w-[100px] truncate">
-                        {inv.customer_name || "—"}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {Math.round(inv.total).toLocaleString()} ج
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap text-green-600 dark:text-green-400">
-                        {Math.round(
-                          Number(inv.paid_amount || 0),
-                        ).toLocaleString()}{" "}
-                        ج
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap text-red-600 dark:text-red-400">
-                        {Math.round(
-                          Number(inv.remaining_amount || 0),
-                        ).toLocaleString()}{" "}
-                        ج
-                      </TableCell>
-                      <TableCell>{paymentBadge(inv.payment_status)}</TableCell>
-                      <TableCell className="text-muted-foreground text-xs hidden sm:table-cell">
-                        {formatDate(inv.created_at || inv.invoice_date)}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
 
       {/* ====== Render widgets in grid layout ====== */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
