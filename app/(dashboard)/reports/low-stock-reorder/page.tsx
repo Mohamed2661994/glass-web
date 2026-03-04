@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Loader2, Search, ShoppingCart, Plus, Trash2 } from "lucide-react";
 import { multiWordMatch } from "@/lib/utils";
 import { useRealtime } from "@/hooks/use-realtime";
@@ -63,6 +64,7 @@ export default function LowStockReorderPage() {
   );
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [onlyWithWholesaleStock, setOnlyWithWholesaleStock] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCartModal, setShowCartModal] = useState(false);
 
@@ -113,14 +115,28 @@ export default function LowStockReorderPage() {
 
   /* ========== Filter — show only retail warehouse items with stock ≤ 5 ========== */
   const filteredData = useMemo(() => {
-    let result = data.filter(
-      (i) =>
-        i.warehouse_name === "مخزن المعرض" &&
-        i.current_stock <= 5 &&
-        i.current_stock >= 0 &&
-        !!i.wholesale_package &&
-        (i.current_stock > 0 || (wholesaleStock[i.product_id] ?? 0) > 0),
-    );
+    let result = data.filter((i) => {
+      const wsQty = wholesaleStock[i.product_id] ?? 0;
+
+      if (
+        i.warehouse_name !== "مخزن المعرض" ||
+        i.current_stock > 5 ||
+        i.current_stock < 0 ||
+        !i.wholesale_package
+      ) {
+        return false;
+      }
+
+      if (!(i.current_stock > 0 || wsQty > 0)) {
+        return false;
+      }
+
+      if (onlyWithWholesaleStock && wsQty <= 0) {
+        return false;
+      }
+
+      return true;
+    });
 
     if (search.trim()) {
       result = result.filter((item) =>
@@ -134,7 +150,7 @@ export default function LowStockReorderPage() {
     }
 
     return result.sort((a, b) => a.current_stock - b.current_stock);
-  }, [data, search, wholesaleStock]);
+  }, [data, search, wholesaleStock, onlyWithWholesaleStock]);
 
   /* ========== Cart actions ========== */
   const addToCart = (item: LowStockItem) => {
@@ -181,7 +197,7 @@ export default function LowStockReorderPage() {
         أصناف تحتاج تحويل
       </h1>
       {/* ===== Search + Cart Icon ===== */}
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="relative flex-1">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -192,6 +208,16 @@ export default function LowStockReorderPage() {
             className="pr-9"
           />
         </div>
+
+        <div className="flex items-center gap-2 border rounded-md px-3 h-10" dir="rtl">
+          <span className="text-sm whitespace-nowrap">متاح في الجملة فقط</span>
+          <Switch
+            checked={onlyWithWholesaleStock}
+            onCheckedChange={(checked) => setOnlyWithWholesaleStock(Boolean(checked))}
+            size="sm"
+          />
+        </div>
+
         <Button
           variant="outline"
           size="icon"
