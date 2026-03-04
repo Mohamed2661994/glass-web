@@ -75,7 +75,7 @@ export default function LowStockReorderPage() {
           params: { limit_quantity: 5 },
         }),
         api.get("/reports/low-stock", {
-          params: { limit_quantity: 999999, warehouse_id: 1 },
+          params: { limit_quantity: 999999, warehouse_id: 2 },
         }),
       ]);
 
