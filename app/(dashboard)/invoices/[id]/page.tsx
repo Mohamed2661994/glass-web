@@ -180,8 +180,7 @@ export default function InvoiceDetailsPage() {
             <strong>المدفوع:</strong> {Number(invoice.paid_amount).toFixed(2)}
           </p>
           <p>
-            <strong>المتبقي:</strong>{" "}
-            {computedRemaining.toFixed(2)}
+            <strong>المتبقي:</strong> {computedRemaining.toFixed(2)}
           </p>
           {invoice.created_by_name && (
             <p>

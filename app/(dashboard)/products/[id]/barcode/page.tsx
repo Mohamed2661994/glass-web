@@ -56,6 +56,8 @@ function BarcodePrintPage() {
           displayValue: true,
           fontSize: 13,
           margin: 2,
+          lineColor: "#000",
+          textColor: "#000",
         });
       });
 
@@ -146,6 +148,7 @@ body {
   white-space: nowrap;
   text-overflow: ellipsis;
   max-width: 100%;
+  color: #000;
 }
 
 .barcode-item .product-price {
@@ -156,7 +159,7 @@ body {
 
 @page {
   size: auto;
-  margin: 0;
+  margin: 10mm 0 0 0;
 }
 
 @media print {
@@ -172,6 +175,19 @@ body {
     width: 100%;
     padding: 0;
     margin: 0;
+  }
+
+  .barcode-item .product-name,
+  .barcode-item .product-price {
+    color: #000 !important;
+  }
+
+  .barcode-svg text {
+    fill: #000 !important;
+  }
+
+  .barcode-svg rect {
+    fill: #000 !important;
   }
 
   .barcode-item {

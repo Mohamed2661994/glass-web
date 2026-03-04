@@ -56,36 +56,34 @@ export function CashCounterModal() {
     if (!prefsLoaded || loadedRef.current) return;
     const saved = prefs.cashCounter as CashCounterPref | undefined;
 
-    const normalizedTabs: CashCounterTab[] =
-      saved?.tabs?.length
-        ? saved.tabs
-            .filter((tab) => tab && Array.isArray(tab.denominations))
-            .map((tab, idx) => ({
-              id: tab.id || createTabId(),
-              name: tab.name?.trim() || `عد ${idx + 1}`,
-              color: tab.color || DEFAULT_TAB_COLOR,
-              denominations:
-                tab.denominations.length > 0
-                  ? [...new Set(tab.denominations)]
-                      .filter((n) => Number(n) > 0)
-                      .sort((a, b) => b - a)
-                  : [...DEFAULT_DENOMINATIONS],
-              counts: tab.counts ?? {},
-            }))
-        : [
-            {
-              id: createTabId(),
-              name: "عد 1",
-              color: DEFAULT_TAB_COLOR,
-              denominations:
-                saved?.denominations?.length
-                  ? [...new Set(saved.denominations)]
-                      .filter((n) => Number(n) > 0)
-                      .sort((a, b) => b - a)
-                  : [...DEFAULT_DENOMINATIONS],
-              counts: saved?.counts ?? {},
-            },
-          ];
+    const normalizedTabs: CashCounterTab[] = saved?.tabs?.length
+      ? saved.tabs
+          .filter((tab) => tab && Array.isArray(tab.denominations))
+          .map((tab, idx) => ({
+            id: tab.id || createTabId(),
+            name: tab.name?.trim() || `عد ${idx + 1}`,
+            color: tab.color || DEFAULT_TAB_COLOR,
+            denominations:
+              tab.denominations.length > 0
+                ? [...new Set(tab.denominations)]
+                    .filter((n) => Number(n) > 0)
+                    .sort((a, b) => b - a)
+                : [...DEFAULT_DENOMINATIONS],
+            counts: tab.counts ?? {},
+          }))
+      : [
+          {
+            id: createTabId(),
+            name: "عد 1",
+            color: DEFAULT_TAB_COLOR,
+            denominations: saved?.denominations?.length
+              ? [...new Set(saved.denominations)]
+                  .filter((n) => Number(n) > 0)
+                  .sort((a, b) => b - a)
+              : [...DEFAULT_DENOMINATIONS],
+            counts: saved?.counts ?? {},
+          },
+        ];
 
     const safeTabs = normalizedTabs.length
       ? normalizedTabs

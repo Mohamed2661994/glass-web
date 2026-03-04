@@ -269,7 +269,9 @@ export default function InvoicesPage() {
                   const quantity = toNumber(item.quantity);
                   const price = toNumber(item.price);
                   const discount = toNumber(item.discount);
-                  const unitPrice = applyItemsDiscount ? price - discount : price;
+                  const unitPrice = applyItemsDiscount
+                    ? price - discount
+                    : price;
                   const itemTotal = unitPrice * quantity;
                   return sum + (item.is_return ? -itemTotal : itemTotal);
                 }, 0) * 100,
@@ -282,11 +284,13 @@ export default function InvoicesPage() {
             const netTotal =
               Math.round((totalBeforeDiscount - invoiceDiscount) * 100) / 100;
             const totalWithPrevious =
-              Math.round((netTotal + toNumber(details.previous_balance)) * 100) /
-              100;
+              Math.round(
+                (netTotal + toNumber(details.previous_balance)) * 100,
+              ) / 100;
 
             const paid = toNumber(details.paid_amount);
-            const remaining = Math.round((totalWithPrevious - paid) * 100) / 100;
+            const remaining =
+              Math.round((totalWithPrevious - paid) * 100) / 100;
             const epsilon = 0.01;
 
             const status: "paid" | "partial" | "unpaid" =

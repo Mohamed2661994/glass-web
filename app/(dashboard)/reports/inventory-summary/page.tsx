@@ -355,7 +355,6 @@ export default function InventorySummaryPage() {
             <Badge variant="secondary">{filteredData.length} صنف</Badge>
           </div>
         )}
-
       </div>
     </PageContainer>
   );
