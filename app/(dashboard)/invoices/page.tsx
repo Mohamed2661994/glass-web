@@ -60,6 +60,7 @@ interface Invoice {
 }
 
 interface InvoiceResolvedFinancials {
+  totalBeforeDiscount: number;
   remaining: number;
   status: "paid" | "partial" | "unpaid";
 }
@@ -101,6 +102,7 @@ const getInvoiceComputedFinancials = (invoice: Invoice) => {
         : "unpaid";
 
   return {
+    totalBeforeDiscount,
     remaining: normalizedRemaining,
     status,
   };
@@ -254,14 +256,47 @@ export default function InvoicesPage() {
             const res = await axios.get(`/invoices/${invoice.id}/edit`);
             const details = res.data || {};
 
-            const remaining = Math.round(toNumber(details.remaining_amount) * 100) / 100;
+            const detailItems: any[] = Array.isArray(details.items)
+              ? details.items
+              : [];
+            const isWholesale = details.invoice_type === "wholesale";
+            const applyItemsDiscount =
+              isWholesale || Boolean(details.apply_items_discount);
+
+            const totalBeforeDiscount =
+              Math.round(
+                detailItems.reduce((sum, item) => {
+                  const quantity = toNumber(item.quantity);
+                  const price = toNumber(item.price);
+                  const discount = toNumber(item.discount);
+                  const unitPrice = applyItemsDiscount ? price - discount : price;
+                  const itemTotal = unitPrice * quantity;
+                  return sum + (item.is_return ? -itemTotal : itemTotal);
+                }, 0) * 100,
+              ) / 100;
+
+            const invoiceDiscount = isWholesale
+              ? toNumber(details.manual_discount ?? details.extra_discount)
+              : toNumber(details.extra_discount ?? details.manual_discount);
+
+            const netTotal =
+              Math.round((totalBeforeDiscount - invoiceDiscount) * 100) / 100;
+            const totalWithPrevious =
+              Math.round((netTotal + toNumber(details.previous_balance)) * 100) /
+              100;
+
             const paid = toNumber(details.paid_amount);
+            const remaining = Math.round((totalWithPrevious - paid) * 100) / 100;
             const epsilon = 0.01;
 
             const status: "paid" | "partial" | "unpaid" =
-              remaining <= epsilon ? "paid" : paid > epsilon ? "partial" : "unpaid";
+              remaining <= epsilon
+                ? "paid"
+                : paid > epsilon
+                  ? "partial"
+                  : "unpaid";
 
-            nextMap[invoice.id] = { remaining, status };
+            nextMap[invoice.id] = { totalBeforeDiscount, remaining, status };
           } catch {
             // fallback handled from list data
           }
@@ -494,7 +529,7 @@ export default function InvoicesPage() {
                             : invoice.customer_name || "نقدي"}
                         </td>
                         <td className="p-3">
-                          {Number(invoice.subtotal).toFixed(2)}
+                          {computed.totalBeforeDiscount.toFixed(2)}
                         </td>
                         <td className="p-3">
                           {Number(invoice.previous_balance || 0).toFixed(2)}
@@ -635,7 +670,7 @@ export default function InvoicesPage() {
                         الإجمالي
                       </p>
                       <p className="text-xs font-bold">
-                        {Number(invoice.subtotal).toFixed(0)}
+                        {computed.totalBeforeDiscount.toFixed(0)}
                       </p>
                     </div>
                     <div className="p-2 border-l border-border/50">
