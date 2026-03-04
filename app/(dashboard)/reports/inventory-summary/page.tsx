@@ -346,7 +346,8 @@ export default function InventorySummaryPage() {
                         {item.product_name}
                         {item.manufacturer_name && (
                           <span className="text-muted-foreground font-normal">
-                            {" "}- {item.manufacturer_name}
+                            {" "}
+                            - {item.manufacturer_name}
                           </span>
                         )}
                       </div>
@@ -438,7 +439,21 @@ export default function InventorySummaryPage() {
                   onClick={async () => {
                     setReconciling(true);
                     try {
-                      const { data } = await api.post("/stock/reconcile");
+                      const branchId =
+                        selectedWarehouse === "مخزن المعرض"
+                          ? 1
+                          : selectedWarehouse === "المخزن الرئيسي"
+                            ? 2
+                            : isShowroomUser
+                              ? 1
+                              : isWarehouseUser
+                                ? 2
+                                : undefined;
+
+                      const payload =
+                        typeof branchId === "number" ? { branch_id: branchId } : {};
+
+                      const { data } = await api.post("/stock/reconcile", payload);
                       toast.success(data.message || "تم تصحيح الأرصدة");
                       setDiscrepancyOpen(false);
                       fetchReport();
