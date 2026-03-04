@@ -348,12 +348,16 @@ function InvoicePrintPage() {
   const items = invoice.items || [];
   const isWholesale = invoice.invoice_type === "wholesale";
 
+  const applyDiscount = invoice.apply_items_discount ?? true;
+
   const calcUnitPrice = (it: InvoiceItem) => {
+    if (!applyDiscount) return Number(it.price);
     return Number(it.price) - Number(it.discount || 0);
   };
 
   const calcItemTotal = (it: InvoiceItem) => {
     const qty = Number(it.quantity || 0);
+    if (!applyDiscount) return Number(it.price) * qty;
     return (Number(it.price) - Number(it.discount || 0)) * qty;
   };
 

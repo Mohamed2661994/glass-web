@@ -165,6 +165,8 @@ export interface WhatsAppInvoice {
   extra_discount?: number;
   manual_discount?: number;
   previous_balance?: number;
+  apply_items_discount?: boolean;
+  invoice_type?: string;
   items?: {
     product_name: string;
     package?: string;
@@ -211,7 +213,8 @@ function buildInvoiceHtml(invoice: WhatsAppInvoice): string {
       });
 
   const items = invoice.items || [];
-  const hasDiscount = items.some((it) => Number(it.discount || 0) > 0);
+  const applyDiscount = invoice.apply_items_discount ?? true;
+  const hasDiscount = applyDiscount && items.some((it) => Number(it.discount || 0) > 0);
   const extraDiscount =
     Number(invoice.extra_discount || 0) + Number(invoice.manual_discount || 0);
 
