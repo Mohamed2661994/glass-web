@@ -1189,25 +1189,27 @@ export default function DashboardPage() {
     setLoadingPendingWS(true);
     (async () => {
       try {
+        // Fetch without invoice_type filter — backend may restrict wholesale access for retail user
         const { data } = await api.get("/invoices", {
           params: {
-            invoice_type: "wholesale",
-            limit: 100,
+            limit: 200,
             _t: Date.now(),
           },
         });
         const all: Invoice[] = Array.isArray(data) ? data : (data.data ?? []);
-        // Show only unpaid/partial invoices that this user created
-        console.log("[pending-ws] user.id=", user?.id, "invoices=", all.map(i => ({ id: i.id, created_by: i.created_by, created_by_name: i.created_by_name, payment_status: i.payment_status })));
+        // Show only wholesale unpaid/partial invoices that this user created
         const pending = all
           .filter(
             (inv) =>
-              inv.created_by === user?.id && inv.payment_status !== "paid",
+              inv.invoice_type === "wholesale" &&
+              inv.created_by === user?.id &&
+              inv.payment_status !== "paid",
           )
           .sort((a, b) => b.id - a.id);
+        console.log("[pending-ws] user.id=", user?.id, "total=", all.length, "wholesale=", all.filter(i => i.invoice_type === "wholesale").length, "pending=", pending.length);
         setPendingWholesale(pending);
-      } catch {
-        /* silent */
+      } catch (err) {
+        console.error("[pending-ws] error:", err);
       } finally {
         setLoadingPendingWS(false);
       }
