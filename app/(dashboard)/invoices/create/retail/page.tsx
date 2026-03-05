@@ -319,7 +319,12 @@ export default function CreateRetailInvoicePage() {
 
   // Auto-save draft on changes
   useEffect(() => {
-    if (!items.length && !customerName && !customerPhone && !invoiceNotes.trim())
+    if (
+      !items.length &&
+      !customerName &&
+      !customerPhone &&
+      !invoiceNotes.trim()
+    )
       return;
     const draft = {
       movementType,

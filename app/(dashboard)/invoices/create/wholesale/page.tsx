@@ -234,7 +234,12 @@ export default function CreateWholesaleInvoicePage() {
   // Auto-save draft on changes
   useEffect(() => {
     // Skip empty state
-    if (!items.length && !customerName && !customerPhone && !invoiceNotes.trim())
+    if (
+      !items.length &&
+      !customerName &&
+      !customerPhone &&
+      !invoiceNotes.trim()
+    )
       return;
     const draft = {
       movementType,

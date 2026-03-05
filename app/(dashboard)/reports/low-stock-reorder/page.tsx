@@ -209,11 +209,16 @@ export default function LowStockReorderPage() {
           />
         </div>
 
-        <div className="flex items-center gap-2 border rounded-md px-3 h-10" dir="rtl">
+        <div
+          className="flex items-center gap-2 border rounded-md px-3 h-10"
+          dir="rtl"
+        >
           <span className="text-sm whitespace-nowrap">متاح في الجملة فقط</span>
           <Switch
             checked={onlyWithWholesaleStock}
-            onCheckedChange={(checked) => setOnlyWithWholesaleStock(Boolean(checked))}
+            onCheckedChange={(checked) =>
+              setOnlyWithWholesaleStock(Boolean(checked))
+            }
             size="sm"
           />
         </div>
