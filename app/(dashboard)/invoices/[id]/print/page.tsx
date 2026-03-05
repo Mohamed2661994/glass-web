@@ -65,17 +65,6 @@ const FONT_OPTIONS = [
   { label: "Noto Sans Arabic", value: "Noto Sans Arabic, sans-serif" },
 ];
 
-const COLOR_PRESETS = [
-  { label: "أسود", value: "#000000" },
-  { label: "كحلي", value: "#1e3a5f" },
-  { label: "أزرق", value: "#1d4ed8" },
-  { label: "أخضر", value: "#15803d" },
-  { label: "أحمر", value: "#dc2626" },
-  { label: "بنفسجي", value: "#7c3aed" },
-  { label: "بني", value: "#78350f" },
-  { label: "رمادي", value: "#4b5563" },
-];
-
 export default function InvoicePrintPageWrapper() {
   return (
     <Suspense
@@ -104,11 +93,12 @@ function InvoicePrintPage() {
   const [orientation, setOrientation] = useState<Orientation>("portrait");
   const [margins, setMargins] = useState<MarginSize>("normal");
   const [printBold, setPrintBold] = useState(false);
-  const [printColor, setPrintColor] = useState("#000000");
   const [fontSize, setFontSize] = useState(10);
   const [borderWidth, setBorderWidth] = useState(1);
+  const [borderColor, setBorderColor] = useState("#cccccc");
   const [showLogo, setShowLogo] = useState(true);
   const [showPhone, setShowPhone] = useState(true);
+  const [customPhone, setCustomPhone] = useState("");
   const [fontFamily, setFontFamily] = useState("Tahoma, Arial, sans-serif");
   const [isPrinting, setIsPrinting] = useState(false);
 
@@ -122,7 +112,6 @@ function InvoicePrintPage() {
       if (raw) {
         const s = JSON.parse(raw);
         if (s.printBold !== undefined) setPrintBold(s.printBold);
-        if (s.printColor) setPrintColor(s.printColor);
       }
     } catch {}
     try {
@@ -135,8 +124,10 @@ function InvoicePrintPage() {
         if (s.margins) setMargins(s.margins);
         if (s.fontSize) setFontSize(s.fontSize);
         if (s.borderWidth !== undefined) setBorderWidth(s.borderWidth);
+        if (s.borderColor) setBorderColor(s.borderColor);
         if (s.showLogo !== undefined) setShowLogo(s.showLogo);
         if (s.showPhone !== undefined) setShowPhone(s.showPhone);
+        if (s.customPhone !== undefined) setCustomPhone(s.customPhone);
         if (s.fontFamily) setFontFamily(s.fontFamily);
       }
     } catch {}
@@ -156,8 +147,10 @@ function InvoicePrintPage() {
           margins,
           fontSize,
           borderWidth,
+          borderColor,
           showLogo,
           showPhone,
+          customPhone,
           fontFamily,
           ...patch,
         };
@@ -171,8 +164,10 @@ function InvoicePrintPage() {
       margins,
       fontSize,
       borderWidth,
+      borderColor,
       showLogo,
       showPhone,
+      customPhone,
       fontFamily,
     ],
   );
@@ -206,18 +201,18 @@ function InvoicePrintPage() {
     const css = `
       <style>
         body { margin:0; padding:0; background:white; font-family:${fontFamily}; direction:rtl; }
-        * { color: ${printColor} !important; }
         .invoice-wrap {
           width:100%; margin:0; padding:${marginMM}mm; box-sizing:border-box;
           direction:rtl; font-size:${fontSize}px; font-family:${fontFamily};
           ${printBold ? "font-weight:bold;" : ""}
-          color:${printColor} !important;
         }
         .invoice-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
         .invoice-info { font-size:${fontSize}px; line-height:1.4; text-align:right; min-width:170px; }
+        .logo-section { display:flex; flex-direction:column; align-items:center; gap:4px; }
+        .logo-phone { font-size:${fontSize}px; font-weight:bold; }
         table { width:100%; border-collapse:collapse; font-size:${fontSize}px; }
-        th { background:#f3f3f3; font-weight:bold; border-bottom:2px solid ${printColor}; }
-        td { border-bottom:${borderWidth}px solid #ddd; }
+        th { background:#f3f3f3; font-weight:bold; border-bottom:2px solid #000; }
+        td { border-bottom:${borderWidth}px solid ${borderColor}; }
         th,td { padding:3px 4px; text-align:center; }
         tfoot tr:first-child { border-top:3px solid #000; }
         tfoot tr:first-child td { border-bottom:none; }
@@ -246,9 +241,9 @@ function InvoicePrintPage() {
     orientation,
     margins,
     printBold,
-    printColor,
     fontSize,
     borderWidth,
+    borderColor,
     fontFamily,
     pageW,
     pageH,
@@ -559,18 +554,18 @@ body { background:#3b3b3b; font-family:${fontFamily}; }
 /* ===== محتوى الفاتورة داخل المعاينة ===== */
 .invoice-wrap {
   direction:rtl; box-sizing:border-box;
-  color:${printColor} !important;
   ${printBold ? "font-weight:bold;" : ""}
 }
-.invoice-wrap * { color:${printColor} !important; }
 .invoice-header {
   display:flex; align-items:center;
   justify-content:space-between; margin-bottom:8px;
 }
 .invoice-info { line-height:1.4; text-align:right; min-width:170px; }
+.logo-section { display:flex; flex-direction:column; align-items:center; gap:4px; }
+.logo-phone { font-weight:bold; }
 table { width:100%; border-collapse:collapse; }
-th { background:#f3f3f3; font-weight:bold; border-bottom:2px solid ${printColor}; }
-td { border-bottom:1px solid #ddd; }
+th { background:#f3f3f3; font-weight:bold; border-bottom:2px solid #000; }
+td { border-bottom:${borderWidth}px solid ${borderColor}; }
 th,td { padding:3px 4px; text-align:center; }
 tfoot tr:first-child { border-top:3px solid #000; }
 tfoot tr:first-child td { border-bottom:none; }
@@ -776,30 +771,63 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
 
               {/* سمك الخط الفاصل */}
               <div className="setting-group">
-                <label className="setting-label">سمك الخط الفاصل: {borderWidth}px</label>
-                <input
-                  type="range"
-                  min={0}
-                  max={3}
-                  step={0.5}
+                <label className="setting-label">سمك الخط الفاصل</label>
+                <select
+                  className="s-select"
                   value={borderWidth}
                   onChange={(e) => {
                     const v = Number(e.target.value);
                     setBorderWidth(v);
                     savePrintSettings({ borderWidth: v });
                   }}
-                  style={{ width: "100%", accentColor: "#3b82f6" }}
-                />
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: 10,
-                    color: "#94a3b8",
-                  }}
                 >
-                  <span>0</span>
-                  <span>3</span>
+                  <option value={0}>بدون خط</option>
+                  <option value={0.5}>رفيع جداً (0.5px)</option>
+                  <option value={1}>رفيع (1px)</option>
+                  <option value={1.5}>متوسط (1.5px)</option>
+                  <option value={2}>سميك (2px)</option>
+                  <option value={3}>سميك جداً (3px)</option>
+                </select>
+              </div>
+
+              {/* لون الخط الفاصل */}
+              <div className="setting-group">
+                <label className="setting-label">لون الخط الفاصل</label>
+                <div className="color-grid">
+                  {[
+                    { label: "رمادي فاتح", value: "#e5e5e5" },
+                    { label: "رمادي", value: "#cccccc" },
+                    { label: "رمادي غامق", value: "#999999" },
+                    { label: "أسود", value: "#000000" },
+                    { label: "أزرق فاتح", value: "#bfdbfe" },
+                    { label: "أخضر فاتح", value: "#bbf7d0" },
+                  ].map((c) => (
+                    <div
+                      key={c.value}
+                      className={`color-dot ${borderColor === c.value ? "selected" : ""}`}
+                      style={{ backgroundColor: c.value, border: "1px solid #ccc" }}
+                      title={c.label}
+                      onClick={() => {
+                        setBorderColor(c.value);
+                        savePrintSettings({ borderColor: c.value });
+                      }}
+                    >
+                      {borderColor === c.value && (
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke={c.value === "#000000" ? "#fff" : "#000"}
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -825,84 +853,6 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                 </div>
               </div>
 
-              {/* لون الخط */}
-              <div className="setting-group">
-                <label className="setting-label">لون الخط</label>
-                <div className="color-grid">
-                  {COLOR_PRESETS.map((c) => (
-                    <div
-                      key={c.value}
-                      className={`color-dot ${printColor === c.value ? "selected" : ""}`}
-                      style={{ backgroundColor: c.value }}
-                      title={c.label}
-                      onClick={() => {
-                        setPrintColor(c.value);
-                        try {
-                          const raw = localStorage.getItem("appSettings");
-                          const s = raw ? JSON.parse(raw) : {};
-                          s.printColor = c.value;
-                          localStorage.setItem(
-                            "appSettings",
-                            JSON.stringify(s),
-                          );
-                        } catch {}
-                      }}
-                    >
-                      {printColor === c.value && (
-                        <svg
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="#fff"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      )}
-                    </div>
-                  ))}
-                  <label
-                    className="color-dot"
-                    style={{
-                      backgroundColor:
-                        "conic-gradient(red,yellow,lime,aqua,blue,magenta,red)",
-                      background:
-                        "conic-gradient(red,yellow,lime,aqua,blue,magenta,red)",
-                      position: "relative",
-                      overflow: "hidden",
-                    }}
-                    title="لون مخصص"
-                  >
-                    <input
-                      type="color"
-                      value={printColor}
-                      onChange={(e) => {
-                        setPrintColor(e.target.value);
-                        try {
-                          const raw = localStorage.getItem("appSettings");
-                          const s = raw ? JSON.parse(raw) : {};
-                          s.printColor = e.target.value;
-                          localStorage.setItem(
-                            "appSettings",
-                            JSON.stringify(s),
-                          );
-                        } catch {}
-                      }}
-                      style={{
-                        position: "absolute",
-                        opacity: 0,
-                        width: "100%",
-                        height: "100%",
-                        cursor: "pointer",
-                      }}
-                    />
-                  </label>
-                </div>
-              </div>
-
               <hr
                 style={{
                   border: "none",
@@ -925,6 +875,22 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                     <div className="toggle-thumb" />
                   </div>
                 </div>
+              </div>
+
+              {/* رقم تليفون مخصص بجانب اللوجو */}
+              <div className="setting-group">
+                <label className="setting-label">تليفون بجانب اللوجو</label>
+                <input
+                  className="s-input"
+                  type="text"
+                  placeholder="اكتب رقم التليفون..."
+                  value={customPhone}
+                  onChange={(e) => {
+                    setCustomPhone(e.target.value);
+                    savePrintSettings({ customPhone: e.target.value });
+                  }}
+                  style={{ direction: "ltr", textAlign: "center" }}
+                />
               </div>
 
               {/* إظهار/إخفاء التليفون */}
@@ -1021,14 +987,26 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                   )}
                 </div>
                 {showLogo && (
-                  <img
-                    src="/logo-dark.png"
-                    alt="Logo"
-                    style={{ width: 65 }}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = "none";
-                    }}
-                  />
+                  <div className="logo-section">
+                    <img
+                      src="/logo-dark.png"
+                      alt="Logo"
+                      style={{ width: 65 }}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                    {customPhone && (
+                      <div className="logo-phone" style={{ fontSize: `${fontSize}px` }}>
+                        {customPhone}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {!showLogo && customPhone && (
+                  <div className="logo-phone" style={{ fontSize: `${fontSize}px`, fontWeight: "bold" }}>
+                    {customPhone}
+                  </div>
                 )}
               </div>
 
