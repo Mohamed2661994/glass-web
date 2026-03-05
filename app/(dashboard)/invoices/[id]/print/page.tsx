@@ -1124,7 +1124,7 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                       <td></td>
                       <td></td>
                       <td></td>
-                      <td style={{ textAlign: "left" }}>حساب سابق:</td>
+                      <td style={{ textAlign: "left" }}>حساب سابق</td>
                       <td>{fmt(previousBalance)}</td>
                     </tr>
                   )}
@@ -1134,7 +1134,7 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                       <td></td>
                       <td></td>
                       <td></td>
-                      <td style={{ textAlign: "left" }}>خصم:</td>
+                      <td style={{ textAlign: "left" }}>خصم</td>
                       <td>{fmt(extraDiscount)}</td>
                     </tr>
                   )}
@@ -1145,7 +1145,7 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                       <td></td>
                       <td></td>
                       <td style={{ textAlign: "left" }}>
-                        <b>الصافي:</b>
+                        <b>الصافي</b>
                       </td>
                       <td>
                         <b>{fmt(netTotal)}</b>
@@ -1158,7 +1158,7 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                       <td></td>
                       <td></td>
                       <td></td>
-                      <td style={{ textAlign: "left" }}>المدفوع:</td>
+                      <td style={{ textAlign: "left" }}>المدفوع</td>
                       <td>{fmt(paidAmount)}</td>
                     </tr>
                   )}
@@ -1169,7 +1169,7 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                       <td></td>
                       <td></td>
                       <td style={{ textAlign: "left" }}>
-                        <b>المتبقي:</b>
+                        <b>المتبقي</b>
                       </td>
                       <td>
                         <b>{fmt(remaining)}</b>
