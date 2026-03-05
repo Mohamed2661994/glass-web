@@ -1007,7 +1007,9 @@ export default function CreateWholesaleInvoicePage() {
             >
               <StickyNote className="h-4 w-4" />
               {invoiceNotes ? "ملاحظات (موجودة)" : "إضافة ملاحظات"}
-              <ChevronDown className={`h-4 w-4 mr-auto transition-transform ${showNotes ? "rotate-180" : ""}`} />
+              <ChevronDown
+                className={`h-4 w-4 mr-auto transition-transform ${showNotes ? "rotate-180" : ""}`}
+              />
             </Button>
 
             {showNotes && (
