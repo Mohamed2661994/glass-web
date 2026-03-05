@@ -224,14 +224,33 @@ function InvoicePrintPage() {
         tfoot tr:first-child td:nth-last-child(2) { border-bottom:2px solid #000; }
         tfoot .summary-row td { border-bottom:none; padding:1px 4px; font-size:${fontSize + 1}px; }
         tfoot .summary-remaining td { font-size:${fontSize + 3}px; }
-        .invoice-notes {
+        .invoice-footer-row {
           margin-top:auto;
+          padding-top:6px;
+          display:flex;
+          gap:10px;
+          align-items:flex-end;
+        }
+        .invoice-footer-row.no-notes .totals-section {
+          width:55%;
+          margin-right:auto;
+        }
+        .invoice-notes {
           padding-top:6px;
           border-top:1px dashed ${printColor};
           line-height:1.6;
           text-align:right;
           white-space:pre-wrap;
           word-break:break-word;
+          flex:1;
+        }
+        .totals-section {
+          min-width:220px;
+          width:40%;
+          padding-top:6px;
+          border-top:1px dashed ${printColor};
+          line-height:1.6;
+          text-align:left;
         }
         hr { border:none; border-top:2px solid #000; margin-bottom:10px; }
         @page { size:${pageW}mm ${pageH}mm; margin:${marginMM}mm; }
@@ -587,20 +606,33 @@ tfoot tr:first-child td { border-bottom:none; }
 tfoot tr:first-child td:nth-last-child(1),
 tfoot tr:first-child td:nth-last-child(2) { border-bottom:2px solid #000; }
 tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
+.invoice-footer-row {
+  margin-top:auto;
+  padding-top:6px;
+  display:flex;
+  gap:10px;
+  align-items:flex-end;
+}
+.invoice-footer-row.no-notes .totals-section {
+  width:55%;
+  margin-right:auto;
+}
 .totals-section {
-  margin-top:6px; padding-top:6px;
-  border-top:none;
-  width:55%; margin-left:0; margin-right:auto;
-  line-height:1.5; text-align:left;
+  min-width:220px;
+  width:40%;
+  padding-top:6px;
+  border-top:1px dashed ${printColor};
+  line-height:1.6;
+  text-align:left;
 }
 .invoice-notes {
-  margin-top:auto;
   padding-top:6px;
   border-top:1px dashed ${printColor};
   line-height:1.6;
   text-align:right;
   white-space:pre-wrap;
   word-break:break-word;
+  flex:1;
 }
 
 /* iframe مخفي */
@@ -1096,72 +1128,98 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                     <td></td>
                     <td>{fmt(itemsSubtotal)}</td>
                   </tr>
-                  {previousBalance !== 0 && (
-                    <tr className="summary-row">
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td style={{ textAlign: "left" }}>حساب سابق:</td>
-                      <td>{fmt(previousBalance)}</td>
-                    </tr>
-                  )}
-                  {extraDiscount > 0 && (
-                    <tr className="summary-row">
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td style={{ textAlign: "left" }}>خصم:</td>
-                      <td>{fmt(extraDiscount)}</td>
-                    </tr>
-                  )}
-                  {(previousBalance !== 0 || extraDiscount > 0) && (
-                    <tr className="summary-row">
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td style={{ textAlign: "left" }}>
-                        <b>الصافي:</b>
-                      </td>
-                      <td>
-                        <b>{fmt(netTotal)}</b>
-                      </td>
-                    </tr>
-                  )}
-                  {paidAmount !== 0 && (
-                    <tr className="summary-row">
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td style={{ textAlign: "left" }}>المدفوع:</td>
-                      <td>{fmt(paidAmount)}</td>
-                    </tr>
-                  )}
-                  {remaining !== 0 && (
-                    <tr className="summary-row summary-remaining">
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td style={{ textAlign: "left" }}>
-                        <b>المتبقي:</b>
-                      </td>
-                      <td>
-                        <b>{fmt(remaining)}</b>
-                      </td>
-                    </tr>
-                  )}
                 </tfoot>
               </table>
 
-              {invoiceNotes && (
-                <div className="invoice-notes" style={{ fontSize: `${fontSize}px` }}>
-                  <b>ملاحظات:</b> {invoiceNotes}
+              <div
+                className={`invoice-footer-row ${invoiceNotes ? "has-notes" : "no-notes"}`}
+                style={{ fontSize: `${fontSize}px` }}
+              >
+                <div className="totals-section" style={{ fontSize: `${fontSize + 1}px` }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 12,
+                    }}
+                  >
+                    <span>إجمالي الأصناف:</span>
+                    <span>{fmt(itemsSubtotal)}</span>
+                  </div>
+
+                  {previousBalance !== 0 && (
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: 12,
+                      }}
+                    >
+                      <span>حساب سابق:</span>
+                      <span>{fmt(previousBalance)}</span>
+                    </div>
+                  )}
+
+                  {extraDiscount > 0 && (
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: 12,
+                      }}
+                    >
+                      <span>خصم:</span>
+                      <span>{fmt(extraDiscount)}</span>
+                    </div>
+                  )}
+
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 12,
+                      fontWeight: 700,
+                    }}
+                  >
+                    <span>الصافي:</span>
+                    <span>{fmt(netTotal)}</span>
+                  </div>
+
+                  {paidAmount !== 0 && (
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: 12,
+                      }}
+                    >
+                      <span>المدفوع:</span>
+                      <span>{fmt(paidAmount)}</span>
+                    </div>
+                  )}
+
+                  {remaining !== 0 && (
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: 12,
+                        fontWeight: 700,
+                        fontSize: `${fontSize + 3}px`,
+                      }}
+                    >
+                      <span>المتبقي:</span>
+                      <span>{fmt(remaining)}</span>
+                    </div>
+                  )}
                 </div>
-              )}
+
+                {invoiceNotes && (
+                  <div className="invoice-notes" style={{ fontSize: `${fontSize}px` }}>
+                    <b>ملاحظات:</b> {invoiceNotes}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
