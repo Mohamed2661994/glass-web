@@ -21,6 +21,7 @@ interface InvoiceData {
   invoice_type: "retail" | "wholesale";
   movement_type: "sale" | "purchase";
   invoice_date: string;
+  notes?: string;
   customer_name: string;
   customer_phone: string;
   subtotal: number;
@@ -207,6 +208,8 @@ function InvoicePrintPage() {
           width:100%; margin:0; padding:${marginMM}mm; box-sizing:border-box;
           direction:rtl; font-size:${fontSize}px; font-family:${fontFamily};
           ${printBold ? "font-weight:bold;" : ""}
+          display:flex; flex-direction:column;
+          min-height:${Math.max(pageH - marginMM * 2, 0)}mm;
           color:${printColor} !important;
         }
         .invoice-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
@@ -221,6 +224,15 @@ function InvoicePrintPage() {
         tfoot tr:first-child td:nth-last-child(2) { border-bottom:2px solid #000; }
         tfoot .summary-row td { border-bottom:none; padding:1px 4px; font-size:${fontSize + 1}px; }
         tfoot .summary-remaining td { font-size:${fontSize + 3}px; }
+        .invoice-notes {
+          margin-top:auto;
+          padding-top:6px;
+          border-top:1px dashed ${printColor};
+          line-height:1.6;
+          text-align:right;
+          white-space:pre-wrap;
+          word-break:break-word;
+        }
         hr { border:none; border-top:2px solid #000; margin-bottom:10px; }
         @page { size:${pageW}mm ${pageH}mm; margin:${marginMM}mm; }
         table { page-break-inside:auto; break-inside:auto; }
@@ -404,6 +416,7 @@ function InvoicePrintPage() {
   const formattedDate = invoice.invoice_date
     ? new Date(invoice.invoice_date).toLocaleDateString("ar-EG")
     : "-";
+  const invoiceNotes = String(invoice.notes || "").trim();
 
   /* ──── مقياس المعاينة ──── */
   const previewScale = Math.min(1, 520 / ((pageW / 25.4) * 96));
@@ -556,6 +569,8 @@ body { background:#3b3b3b; font-family:${fontFamily}; }
   direction:rtl; box-sizing:border-box;
   color:${printColor} !important;
   ${printBold ? "font-weight:bold;" : ""}
+  display:flex; flex-direction:column;
+  min-height:${Math.max(pageH - marginMM * 2, 0)}mm;
 }
 .invoice-wrap * { color:${printColor} !important; }
 .invoice-header {
@@ -577,6 +592,15 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
   border-top:none;
   width:55%; margin-left:0; margin-right:auto;
   line-height:1.5; text-align:left;
+}
+.invoice-notes {
+  margin-top:auto;
+  padding-top:6px;
+  border-top:1px dashed ${printColor};
+  line-height:1.6;
+  text-align:right;
+  white-space:pre-wrap;
+  word-break:break-word;
 }
 
 /* iframe مخفي */
@@ -1132,6 +1156,12 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                   )}
                 </tfoot>
               </table>
+
+              {invoiceNotes && (
+                <div className="invoice-notes" style={{ fontSize: `${fontSize}px` }}>
+                  <b>ملاحظات:</b> {invoiceNotes}
+                </div>
+              )}
             </div>
           </div>
         </div>
