@@ -23,6 +23,7 @@ export interface InvoicePreviewData {
   invoiceDate: string;
   customerName: string;
   customerPhone?: string;
+  notes?: string;
   items: PreviewItem[];
   applyItemsDiscount?: boolean;
   extraDiscount: number;
@@ -277,6 +278,11 @@ export function InvoicePreviewDialog({
                   <b>النوع:</b> {data.movementType === "sale" ? "بيع" : "شراء"}{" "}
                   — {isWholesale ? "جملة" : "قطاعي"}
                 </div>
+                {data.notes?.trim() && (
+                  <div>
+                    <b>ملاحظات:</b> {data.notes}
+                  </div>
+                )}
               </div>
 
               <img
