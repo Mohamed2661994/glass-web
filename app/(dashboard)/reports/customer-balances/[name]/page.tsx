@@ -377,7 +377,9 @@ export default function CustomerDebtDetailsPage() {
                     </div>
 
                     {/* Row 2: Numbers grid */}
-                    <div className={`grid gap-1 text-center text-xs ${user?.branch_id === 1 ? 'grid-cols-4' : 'grid-cols-5'}`}>
+                    <div
+                      className={`grid gap-1 text-center text-xs ${user?.branch_id === 1 ? "grid-cols-4" : "grid-cols-5"}`}
+                    >
                       <div>
                         <p className="text-muted-foreground">الحساب السابق</p>
                         <p className="font-medium">

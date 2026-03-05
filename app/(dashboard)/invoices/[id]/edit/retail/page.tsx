@@ -23,6 +23,7 @@ import {
   Eye,
   FileText,
   Download,
+  StickyNote,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -85,6 +86,7 @@ export default function EditRetailInvoicePage() {
   const [movementType, setMovementType] = useState<"sale" | "purchase">("sale");
   const [invoiceDate, setInvoiceDate] = useState("");
   const [invoiceNotes, setInvoiceNotes] = useState("");
+  const [showNotes, setShowNotes] = useState(false);
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -187,6 +189,7 @@ export default function EditRetailInvoicePage() {
           inv.invoice_date ? inv.invoice_date.substring(0, 10) : "",
         );
         setInvoiceNotes(inv.notes || "");
+        if (inv.notes) setShowNotes(true);
         setCustomerName(inv.customer_name || "");
         setCustomerPhone(inv.customer_phone || "");
         setSupplierName(inv.supplier_name || "");
@@ -834,15 +837,29 @@ export default function EditRetailInvoicePage() {
               />
             </div>
 
-            <div>
-              <label className="text-sm mb-2 block">ملاحظات</label>
-              <Textarea
-                value={invoiceNotes}
-                placeholder="اكتب أي ملاحظات على الفاتورة..."
-                onChange={(e) => setInvoiceNotes(e.target.value)}
-                rows={3}
-              />
-            </div>
+            <Button
+              type="button"
+              variant={showNotes || invoiceNotes ? "secondary" : "ghost"}
+              size="sm"
+              className="w-full justify-start gap-2 text-muted-foreground"
+              onClick={() => setShowNotes(!showNotes)}
+            >
+              <StickyNote className="h-4 w-4" />
+              {invoiceNotes ? "ملاحظات (موجودة)" : "إضافة ملاحظات"}
+              <ChevronDown className={`h-4 w-4 mr-auto transition-transform ${showNotes ? "rotate-180" : ""}`} />
+            </Button>
+
+            {showNotes && (
+              <div>
+                <Textarea
+                  value={invoiceNotes}
+                  placeholder="اكتب أي ملاحظات على الفاتورة..."
+                  onChange={(e) => setInvoiceNotes(e.target.value)}
+                  rows={3}
+                  autoFocus
+                />
+              </div>
+            )}
 
             {movementType !== "purchase" && (
               <>

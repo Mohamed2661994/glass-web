@@ -212,7 +212,9 @@ function CustomerStatementPrintInner() {
                       style={{
                         ...tdStyle,
                         color:
-                          Number(inv.discount_total) > 0 ? "#dc2626" : undefined,
+                          Number(inv.discount_total) > 0
+                            ? "#dc2626"
+                            : undefined,
                       }}
                     >
                       {inv.record_type === "invoice" &&
