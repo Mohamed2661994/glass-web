@@ -99,6 +99,7 @@ function InvoicePrintPage() {
   const [showLogo, setShowLogo] = useState(true);
   const [showPhone, setShowPhone] = useState(true);
   const [customPhone, setCustomPhone] = useState("");
+  const [showCustomPhone, setShowCustomPhone] = useState(true);
   const [fontFamily, setFontFamily] = useState("Tahoma, Arial, sans-serif");
   const [isPrinting, setIsPrinting] = useState(false);
 
@@ -128,6 +129,7 @@ function InvoicePrintPage() {
         if (s.showLogo !== undefined) setShowLogo(s.showLogo);
         if (s.showPhone !== undefined) setShowPhone(s.showPhone);
         if (s.customPhone !== undefined) setCustomPhone(s.customPhone);
+        if (s.showCustomPhone !== undefined) setShowCustomPhone(s.showCustomPhone);
         if (s.fontFamily) setFontFamily(s.fontFamily);
       }
     } catch {}
@@ -151,6 +153,7 @@ function InvoicePrintPage() {
           showLogo,
           showPhone,
           customPhone,
+          showCustomPhone,
           fontFamily,
           ...patch,
         };
@@ -168,6 +171,7 @@ function InvoicePrintPage() {
       showLogo,
       showPhone,
       customPhone,
+      showCustomPhone,
       fontFamily,
     ],
   );
@@ -882,7 +886,18 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
 
               {/* رقم تليفون مخصص بجانب اللوجو */}
               <div className="setting-group">
-                <label className="setting-label">تليفون بجانب اللوجو</label>
+                <div className="setting-row" style={{ marginBottom: 8 }}>
+                  <span className="setting-row-label">تليفون بجانب اللوجو</span>
+                  <div
+                    className={`toggle-track ${showCustomPhone ? "active" : ""}`}
+                    onClick={() => {
+                      setShowCustomPhone(!showCustomPhone);
+                      savePrintSettings({ showCustomPhone: !showCustomPhone });
+                    }}
+                  >
+                    <div className="toggle-thumb" />
+                  </div>
+                </div>
                 <input
                   className="s-input"
                   type="tel"
@@ -1000,7 +1015,7 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                         (e.target as HTMLImageElement).style.display = "none";
                       }}
                     />
-                    {customPhone && (
+                    {customPhone && showCustomPhone && (
                       <div
                         className="logo-phone"
                         style={{ fontSize: `${fontSize}px` }}
@@ -1010,7 +1025,7 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                     )}
                   </div>
                 )}
-                {!showLogo && customPhone && (
+                {!showLogo && customPhone && showCustomPhone && (
                   <div
                     className="logo-phone"
                     style={{ fontSize: `${fontSize}px`, fontWeight: "bold" }}
