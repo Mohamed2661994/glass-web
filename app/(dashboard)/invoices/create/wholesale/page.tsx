@@ -706,6 +706,9 @@ export default function CreateWholesaleInvoicePage() {
         0,
       );
 
+      console.log("📝 FRONTEND - invoiceNotes value:", invoiceNotes);
+      console.log("📝 FRONTEND - invoiceNotes type:", typeof invoiceNotes);
+
       const res = await api.post("/invoices", {
         invoice_type: "wholesale",
         movement_type: movementType,
@@ -721,7 +724,7 @@ export default function CreateWholesaleInvoicePage() {
         manual_discount: extraDiscount,
         items_discount: itemsDiscount,
         total_before_discount: totalBeforeDiscount,
-        notes: invoiceNotes.trim() || null,
+        notes: invoiceNotes,
         apply_items_discount: applyItemsDiscount,
         items,
         paid_amount: Number(paidAmount) || 0,

@@ -146,7 +146,9 @@ export default function CustomerDebtDetailsPage() {
   }, [data, openingBalance]);
 
   // صافي المديونية = الإجمالي - الخصم + الرصيد الافتتاحي - المدفوع
-  const netDebt = totalAll - totalDiscount + openingBalance - totalPaid;
+  // للقطاعي: لا نحسب الخصم
+  const discountToSubtract = user?.branch_id === 1 ? 0 : totalDiscount;
+  const netDebt = totalAll - discountToSubtract + openingBalance - totalPaid;
 
   return (
     <PageContainer size="xl">
@@ -248,7 +250,9 @@ export default function CustomerDebtDetailsPage() {
                           الحساب السابق
                         </TableHead>
                         <TableHead className="text-center">الإجمالي</TableHead>
-                        <TableHead className="text-center">الخصم</TableHead>
+                        {user?.branch_id !== 1 && (
+                          <TableHead className="text-center">الخصم</TableHead>
+                        )}
                         <TableHead className="text-center">المدفوع</TableHead>
                         <TableHead className="text-center">الباقي</TableHead>
                         <TableHead className="text-center w-12"></TableHead>
@@ -288,12 +292,14 @@ export default function CustomerDebtDetailsPage() {
                               ? Number(inv.subtotal).toLocaleString()
                               : "—"}
                           </TableCell>
-                          <TableCell className="text-center text-red-500">
-                            {inv.record_type === "invoice" &&
-                            Number(inv.discount_total) > 0
-                              ? Number(inv.discount_total).toLocaleString()
-                              : "—"}
-                          </TableCell>
+                          {user?.branch_id !== 1 && (
+                            <TableCell className="text-center text-red-500">
+                              {inv.record_type === "invoice" &&
+                              Number(inv.discount_total) > 0
+                                ? Number(inv.discount_total).toLocaleString()
+                                : "—"}
+                            </TableCell>
+                          )}
                           <TableCell className="text-center">
                             {Number(inv.paid_amount).toLocaleString()}
                           </TableCell>
@@ -371,7 +377,7 @@ export default function CustomerDebtDetailsPage() {
                     </div>
 
                     {/* Row 2: Numbers grid */}
-                    <div className="grid grid-cols-5 gap-1 text-center text-xs">
+                    <div className={`grid gap-1 text-center text-xs ${user?.branch_id === 1 ? 'grid-cols-4' : 'grid-cols-5'}`}>
                       <div>
                         <p className="text-muted-foreground">الحساب السابق</p>
                         <p className="font-medium">
@@ -388,15 +394,17 @@ export default function CustomerDebtDetailsPage() {
                             : "—"}
                         </p>
                       </div>
-                      <div>
-                        <p className="text-muted-foreground">الخصم</p>
-                        <p className="font-medium text-red-500">
-                          {inv.record_type === "invoice" &&
-                          Number(inv.discount_total) > 0
-                            ? Number(inv.discount_total).toLocaleString()
-                            : "—"}
-                        </p>
-                      </div>
+                      {user?.branch_id !== 1 && (
+                        <div>
+                          <p className="text-muted-foreground">الخصم</p>
+                          <p className="font-medium text-red-500">
+                            {inv.record_type === "invoice" &&
+                            Number(inv.discount_total) > 0
+                              ? Number(inv.discount_total).toLocaleString()
+                              : "—"}
+                          </p>
+                        </div>
+                      )}
                       <div>
                         <p className="text-muted-foreground">المدفوع</p>
                         <p className="font-medium text-green-600">
@@ -443,7 +451,7 @@ export default function CustomerDebtDetailsPage() {
                   <p className="text-muted-foreground">إجمالي الفواتير</p>
                   <p className="font-bold">{totalAll.toLocaleString()}</p>
                 </div>
-                {totalDiscount > 0 && (
+                {user?.branch_id !== 1 && totalDiscount > 0 && (
                   <div className="text-center">
                     <p className="text-muted-foreground">إجمالي الخصم</p>
                     <p className="font-bold text-red-500">

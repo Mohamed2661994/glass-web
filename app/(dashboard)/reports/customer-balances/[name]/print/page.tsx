@@ -85,7 +85,9 @@ function CustomerStatementPrintInner() {
     [data],
   );
 
-  const netDebt = totalAll - totalDiscount - totalPaid;
+  // للقطاعي: لا نحسب الخصم
+  const discountToSubtract = warehouseId === "1" ? 0 : totalDiscount;
+  const netDebt = totalAll - discountToSubtract - totalPaid;
 
   /* ========== Running Balance ========== */
   const runningBalances = useMemo(() => {
@@ -174,7 +176,7 @@ function CustomerStatementPrintInner() {
                 <th style={thStyle}>التاريخ</th>
                 <th style={thStyle}>الحساب السابق</th>
                 <th style={thStyle}>الإجمالي</th>
-                <th style={thStyle}>الخصم</th>
+                {warehouseId !== "1" && <th style={thStyle}>الخصم</th>}
                 <th style={thStyle}>المدفوع</th>
                 <th style={thStyle}>الباقي</th>
               </tr>
@@ -205,18 +207,20 @@ function CustomerStatementPrintInner() {
                       ? formatMoney(Number(inv.subtotal))
                       : "—"}
                   </td>
-                  <td
-                    style={{
-                      ...tdStyle,
-                      color:
-                        Number(inv.discount_total) > 0 ? "#dc2626" : undefined,
-                    }}
-                  >
-                    {inv.record_type === "invoice" &&
-                    Number(inv.discount_total) > 0
-                      ? formatMoney(Number(inv.discount_total))
-                      : "—"}
-                  </td>
+                  {warehouseId !== "1" && (
+                    <td
+                      style={{
+                        ...tdStyle,
+                        color:
+                          Number(inv.discount_total) > 0 ? "#dc2626" : undefined,
+                      }}
+                    >
+                      {inv.record_type === "invoice" &&
+                      Number(inv.discount_total) > 0
+                        ? formatMoney(Number(inv.discount_total))
+                        : "—"}
+                    </td>
+                  )}
                   <td style={tdStyle}>
                     {formatMoney(Number(inv.paid_amount))}
                   </td>
@@ -242,7 +246,7 @@ function CustomerStatementPrintInner() {
               <span style={{ fontWeight: "bold" }}>إجمالي الفواتير:</span>{" "}
               {formatMoney(totalAll)}
             </p>
-            {totalDiscount > 0 && (
+            {warehouseId !== "1" && totalDiscount > 0 && (
               <p style={{ marginBottom: 4, color: "#dc2626" }}>
                 <span style={{ fontWeight: "bold" }}>إجمالي الخصم:</span>{" "}
                 {formatMoney(totalDiscount)}

@@ -755,6 +755,8 @@ export default function DashboardPage() {
   const [loadingInv, setLoadingInv] = useState(true);
   const [loadingTr, setLoadingTr] = useState(true);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [transferNeededCount, setTransferNeededCount] = useState<number>(0);
+  const [loadingTransferCount, setLoadingTransferCount] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Real-time: refresh dashboard when any data changes
@@ -1057,6 +1059,73 @@ export default function DashboardPage() {
     })();
   }, [branchId, invoiceType, refreshKey]);
 
+  /* fetch transfer-needed count for retail branch (same filters as low-stock-reorder page) */
+  useEffect(() => {
+    if (branchId !== 1) {
+      setLoadingTransferCount(false);
+      return;
+    }
+    setLoadingTransferCount(true);
+    (async () => {
+      try {
+        const [lowStockRes, wholesaleRes] = await Promise.all([
+          api.get("/reports/low-stock", {
+            params: { limit_quantity: 5, _t: Date.now() },
+          }),
+          api.get("/reports/low-stock", {
+            params: { limit_quantity: 999999, warehouse_id: 2, _t: Date.now() },
+          }),
+        ]);
+
+        const lowItems: {
+          product_id: number;
+          warehouse_name: string;
+          current_stock: number;
+          wholesale_package?: string | null;
+        }[] = Array.isArray(lowStockRes.data) ? lowStockRes.data : [];
+
+        // Build wholesale stock map
+        const wsItems: {
+          product_id: number;
+          warehouse_name: string;
+          current_stock: number;
+        }[] = Array.isArray(wholesaleRes.data) ? wholesaleRes.data : [];
+        const wsMap: Record<number, number> = {};
+        for (const item of wsItems) {
+          if (item.warehouse_name === "المخزن الرئيسي") {
+            wsMap[item.product_id] = Math.max(
+              wsMap[item.product_id] || 0,
+              item.current_stock,
+            );
+          }
+        }
+
+        // Apply same filters as low-stock-reorder page
+        const filtered = lowItems.filter((i) => {
+          const wsQty = wsMap[i.product_id] ?? 0;
+          if (
+            i.warehouse_name !== "مخزن المعرض" ||
+            i.current_stock > 5 ||
+            i.current_stock < 0 ||
+            !i.wholesale_package
+          ) {
+            return false;
+          }
+          if (!(i.current_stock > 0 || wsQty > 0)) {
+            return false;
+          }
+          return true;
+        });
+
+        setTransferNeededCount(filtered.length);
+      } catch {
+        setTransferNeededCount(0);
+      } finally {
+        setLoadingTransferCount(false);
+      }
+    })();
+  }, [branchId, refreshKey]);
+
   /* fetch transfers (branch 2 only) */
   useEffect(() => {
     if (branchId !== 2) {
@@ -1315,11 +1384,11 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">طلب تحويل</p>
-                    {loadingStats ? (
+                    {loadingTransferCount ? (
                       <Skeleton className="h-6 w-12 mt-1 mx-auto" />
                     ) : (
                       <p className="text-lg font-bold mt-0.5 text-orange-600">
-                        {stats?.low_stock_count ?? 0}
+                        {transferNeededCount}
                       </p>
                     )}
                   </div>
