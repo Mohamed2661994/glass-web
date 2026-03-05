@@ -129,7 +129,8 @@ function InvoicePrintPage() {
         if (s.showLogo !== undefined) setShowLogo(s.showLogo);
         if (s.showPhone !== undefined) setShowPhone(s.showPhone);
         if (s.customPhone !== undefined) setCustomPhone(s.customPhone);
-        if (s.showCustomPhone !== undefined) setShowCustomPhone(s.showCustomPhone);
+        if (s.showCustomPhone !== undefined)
+          setShowCustomPhone(s.showCustomPhone);
         if (s.fontFamily) setFontFamily(s.fontFamily);
       }
     } catch {}
@@ -420,8 +421,8 @@ function InvoicePrintPage() {
         href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&family=Amiri:wght@400;700&family=Noto+Kufi+Arabic:wght@400;700&family=Tajawal:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;700&family=Almarai:wght@400;700&family=Noto+Sans+Arabic:wght@400;700&display=swap"
       />
       <style>{`
-html, body { margin:0; padding:0; height:100%; overflow:hidden; }
-body { background:#3b3b3b; font-family:${fontFamily}; }
+html, body { margin:0; padding:0; height:100%; overflow:hidden; color-scheme:light; }
+body { background:#3b3b3b; font-family:${fontFamily}; color:#000; }
 
 /* ===== التخطيط الرئيسي - شبيه بـ Chrome Print ===== */
 .print-modal {
@@ -436,6 +437,8 @@ body { background:#3b3b3b; font-family:${fontFamily}; }
   display:flex; flex-direction:column;
   overflow-y:auto;
   box-shadow:2px 0 16px rgba(0,0,0,0.08);
+  color-scheme:light;
+  color:#1e293b;
 }
 
 .settings-header {
@@ -546,32 +549,38 @@ body { background:#3b3b3b; font-family:${fontFamily}; }
   flex:1; display:flex; align-items:center;
   justify-content:center; overflow:auto;
   background:#525659; padding:24px;
+  color-scheme:light;
 }
 
 .preview-page {
-  background:white;
+  background:white !important; color:#000 !important;
   box-shadow:0 8px 40px rgba(0,0,0,0.3);
   transform-origin:top center;
   overflow:hidden;
+  color-scheme:light;
 }
 
 /* ===== محتوى الفاتورة داخل المعاينة ===== */
 .invoice-wrap {
   direction:rtl; box-sizing:border-box;
+  background:#fff !important; color:#000 !important;
+  color-scheme:light;
   ${printBold ? "font-weight:bold;" : ""}
 }
+.invoice-wrap * { color:#000 !important; }
+.invoice-wrap b, .invoice-wrap strong { color:#000 !important; }
 .invoice-header {
   display:flex; align-items:center;
   justify-content:space-between; margin-bottom:8px;
 }
-.invoice-info { line-height:1.4; text-align:right; min-width:170px; }
+.invoice-info { line-height:1.4; text-align:right; min-width:170px; color:#000; }
 .logo-section { display:flex; flex-direction:row; align-items:center; gap:8px; }
-.logo-phone { font-weight:bold; }
-table { width:100%; border-collapse:collapse; }
-th { background:#f3f3f3; font-weight:bold; border-bottom:2px solid #000; }
-td { border-bottom:${borderWidth}px solid ${borderColor}; }
+.logo-phone { font-weight:bold; color:#000; }
+table { width:100%; border-collapse:collapse; background:#fff !important; color:#000; }
+th { background:#f3f3f3 !important; font-weight:bold; border-bottom:2px solid #000; color:#000 !important; }
+td { border-bottom:${borderWidth}px solid ${borderColor}; color:#000 !important; background:#fff !important; }
 th,td { padding:3px 4px; text-align:center; }
-tfoot tr:first-child { border-top:3px solid #000; }
+tfoot tr:first-child { border-top:3px solid #000; background:#fafafa !important; }
 tfoot tr:first-child td { border-bottom:none; }
 tfoot tr:first-child td:nth-last-child(1),
 tfoot tr:first-child td:nth-last-child(2) { border-bottom:2px solid #000; }
