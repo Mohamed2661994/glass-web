@@ -106,6 +106,7 @@ function InvoicePrintPage() {
   const [printBold, setPrintBold] = useState(false);
   const [printColor, setPrintColor] = useState("#000000");
   const [fontSize, setFontSize] = useState(10);
+  const [borderWidth, setBorderWidth] = useState(1);
   const [showLogo, setShowLogo] = useState(true);
   const [showPhone, setShowPhone] = useState(true);
   const [fontFamily, setFontFamily] = useState("Tahoma, Arial, sans-serif");
@@ -133,6 +134,7 @@ function InvoicePrintPage() {
         if (s.orientation) setOrientation(s.orientation);
         if (s.margins) setMargins(s.margins);
         if (s.fontSize) setFontSize(s.fontSize);
+        if (s.borderWidth !== undefined) setBorderWidth(s.borderWidth);
         if (s.showLogo !== undefined) setShowLogo(s.showLogo);
         if (s.showPhone !== undefined) setShowPhone(s.showPhone);
         if (s.fontFamily) setFontFamily(s.fontFamily);
@@ -153,6 +155,7 @@ function InvoicePrintPage() {
           orientation,
           margins,
           fontSize,
+          borderWidth,
           showLogo,
           showPhone,
           fontFamily,
@@ -167,6 +170,7 @@ function InvoicePrintPage() {
       orientation,
       margins,
       fontSize,
+      borderWidth,
       showLogo,
       showPhone,
       fontFamily,
@@ -213,7 +217,7 @@ function InvoicePrintPage() {
         .invoice-info { font-size:${fontSize}px; line-height:1.4; text-align:right; min-width:170px; }
         table { width:100%; border-collapse:collapse; font-size:${fontSize}px; }
         th { background:#f3f3f3; font-weight:bold; border-bottom:2px solid ${printColor}; }
-        td { border-bottom:1px solid #ddd; }
+        td { border-bottom:${borderWidth}px solid #ddd; }
         th,td { padding:3px 4px; text-align:center; }
         tfoot tr:first-child { border-top:3px solid #000; }
         tfoot tr:first-child td { border-bottom:none; }
@@ -244,6 +248,7 @@ function InvoicePrintPage() {
     printBold,
     printColor,
     fontSize,
+    borderWidth,
     fontFamily,
     pageW,
     pageH,
@@ -766,6 +771,35 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                 >
                   <span>7</span>
                   <span>16</span>
+                </div>
+              </div>
+
+              {/* سمك الخط الفاصل */}
+              <div className="setting-group">
+                <label className="setting-label">سمك الخط الفاصل: {borderWidth}px</label>
+                <input
+                  type="range"
+                  min={0}
+                  max={3}
+                  step={0.5}
+                  value={borderWidth}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    setBorderWidth(v);
+                    savePrintSettings({ borderWidth: v });
+                  }}
+                  style={{ width: "100%", accentColor: "#3b82f6" }}
+                />
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: 10,
+                    color: "#94a3b8",
+                  }}
+                >
+                  <span>0</span>
+                  <span>3</span>
                 </div>
               </div>
 
