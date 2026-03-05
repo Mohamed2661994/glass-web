@@ -40,6 +40,7 @@ import { getTodayDate } from "@/lib/constants";
 import { BarcodeDetector } from "barcode-detector";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -85,6 +86,7 @@ export default function CreateRetailInvoicePage() {
 
   const [movementType, setMovementType] = useState<"sale" | "purchase">("sale");
   const [invoiceDate, setInvoiceDate] = useState(getTodayDate());
+  const [invoiceNotes, setInvoiceNotes] = useState("");
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -302,6 +304,7 @@ export default function CreateRetailInvoicePage() {
       if (draft.customerId) setCustomerId(draft.customerId);
       if (draft.previousBalance != null)
         setPreviousBalance(draft.previousBalance);
+      if (draft.invoiceNotes != null) setInvoiceNotes(draft.invoiceNotes);
       if (draft.extraDiscount) setExtraDiscount(draft.extraDiscount);
       if (draft.paidAmount) setPaidAmount(draft.paidAmount);
       if (draft.applyItemsDiscount !== undefined)
@@ -316,10 +319,12 @@ export default function CreateRetailInvoicePage() {
 
   // Auto-save draft on changes
   useEffect(() => {
-    if (!items.length && !customerName && !customerPhone) return;
+    if (!items.length && !customerName && !customerPhone && !invoiceNotes.trim())
+      return;
     const draft = {
       movementType,
       invoiceDate,
+      invoiceNotes,
       customerName,
       customerPhone,
       customerId,
@@ -333,6 +338,7 @@ export default function CreateRetailInvoicePage() {
   }, [
     movementType,
     invoiceDate,
+    invoiceNotes,
     customerName,
     customerPhone,
     customerId,
@@ -353,6 +359,7 @@ export default function CreateRetailInvoicePage() {
     setCustomerPhone("");
     setCustomerId(null);
     setPreviousBalance("0");
+    setInvoiceNotes("");
     setExtraDiscount("0");
     setPaidAmount("0");
     setApplyItemsDiscount(true);
@@ -1006,6 +1013,7 @@ export default function CreateRetailInvoicePage() {
         total_before_discount: totalBeforeDiscount,
         items_discount: itemsDiscount,
         extra_discount: Number(extraDiscount) || 0,
+        notes: invoiceNotes.trim() || null,
         final_total: finalTotal,
         items,
         paid_amount: Number(paidAmount) || 0,
@@ -1040,6 +1048,7 @@ export default function CreateRetailInvoicePage() {
       setCustomerPhone("");
       setCustomerId(null);
       setPreviousBalance("0");
+      setInvoiceNotes("");
       setExtraDiscount("0");
       setApplyItemsDiscount(true);
       setPaidAmount("0");
@@ -1263,6 +1272,16 @@ export default function CreateRetailInvoicePage() {
                 type="date"
                 value={invoiceDate}
                 onChange={(e) => setInvoiceDate(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="text-sm mb-2 block">ملاحظات</label>
+              <Textarea
+                value={invoiceNotes}
+                placeholder="اكتب أي ملاحظات على الفاتورة..."
+                onChange={(e) => setInvoiceNotes(e.target.value)}
+                rows={3}
               />
             </div>
 
@@ -2372,6 +2391,7 @@ export default function CreateRetailInvoicePage() {
             extraDiscount: Number(extraDiscount) || 0,
             previousBalance: Number(previousBalance) ?? 0,
             paidAmount: Number(paidAmount) || 0,
+            notes: invoiceNotes,
           }}
           onSave={saveInvoice}
           saving={saving}

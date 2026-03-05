@@ -39,6 +39,7 @@ import { multiWordMatch, multiWordScore } from "@/lib/utils";
 import { getTodayDate } from "@/lib/constants";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -86,6 +87,7 @@ export default function CreateWholesaleInvoicePage() {
 
   const [movementType, setMovementType] = useState<"sale" | "purchase">("sale");
   const [invoiceDate, setInvoiceDate] = useState(getTodayDate());
+  const [invoiceNotes, setInvoiceNotes] = useState("");
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -216,6 +218,7 @@ export default function CreateWholesaleInvoicePage() {
       if (draft.customerId) setCustomerId(draft.customerId);
       if (draft.previousBalance != null)
         setPreviousBalance(draft.previousBalance);
+      if (draft.invoiceNotes != null) setInvoiceNotes(draft.invoiceNotes);
       if (draft.extraDiscount) setExtraDiscount(draft.extraDiscount);
       if (draft.paidAmount) setPaidAmount(draft.paidAmount);
       if (draft.applyItemsDiscount !== undefined)
@@ -231,10 +234,12 @@ export default function CreateWholesaleInvoicePage() {
   // Auto-save draft on changes
   useEffect(() => {
     // Skip empty state
-    if (!items.length && !customerName && !customerPhone) return;
+    if (!items.length && !customerName && !customerPhone && !invoiceNotes.trim())
+      return;
     const draft = {
       movementType,
       invoiceDate,
+      invoiceNotes,
       customerName,
       customerPhone,
       customerId,
@@ -248,6 +253,7 @@ export default function CreateWholesaleInvoicePage() {
   }, [
     movementType,
     invoiceDate,
+    invoiceNotes,
     customerName,
     customerPhone,
     customerId,
@@ -268,6 +274,7 @@ export default function CreateWholesaleInvoicePage() {
     setCustomerPhone("");
     setCustomerId(null);
     setPreviousBalance("0");
+    setInvoiceNotes("");
     setExtraDiscount("0");
     setPaidAmount("0");
     setApplyItemsDiscount(true);
@@ -709,6 +716,7 @@ export default function CreateWholesaleInvoicePage() {
         manual_discount: extraDiscount,
         items_discount: itemsDiscount,
         total_before_discount: totalBeforeDiscount,
+        notes: invoiceNotes.trim() || null,
         apply_items_discount: applyItemsDiscount,
         items,
         paid_amount: Number(paidAmount) || 0,
@@ -736,6 +744,7 @@ export default function CreateWholesaleInvoicePage() {
       setCustomerPhone("");
       setCustomerId(null);
       setPreviousBalance("0");
+      setInvoiceNotes("");
       setExtraDiscount("0");
       setPaidAmount("0");
       setSupplierName("");
@@ -976,6 +985,16 @@ export default function CreateWholesaleInvoicePage() {
                 type="date"
                 value={invoiceDate}
                 onChange={(e) => setInvoiceDate(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="text-sm mb-2 block">ملاحظات</label>
+              <Textarea
+                value={invoiceNotes}
+                placeholder="اكتب أي ملاحظات على الفاتورة..."
+                onChange={(e) => setInvoiceNotes(e.target.value)}
+                rows={3}
               />
             </div>
 
@@ -2043,6 +2062,7 @@ export default function CreateWholesaleInvoicePage() {
             extraDiscount: Number(extraDiscount) || 0,
             previousBalance: Number(previousBalance) ?? 0,
             paidAmount: Number(paidAmount) || 0,
+            notes: invoiceNotes,
           }}
           onSave={saveInvoice}
           saving={saving}

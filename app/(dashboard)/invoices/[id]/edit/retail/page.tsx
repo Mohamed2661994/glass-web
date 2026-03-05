@@ -39,6 +39,7 @@ import { highlightText } from "@/lib/highlight-text";
 import { multiWordMatch, multiWordScore } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -83,6 +84,7 @@ export default function EditRetailInvoicePage() {
 
   const [movementType, setMovementType] = useState<"sale" | "purchase">("sale");
   const [invoiceDate, setInvoiceDate] = useState("");
+  const [invoiceNotes, setInvoiceNotes] = useState("");
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -184,6 +186,7 @@ export default function EditRetailInvoicePage() {
         setInvoiceDate(
           inv.invoice_date ? inv.invoice_date.substring(0, 10) : "",
         );
+        setInvoiceNotes(inv.notes || "");
         setCustomerName(inv.customer_name || "");
         setCustomerPhone(inv.customer_phone || "");
         setSupplierName(inv.supplier_name || "");
@@ -615,6 +618,7 @@ export default function EditRetailInvoicePage() {
           movementType === "purchase" ? null : customerPhone || null,
         total_before_discount: totalBeforeDiscount,
         extra_discount: Number(extraDiscount) || 0,
+        notes: invoiceNotes.trim() || null,
         final_total: finalTotal,
         items,
         paid_amount: Number(paidAmount) || 0,
@@ -827,6 +831,16 @@ export default function EditRetailInvoicePage() {
                 type="date"
                 value={invoiceDate}
                 onChange={(e) => setInvoiceDate(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="text-sm mb-2 block">ملاحظات</label>
+              <Textarea
+                value={invoiceNotes}
+                placeholder="اكتب أي ملاحظات على الفاتورة..."
+                onChange={(e) => setInvoiceNotes(e.target.value)}
+                rows={3}
               />
             </div>
 
