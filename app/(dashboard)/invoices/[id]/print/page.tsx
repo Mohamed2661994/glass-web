@@ -208,7 +208,7 @@ function InvoicePrintPage() {
         }
         .invoice-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
         .invoice-info { font-size:${fontSize}px; line-height:1.4; text-align:right; min-width:170px; }
-        .logo-section { display:flex; flex-direction:column; align-items:center; gap:4px; }
+        .logo-section { display:flex; flex-direction:row; align-items:center; gap:8px; }
         .logo-phone { font-size:${fontSize}px; font-weight:bold; }
         table { width:100%; border-collapse:collapse; font-size:${fontSize}px; }
         th { background:#f3f3f3; font-weight:bold; border-bottom:2px solid #000; }
@@ -561,7 +561,7 @@ body { background:#3b3b3b; font-family:${fontFamily}; }
   justify-content:space-between; margin-bottom:8px;
 }
 .invoice-info { line-height:1.4; text-align:right; min-width:170px; }
-.logo-section { display:flex; flex-direction:column; align-items:center; gap:4px; }
+.logo-section { display:flex; flex-direction:row; align-items:center; gap:8px; }
 .logo-phone { font-weight:bold; }
 table { width:100%; border-collapse:collapse; }
 th { background:#f3f3f3; font-weight:bold; border-bottom:2px solid #000; }
@@ -805,7 +805,10 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                     <div
                       key={c.value}
                       className={`color-dot ${borderColor === c.value ? "selected" : ""}`}
-                      style={{ backgroundColor: c.value, border: "1px solid #ccc" }}
+                      style={{
+                        backgroundColor: c.value,
+                        border: "1px solid #ccc",
+                      }}
                       title={c.label}
                       onClick={() => {
                         setBorderColor(c.value);
@@ -882,9 +885,10 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                 <label className="setting-label">تليفون بجانب اللوجو</label>
                 <input
                   className="s-input"
-                  type="text"
+                  type="tel"
                   placeholder="اكتب رقم التليفون..."
                   value={customPhone}
+                  autoComplete="tel"
                   onChange={(e) => {
                     setCustomPhone(e.target.value);
                     savePrintSettings({ customPhone: e.target.value });
@@ -997,14 +1001,20 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                       }}
                     />
                     {customPhone && (
-                      <div className="logo-phone" style={{ fontSize: `${fontSize}px` }}>
+                      <div
+                        className="logo-phone"
+                        style={{ fontSize: `${fontSize}px` }}
+                      >
                         {customPhone}
                       </div>
                     )}
                   </div>
                 )}
                 {!showLogo && customPhone && (
-                  <div className="logo-phone" style={{ fontSize: `${fontSize}px`, fontWeight: "bold" }}>
+                  <div
+                    className="logo-phone"
+                    style={{ fontSize: `${fontSize}px`, fontWeight: "bold" }}
+                  >
                     {customPhone}
                   </div>
                 )}
