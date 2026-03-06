@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import api from "@/services/api";
 import { highlightText } from "@/lib/highlight-text";
 import { multiWordMatch } from "@/lib/utils";
@@ -58,7 +59,10 @@ type Product = {
 type WarehouseFilter = "الكل" | "المخزن الرئيسي" | "مخزن المعرض";
 
 /* ========== Component ========== */
-export default function ProductMovementPage() {
+function ProductMovementPageContent() {
+  const searchParams = useSearchParams();
+  const productParam = searchParams.get("product");
+  
   const { user } = useAuth();
   const isShowroomUser = user?.branch_id === 1;
   const isWarehouseUser = user?.branch_id === 2;
@@ -102,6 +106,16 @@ export default function ProductMovementPage() {
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  /* ========== Auto-select product from URL ========== */
+  useEffect(() => {
+    if (productParam && products.length > 0 && !selectedProduct) {
+      const found = products.find((p) => p.name === productParam);
+      if (found) {
+        setSelectedProduct(found);
+      }
+    }
+  }, [productParam, products, selectedProduct]);
 
   /* ========== Fetch Movement ========== */
   const fetchMovement = useCallback(async () => {
@@ -690,7 +704,9 @@ export default function ProductMovementPage() {
             {productsLoading ? (
               <div className="flex flex-col items-center justify-center py-8 gap-2">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">جاري تحميل الأصناف...</p>
+                <p className="text-sm text-muted-foreground">
+                  جاري تحميل الأصناف...
+                </p>
               </div>
             ) : (
               <>
@@ -730,5 +746,13 @@ export default function ProductMovementPage() {
         </DialogContent>
       </Dialog>
     </PageContainer>
+  );
+}
+
+export default function ProductMovementPage() {
+  return (
+    <Suspense>
+      <ProductMovementPageContent />
+    </Suspense>
   );
 }

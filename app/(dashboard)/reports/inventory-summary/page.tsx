@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import api from "@/services/api";
 import { multiWordMatch } from "@/lib/utils";
 import { useAuth } from "@/app/context/auth-context";
@@ -290,20 +291,25 @@ export default function InventorySummaryPage() {
                           key={`${item.product_id}-${item.warehouse_name}-${idx}`}
                         >
                           <TableCell className="text-right">
-                            <div className="font-medium">
-                              {item.product_name}
-                              {item.manufacturer_name && (
-                                <span className="text-muted-foreground font-normal">
-                                  {" "}
-                                  - {item.manufacturer_name}
-                                </span>
-                              )}
-                            </div>
-                            {item.barcode && (
-                              <div className="text-xs text-muted-foreground font-mono">
-                                {item.barcode}
+                            <Link
+                              href={`/reports/product-movement?product=${encodeURIComponent(item.product_name)}`}
+                              className="hover:text-primary hover:underline"
+                            >
+                              <div className="font-medium">
+                                {item.product_name}
+                                {item.manufacturer_name && (
+                                  <span className="text-muted-foreground font-normal">
+                                    {" "}
+                                    - {item.manufacturer_name}
+                                  </span>
+                                )}
                               </div>
-                            )}
+                              {item.barcode && (
+                                <div className="text-xs text-muted-foreground font-mono">
+                                  {item.barcode}
+                                </div>
+                              )}
+                            </Link>
                           </TableCell>
                           <TableCell className="text-center text-xs">
                             {item.warehouse_name}
@@ -339,13 +345,18 @@ export default function InventorySummaryPage() {
                       className="rounded-lg border p-3 space-y-2 bg-card"
                     >
                       <div className="text-sm font-semibold leading-6">
-                        {item.product_name}
-                        {item.manufacturer_name && (
-                          <span className="text-muted-foreground font-normal">
-                            {" "}
-                            - {item.manufacturer_name}
-                          </span>
-                        )}
+                        <Link
+                          href={`/reports/product-movement?product=${encodeURIComponent(item.product_name)}`}
+                          className="hover:text-primary hover:underline"
+                        >
+                          {item.product_name}
+                          {item.manufacturer_name && (
+                            <span className="text-muted-foreground font-normal">
+                              {" "}
+                              - {item.manufacturer_name}
+                            </span>
+                          )}
+                        </Link>
                       </div>
 
                       {item.barcode && (
