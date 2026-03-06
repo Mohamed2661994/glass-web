@@ -141,15 +141,34 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
   /* =========================================================
      Keyboard navigation
      ========================================================= */
+  // Find next available (in-stock) product index
+  const findNextAvailable = useCallback(
+    (startIndex: number, direction: 1 | -1): number => {
+      let idx = startIndex + direction;
+      while (idx >= 0 && idx < filteredProducts.length) {
+        if (Number(filteredProducts[idx].available_quantity) > 0) {
+          return idx;
+        }
+        idx += direction;
+      }
+      return -1;
+    },
+    [filteredProducts],
+  );
+
   const handleSearchKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        if (filteredProducts.length > 0) {
-          setFocusedIndex(0);
+        // Find first in-stock product
+        const firstAvailable = filteredProducts.findIndex(
+          (p) => Number(p.available_quantity) > 0,
+        );
+        if (firstAvailable !== -1) {
+          setFocusedIndex(firstAvailable);
           setTimeout(() => {
             const firstItem = listRef.current?.querySelector(
-              "[data-product-index='0']",
+              `[data-product-index='${firstAvailable}']`,
             ) as HTMLElement;
             firstItem?.focus();
           }, 0);
@@ -163,30 +182,32 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     (e: React.KeyboardEvent<HTMLElement>, index: number) => {
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        const next = Math.min(index + 1, filteredProducts.length - 1);
-        setFocusedIndex(next);
-        const el = listRef.current?.querySelector(
-          `[data-product-index='${next}']`,
-        ) as HTMLElement;
-        el?.focus();
+        const next = findNextAvailable(index, 1);
+        if (next !== -1) {
+          setFocusedIndex(next);
+          const el = listRef.current?.querySelector(
+            `[data-product-index='${next}']`,
+          ) as HTMLElement;
+          el?.focus();
+        }
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        if (index === 0) {
-          setFocusedIndex(-1);
-          searchInputRef.current?.focus();
-        } else {
-          const prev = index - 1;
+        const prev = findNextAvailable(index, -1);
+        if (prev !== -1) {
           setFocusedIndex(prev);
           const el = listRef.current?.querySelector(
             `[data-product-index='${prev}']`,
           ) as HTMLElement;
           el?.focus();
+        } else {
+          setFocusedIndex(-1);
+          searchInputRef.current?.focus();
         }
       } else if (e.key === "Escape") {
         onOpenChange(false);
       }
     },
-    [filteredProducts.length, onOpenChange],
+    [findNextAvailable, onOpenChange],
   );
 
   return (
@@ -265,12 +286,12 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                 <div
                   key={product.id}
                   data-product-index={index}
-                  tabIndex={0}
-                  onKeyDown={(e) => handleListKeyDown(e, index)}
-                  className={`p-3 rounded-lg transition outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:bg-muted ${
+                  tabIndex={outOfStock ? -1 : 0}
+                  onKeyDown={(e) => !outOfStock && handleListKeyDown(e, index)}
+                  className={`p-3 rounded-lg border transition outline-none ${
                     outOfStock
-                      ? "border border-dashed border-muted-foreground/30 opacity-60"
-                      : "border hover:bg-muted/50"
+                      ? "opacity-50 cursor-not-allowed bg-muted/30"
+                      : `hover:bg-muted ${focusedIndex === index ? "ring-2 ring-primary bg-muted" : ""}`
                   }`}
                 >
                   {/* Row 1: Name + Barcode */}
