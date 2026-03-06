@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { noSpaces, normalizeArabic } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -58,6 +58,11 @@ function CashOutPage() {
   const [entryType, setEntryType] = useState<
     "expense" | "purchase" | "supplier_payment"
   >("expense");
+
+  /* ========== Field Refs for Enter Navigation ========== */
+  const nameRef = useRef<HTMLInputElement>(null);
+  const amountRef = useRef<HTMLInputElement>(null);
+  const notesRef = useRef<HTMLTextAreaElement>(null);
 
   /* ========== Supplier Autocomplete State ========== */
   const [supplierId, setSupplierId] = useState<number | null>(null);
@@ -309,6 +314,12 @@ function CashOutPage() {
                       supplierResults.length > 0 &&
                       setShowSupplierDropdown(true)
                     }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && supplierId) {
+                        e.preventDefault();
+                        amountRef.current?.focus();
+                      }
+                    }}
                     placeholder="ابحث عن المورد..."
                     className={supplierId ? "border-green-500 pr-8" : ""}
                   />
@@ -347,10 +358,17 @@ function CashOutPage() {
               </>
             ) : (
               <Input
+                ref={nameRef}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="مثال: كهرباء – مصروفات"
                 className="mt-2"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    amountRef.current?.focus();
+                  }
+                }}
               />
             )}
           </div>
@@ -461,6 +479,7 @@ function CashOutPage() {
           <div>
             <Label>المبلغ</Label>
             <Input
+              ref={amountRef}
               type="text"
               inputMode="decimal"
               value={amount}
@@ -469,6 +488,12 @@ function CashOutPage() {
               }
               placeholder="0.00"
               className="mt-2"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  notesRef.current?.focus();
+                }
+              }}
             />
           </div>
 
@@ -476,10 +501,17 @@ function CashOutPage() {
           <div>
             <Label>ملاحظات (اختياري)</Label>
             <Textarea
+              ref={notesRef}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="أي تفاصيل إضافية"
               className="mt-2 min-h-[80px]"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSave();
+                }
+              }}
             />
           </div>
 

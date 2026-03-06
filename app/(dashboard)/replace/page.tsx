@@ -124,9 +124,7 @@ function ProductDropdown({
                 key={p.id}
                 data-index={index}
                 className={`w-full text-right px-3 py-2 transition-colors border-b last:border-b-0 ${
-                  focusedIndex === index
-                    ? "bg-muted"
-                    : "hover:bg-muted"
+                  focusedIndex === index ? "bg-muted" : "hover:bg-muted"
                 }`}
                 onClick={() => onSelect(p)}
               >
