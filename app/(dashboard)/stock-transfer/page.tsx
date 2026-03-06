@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import api from "@/services/api";
 import { highlightText } from "@/lib/highlight-text";
 import { multiWordMatch } from "@/lib/utils";
@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Loader2, Search, Trash2 } from "lucide-react";
+import { CalendarDays, Loader2, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -53,6 +53,8 @@ export default function StockTransferPage() {
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
 
   // Variant package picker
   const [variantsMap, setVariantsMap] = useState<Record<number, any[]>>({});
@@ -159,6 +161,58 @@ export default function StockTransferPage() {
       multiWordMatch(search, String(p.id), p.name, p.manufacturer)
     );
   });
+
+  /* ========== Keyboard Navigation ========== */
+  const handleSearchKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (filtered.length > 0) {
+          setFocusedIndex(0);
+          setTimeout(() => {
+            const firstItem = listRef.current?.querySelector(
+              "[data-product-index='0']",
+            ) as HTMLElement;
+            firstItem?.focus();
+          }, 0);
+        }
+      }
+    },
+    [filtered],
+  );
+
+  const handleListKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLElement>, index: number) => {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const next = Math.min(index + 1, filtered.length - 1);
+        setFocusedIndex(next);
+        const el = listRef.current?.querySelector(
+          `[data-product-index='${next}']`,
+        ) as HTMLElement;
+        el?.focus();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (index === 0) {
+          setFocusedIndex(-1);
+          searchRef.current?.focus();
+        } else {
+          const prev = index - 1;
+          setFocusedIndex(prev);
+          const el = listRef.current?.querySelector(
+            `[data-product-index='${prev}']`,
+          ) as HTMLElement;
+          el?.focus();
+        }
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        addProduct(filtered[index]);
+      } else if (e.key === "Escape") {
+        setShowModal(false);
+      }
+    },
+    [filtered],
+  );
 
   /* ========== Add Product ========== */
   const addProduct = (product: Product) => {
@@ -307,9 +361,21 @@ export default function StockTransferPage() {
 
   return (
     <div dir="rtl" className="max-w-xl mx-auto space-y-4 py-6 px-4">
-      <h1 className="text-2xl font-bold text-center mb-6">
-        فاتورة تحويل للمعرض
-      </h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">فاتورة تحويل للمعرض</h1>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          onClick={() => {
+            const today = new Date().toISOString().split("T")[0];
+            router.push(`/transfers/by-date?date=${today}`);
+          }}
+        >
+          <CalendarDays className="h-4 w-4" />
+          تحويلات اليوم
+        </Button>
+      </div>
 
       {/* ===== اختيار صنف ===== */}
       <Button className="w-full" onClick={() => setShowModal(true)}>
@@ -449,7 +515,10 @@ export default function StockTransferPage() {
         open={showModal}
         onOpenChange={(open) => {
           setShowModal(open);
-          if (open) setTimeout(() => searchRef.current?.focus(), 100);
+          if (open) {
+            setFocusedIndex(-1);
+            setTimeout(() => searchRef.current?.focus(), 100);
+          }
         }}
       >
         <DialogContent
@@ -466,26 +535,38 @@ export default function StockTransferPage() {
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 ref={searchRef}
-                placeholder="ابحث عن صنف..."
+                placeholder="ابحث عن صنف... (Enter للتنقل)"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setFocusedIndex(-1);
+                }}
+                onKeyDown={handleSearchKeyDown}
                 className="pr-9"
                 autoFocus
               />
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          <div ref={listRef} className="flex-1 overflow-y-auto p-2 space-y-1">
             {filtered.length === 0 ? (
               <div className="p-4 text-center text-sm text-muted-foreground">
                 لا توجد نتائج
               </div>
             ) : (
-              filtered.map((p) => (
-                <button
+              filtered.map((p, index) => (
+                <div
                   key={p.id}
-                  className="w-full text-right px-3 py-2.5 rounded-lg hover:bg-muted transition-colors"
+                  data-product-index={index}
+                  tabIndex={0}
+                  role="button"
+                  className={`w-full text-right px-3 py-2.5 rounded-lg transition-colors outline-none cursor-pointer ${
+                    focusedIndex === index
+                      ? "ring-2 ring-primary bg-muted"
+                      : "hover:bg-muted"
+                  }`}
                   onClick={() => addProduct(p)}
+                  onKeyDown={(e) => handleListKeyDown(e, index)}
                 >
                   <div className="flex items-center gap-2">
                     <div className="font-semibold text-sm">
@@ -501,7 +582,7 @@ export default function StockTransferPage() {
                   <div className="text-xs text-muted-foreground mt-0.5">
                     {p.wholesale_package} • رصيد: {p.available_quantity}
                   </div>
-                </button>
+                </div>
               ))
             )}
           </div>
