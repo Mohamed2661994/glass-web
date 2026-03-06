@@ -181,16 +181,40 @@ export default function ProductMovementPage() {
   };
 
   /* ========== Totals ========== */
-  const { totalIn, totalOut } = useMemo(() => {
+  const { totalIn, totalOut, packageTotals } = useMemo(() => {
     let inQty = 0;
     let outQty = 0;
+    // حساب الإجماليات لكل عبوة على حدة
+    const byPackage: Record<string, { inQty: number; outQty: number }> = {};
+    
     for (const item of filteredData) {
       const mt = item.movement_type || item.invoice_movement_type || "";
       const isIn = ["purchase", "transfer_in", "replace_in", "in"].includes(mt);
-      if (isIn) inQty += Number(item.quantity);
-      else outQty += Number(item.quantity);
+      const qty = Number(item.quantity);
+      const pkg = item.package_name || "بدون عبوة";
+      
+      if (!byPackage[pkg]) {
+        byPackage[pkg] = { inQty: 0, outQty: 0 };
+      }
+      
+      if (isIn) {
+        inQty += qty;
+        byPackage[pkg].inQty += qty;
+      } else {
+        outQty += qty;
+        byPackage[pkg].outQty += qty;
+      }
     }
-    return { totalIn: inQty, totalOut: outQty };
+    
+    // تحويل إلى مصفوفة مع حساب الرصيد
+    const packageTotals = Object.entries(byPackage).map(([pkg, totals]) => ({
+      package: pkg,
+      totalIn: totals.inQty,
+      totalOut: totals.outQty,
+      balance: totals.inQty - totals.outQty,
+    }));
+    
+    return { totalIn: inQty, totalOut: outQty, packageTotals };
   }, [filteredData]);
 
   /* ========== Export columns ========== */
@@ -321,27 +345,59 @@ export default function ProductMovementPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableHead>
-                    <TableHead className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableHead>
-                    <TableHead className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></TableHead>
-                    <TableHead className="text-center"><Skeleton className="h-4 w-24 mx-auto" /></TableHead>
-                    <TableHead className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></TableHead>
-                    <TableHead className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></TableHead>
-                    <TableHead className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableHead>
-                    <TableHead className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableHead>
+                    <TableHead className="text-center">
+                      <Skeleton className="h-4 w-20 mx-auto" />
+                    </TableHead>
+                    <TableHead className="text-center">
+                      <Skeleton className="h-4 w-20 mx-auto" />
+                    </TableHead>
+                    <TableHead className="text-center">
+                      <Skeleton className="h-4 w-16 mx-auto" />
+                    </TableHead>
+                    <TableHead className="text-center">
+                      <Skeleton className="h-4 w-24 mx-auto" />
+                    </TableHead>
+                    <TableHead className="text-center">
+                      <Skeleton className="h-4 w-16 mx-auto" />
+                    </TableHead>
+                    <TableHead className="text-center">
+                      <Skeleton className="h-4 w-16 mx-auto" />
+                    </TableHead>
+                    <TableHead className="text-center">
+                      <Skeleton className="h-4 w-20 mx-auto" />
+                    </TableHead>
+                    <TableHead className="text-center">
+                      <Skeleton className="h-4 w-20 mx-auto" />
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {[...Array(8)].map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell className="text-center"><Skeleton className="h-4 w-24 mx-auto" /></TableCell>
-                      <TableCell className="text-center"><Skeleton className="h-4 w-24 mx-auto" /></TableCell>
-                      <TableCell className="text-center"><Skeleton className="h-6 w-16 mx-auto rounded-full" /></TableCell>
-                      <TableCell className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></TableCell>
-                      <TableCell className="text-center"><Skeleton className="h-4 w-12 mx-auto" /></TableCell>
-                      <TableCell className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></TableCell>
-                      <TableCell className="text-center"><Skeleton className="h-4 w-28 mx-auto" /></TableCell>
-                      <TableCell className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></TableCell>
+                      <TableCell className="text-center">
+                        <Skeleton className="h-4 w-24 mx-auto" />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Skeleton className="h-4 w-24 mx-auto" />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Skeleton className="h-6 w-16 mx-auto rounded-full" />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Skeleton className="h-4 w-16 mx-auto" />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Skeleton className="h-4 w-12 mx-auto" />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Skeleton className="h-4 w-16 mx-auto" />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Skeleton className="h-4 w-28 mx-auto" />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Skeleton className="h-4 w-16 mx-auto" />
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -467,22 +523,46 @@ export default function ProductMovementPage() {
 
         {/* Summary totals */}
         {!loading && filteredData.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-4 text-sm font-semibold">
-            <span className="text-green-600">
-              إجمالي الوارد: {totalIn.toLocaleString()}
-            </span>
-            <span className="text-muted-foreground">—</span>
-            <span className="text-red-600">
-              إجمالي الصادر: {totalOut.toLocaleString()}
-            </span>
-            <span className="text-muted-foreground">—</span>
-            <span
-              className={
-                totalIn - totalOut >= 0 ? "text-green-600" : "text-red-600"
-              }
-            >
-              الرصيد الفعلي: {(totalIn - totalOut).toLocaleString()}
-            </span>
+          <div className="space-y-3">
+            {/* الإجمالي العام */}
+            <div className="flex flex-wrap justify-center gap-4 text-sm font-semibold">
+              <span className="text-green-600">
+                إجمالي الوارد: {totalIn.toLocaleString()}
+              </span>
+              <span className="text-muted-foreground">—</span>
+              <span className="text-red-600">
+                إجمالي الصادر: {totalOut.toLocaleString()}
+              </span>
+              <span className="text-muted-foreground">—</span>
+              <span
+                className={
+                  totalIn - totalOut >= 0 ? "text-green-600" : "text-red-600"
+                }
+              >
+                الرصيد الفعلي: {(totalIn - totalOut).toLocaleString()}
+              </span>
+            </div>
+            
+            {/* تفصيل حسب العبوة */}
+            {packageTotals.length > 1 && (
+              <div className="flex flex-wrap justify-center gap-3 text-xs">
+                {packageTotals.map((pt) => (
+                  <div
+                    key={pt.package}
+                    className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-1.5"
+                  >
+                    <span className="font-medium">{pt.package}:</span>
+                    <span className="text-green-600">{pt.totalIn}</span>
+                    <span className="text-muted-foreground">/</span>
+                    <span className="text-red-600">{pt.totalOut}</span>
+                    <span className="text-muted-foreground">=</span>
+                    <span className={pt.balance >= 0 ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
+                      {pt.balance}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

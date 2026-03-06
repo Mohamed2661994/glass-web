@@ -139,23 +139,47 @@ export default function SupplierBalancesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-right"><Skeleton className="h-4 w-20" /></TableHead>
-                    <TableHead className="text-center"><Skeleton className="h-4 w-24 mx-auto" /></TableHead>
-                    <TableHead className="text-center"><Skeleton className="h-4 w-28 mx-auto" /></TableHead>
-                    <TableHead className="text-center"><Skeleton className="h-4 w-24 mx-auto" /></TableHead>
-                    <TableHead className="text-center"><Skeleton className="h-4 w-24 mx-auto" /></TableHead>
-                    <TableHead className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableHead>
+                    <TableHead className="text-right">
+                      <Skeleton className="h-4 w-20" />
+                    </TableHead>
+                    <TableHead className="text-center">
+                      <Skeleton className="h-4 w-24 mx-auto" />
+                    </TableHead>
+                    <TableHead className="text-center">
+                      <Skeleton className="h-4 w-28 mx-auto" />
+                    </TableHead>
+                    <TableHead className="text-center">
+                      <Skeleton className="h-4 w-24 mx-auto" />
+                    </TableHead>
+                    <TableHead className="text-center">
+                      <Skeleton className="h-4 w-24 mx-auto" />
+                    </TableHead>
+                    <TableHead className="text-center">
+                      <Skeleton className="h-4 w-20 mx-auto" />
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {[...Array(8)].map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                      <TableCell className="text-center"><Skeleton className="h-4 w-24 mx-auto" /></TableCell>
-                      <TableCell className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableCell>
-                      <TableCell className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableCell>
-                      <TableCell className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableCell>
-                      <TableCell className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-32" />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Skeleton className="h-4 w-24 mx-auto" />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Skeleton className="h-4 w-20 mx-auto" />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Skeleton className="h-4 w-20 mx-auto" />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Skeleton className="h-4 w-20 mx-auto" />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Skeleton className="h-4 w-20 mx-auto" />
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

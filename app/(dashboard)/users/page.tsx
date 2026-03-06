@@ -573,7 +573,10 @@ export default function UsersPage() {
               {loadingUsers ? (
                 <div className="space-y-2">
                   {[...Array(4)].map((_, i) => (
-                    <div key={i} className="flex items-center justify-between rounded-lg border px-4 py-3">
+                    <div
+                      key={i}
+                      className="flex items-center justify-between rounded-lg border px-4 py-3"
+                    >
                       <div className="flex items-center gap-3">
                         <Skeleton className="w-9 h-9 rounded-full" />
                         <div className="space-y-1">
