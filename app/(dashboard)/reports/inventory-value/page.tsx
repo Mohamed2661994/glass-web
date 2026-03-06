@@ -362,10 +362,14 @@ export default function InventoryValuePage() {
                   <div>
                     <p className="font-medium">{item.product_name}</p>
                     {item.manufacturer && (
-                      <p className="text-xs text-muted-foreground">{item.manufacturer}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.manufacturer}
+                      </p>
                     )}
                     {(item.package_name || item.packages) && (
-                      <p className="text-xs text-muted-foreground">{item.package_name || item.packages}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.package_name || item.packages}
+                      </p>
                     )}
                   </div>
                   <div className="text-left">
@@ -377,7 +381,9 @@ export default function InventoryValuePage() {
                 </div>
                 <div className="flex justify-between mt-2 pt-2 border-t text-xs text-muted-foreground">
                   <span>الكمية: {item.quantity}</span>
-                  <span>سعر الشراء: {Number(item.purchase_price).toLocaleString()}</span>
+                  <span>
+                    سعر الشراء: {Number(item.purchase_price).toLocaleString()}
+                  </span>
                 </div>
               </Card>
             ))}

@@ -283,20 +283,35 @@ export default function SupplierBalancesPage() {
                     </Link>
                     {item.last_invoice_date && (
                       <p className="text-xs text-muted-foreground">
-                        آخر فاتورة: {new Date(item.last_invoice_date).toLocaleDateString("ar-EG")}
+                        آخر فاتورة:{" "}
+                        {new Date(item.last_invoice_date).toLocaleDateString(
+                          "ar-EG",
+                        )}
                       </p>
                     )}
                   </div>
                   <div className="text-left">
                     <p className="text-lg font-bold text-red-600">
-                      {Math.round(Number(item.balance_due || 0)).toLocaleString()}
+                      {Math.round(
+                        Number(item.balance_due || 0),
+                      ).toLocaleString()}
                     </p>
                     <p className="text-xs text-muted-foreground">مديونية</p>
                   </div>
                 </div>
                 <div className="flex justify-between mt-2 pt-2 border-t text-xs text-muted-foreground">
-                  <span>مشتريات: {Math.round(Number(item.total_purchases || 0)).toLocaleString()}</span>
-                  <span className="text-green-600">دفعات: {Math.round(Number(item.total_payments || 0)).toLocaleString()}</span>
+                  <span>
+                    مشتريات:{" "}
+                    {Math.round(
+                      Number(item.total_purchases || 0),
+                    ).toLocaleString()}
+                  </span>
+                  <span className="text-green-600">
+                    دفعات:{" "}
+                    {Math.round(
+                      Number(item.total_payments || 0),
+                    ).toLocaleString()}
+                  </span>
                 </div>
               </Card>
             ))}

@@ -361,7 +361,10 @@ export default function CustomerBalancesPage() {
                       </Link>
                       {item.last_invoice_date && (
                         <p className="text-xs text-muted-foreground">
-                          آخر فاتورة: {new Date(item.last_invoice_date).toLocaleDateString("ar-EG")}
+                          آخر فاتورة:{" "}
+                          {new Date(item.last_invoice_date).toLocaleDateString(
+                            "ar-EG",
+                          )}
                         </p>
                       )}
                     </div>
@@ -374,8 +377,12 @@ export default function CustomerBalancesPage() {
                   </div>
                 </div>
                 <div className="flex justify-between mt-2 pt-2 border-t text-xs text-muted-foreground">
-                  <span>مبيعات: {Number(item.total_sales || 0).toLocaleString()}</span>
-                  <span>مدفوع: {Number(item.total_paid || 0).toLocaleString()}</span>
+                  <span>
+                    مبيعات: {Number(item.total_sales || 0).toLocaleString()}
+                  </span>
+                  <span>
+                    مدفوع: {Number(item.total_paid || 0).toLocaleString()}
+                  </span>
                 </div>
               </Card>
             ))}

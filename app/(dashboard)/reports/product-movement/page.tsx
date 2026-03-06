@@ -67,6 +67,7 @@ export default function ProductMovementPage() {
   const [loading, setLoading] = useState(false);
 
   const [products, setProducts] = useState<Product[]>([]);
+  const [productsLoading, setProductsLoading] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showProductModal, setShowProductModal] = useState(false);
   const [productSearch, setProductSearch] = useState("");
@@ -88,10 +89,13 @@ export default function ProductMovementPage() {
   /* ========== Fetch Products ========== */
   const fetchProducts = useCallback(async () => {
     try {
+      setProductsLoading(true);
       const res = await api.get("/reports/products");
       setProducts(Array.isArray(res.data) ? res.data : []);
     } catch {
       /* ignore */
+    } finally {
+      setProductsLoading(false);
     }
   }, []);
 
@@ -504,41 +508,67 @@ export default function ProductMovementPage() {
             {/* Mobile Cards */}
             <div className="md:hidden space-y-2">
               {filteredData.map((item, idx) => {
-                const mt = item.movement_type || item.invoice_movement_type || "";
-                const isIn = ["purchase", "transfer_in", "replace_in", "in"].includes(mt);
+                const mt =
+                  item.movement_type || item.invoice_movement_type || "";
+                const isIn = [
+                  "purchase",
+                  "transfer_in",
+                  "replace_in",
+                  "in",
+                ].includes(mt);
 
                 return (
                   <Card key={idx} className="p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <Badge variant={isIn ? "default" : "destructive"} className="text-xs">
+                          <Badge
+                            variant={isIn ? "default" : "destructive"}
+                            className="text-xs"
+                          >
                             {isIn ? "وارد" : "صادر"}
                           </Badge>
-                          <span className="text-xs text-muted-foreground">{getDate(item)}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {getDate(item)}
+                          </span>
                         </div>
                         <p className="text-sm">{item.warehouse_name}</p>
                         {item.party_name && (
-                          <p className="text-xs text-muted-foreground">الطرف: {item.party_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            الطرف: {item.party_name}
+                          </p>
                         )}
                       </div>
                       <div className="text-left">
-                        <p className={`text-lg font-bold ${isIn ? "text-green-600" : "text-red-600"}`}>
+                        <p
+                          className={`text-lg font-bold ${isIn ? "text-green-600" : "text-red-600"}`}
+                        >
                           {item.quantity}
                         </p>
                         {item.package_name && (
-                          <p className="text-xs text-muted-foreground">{item.package_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {item.package_name}
+                          </p>
                         )}
                       </div>
                     </div>
                     {(item.invoice_id || item.note) && (
                       <div className="flex justify-between mt-2 pt-2 border-t text-xs text-muted-foreground">
                         {item.invoice_id ? (
-                          <a href={`/invoices/${item.invoice_id}`} className="text-blue-600 hover:underline">
+                          <a
+                            href={`/invoices/${item.invoice_id}`}
+                            className="text-blue-600 hover:underline"
+                          >
                             فاتورة #{item.invoice_id}
                           </a>
-                        ) : <span />}
-                        {item.note && <span className="truncate max-w-[150px]">{item.note}</span>}
+                        ) : (
+                          <span />
+                        )}
+                        {item.note && (
+                          <span className="truncate max-w-[150px]">
+                            {item.note}
+                          </span>
+                        )}
                       </div>
                     )}
                   </Card>
@@ -647,35 +677,44 @@ export default function ProductMovementPage() {
 
           {/* Product list */}
           <div className="flex-1 overflow-y-auto p-2">
-            {filteredProducts.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => {
-                  setSelectedProduct(p);
-                  setShowProductModal(false);
-                }}
-                className={`w-full text-right px-3 py-2.5 rounded-lg hover:bg-muted transition-colors ${
-                  selectedProduct?.id === p.id ? "bg-muted" : ""
-                }`}
-              >
-                <div className="font-medium text-sm">
-                  {highlightText(p.name, productSearch)}
-                </div>
-                {(p.manufacturer || p.manufacturer_name) && (
-                  <div className="text-xs text-muted-foreground">
-                    {highlightText(
-                      p.manufacturer || p.manufacturer_name,
-                      productSearch,
+            {productsLoading ? (
+              <div className="flex flex-col items-center justify-center py-8 gap-2">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">جاري تحميل الأصناف...</p>
+              </div>
+            ) : (
+              <>
+                {filteredProducts.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      setSelectedProduct(p);
+                      setShowProductModal(false);
+                    }}
+                    className={`w-full text-right px-3 py-2.5 rounded-lg hover:bg-muted transition-colors ${
+                      selectedProduct?.id === p.id ? "bg-muted" : ""
+                    }`}
+                  >
+                    <div className="font-medium text-sm">
+                      {highlightText(p.name, productSearch)}
+                    </div>
+                    {(p.manufacturer || p.manufacturer_name) && (
+                      <div className="text-xs text-muted-foreground">
+                        {highlightText(
+                          p.manufacturer || p.manufacturer_name,
+                          productSearch,
+                        )}
+                      </div>
                     )}
-                  </div>
-                )}
-              </button>
-            ))}
+                  </button>
+                ))}
 
-            {filteredProducts.length === 0 && (
-              <p className="text-center text-muted-foreground py-8 text-sm">
-                لا توجد نتائج
-              </p>
+                {filteredProducts.length === 0 && (
+                  <p className="text-center text-muted-foreground py-8 text-sm">
+                    لا توجد نتائج
+                  </p>
+                )}
+              </>
             )}
           </div>
         </DialogContent>

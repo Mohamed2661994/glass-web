@@ -384,16 +384,25 @@ export default function LowStockReorderPage() {
             const wsQty = wholesaleStock[item.product_id] ?? 0;
             const inCart = isInCart(item.product_id);
             return (
-              <Card key={`m-${item.product_id}-${item.variant_id || 0}`} className="p-3">
+              <Card
+                key={`m-${item.product_id}-${item.variant_id || 0}`}
+                className="p-3"
+              >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1">
                     <p className="font-medium">{item.product_name}</p>
                     {item.manufacturer_name && (
-                      <p className="text-xs text-muted-foreground">{item.manufacturer_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.manufacturer_name}
+                      </p>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant={item.current_stock === 0 ? "destructive" : "secondary"}>
+                    <Badge
+                      variant={
+                        item.current_stock === 0 ? "destructive" : "secondary"
+                      }
+                    >
                       {item.current_stock}
                     </Badge>
                     {wsQty > 0 && !inCart && (
@@ -407,7 +416,9 @@ export default function LowStockReorderPage() {
                       </Button>
                     )}
                     {inCart && (
-                      <Badge variant="secondary" className="text-xs">✓</Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        ✓
+                      </Badge>
                     )}
                   </div>
                 </div>
