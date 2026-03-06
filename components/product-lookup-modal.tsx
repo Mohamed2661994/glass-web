@@ -141,36 +141,15 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
   /* =========================================================
      Keyboard navigation
      ========================================================= */
-  // Helper to find next/prev focusable (in-stock) product
-  const findNextFocusable = useCallback(
-    (startIndex: number, direction: "up" | "down"): number => {
-      const step = direction === "down" ? 1 : -1;
-      let idx = startIndex + step;
-      while (idx >= 0 && idx < filteredProducts.length) {
-        const product = filteredProducts[idx];
-        if (Number(product.available_quantity) > 0) {
-          return idx;
-        }
-        idx += step;
-      }
-      return -1; // No focusable found
-    },
-    [filteredProducts],
-  );
-
   const handleSearchKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        // Find first in-stock product
-        const firstFocusable = filteredProducts.findIndex(
-          (p) => Number(p.available_quantity) > 0,
-        );
-        if (firstFocusable !== -1) {
-          setFocusedIndex(firstFocusable);
+        if (filteredProducts.length > 0) {
+          setFocusedIndex(0);
           setTimeout(() => {
             const firstItem = listRef.current?.querySelector(
-              `[data-product-index='${firstFocusable}']`,
+              "[data-product-index='0']",
             ) as HTMLElement;
             firstItem?.focus();
           }, 0);
@@ -184,33 +163,30 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     (e: React.KeyboardEvent<HTMLElement>, index: number) => {
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        const next = findNextFocusable(index, "down");
-        if (next !== -1) {
-          setFocusedIndex(next);
-          const el = listRef.current?.querySelector(
-            `[data-product-index='${next}']`,
-          ) as HTMLElement;
-          el?.focus();
-        }
+        const next = Math.min(index + 1, filteredProducts.length - 1);
+        setFocusedIndex(next);
+        const el = listRef.current?.querySelector(
+          `[data-product-index='${next}']`,
+        ) as HTMLElement;
+        el?.focus();
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        const prev = findNextFocusable(index, "up");
-        if (prev !== -1) {
+        if (index === 0) {
+          setFocusedIndex(-1);
+          searchInputRef.current?.focus();
+        } else {
+          const prev = index - 1;
           setFocusedIndex(prev);
           const el = listRef.current?.querySelector(
             `[data-product-index='${prev}']`,
           ) as HTMLElement;
           el?.focus();
-        } else {
-          // No prev focusable, go back to search
-          setFocusedIndex(-1);
-          searchInputRef.current?.focus();
         }
       } else if (e.key === "Escape") {
         onOpenChange(false);
       }
     },
-    [findNextFocusable, onOpenChange],
+    [filteredProducts.length, onOpenChange],
   );
 
   return (
@@ -291,12 +267,12 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                   data-product-index={index}
                   tabIndex={0}
                   onKeyDown={(e) => handleListKeyDown(e, index)}
-                  className={`p-3 rounded-lg border transition outline-none ${
+                  className={`p-3 rounded-lg transition outline-none ${
                     outOfStock
-                      ? "opacity-50 cursor-not-allowed bg-muted/30"
+                      ? `border border-dashed border-muted-foreground/30 opacity-60 ${focusedIndex === index ? "ring-1 ring-muted-foreground/50 bg-muted/20" : ""}`
                       : focusedIndex === index
-                        ? "ring-2 ring-primary bg-muted"
-                        : "hover:bg-muted/50"
+                        ? "border ring-2 ring-primary bg-muted"
+                        : "border hover:bg-muted/50"
                   }`}
                 >
                   {/* Row 1: Name + Barcode */}
