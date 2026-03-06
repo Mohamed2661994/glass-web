@@ -1,6 +1,13 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useSearchParams } from "next/navigation";
 import api from "@/services/api";
 import { highlightText } from "@/lib/highlight-text";
@@ -62,7 +69,7 @@ type WarehouseFilter = "الكل" | "المخزن الرئيسي" | "مخزن ا
 function ProductMovementPageContent() {
   const searchParams = useSearchParams();
   const productParam = searchParams.get("product");
-  
+
   const { user } = useAuth();
   const isShowroomUser = user?.branch_id === 1;
   const isWarehouseUser = user?.branch_id === 2;

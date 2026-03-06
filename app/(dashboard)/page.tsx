@@ -246,6 +246,24 @@ interface Transfer {
   created_at: string;
 }
 
+interface TransferRow {
+  id: number;
+  transfer_id: number;
+  product_id: number;
+  product_name: string;
+  manufacturer: string;
+  from_quantity: string;
+  to_quantity: string;
+  total_price: string;
+  from_warehouse: string;
+  to_warehouse: string;
+  status: string;
+  transfer_status: string;
+  wholesale_package: string;
+  created_at: string;
+  received?: boolean;
+}
+
 interface DashboardStats {
   today_sales: number;
   today_invoices_count: number;
@@ -751,6 +769,7 @@ export default function DashboardPage() {
 
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
+  const [transferItems, setTransferItems] = useState<TransferRow[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loadingInv, setLoadingInv] = useState(true);
   const [loadingTr, setLoadingTr] = useState(true);
@@ -1181,6 +1200,7 @@ export default function DashboardPage() {
         });
 
         setTransfers(grouped);
+        setTransferItems(rows as TransferRow[]);
       } catch {
         /* silent */
       } finally {
@@ -1802,6 +1822,10 @@ export default function DashboardPage() {
 
       case "recent_transfers":
         if (branchId !== 2) return null;
+        const totalTransferPrice = transferItems
+          .filter((r) => r.status !== "cancelled")
+          .reduce((sum, r) => sum + (parseFloat(r.total_price) || 0), 0);
+        const activeItemsCount = transferItems.filter((r) => r.status !== "cancelled").length;
         return (
           <Card
             key={id}
@@ -1847,10 +1871,22 @@ export default function DashboardPage() {
                   variant="outline"
                   className="border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300"
                 >
-                  {transfers.length} تحويل
+                  {activeItemsCount} صنف
                 </Badge>
               </div>
             </CardHeader>
+
+            {/* Summary bar */}
+            {!loadingTr && transferItems.length > 0 && (
+              <div className="px-4 pb-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">إجمالي اليوم:</span>
+                  <span className="font-bold text-violet-700 dark:text-violet-300">
+                    {Math.round(totalTransferPrice).toLocaleString()} جنيه
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* -------- TABLE VIEW -------- */}
             {transferView === "table" && (
@@ -1858,52 +1894,59 @@ export default function DashboardPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-right">رقم التحويل</TableHead>
-                      <TableHead className="text-right">عدد الأصناف</TableHead>
-                      <TableHead className="text-right">
-                        إجمالي الكمية
-                      </TableHead>
-                      <TableHead className="text-right">الحالة</TableHead>
-                      <TableHead className="text-right">التاريخ</TableHead>
+                      <TableHead className="text-right">اسم الصنف</TableHead>
+                      <TableHead className="text-center">مصنع</TableHead>
+                      <TableHead className="text-center">من المخزن</TableHead>
+                      <TableHead className="text-center">إلى المعرض</TableHead>
+                      <TableHead className="text-center">السعر</TableHead>
+                      <TableHead className="text-center">رقم التحويل</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {loadingTr ? (
                       skelRows(5)
-                    ) : transfers.length === 0 ? (
+                    ) : transferItems.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={5}
+                          colSpan={6}
                           className="text-center py-8 text-muted-foreground"
                         >
                           لا توجد تحويلات
                         </TableCell>
                       </TableRow>
                     ) : (
-                      transfers.map((tr) => (
-                        <TableRow
-                          key={tr.id}
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => {
-                            startNavigation();
-                            router.push(`/transfers/${tr.id}`);
-                          }}
-                        >
-                          <TableCell className="font-medium">{tr.id}</TableCell>
-                          <TableCell>{tr.items_count}</TableCell>
-                          <TableCell>{tr.total_from_quantity}</TableCell>
-                          <TableCell>
-                            {tr.status === "cancelled" ? (
-                              <Badge variant="destructive">ملغي</Badge>
-                            ) : (
-                              <Badge className="bg-green-600">تم</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-xs">
-                            {formatDate(tr.created_at)}
-                          </TableCell>
-                        </TableRow>
-                      ))
+                      transferItems.map((row) => {
+                        const isCancelled = row.status === "cancelled";
+                        return (
+                          <TableRow
+                            key={row.id}
+                            className={`cursor-pointer hover:bg-muted/50 ${isCancelled ? "opacity-40 line-through" : ""}`}
+                            onClick={() => {
+                              startNavigation();
+                              router.push(`/transfers/${row.transfer_id}`);
+                            }}
+                          >
+                            <TableCell className="text-right font-medium">
+                              {row.product_name}
+                            </TableCell>
+                            <TableCell className="text-center text-xs text-muted-foreground">
+                              {row.manufacturer}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {row.from_quantity}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {row.to_quantity}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {Math.round(parseFloat(row.total_price) || 0).toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-center text-primary">
+                              {row.transfer_id}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
                     )}
                   </TableBody>
                 </Table>
@@ -1919,51 +1962,57 @@ export default function DashboardPage() {
                       <Skeleton key={i} className="h-24 rounded-lg" />
                     ))}
                   </div>
-                ) : transfers.length === 0 ? (
+                ) : transferItems.length === 0 ? (
                   <p className="text-center py-8 text-muted-foreground text-sm">
                     لا توجد تحويلات
                   </p>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {transfers.map((tr) => (
-                      <div
-                        key={tr.id}
-                        className="rounded-lg border bg-card p-2.5 cursor-pointer hover:bg-muted/50 transition-colors space-y-1.5"
-                        onClick={() => {
-                          startNavigation();
-                          router.push(`/transfers/${tr.id}`);
-                        }}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-bold text-muted-foreground">
-                            #{tr.id}
-                          </span>
-                          {tr.status === "cancelled" ? (
-                            <Badge
-                              variant="destructive"
-                              className="text-[10px] px-1.5 py-0"
-                            >
-                              ملغي
-                            </Badge>
-                          ) : (
-                            <Badge className="bg-green-600 text-[10px] px-1.5 py-0">
-                              تم
-                            </Badge>
-                          )}
+                    {transferItems.map((row) => {
+                      const isCancelled = row.status === "cancelled";
+                      return (
+                        <div
+                          key={row.id}
+                          className={`rounded-lg border bg-card p-2.5 cursor-pointer hover:bg-muted/50 transition-colors space-y-1.5 ${isCancelled ? "opacity-40" : ""}`}
+                          onClick={() => {
+                            startNavigation();
+                            router.push(`/transfers/${row.transfer_id}`);
+                          }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-muted-foreground">
+                              #{row.transfer_id}
+                            </span>
+                            {isCancelled ? (
+                              <Badge
+                                variant="destructive"
+                                className="text-[10px] px-1.5 py-0"
+                              >
+                                ملغي
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-green-600 text-[10px] px-1.5 py-0">
+                                تم
+                              </Badge>
+                            )}
+                          </div>
+                          <p className={`text-xs font-medium truncate ${isCancelled ? "line-through" : ""}`}>
+                            {row.product_name}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground truncate">
+                            {row.manufacturer}
+                          </p>
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-muted-foreground">
+                              {row.from_quantity} ← {row.to_quantity}
+                            </span>
+                            <span className="font-semibold">
+                              {Math.round(parseFloat(row.total_price) || 0).toLocaleString()} ج
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center justify-between text-[11px]">
-                          <span className="text-muted-foreground">
-                            أصناف: {tr.items_count}
-                          </span>
-                          <span className="font-semibold">
-                            كمية: {tr.total_from_quantity}
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-muted-foreground">
-                          {formatDate(tr.created_at)}
-                        </p>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
