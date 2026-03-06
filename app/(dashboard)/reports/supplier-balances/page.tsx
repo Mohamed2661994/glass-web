@@ -20,6 +20,7 @@ import { ExportButtons, type ExportColumn } from "@/components/export-buttons";
 import Link from "next/link";
 import { useRealtime } from "@/hooks/use-realtime";
 import { useAuth } from "@/app/context/auth-context";
+import { Skeleton } from "@/components/ui/skeleton";
 
 /* ========== Types ========== */
 type SupplierBalanceItem = {
@@ -131,11 +132,36 @@ export default function SupplierBalancesPage() {
           </CardContent>
         </Card>
 
-        {/* Loading */}
+        {/* Loading Skeleton */}
         {loading && (
-          <div className="flex justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right"><Skeleton className="h-4 w-20" /></TableHead>
+                    <TableHead className="text-center"><Skeleton className="h-4 w-24 mx-auto" /></TableHead>
+                    <TableHead className="text-center"><Skeleton className="h-4 w-28 mx-auto" /></TableHead>
+                    <TableHead className="text-center"><Skeleton className="h-4 w-24 mx-auto" /></TableHead>
+                    <TableHead className="text-center"><Skeleton className="h-4 w-24 mx-auto" /></TableHead>
+                    <TableHead className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...Array(8)].map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-4 w-24 mx-auto" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         )}
 
         {/* Export buttons */}

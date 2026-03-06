@@ -28,6 +28,7 @@ import { Loader2, Search, ShoppingCart, Plus, Trash2 } from "lucide-react";
 import { multiWordMatch } from "@/lib/utils";
 import { useRealtime } from "@/hooks/use-realtime";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 /* ========== Types ========== */
 type LowStockItem = {
@@ -250,11 +251,34 @@ export default function LowStockReorderPage() {
         </Card>
       )}
 
-      {/* ===== Loading ===== */}
+      {/* ===== Loading Skeleton ===== */}
       {loading && (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-right"><Skeleton className="h-4 w-24" /></TableHead>
+                  <TableHead className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></TableHead>
+                  <TableHead className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></TableHead>
+                  <TableHead className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableHead>
+                  <TableHead className="text-center w-20"><Skeleton className="h-4 w-12 mx-auto" /></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {[...Array(8)].map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-6 w-12 mx-auto rounded-full" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-6 w-12 mx-auto rounded-full" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-8 w-8 mx-auto rounded" /></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
 
       {/* ===== Table ===== */}

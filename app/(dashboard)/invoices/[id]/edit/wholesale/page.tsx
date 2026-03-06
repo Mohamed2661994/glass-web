@@ -54,6 +54,7 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/app/context/auth-context";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -742,10 +743,34 @@ export default function EditWholesaleInvoicePage() {
 
   if (loadingInvoice) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          <p className="text-muted-foreground">جاري تحميل الفاتورة...</p>
+      <div className="mx-auto px-4" style={{ maxWidth: 950, width: "100%" }}>
+        <div className="space-y-6">
+          <Skeleton className="h-8 w-48 mx-auto" />
+          <Card className="p-6 space-y-6">
+            <div className="space-y-4">
+              <Skeleton className="h-10 w-full" />
+              <div className="grid grid-cols-2 gap-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <div className="space-y-2">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex gap-3 p-3 border rounded-lg">
+                  <Skeleton className="h-12 w-12 rounded" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <Skeleton className="h-10 flex-1" />
+              <Skeleton className="h-10 flex-1" />
+            </div>
+          </Card>
         </div>
       </div>
     );

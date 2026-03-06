@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 import { Loader2, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Product {
   id: number;
@@ -282,8 +283,24 @@ export default function StockTransferPage() {
   /* ========== Render ========== */
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div dir="rtl" className="max-w-xl mx-auto space-y-4 py-6 px-4">
+        <Skeleton className="h-8 w-48 mx-auto mb-6" />
+        <Skeleton className="h-10 w-full rounded-md" />
+        <div className="space-y-3">
+          {[...Array(3)].map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-4 space-y-2">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-8 w-20" />
+                  <Skeleton className="h-8 w-20" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <Skeleton className="h-10 w-full rounded-md" />
       </div>
     );
   }

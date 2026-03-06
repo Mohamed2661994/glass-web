@@ -29,6 +29,7 @@ import {
 import { Loader2, TrendingDown, RefreshCw, Eraser } from "lucide-react";
 import { toast } from "sonner";
 import { ExportButtons, type ExportColumn } from "@/components/export-buttons";
+import { Skeleton } from "@/components/ui/skeleton";
 
 /* ========== Types ========== */
 type NegativeStockItem = {
@@ -269,11 +270,36 @@ export default function NegativeStockReportPage() {
           </div>
         )}
 
-        {/* Loading */}
+        {/* Loading Skeleton */}
         {loading && (
-          <div className="flex justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-center w-12"><Skeleton className="h-4 w-6 mx-auto" /></TableHead>
+                    <TableHead className="text-right"><Skeleton className="h-4 w-20" /></TableHead>
+                    <TableHead className="text-center"><Skeleton className="h-4 w-24 mx-auto" /></TableHead>
+                    <TableHead className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableHead>
+                    <TableHead className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></TableHead>
+                    <TableHead className="text-center"><Skeleton className="h-4 w-24 mx-auto" /></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...Array(6)].map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell className="text-center"><Skeleton className="h-4 w-6 mx-auto" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-4 w-28 mx-auto" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-4 w-24 mx-auto" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-6 w-12 mx-auto rounded-full" /></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         )}
 
         {/* Export buttons */}

@@ -22,6 +22,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useRealtime } from "@/hooks/use-realtime";
+import { Skeleton } from "@/components/ui/skeleton";
 
 /* ========== Types ========== */
 type CustomerBalanceItem = {
@@ -214,11 +215,36 @@ export default function CustomerBalancesPage() {
           )}
         </div>
 
-        {/* Loading */}
+        {/* Loading Skeleton */}
         {loading && (
-          <div className="flex justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-center w-10"><Skeleton className="h-4 w-4 mx-auto" /></TableHead>
+                    <TableHead className="text-right"><Skeleton className="h-4 w-20" /></TableHead>
+                    <TableHead className="text-center"><Skeleton className="h-4 w-24 mx-auto" /></TableHead>
+                    <TableHead className="text-center"><Skeleton className="h-4 w-24 mx-auto" /></TableHead>
+                    <TableHead className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableHead>
+                    <TableHead className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...Array(8)].map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell className="text-center"><Skeleton className="h-4 w-4 mx-auto" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-4 w-24 mx-auto" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         )}
 
         {/* Table */}

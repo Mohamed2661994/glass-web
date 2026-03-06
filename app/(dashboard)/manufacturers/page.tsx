@@ -28,6 +28,7 @@ import {
 import { Factory, Pencil, Trash2, Plus, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useRealtime } from "@/hooks/use-realtime";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Manufacturer {
   id: number;
@@ -128,8 +129,25 @@ export default function ManufacturersPage() {
   if (loading) {
     return (
       <PageContainer>
-        <div className="flex items-center justify-center min-h-[40vh]">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-32" />
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-10 flex-1" />
+            <Skeleton className="h-10 w-28" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <Card key={i}>
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-10 w-10 rounded-lg" />
+                    <Skeleton className="h-5 w-24" />
+                  </div>
+                  <Skeleton className="h-4 w-20" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       </PageContainer>
     );

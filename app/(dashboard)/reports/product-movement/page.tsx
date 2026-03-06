@@ -27,6 +27,7 @@ import {
 import { Loader2, Search } from "lucide-react";
 import { ExportButtons, type ExportColumn } from "@/components/export-buttons";
 import { useRealtime } from "@/hooks/use-realtime";
+import { Skeleton } from "@/components/ui/skeleton";
 
 /* ========== Types ========== */
 type MovementItem = {
@@ -313,11 +314,40 @@ export default function ProductMovementPage() {
           </Card>
         )}
 
-        {/* Loading */}
+        {/* Loading Skeleton */}
         {loading && (
-          <div className="flex justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableHead>
+                    <TableHead className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableHead>
+                    <TableHead className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></TableHead>
+                    <TableHead className="text-center"><Skeleton className="h-4 w-24 mx-auto" /></TableHead>
+                    <TableHead className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></TableHead>
+                    <TableHead className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></TableHead>
+                    <TableHead className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableHead>
+                    <TableHead className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...Array(8)].map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell className="text-center"><Skeleton className="h-4 w-24 mx-auto" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-4 w-24 mx-auto" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-6 w-16 mx-auto rounded-full" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-4 w-12 mx-auto" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-4 w-28 mx-auto" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         )}
 
         {/* Table */}

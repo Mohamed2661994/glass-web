@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
 import { useRealtime } from "@/hooks/use-realtime";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type SupplierPhone = { id: number; phone: string };
 type Supplier = {
@@ -205,8 +206,21 @@ export default function SuppliersPage() {
 
         {/* List */}
         {loading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <div className="space-y-2">
+            {[...Array(6)].map((_, i) => (
+              <Card key={i}>
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <Skeleton className="h-5 w-32" />
+                    <div className="flex gap-2">
+                      <Skeleton className="h-5 w-24 rounded-full" />
+                      <Skeleton className="h-5 w-24 rounded-full" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-8 w-8 rounded" />
+                </CardContent>
+              </Card>
+            ))}
           </div>
         ) : suppliers.length === 0 ? (
           <p className="text-center text-muted-foreground py-12">

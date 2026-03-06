@@ -18,6 +18,7 @@ import {
 import { toast } from "sonner";
 import { Loader2, Search } from "lucide-react";
 import { useRealtime } from "@/hooks/use-realtime";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Product {
   id: number;
@@ -253,8 +254,23 @@ export default function ReplacePage() {
   /* ========== Render ========== */
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div dir="rtl" className="max-w-xl mx-auto space-y-4 py-6 px-4">
+        <Skeleton className="h-8 w-40 mx-auto mb-6" />
+        <Card>
+          <CardContent className="p-5 space-y-3">
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5 space-y-3">
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </CardContent>
+        </Card>
+        <Skeleton className="h-10 w-full rounded-md" />
       </div>
     );
   }

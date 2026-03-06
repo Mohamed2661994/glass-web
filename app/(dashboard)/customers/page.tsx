@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { Search, Phone, Plus, Trash2, Pencil, X, Loader2 } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
 import { useRealtime } from "@/hooks/use-realtime";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type CustomerPhone = { id: number; phone: string };
 type Customer = {
@@ -224,8 +225,24 @@ export default function CustomersPage() {
 
         {/* List */}
         {loading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <div className="space-y-2">
+            {[...Array(6)].map((_, i) => (
+              <Card key={i}>
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <Skeleton className="h-5 w-32" />
+                    <div className="flex gap-2">
+                      <Skeleton className="h-5 w-24 rounded-full" />
+                      <Skeleton className="h-5 w-24 rounded-full" />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Skeleton className="h-8 w-8 rounded" />
+                    <Skeleton className="h-8 w-8 rounded" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         ) : customers.length === 0 ? (
           <p className="text-center text-muted-foreground py-12">

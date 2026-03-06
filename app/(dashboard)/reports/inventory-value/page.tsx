@@ -25,6 +25,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { ExportButtons, type ExportColumn } from "@/components/export-buttons";
 import { useRealtime } from "@/hooks/use-realtime";
+import { Skeleton } from "@/components/ui/skeleton";
 
 /* ========== Types ========== */
 type InventoryItem = {
@@ -240,11 +241,34 @@ export default function InventoryValuePage() {
           </CardContent>
         </Card>
 
-        {/* Loading */}
+        {/* Loading Skeleton */}
         {loading && (
-          <div className="flex justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right"><Skeleton className="h-4 w-20" /></TableHead>
+                    <TableHead className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableHead>
+                    <TableHead className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></TableHead>
+                    <TableHead className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableHead>
+                    <TableHead className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...Array(10)].map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-4 w-12 mx-auto" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         )}
 
         {/* Export buttons */}
