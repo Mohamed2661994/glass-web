@@ -267,12 +267,10 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                   data-product-index={index}
                   tabIndex={0}
                   onKeyDown={(e) => handleListKeyDown(e, index)}
-                  className={`p-3 rounded-lg transition outline-none ${
+                  className={`p-3 rounded-lg transition outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:bg-muted ${
                     outOfStock
-                      ? `border border-dashed border-muted-foreground/30 opacity-60 ${focusedIndex === index ? "ring-1 ring-muted-foreground/50 bg-muted/20" : ""}`
-                      : focusedIndex === index
-                        ? "border ring-2 ring-primary bg-muted"
-                        : "border hover:bg-muted/50"
+                      ? "border border-dashed border-muted-foreground/30 opacity-60"
+                      : "border hover:bg-muted/50"
                   }`}
                 >
                   {/* Row 1: Name + Barcode */}
