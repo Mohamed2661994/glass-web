@@ -1845,7 +1845,9 @@ export default function DashboardPage() {
         const totalTransferPrice = transferItems
           .filter((r) => r.status !== "cancelled")
           .reduce((sum, r) => sum + (parseFloat(r.total_price) || 0), 0);
-        const activeItemsCount = transferItems.filter((r) => r.status !== "cancelled").length;
+        const activeItemsCount = transferItems.filter(
+          (r) => r.status !== "cancelled",
+        ).length;
         return (
           <Card
             key={id}
@@ -1956,7 +1958,7 @@ export default function DashboardPage() {
                                 }
                               />
                             </TableCell>
-                            <TableCell 
+                            <TableCell
                               className="text-right font-medium cursor-pointer"
                               onClick={() => {
                                 startNavigation();
@@ -1975,7 +1977,9 @@ export default function DashboardPage() {
                               {row.to_quantity}
                             </TableCell>
                             <TableCell className="text-center">
-                              {Math.round(parseFloat(row.total_price) || 0).toLocaleString()}
+                              {Math.round(
+                                parseFloat(row.total_price) || 0,
+                              ).toLocaleString()}
                             </TableCell>
                             <TableCell className="text-center text-primary">
                               {row.transfer_id}
@@ -2041,7 +2045,7 @@ export default function DashboardPage() {
                               </Badge>
                             )}
                           </div>
-                          <p 
+                          <p
                             className={`text-xs font-medium truncate cursor-pointer ${isCancelled ? "line-through" : ""}`}
                             onClick={() => {
                               startNavigation();
@@ -2058,7 +2062,10 @@ export default function DashboardPage() {
                               {row.from_quantity} ← {row.to_quantity}
                             </span>
                             <span className="font-semibold">
-                              {Math.round(parseFloat(row.total_price) || 0).toLocaleString()} ج
+                              {Math.round(
+                                parseFloat(row.total_price) || 0,
+                              ).toLocaleString()}{" "}
+                              ج
                             </span>
                           </div>
                         </div>

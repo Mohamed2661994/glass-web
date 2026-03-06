@@ -96,6 +96,8 @@ function InvoicePrintPage() {
   const [fontSize, setFontSize] = useState(10);
   const [borderWidth, setBorderWidth] = useState(1);
   const [borderColor, setBorderColor] = useState("#cccccc");
+  const [verticalBorderWidth, setVerticalBorderWidth] = useState(0);
+  const [verticalBorderColor, setVerticalBorderColor] = useState("#cccccc");
   const [showLogo, setShowLogo] = useState(true);
   const [showPhone, setShowPhone] = useState(true);
   const [customPhone, setCustomPhone] = useState("");
@@ -126,6 +128,8 @@ function InvoicePrintPage() {
         if (s.fontSize) setFontSize(s.fontSize);
         if (s.borderWidth !== undefined) setBorderWidth(s.borderWidth);
         if (s.borderColor) setBorderColor(s.borderColor);
+        if (s.verticalBorderWidth !== undefined) setVerticalBorderWidth(s.verticalBorderWidth);
+        if (s.verticalBorderColor) setVerticalBorderColor(s.verticalBorderColor);
         if (s.showLogo !== undefined) setShowLogo(s.showLogo);
         if (s.showPhone !== undefined) setShowPhone(s.showPhone);
         if (s.customPhone !== undefined) setCustomPhone(s.customPhone);
@@ -151,6 +155,8 @@ function InvoicePrintPage() {
           fontSize,
           borderWidth,
           borderColor,
+          verticalBorderWidth,
+          verticalBorderColor,
           showLogo,
           showPhone,
           customPhone,
@@ -169,6 +175,8 @@ function InvoicePrintPage() {
       fontSize,
       borderWidth,
       borderColor,
+      verticalBorderWidth,
+      verticalBorderColor,
       showLogo,
       showPhone,
       customPhone,
@@ -215,9 +223,11 @@ function InvoicePrintPage() {
         .invoice-info { font-size:${fontSize}px; line-height:1.4; text-align:right; min-width:170px; }
         .logo-section { display:flex; flex-direction:row; align-items:center; gap:8px; }
         .logo-phone { font-size:${fontSize}px; font-weight:bold; }
-        table { width:100%; border-collapse:collapse; font-size:${fontSize}px; }
-        th { background:#f3f3f3; font-weight:bold; border-bottom:2px solid #000; }
-        td { border-bottom:${borderWidth}px solid ${borderColor}; }
+        table { width:100%; border-collapse:collapse; font-size:${fontSize}px; ${verticalBorderWidth > 0 ? `border-left:${verticalBorderWidth}px solid ${verticalBorderColor}; border-right:${verticalBorderWidth}px solid ${verticalBorderColor};` : ''} }
+        th { background:#f3f3f3; font-weight:bold; border-bottom:2px solid #000; ${verticalBorderWidth > 0 ? `border-left:${verticalBorderWidth}px solid ${verticalBorderColor};` : ''} }
+        th:first-child { border-left:none; }
+        td { border-bottom:${borderWidth}px solid ${borderColor}; ${verticalBorderWidth > 0 ? `border-left:${verticalBorderWidth}px solid ${verticalBorderColor};` : ''} }
+        td:first-child { border-left:none; }
         th,td { padding:3px 4px; text-align:center; }
         tfoot tr:first-child { border-top:3px solid #000; }
         tfoot tr:first-child td { border-bottom:none; }
@@ -249,6 +259,8 @@ function InvoicePrintPage() {
     fontSize,
     borderWidth,
     borderColor,
+    verticalBorderWidth,
+    verticalBorderColor,
     fontFamily,
     pageW,
     pageH,
@@ -576,9 +588,11 @@ body { background:#3b3b3b; font-family:${fontFamily}; color:#000; }
 .invoice-info { line-height:1.4; text-align:right; min-width:170px; color:#000; }
 .logo-section { display:flex; flex-direction:row; align-items:center; gap:8px; }
 .logo-phone { font-weight:bold; color:#000; }
-table { width:100%; border-collapse:collapse; background:#fff !important; color:#000; }
-th { background:#f3f3f3 !important; font-weight:bold; border-bottom:2px solid #000; color:#000 !important; }
-td { border-bottom:${borderWidth}px solid ${borderColor}; color:#000 !important; background:#fff !important; }
+table { width:100%; border-collapse:collapse; background:#fff !important; color:#000; ${verticalBorderWidth > 0 ? `border-left:${verticalBorderWidth}px solid ${verticalBorderColor}; border-right:${verticalBorderWidth}px solid ${verticalBorderColor};` : ''} }
+th { background:#f3f3f3 !important; font-weight:bold; border-bottom:2px solid #000; color:#000 !important; ${verticalBorderWidth > 0 ? `border-left:${verticalBorderWidth}px solid ${verticalBorderColor};` : ''} }
+th:first-child { border-left:none !important; }
+td { border-bottom:${borderWidth}px solid ${borderColor}; color:#000 !important; background:#fff !important; ${verticalBorderWidth > 0 ? `border-left:${verticalBorderWidth}px solid ${verticalBorderColor};` : ''} }
+td:first-child { border-left:none !important; }
 th,td { padding:3px 4px; text-align:center; }
 tfoot tr:first-child { border-top:3px solid #000; background:#fafafa !important; }
 tfoot tr:first-child td { border-bottom:none; }
@@ -829,6 +843,71 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                       }}
                     >
                       {borderColor === c.value && (
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke={c.value === "#000000" ? "#fff" : "#000"}
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* سمك الخط الطولي */}
+              <div className="setting-group">
+                <label className="setting-label">سمك الخط الطولي</label>
+                <select
+                  className="s-select"
+                  value={verticalBorderWidth}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    setVerticalBorderWidth(v);
+                    savePrintSettings({ verticalBorderWidth: v });
+                  }}
+                >
+                  <option value={0}>بدون خط</option>
+                  <option value={0.5}>رفيع جداً (0.5px)</option>
+                  <option value={1}>رفيع (1px)</option>
+                  <option value={1.5}>متوسط (1.5px)</option>
+                  <option value={2}>سميك (2px)</option>
+                  <option value={3}>سميك جداً (3px)</option>
+                </select>
+              </div>
+
+              {/* لون الخط الطولي */}
+              <div className="setting-group">
+                <label className="setting-label">لون الخط الطولي</label>
+                <div className="color-grid">
+                  {[
+                    { label: "رمادي فاتح", value: "#e5e5e5" },
+                    { label: "رمادي", value: "#cccccc" },
+                    { label: "رمادي غامق", value: "#999999" },
+                    { label: "أسود", value: "#000000" },
+                    { label: "أزرق فاتح", value: "#bfdbfe" },
+                    { label: "أخضر فاتح", value: "#bbf7d0" },
+                  ].map((c) => (
+                    <div
+                      key={c.value}
+                      className={`color-dot ${verticalBorderColor === c.value ? "selected" : ""}`}
+                      style={{
+                        backgroundColor: c.value,
+                        border: "1px solid #ccc",
+                      }}
+                      title={c.label}
+                      onClick={() => {
+                        setVerticalBorderColor(c.value);
+                        savePrintSettings({ verticalBorderColor: c.value });
+                      }}
+                    >
+                      {verticalBorderColor === c.value && (
                         <svg
                           width="14"
                           height="14"
