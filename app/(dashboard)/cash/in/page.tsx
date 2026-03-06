@@ -329,7 +329,11 @@ function CashInPage() {
                       setHighlightedIdx((p) =>
                         p > 0 ? p - 1 : customerSuggestions.length - 1,
                       );
-                    } else if (e.key === "Enter" && showDropdown && highlightedIdx >= 0) {
+                    } else if (
+                      e.key === "Enter" &&
+                      showDropdown &&
+                      highlightedIdx >= 0
+                    ) {
                       e.preventDefault();
                       selectCustomer(customerSuggestions[highlightedIdx]);
                       setTimeout(() => amountRef.current?.focus(), 50);

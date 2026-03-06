@@ -201,9 +201,9 @@ export default function SupplierBalancesPage() {
           </div>
         )}
 
-        {/* Table */}
+        {/* Table - Desktop */}
         {!loading && data.length > 0 && (
-          <Card>
+          <Card className="hidden md:block">
             <CardContent className="p-0">
               <div className="overflow-x-auto" ref={tableRef}>
                 <Table>
@@ -266,6 +266,41 @@ export default function SupplierBalancesPage() {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Mobile Cards */}
+        {!loading && data.length > 0 && (
+          <div className="md:hidden space-y-2">
+            {data.map((item) => (
+              <Card key={item.supplier_id} className="p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <Link
+                      href={`/reports/supplier-balances/${item.supplier_id}`}
+                      className="text-primary font-medium hover:underline"
+                    >
+                      {item.supplier_name}
+                    </Link>
+                    {item.last_invoice_date && (
+                      <p className="text-xs text-muted-foreground">
+                        آخر فاتورة: {new Date(item.last_invoice_date).toLocaleDateString("ar-EG")}
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-left">
+                    <p className="text-lg font-bold text-red-600">
+                      {Math.round(Number(item.balance_due || 0)).toLocaleString()}
+                    </p>
+                    <p className="text-xs text-muted-foreground">مديونية</p>
+                  </div>
+                </div>
+                <div className="flex justify-between mt-2 pt-2 border-t text-xs text-muted-foreground">
+                  <span>مشتريات: {Math.round(Number(item.total_purchases || 0)).toLocaleString()}</span>
+                  <span className="text-green-600">دفعات: {Math.round(Number(item.total_payments || 0)).toLocaleString()}</span>
+                </div>
+              </Card>
+            ))}
+          </div>
         )}
 
         {/* Empty */}

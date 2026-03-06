@@ -339,9 +339,9 @@ export default function NegativeStockReportPage() {
           </div>
         )}
 
-        {/* Table */}
+        {/* Table - Desktop */}
         {!loading && filteredData.length > 0 && (
-          <Card>
+          <Card className="hidden md:block">
             <CardContent className="p-0">
               <div className="overflow-x-auto" ref={tableRef}>
                 <Table>
@@ -393,6 +393,38 @@ export default function NegativeStockReportPage() {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Mobile Cards */}
+        {!loading && filteredData.length > 0 && (
+          <div className="md:hidden space-y-2">
+            {filteredData.map((item, idx) => (
+              <Card key={`m-${item.product_id}-${item.warehouse_name}`} className="p-3 bg-red-50/50 dark:bg-red-950/10 border-red-200 dark:border-red-800">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">#{idx + 1}</span>
+                      <p className="font-medium">{item.product_name}</p>
+                    </div>
+                    {item.manufacturer_name && (
+                      <p className="text-xs text-muted-foreground">{item.manufacturer_name}</p>
+                    )}
+                    {item.barcode && (
+                      <p className="text-xs font-mono text-muted-foreground">{item.barcode}</p>
+                    )}
+                  </div>
+                  <div className="text-left">
+                    <p className="text-lg font-bold text-red-600">{item.current_stock}</p>
+                    <p className="text-xs text-muted-foreground">رصيد</p>
+                  </div>
+                </div>
+                <div className="flex justify-between mt-2 pt-2 border-t border-red-200 dark:border-red-800 text-xs text-muted-foreground">
+                  <span>المخزن: {item.warehouse_name}</span>
+                  {item.package_name && <span>العبوات: {item.package_name}</span>}
+                </div>
+              </Card>
+            ))}
+          </div>
         )}
 
         {/* Empty */}

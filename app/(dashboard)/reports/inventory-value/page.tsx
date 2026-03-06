@@ -304,9 +304,9 @@ export default function InventoryValuePage() {
           </div>
         )}
 
-        {/* Table */}
+        {/* Table - Desktop */}
         {!loading && data.length > 0 && (
-          <Card>
+          <Card className="hidden md:block">
             <CardContent className="p-0">
               <div className="overflow-x-auto" ref={tableRef}>
                 <Table>
@@ -351,6 +351,37 @@ export default function InventoryValuePage() {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Mobile Cards */}
+        {!loading && data.length > 0 && (
+          <div className="md:hidden space-y-2">
+            {data.map((item, idx) => (
+              <Card key={idx} className="p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-medium">{item.product_name}</p>
+                    {item.manufacturer && (
+                      <p className="text-xs text-muted-foreground">{item.manufacturer}</p>
+                    )}
+                    {(item.package_name || item.packages) && (
+                      <p className="text-xs text-muted-foreground">{item.package_name || item.packages}</p>
+                    )}
+                  </div>
+                  <div className="text-left">
+                    <p className="text-lg font-bold text-primary">
+                      {Number(item.total_value).toLocaleString()}
+                    </p>
+                    <p className="text-xs text-muted-foreground">إجمالي</p>
+                  </div>
+                </div>
+                <div className="flex justify-between mt-2 pt-2 border-t text-xs text-muted-foreground">
+                  <span>الكمية: {item.quantity}</span>
+                  <span>سعر الشراء: {Number(item.purchase_price).toLocaleString()}</span>
+                </div>
+              </Card>
+            ))}
+          </div>
         )}
 
         {/* Empty */}

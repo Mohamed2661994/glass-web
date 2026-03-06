@@ -301,9 +301,9 @@ export default function LowStockReorderPage() {
         </Card>
       )}
 
-      {/* ===== Table ===== */}
+      {/* ===== Table - Desktop ===== */}
       {!loading && filteredData.length > 0 && (
-        <Card>
+        <Card className="hidden md:block">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
@@ -375,6 +375,49 @@ export default function LowStockReorderPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* ===== Mobile Cards ===== */}
+      {!loading && filteredData.length > 0 && (
+        <div className="md:hidden space-y-2">
+          {filteredData.map((item) => {
+            const wsQty = wholesaleStock[item.product_id] ?? 0;
+            const inCart = isInCart(item.product_id);
+            return (
+              <Card key={`m-${item.product_id}-${item.variant_id || 0}`} className="p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1">
+                    <p className="font-medium">{item.product_name}</p>
+                    {item.manufacturer_name && (
+                      <p className="text-xs text-muted-foreground">{item.manufacturer_name}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={item.current_stock === 0 ? "destructive" : "secondary"}>
+                      {item.current_stock}
+                    </Badge>
+                    {wsQty > 0 && !inCart && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-green-600 hover:text-green-700"
+                        onClick={() => addToCart(item)}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {inCart && (
+                      <Badge variant="secondary" className="text-xs">✓</Badge>
+                    )}
+                  </div>
+                </div>
+                <div className="flex justify-between mt-2 pt-2 border-t text-xs text-muted-foreground">
+                  <span>رصيد الجملة: {wsQty > 0 ? wsQty : "0"}</span>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
       )}
 
       {/* ===== Empty ===== */}

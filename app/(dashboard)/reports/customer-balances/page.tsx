@@ -271,9 +271,9 @@ export default function CustomerBalancesPage() {
           </Card>
         )}
 
-        {/* Table */}
+        {/* Table - Desktop */}
         {!loading && data.length > 0 && (
-          <Card>
+          <Card className="hidden md:block">
             <CardContent className="p-0">
               <div className="overflow-x-auto" ref={tableRef}>
                 <Table>
@@ -339,6 +339,47 @@ export default function CustomerBalancesPage() {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Mobile Cards */}
+        {!loading && data.length > 0 && (
+          <div className="md:hidden space-y-2">
+            {data.map((item, idx) => (
+              <Card key={idx} className="p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={selectedCustomers.has(item.customer_name)}
+                      onCheckedChange={() => toggleCustomer(item.customer_name)}
+                    />
+                    <div>
+                      <Link
+                        href={`/reports/customer-balances/${encodeURIComponent(item.customer_name)}`}
+                        className="text-primary font-medium hover:underline"
+                      >
+                        {item.customer_name}
+                      </Link>
+                      {item.last_invoice_date && (
+                        <p className="text-xs text-muted-foreground">
+                          آخر فاتورة: {new Date(item.last_invoice_date).toLocaleDateString("ar-EG")}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-left">
+                    <p className="text-lg font-bold text-red-600">
+                      {Number(item.balance_due || 0).toLocaleString()}
+                    </p>
+                    <p className="text-xs text-muted-foreground">مديونية</p>
+                  </div>
+                </div>
+                <div className="flex justify-between mt-2 pt-2 border-t text-xs text-muted-foreground">
+                  <span>مبيعات: {Number(item.total_sales || 0).toLocaleString()}</span>
+                  <span>مدفوع: {Number(item.total_paid || 0).toLocaleString()}</span>
+                </div>
+              </Card>
+            ))}
+          </div>
         )}
 
         {/* Empty */}

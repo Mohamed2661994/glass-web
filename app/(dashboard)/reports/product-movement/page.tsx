@@ -420,7 +420,9 @@ export default function ProductMovementPage() {
                 pdfOrientation="landscape"
               />
             </div>
-            <Card>
+
+            {/* Desktop Table */}
+            <Card className="hidden md:block">
               <CardContent className="p-0">
                 <div className="overflow-x-auto" ref={tableRef}>
                   <Table>
@@ -498,6 +500,51 @@ export default function ProductMovementPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Mobile Cards */}
+            <div className="md:hidden space-y-2">
+              {filteredData.map((item, idx) => {
+                const mt = item.movement_type || item.invoice_movement_type || "";
+                const isIn = ["purchase", "transfer_in", "replace_in", "in"].includes(mt);
+
+                return (
+                  <Card key={idx} className="p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant={isIn ? "default" : "destructive"} className="text-xs">
+                            {isIn ? "وارد" : "صادر"}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">{getDate(item)}</span>
+                        </div>
+                        <p className="text-sm">{item.warehouse_name}</p>
+                        {item.party_name && (
+                          <p className="text-xs text-muted-foreground">الطرف: {item.party_name}</p>
+                        )}
+                      </div>
+                      <div className="text-left">
+                        <p className={`text-lg font-bold ${isIn ? "text-green-600" : "text-red-600"}`}>
+                          {item.quantity}
+                        </p>
+                        {item.package_name && (
+                          <p className="text-xs text-muted-foreground">{item.package_name}</p>
+                        )}
+                      </div>
+                    </div>
+                    {(item.invoice_id || item.note) && (
+                      <div className="flex justify-between mt-2 pt-2 border-t text-xs text-muted-foreground">
+                        {item.invoice_id ? (
+                          <a href={`/invoices/${item.invoice_id}`} className="text-blue-600 hover:underline">
+                            فاتورة #{item.invoice_id}
+                          </a>
+                        ) : <span />}
+                        {item.note && <span className="truncate max-w-[150px]">{item.note}</span>}
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
           </>
         )}
 
