@@ -319,22 +319,21 @@ function CashInPage() {
                     );
                   }}
                   onKeyDown={(e) => {
-                    if (!showDropdown) return;
-                    if (e.key === "ArrowDown") {
+                    if (showDropdown && e.key === "ArrowDown") {
                       e.preventDefault();
                       setHighlightedIdx((p) =>
                         p < customerSuggestions.length - 1 ? p + 1 : 0,
                       );
-                    } else if (e.key === "ArrowUp") {
+                    } else if (showDropdown && e.key === "ArrowUp") {
                       e.preventDefault();
                       setHighlightedIdx((p) =>
                         p > 0 ? p - 1 : customerSuggestions.length - 1,
                       );
-                    } else if (e.key === "Enter" && highlightedIdx >= 0) {
+                    } else if (e.key === "Enter" && showDropdown && highlightedIdx >= 0) {
                       e.preventDefault();
                       selectCustomer(customerSuggestions[highlightedIdx]);
                       setTimeout(() => amountRef.current?.focus(), 50);
-                    } else if (e.key === "Enter" && !showDropdown) {
+                    } else if (e.key === "Enter") {
                       e.preventDefault();
                       amountRef.current?.focus();
                     } else if (e.key === "Escape") {
