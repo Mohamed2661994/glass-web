@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import api from "@/services/api";
 import { highlightText } from "@/lib/highlight-text";
 import { multiWordMatch } from "@/lib/utils";
@@ -49,8 +49,47 @@ function ProductDropdown({
   placeholder: string;
   products: Product[];
 }) {
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+  const listRef = useRef<HTMLDivElement>(null);
+
   const filtered = products.filter((p) =>
     multiWordMatch(search, String(p.id), p.name, p.manufacturer),
+  );
+
+  // Reset focused index when filtered list changes
+  useEffect(() => {
+    setFocusedIndex(-1);
+  }, [search]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (!showDropdown || filtered.length === 0) return;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const next = Math.min(focusedIndex + 1, filtered.length - 1);
+        setFocusedIndex(next);
+        const el = listRef.current?.querySelector(
+          `[data-index='${next}']`,
+        ) as HTMLElement;
+        el?.scrollIntoView({ block: "nearest" });
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const prev = Math.max(focusedIndex - 1, 0);
+        setFocusedIndex(prev);
+        const el = listRef.current?.querySelector(
+          `[data-index='${prev}']`,
+        ) as HTMLElement;
+        el?.scrollIntoView({ block: "nearest" });
+      } else if (e.key === "Enter" && focusedIndex >= 0) {
+        e.preventDefault();
+        onSelect(filtered[focusedIndex]);
+      } else if (e.key === "Escape") {
+        setShowDropdown(false);
+        setFocusedIndex(-1);
+      }
+    },
+    [showDropdown, filtered, focusedIndex, onSelect, setShowDropdown],
   );
 
   return (
@@ -65,21 +104,30 @@ function ProductDropdown({
             setShowDropdown(true);
           }}
           onFocus={() => setShowDropdown(true)}
+          onKeyDown={handleKeyDown}
           className="pr-9"
         />
       </div>
 
       {showDropdown && (
-        <div className="absolute top-full mt-1 left-0 right-0 z-50 bg-popover border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+        <div
+          ref={listRef}
+          className="absolute top-full mt-1 left-0 right-0 z-50 bg-popover border rounded-lg shadow-lg max-h-60 overflow-y-auto"
+        >
           {filtered.length === 0 ? (
             <div className="p-3 text-sm text-muted-foreground text-center">
               لا توجد نتائج
             </div>
           ) : (
-            filtered.map((p) => (
+            filtered.map((p, index) => (
               <button
                 key={p.id}
-                className="w-full text-right px-3 py-2 hover:bg-muted transition-colors border-b last:border-b-0"
+                data-index={index}
+                className={`w-full text-right px-3 py-2 transition-colors border-b last:border-b-0 ${
+                  focusedIndex === index
+                    ? "bg-muted"
+                    : "hover:bg-muted"
+                }`}
                 onClick={() => onSelect(p)}
               >
                 <div className="font-medium text-sm">
