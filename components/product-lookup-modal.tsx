@@ -317,13 +317,32 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                   {/* Row 2: Wholesale details */}
                   {product.wholesale_package && (
                     <div className="text-xs mt-1 flex flex-wrap gap-x-4 gap-y-1 text-blue-600 dark:text-blue-400">
-                      <span>عبوة جملة: {product.wholesale_package}</span>
-                      {product.wholesale_price != null &&
-                        Number(product.wholesale_price) > 0 && (
-                          <span className="font-semibold">
-                            سعر الجملة: {product.wholesale_price}
-                          </span>
-                        )}
+                      {/* Show prices per variant if multiple variants with different prices */}
+                      {product.variant_stock && product.variant_stock.length > 1 ? (
+                        <>
+                          {product.variant_stock.map((vs: { variant_id: number; package_name: string; quantity: number; price: number | null }, idx: number) => {
+                            const variantPrice = vs.price ?? (vs.variant_id === 0 ? product.wholesale_price : null);
+                            return (
+                              <span key={vs.variant_id ?? idx}>
+                                {vs.package_name}:{" "}
+                                <span className="font-semibold">
+                                  {variantPrice ?? product.wholesale_price}
+                                </span>
+                              </span>
+                            );
+                          })}
+                        </>
+                      ) : (
+                        <>
+                          <span>عبوة جملة: {product.wholesale_package}</span>
+                          {product.wholesale_price != null &&
+                            Number(product.wholesale_price) > 0 && (
+                              <span className="font-semibold">
+                                سعر الجملة: {product.wholesale_price}
+                              </span>
+                            )}
+                        </>
+                      )}
                     </div>
                   )}
 
@@ -335,7 +354,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                         <span className="text-muted-foreground">
                           رصيد {branchId === 1 ? "القطاعي" : "الجملة"}:
                         </span>
-                        {product.variant_stock.map((vs: { variant_id: number; package_name: string; quantity: number }, idx: number) => (
+                        {product.variant_stock.map((vs: { variant_id: number; package_name: string; quantity: number; price: number | null }, idx: number) => (
                           <span
                             key={vs.variant_id ?? idx}
                             className={
