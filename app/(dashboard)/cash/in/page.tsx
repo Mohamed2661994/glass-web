@@ -155,6 +155,9 @@ function CashInPage() {
   const [highlightedIdx, setHighlightedIdx] = useState(-1);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const amountRef = useRef<HTMLInputElement>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
   const searchCustomers = async (query: string) => {
     if (query.length < 2) {
@@ -330,6 +333,10 @@ function CashInPage() {
                     } else if (e.key === "Enter" && highlightedIdx >= 0) {
                       e.preventDefault();
                       selectCustomer(customerSuggestions[highlightedIdx]);
+                      setTimeout(() => amountRef.current?.focus(), 50);
+                    } else if (e.key === "Enter" && !showDropdown) {
+                      e.preventDefault();
+                      amountRef.current?.focus();
                     } else if (e.key === "Escape") {
                       setShowDropdown(false);
                     }
@@ -362,10 +369,17 @@ function CashInPage() {
               </div>
             ) : (
               <Input
+                ref={nameRef}
                 value={sourceName}
                 onChange={(e) => setSourceName(e.target.value)}
                 placeholder="اسم القيد"
                 className="mt-2"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    amountRef.current?.focus();
+                  }
+                }}
               />
             )}
           </div>
@@ -402,12 +416,19 @@ function CashInPage() {
           <div>
             <Label>المبلغ</Label>
             <Input
+              ref={amountRef}
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0"
               className="mt-2 text-center font-semibold"
               onFocus={(e) => e.target.select()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  descriptionRef.current?.focus();
+                }
+              }}
             />
           </div>
 
@@ -469,10 +490,17 @@ function CashInPage() {
           <div>
             <Label>البيان</Label>
             <Textarea
+              ref={descriptionRef}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="سبب الوارد"
               className="mt-2 min-h-[80px]"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSave();
+                }
+              }}
             />
           </div>
 
