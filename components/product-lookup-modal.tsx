@@ -289,8 +289,8 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                 <div
                   key={product.id}
                   data-product-index={index}
-                  tabIndex={outOfStock ? -1 : 0}
-                  onKeyDown={(e) => !outOfStock && handleListKeyDown(e, index)}
+                  tabIndex={0}
+                  onKeyDown={(e) => handleListKeyDown(e, index)}
                   className={`p-3 rounded-lg border transition outline-none ${
                     outOfStock
                       ? "opacity-50 cursor-not-allowed bg-muted/30"
