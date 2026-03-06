@@ -141,15 +141,36 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
   /* =========================================================
      Keyboard navigation
      ========================================================= */
+  // Helper to find next/prev focusable (in-stock) product
+  const findNextFocusable = useCallback(
+    (startIndex: number, direction: "up" | "down"): number => {
+      const step = direction === "down" ? 1 : -1;
+      let idx = startIndex + step;
+      while (idx >= 0 && idx < filteredProducts.length) {
+        const product = filteredProducts[idx];
+        if (Number(product.available_quantity) > 0) {
+          return idx;
+        }
+        idx += step;
+      }
+      return -1; // No focusable found
+    },
+    [filteredProducts],
+  );
+
   const handleSearchKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        if (filteredProducts.length > 0) {
-          setFocusedIndex(0);
+        // Find first in-stock product
+        const firstFocusable = filteredProducts.findIndex(
+          (p) => Number(p.available_quantity) > 0,
+        );
+        if (firstFocusable !== -1) {
+          setFocusedIndex(firstFocusable);
           setTimeout(() => {
             const firstItem = listRef.current?.querySelector(
-              "[data-product-index='0']",
+              `[data-product-index='${firstFocusable}']`,
             ) as HTMLElement;
             firstItem?.focus();
           }, 0);
@@ -163,30 +184,33 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     (e: React.KeyboardEvent<HTMLElement>, index: number) => {
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        const next = Math.min(index + 1, filteredProducts.length - 1);
-        setFocusedIndex(next);
-        const el = listRef.current?.querySelector(
-          `[data-product-index='${next}']`,
-        ) as HTMLElement;
-        el?.focus();
+        const next = findNextFocusable(index, "down");
+        if (next !== -1) {
+          setFocusedIndex(next);
+          const el = listRef.current?.querySelector(
+            `[data-product-index='${next}']`,
+          ) as HTMLElement;
+          el?.focus();
+        }
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        if (index === 0) {
-          setFocusedIndex(-1);
-          searchInputRef.current?.focus();
-        } else {
-          const prev = index - 1;
+        const prev = findNextFocusable(index, "up");
+        if (prev !== -1) {
           setFocusedIndex(prev);
           const el = listRef.current?.querySelector(
             `[data-product-index='${prev}']`,
           ) as HTMLElement;
           el?.focus();
+        } else {
+          // No prev focusable, go back to search
+          setFocusedIndex(-1);
+          searchInputRef.current?.focus();
         }
       } else if (e.key === "Escape") {
         onOpenChange(false);
       }
     },
-    [filteredProducts.length, onOpenChange],
+    [findNextFocusable, onOpenChange],
   );
 
   return (
@@ -318,19 +342,34 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                   {product.wholesale_package && (
                     <div className="text-xs mt-1 flex flex-wrap gap-x-4 gap-y-1 text-blue-600 dark:text-blue-400">
                       {/* Show prices per variant if multiple variants with different prices */}
-                      {product.variant_stock && product.variant_stock.length > 1 ? (
+                      {product.variant_stock &&
+                      product.variant_stock.length > 1 ? (
                         <>
-                          {product.variant_stock.map((vs: { variant_id: number; package_name: string; quantity: number; price: number | null }, idx: number) => {
-                            const variantPrice = vs.price ?? (vs.variant_id === 0 ? product.wholesale_price : null);
-                            return (
-                              <span key={vs.variant_id ?? idx}>
-                                {vs.package_name}:{" "}
-                                <span className="font-semibold">
-                                  {variantPrice ?? product.wholesale_price}
+                          {product.variant_stock.map(
+                            (
+                              vs: {
+                                variant_id: number;
+                                package_name: string;
+                                quantity: number;
+                                price: number | null;
+                              },
+                              idx: number,
+                            ) => {
+                              const variantPrice =
+                                vs.price ??
+                                (vs.variant_id === 0
+                                  ? product.wholesale_price
+                                  : null);
+                              return (
+                                <span key={vs.variant_id ?? idx}>
+                                  {vs.package_name}:{" "}
+                                  <span className="font-semibold">
+                                    {variantPrice ?? product.wholesale_price}
+                                  </span>
                                 </span>
-                              </span>
-                            );
-                          })}
+                              );
+                            },
+                          )}
                         </>
                       ) : (
                         <>
@@ -349,23 +388,34 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                   {/* Row 3: Branch Balances */}
                   <div className="text-xs mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
                     {/* Current branch balance - show per variant if multiple */}
-                    {product.variant_stock && product.variant_stock.length > 1 ? (
+                    {product.variant_stock &&
+                    product.variant_stock.length > 1 ? (
                       <div className="flex flex-wrap gap-x-3 gap-y-1">
                         <span className="text-muted-foreground">
                           رصيد {branchId === 1 ? "القطاعي" : "الجملة"}:
                         </span>
-                        {product.variant_stock.map((vs: { variant_id: number; package_name: string; quantity: number; price: number | null }, idx: number) => (
-                          <span
-                            key={vs.variant_id ?? idx}
-                            className={
-                              Number(vs.quantity) > 0
-                                ? "text-green-600 dark:text-green-400 font-semibold"
-                                : "text-red-500 font-semibold"
-                            }
-                          >
-                            {vs.package_name}: {vs.quantity}
-                          </span>
-                        ))}
+                        {product.variant_stock.map(
+                          (
+                            vs: {
+                              variant_id: number;
+                              package_name: string;
+                              quantity: number;
+                              price: number | null;
+                            },
+                            idx: number,
+                          ) => (
+                            <span
+                              key={vs.variant_id ?? idx}
+                              className={
+                                Number(vs.quantity) > 0
+                                  ? "text-green-600 dark:text-green-400 font-semibold"
+                                  : "text-red-500 font-semibold"
+                              }
+                            >
+                              {vs.package_name}: {vs.quantity}
+                            </span>
+                          ),
+                        )}
                       </div>
                     ) : (
                       <span
