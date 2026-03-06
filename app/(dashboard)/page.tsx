@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/auth-context";
@@ -776,7 +777,10 @@ export default function DashboardPage() {
   const [loadingStats, setLoadingStats] = useState(true);
   const [transferNeededCount, setTransferNeededCount] = useState<number>(0);
   const [loadingTransferCount, setLoadingTransferCount] = useState(true);
+  const [togglingReceived, setTogglingReceived] = useState<number | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  const isRetail = branchId === 1;
 
   // Real-time: refresh dashboard when any data changes
   useRealtime(
@@ -1145,9 +1149,26 @@ export default function DashboardPage() {
     })();
   }, [branchId, refreshKey]);
 
-  /* fetch transfers (branch 2 only) */
+  /* Toggle received status for transfer item */
+  const toggleReceived = async (itemId: number, current: boolean) => {
+    try {
+      setTogglingReceived(itemId);
+      await api.patch(`/stock-transfers/items/${itemId}`, {
+        received: !current,
+      });
+      setTransferItems((prev) =>
+        prev.map((r) => (r.id === itemId ? { ...r, received: !current } : r)),
+      );
+    } catch {
+      /* silent */
+    } finally {
+      setTogglingReceived(null);
+    }
+  };
+
+  /* fetch transfers */
   useEffect(() => {
-    if (branchId !== 2) {
+    if (!branchId) {
       setLoadingTr(false);
       return;
     }
@@ -1821,7 +1842,6 @@ export default function DashboardPage() {
         );
 
       case "recent_transfers":
-        if (branchId !== 2) return null;
         const totalTransferPrice = transferItems
           .filter((r) => r.status !== "cancelled")
           .reduce((sum, r) => sum + (parseFloat(r.total_price) || 0), 0);
@@ -1894,6 +1914,7 @@ export default function DashboardPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="text-center w-10">✓</TableHead>
                       <TableHead className="text-right">اسم الصنف</TableHead>
                       <TableHead className="text-center">مصنع</TableHead>
                       <TableHead className="text-center">من المخزن</TableHead>
@@ -1908,7 +1929,7 @@ export default function DashboardPage() {
                     ) : transferItems.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={6}
+                          colSpan={7}
                           className="text-center py-8 text-muted-foreground"
                         >
                           لا توجد تحويلات
@@ -1920,13 +1941,28 @@ export default function DashboardPage() {
                         return (
                           <TableRow
                             key={row.id}
-                            className={`cursor-pointer hover:bg-muted/50 ${isCancelled ? "opacity-40 line-through" : ""}`}
-                            onClick={() => {
-                              startNavigation();
-                              router.push(`/transfers/${row.transfer_id}`);
-                            }}
+                            className={`hover:bg-muted/50 ${isCancelled ? "opacity-40 line-through" : ""}`}
                           >
-                            <TableCell className="text-right font-medium">
+                            <TableCell className="text-center">
+                              <Checkbox
+                                checked={!!row.received}
+                                disabled={
+                                  !isRetail ||
+                                  isCancelled ||
+                                  togglingReceived === row.id
+                                }
+                                onCheckedChange={() =>
+                                  toggleReceived(row.id, !!row.received)
+                                }
+                              />
+                            </TableCell>
+                            <TableCell 
+                              className="text-right font-medium cursor-pointer"
+                              onClick={() => {
+                                startNavigation();
+                                router.push(`/transfers/${row.transfer_id}`);
+                              }}
+                            >
                               {row.product_name}
                             </TableCell>
                             <TableCell className="text-center text-xs text-muted-foreground">
@@ -1973,16 +2009,25 @@ export default function DashboardPage() {
                       return (
                         <div
                           key={row.id}
-                          className={`rounded-lg border bg-card p-2.5 cursor-pointer hover:bg-muted/50 transition-colors space-y-1.5 ${isCancelled ? "opacity-40" : ""}`}
-                          onClick={() => {
-                            startNavigation();
-                            router.push(`/transfers/${row.transfer_id}`);
-                          }}
+                          className={`rounded-lg border bg-card p-2.5 hover:bg-muted/50 transition-colors space-y-1.5 ${isCancelled ? "opacity-40" : ""}`}
                         >
                           <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-bold text-muted-foreground">
-                              #{row.transfer_id}
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <Checkbox
+                                checked={!!row.received}
+                                disabled={
+                                  !isRetail ||
+                                  isCancelled ||
+                                  togglingReceived === row.id
+                                }
+                                onCheckedChange={() =>
+                                  toggleReceived(row.id, !!row.received)
+                                }
+                              />
+                              <span className="text-[11px] font-bold text-muted-foreground">
+                                #{row.transfer_id}
+                              </span>
+                            </div>
                             {isCancelled ? (
                               <Badge
                                 variant="destructive"
@@ -1996,7 +2041,13 @@ export default function DashboardPage() {
                               </Badge>
                             )}
                           </div>
-                          <p className={`text-xs font-medium truncate ${isCancelled ? "line-through" : ""}`}>
+                          <p 
+                            className={`text-xs font-medium truncate cursor-pointer ${isCancelled ? "line-through" : ""}`}
+                            onClick={() => {
+                              startNavigation();
+                              router.push(`/transfers/${row.transfer_id}`);
+                            }}
+                          >
                             {row.product_name}
                           </p>
                           <p className="text-[10px] text-muted-foreground truncate">
