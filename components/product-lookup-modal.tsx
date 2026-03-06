@@ -329,16 +329,37 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
                   {/* Row 3: Branch Balances */}
                   <div className="text-xs mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
-                    <span
-                      className={
-                        Number(product.available_quantity) > 0
-                          ? "text-green-600 dark:text-green-400 font-semibold"
-                          : "text-red-500 font-semibold"
-                      }
-                    >
-                      رصيد {branchId === 1 ? "القطاعي" : "الجملة"}:{" "}
-                      {product.available_quantity}
-                    </span>
+                    {/* Current branch balance - show per variant if multiple */}
+                    {product.variant_stock && product.variant_stock.length > 1 ? (
+                      <div className="flex flex-wrap gap-x-3 gap-y-1">
+                        <span className="text-muted-foreground">
+                          رصيد {branchId === 1 ? "القطاعي" : "الجملة"}:
+                        </span>
+                        {product.variant_stock.map((vs: { variant_id: number; package_name: string; quantity: number }, idx: number) => (
+                          <span
+                            key={vs.variant_id ?? idx}
+                            className={
+                              Number(vs.quantity) > 0
+                                ? "text-green-600 dark:text-green-400 font-semibold"
+                                : "text-red-500 font-semibold"
+                            }
+                          >
+                            {vs.package_name}: {vs.quantity}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span
+                        className={
+                          Number(product.available_quantity) > 0
+                            ? "text-green-600 dark:text-green-400 font-semibold"
+                            : "text-red-500 font-semibold"
+                        }
+                      >
+                        رصيد {branchId === 1 ? "القطاعي" : "الجملة"}:{" "}
+                        {product.available_quantity}
+                      </span>
+                    )}
                     <span
                       className={
                         (otherBranchQtyMap[product.id] || 0) > 0

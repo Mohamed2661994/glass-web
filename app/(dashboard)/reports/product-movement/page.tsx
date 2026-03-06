@@ -186,17 +186,17 @@ export default function ProductMovementPage() {
     let outQty = 0;
     // حساب الإجماليات لكل عبوة على حدة
     const byPackage: Record<string, { inQty: number; outQty: number }> = {};
-    
+
     for (const item of filteredData) {
       const mt = item.movement_type || item.invoice_movement_type || "";
       const isIn = ["purchase", "transfer_in", "replace_in", "in"].includes(mt);
       const qty = Number(item.quantity);
       const pkg = item.package_name || "بدون عبوة";
-      
+
       if (!byPackage[pkg]) {
         byPackage[pkg] = { inQty: 0, outQty: 0 };
       }
-      
+
       if (isIn) {
         inQty += qty;
         byPackage[pkg].inQty += qty;
@@ -205,7 +205,7 @@ export default function ProductMovementPage() {
         byPackage[pkg].outQty += qty;
       }
     }
-    
+
     // تحويل إلى مصفوفة مع حساب الرصيد
     const packageTotals = Object.entries(byPackage).map(([pkg, totals]) => ({
       package: pkg,
@@ -213,7 +213,7 @@ export default function ProductMovementPage() {
       totalOut: totals.outQty,
       balance: totals.inQty - totals.outQty,
     }));
-    
+
     return { totalIn: inQty, totalOut: outQty, packageTotals };
   }, [filteredData]);
 
@@ -542,7 +542,7 @@ export default function ProductMovementPage() {
                 الرصيد الفعلي: {(totalIn - totalOut).toLocaleString()}
               </span>
             </div>
-            
+
             {/* تفصيل حسب العبوة */}
             {packageTotals.length > 1 && (
               <div className="flex flex-wrap justify-center gap-3 text-xs">
@@ -556,7 +556,13 @@ export default function ProductMovementPage() {
                     <span className="text-muted-foreground">/</span>
                     <span className="text-red-600">{pt.totalOut}</span>
                     <span className="text-muted-foreground">=</span>
-                    <span className={pt.balance >= 0 ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
+                    <span
+                      className={
+                        pt.balance >= 0
+                          ? "text-green-600 font-semibold"
+                          : "text-red-600 font-semibold"
+                      }
+                    >
                       {pt.balance}
                     </span>
                   </div>
