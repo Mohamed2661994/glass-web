@@ -1182,22 +1182,47 @@ export default function CreateRetailInvoicePage() {
      Handle search keydown (Enter & arrows)
      ========================================================= */
 
+  // Find next available (in-stock) product index
+  const findNextAvailable = useCallback(
+    (startIndex: number, direction: 1 | -1): number => {
+      let idx = startIndex + direction;
+      while (idx >= 0 && idx < filteredProducts.length) {
+        if (
+          movementType !== "sale" ||
+          Number(filteredProducts[idx].available_quantity) > 0
+        ) {
+          return idx;
+        }
+        idx += direction;
+      }
+      return -1;
+    },
+    [filteredProducts, movementType],
+  );
+
   const handleSearchKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        if (filteredProducts.length > 0) {
-          setFocusedIndex(0);
+        // Find first available product (skip out-of-stock for sales)
+        const firstAvailable =
+          movementType === "sale"
+            ? filteredProducts.findIndex(
+                (p) => Number(p.available_quantity) > 0,
+              )
+            : 0;
+        if (firstAvailable !== -1 && filteredProducts.length > 0) {
+          setFocusedIndex(firstAvailable);
           setTimeout(() => {
             const firstItem = listRef.current?.querySelector(
-              "[data-product-index='0']",
+              `[data-product-index='${firstAvailable}']`,
             ) as HTMLElement;
             firstItem?.focus();
           }, 0);
         }
       }
     },
-    [filteredProducts],
+    [filteredProducts, movementType],
   );
 
   /* =========================================================
@@ -1208,26 +1233,30 @@ export default function CreateRetailInvoicePage() {
     (e: React.KeyboardEvent<HTMLDivElement>, index: number) => {
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        const next = Math.min(index + 1, filteredProducts.length - 1);
-        setFocusedIndex(next);
-        const el = listRef.current?.querySelector(
-          `[data-product-index='${next}']`,
-        ) as HTMLElement;
-        el?.focus();
+        const next = findNextAvailable(index, 1);
+        if (next !== -1) {
+          setFocusedIndex(next);
+          const el = listRef.current?.querySelector(
+            `[data-product-index='${next}']`,
+          ) as HTMLElement;
+          el?.focus();
+        }
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        const prev = Math.max(index - 1, 0);
-        setFocusedIndex(prev);
-        const el = listRef.current?.querySelector(
-          `[data-product-index='${prev}']`,
-        ) as HTMLElement;
-        el?.focus();
+        const prev = findNextAvailable(index, -1);
+        if (prev !== -1) {
+          setFocusedIndex(prev);
+          const el = listRef.current?.querySelector(
+            `[data-product-index='${prev}']`,
+          ) as HTMLElement;
+          el?.focus();
+        }
       } else if (e.key === "Enter") {
         e.preventDefault();
         addItem(filteredProducts[index]);
       }
     },
-    [filteredProducts, addItem],
+    [filteredProducts, addItem, findNextAvailable],
   );
 
   /* =========================================================
