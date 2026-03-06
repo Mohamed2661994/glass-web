@@ -262,8 +262,18 @@ export default function ProductMovementPage() {
               setTimeout(() => searchInputRef.current?.focus(), 100);
             }}
             className="min-w-[250px]"
+            disabled={productsLoading}
           >
-            {selectedProduct ? selectedProduct.name : "اختر صنف لعرض حركته"}
+            {productsLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                جاري التحميل...
+              </>
+            ) : selectedProduct ? (
+              selectedProduct.name
+            ) : (
+              "اختر صنف لعرض حركته"
+            )}
           </Button>
         </div>
 
@@ -654,8 +664,8 @@ export default function ProductMovementPage() {
       <Dialog open={showProductModal} onOpenChange={setShowProductModal}>
         <DialogContent
           dir="rtl"
-          className="max-w-md p-0 flex flex-col"
-          style={{ height: 420, maxHeight: "75vh" }}
+          className="max-w-md p-0 flex flex-col top-[5%] translate-y-0 md:top-[50%] md:-translate-y-1/2"
+          style={{ height: "auto", maxHeight: "45vh" }}
         >
           <DialogHeader className="p-4 border-b shrink-0">
             <DialogTitle>اختيار صنف</DialogTitle>
