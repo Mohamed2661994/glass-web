@@ -322,7 +322,7 @@ function CashOutPage() {
                       setShowSupplierDropdown(true)
                     }
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" && supplierId) {
+                      if (e.key === "Enter") {
                         e.preventDefault();
                         amountRef.current?.focus();
                       }
