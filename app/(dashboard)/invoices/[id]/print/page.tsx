@@ -426,8 +426,11 @@ function InvoicePrintPage() {
   const formattedDate = invoice.invoice_date
     ? new Date(invoice.invoice_date).toLocaleDateString("ar-EG")
     : "-";
-  const invoiceUserName =
-    (invoice.updated_by_name || invoice.created_by_name || "").trim();
+  const invoiceUserName = (
+    invoice.updated_by_name ||
+    invoice.created_by_name ||
+    ""
+  ).trim();
 
   /* ──── مقياس المعاينة ──── */
   const previewScale = Math.min(1, 520 / ((pageW / 25.4) * 96));
@@ -1143,36 +1146,40 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                     )}
                   </div>
                 )}
-                {!showLogo && (invoiceUserName || (customPhone && showCustomPhone)) && (
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      lineHeight: 1.25,
-                      gap: 1,
-                    }}
-                  >
-                    {invoiceUserName && (
-                      <div
-                        style={{
-                          fontSize: `${Math.max(fontSize - 1, 7)}px`,
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {invoiceUserName}
-                      </div>
-                    )}
-                    {customPhone && showCustomPhone && (
-                      <div
-                        className="logo-phone"
-                        style={{ fontSize: `${fontSize}px`, fontWeight: "bold" }}
-                      >
-                        {customPhone}
-                      </div>
-                    )}
-                  </div>
-                )}
+                {!showLogo &&
+                  (invoiceUserName || (customPhone && showCustomPhone)) && (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        lineHeight: 1.25,
+                        gap: 1,
+                      }}
+                    >
+                      {invoiceUserName && (
+                        <div
+                          style={{
+                            fontSize: `${Math.max(fontSize - 1, 7)}px`,
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {invoiceUserName}
+                        </div>
+                      )}
+                      {customPhone && showCustomPhone && (
+                        <div
+                          className="logo-phone"
+                          style={{
+                            fontSize: `${fontSize}px`,
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {customPhone}
+                        </div>
+                      )}
+                    </div>
+                  )}
               </div>
 
               <hr

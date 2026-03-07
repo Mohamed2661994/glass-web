@@ -522,8 +522,10 @@ export default function EditWholesaleInvoicePage() {
     }
 
     // التحقق من الرصيد المتاح (للبيع فقط) - مع مراعاة الكميات الأصلية في الفاتورة
+    // يتم استثناء الأصناف المرتجع من هذا التحقق.
     if (movementType === "sale") {
       const overStock = items.filter((item) => {
+        if (item.is_return) return false;
         const prod = products.find((p: any) => p.id === item.product_id);
         if (!prod) return false;
         // الكمية الأصلية للصنف في الفاتورة (متخصمة أصلاً من الرصيد)
@@ -1959,14 +1961,12 @@ export default function EditWholesaleInvoicePage() {
                       <div
                         key={product.id}
                         data-product-index={index}
-                        tabIndex={outOfStock ? -1 : 0}
-                        onClick={() => !outOfStock && addItem(product)}
-                        onKeyDown={(e) =>
-                          !outOfStock && handleListKeyDown(e, index)
-                        }
+                        tabIndex={0}
+                        onClick={() => addItem(product)}
+                        onKeyDown={(e) => handleListKeyDown(e, index)}
                         className={`p-3 rounded-lg border transition outline-none ${
                           outOfStock
-                            ? "opacity-50 cursor-not-allowed bg-muted/30"
+                            ? `opacity-50 bg-muted/30 cursor-pointer hover:bg-muted ${focusedIndex === index ? "ring-2 ring-primary bg-muted" : ""}`
                             : `cursor-pointer hover:bg-muted ${focusedIndex === index ? "ring-2 ring-primary bg-muted" : ""}`
                         }`}
                       >

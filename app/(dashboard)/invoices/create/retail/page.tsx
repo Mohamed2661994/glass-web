@@ -980,9 +980,10 @@ export default function CreateRetailInvoicePage() {
       return;
     }
 
-    // التحقق من الرصيد المتاح (للبيع فقط)
+    // التحقق من الرصيد المتاح (للبيع فقط) مع استثناء الأصناف المرتجع
     if (movementType === "sale") {
       const overStock = items.filter((item) => {
+        if (item.is_return) return false;
         const prod = products.find((p: any) => p.id === item.product_id);
         return prod && Number(item.quantity) > Number(prod.available_quantity);
       });
@@ -1182,36 +1183,24 @@ export default function CreateRetailInvoicePage() {
      Handle search keydown (Enter & arrows)
      ========================================================= */
 
-  // Find next available (in-stock) product index
+  // Find next product index (including out-of-stock items)
   const findNextAvailable = useCallback(
     (startIndex: number, direction: 1 | -1): number => {
-      let idx = startIndex + direction;
-      while (idx >= 0 && idx < filteredProducts.length) {
-        if (
-          movementType !== "sale" ||
-          Number(filteredProducts[idx].available_quantity) > 0
-        ) {
-          return idx;
-        }
-        idx += direction;
+      const nextIndex = startIndex + direction;
+      if (nextIndex >= 0 && nextIndex < filteredProducts.length) {
+        return nextIndex;
       }
       return -1;
     },
-    [filteredProducts, movementType],
+    [filteredProducts.length],
   );
 
   const handleSearchKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        // Find first available product (skip out-of-stock for sales)
-        const firstAvailable =
-          movementType === "sale"
-            ? filteredProducts.findIndex(
-                (p) => Number(p.available_quantity) > 0,
-              )
-            : 0;
-        if (firstAvailable !== -1 && filteredProducts.length > 0) {
+        const firstAvailable = filteredProducts.length > 0 ? 0 : -1;
+        if (firstAvailable !== -1) {
           setFocusedIndex(firstAvailable);
           setTimeout(() => {
             const firstItem = listRef.current?.querySelector(
@@ -1222,7 +1211,7 @@ export default function CreateRetailInvoicePage() {
         }
       }
     },
-    [filteredProducts, movementType],
+    [filteredProducts],
   );
 
   /* =========================================================
@@ -2760,14 +2749,12 @@ export default function CreateRetailInvoicePage() {
                       <div
                         key={product.id}
                         data-product-index={index}
-                        tabIndex={outOfStock ? -1 : 0}
-                        onClick={() => !outOfStock && addItem(product)}
-                        onKeyDown={(e) =>
-                          !outOfStock && handleListKeyDown(e, index)
-                        }
+                        tabIndex={0}
+                        onClick={() => addItem(product)}
+                        onKeyDown={(e) => handleListKeyDown(e, index)}
                         className={`p-3 rounded-lg border transition outline-none ${
                           outOfStock
-                            ? "opacity-50 cursor-not-allowed bg-muted/30"
+                            ? `opacity-50 bg-muted/30 cursor-pointer hover:bg-muted ${focusedIndex === index ? "ring-2 ring-primary bg-muted" : ""}`
                             : `cursor-pointer hover:bg-muted ${focusedIndex === index ? "ring-2 ring-primary bg-muted" : ""}`
                         }`}
                       >
