@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useCachedProducts } from "@/hooks/use-cached-products";
 import { highlightText } from "@/lib/highlight-text";
 import { multiWordMatch, multiWordScore } from "@/lib/utils";
+import api from "@/services/api";
 
 interface Props {
   open: boolean;
@@ -78,6 +79,11 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     return map;
   }, [otherBranchProducts]);
 
+  const [otherBranchVariantQtyMap, setOtherBranchVariantQtyMap] = useState<
+    Record<number, Record<number, number>>
+  >({});
+  const otherBranchQtyLoadingRef = useRef<Record<number, boolean>>({});
+
   const [refreshing, setRefreshing] = useState(false);
 
   // Force refresh every time the modal opens so data is always fresh
@@ -98,6 +104,49 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
       setRefreshing(false);
     }
   };
+
+  useEffect(() => {
+    if (!open) return;
+
+    const candidates = filteredProducts.slice(0, 30);
+    candidates.forEach((product) => {
+      const hasOtherVariants =
+        (otherBranchVariantsMap[product.id] || []).length > 1;
+      const hasCurrentVariants =
+        product.variant_stock && product.variant_stock.length > 1;
+
+      if (hasOtherVariants || !hasCurrentVariants) return;
+      if (otherBranchVariantQtyMap[product.id]) return;
+      if (otherBranchQtyLoadingRef.current[product.id]) return;
+
+      otherBranchQtyLoadingRef.current[product.id] = true;
+      api
+        .get("/stock/quantity-all", {
+          params: { product_id: product.id, branch_id: otherBranchId },
+        })
+        .then((res) => {
+          setOtherBranchVariantQtyMap((prev) => ({
+            ...prev,
+            [product.id]: res.data || {},
+          }));
+        })
+        .catch(() => {
+          setOtherBranchVariantQtyMap((prev) => ({
+            ...prev,
+            [product.id]: {},
+          }));
+        })
+        .finally(() => {
+          otherBranchQtyLoadingRef.current[product.id] = false;
+        });
+    });
+  }, [
+    open,
+    filteredProducts,
+    otherBranchId,
+    otherBranchVariantsMap,
+    otherBranchVariantQtyMap,
+  ]);
 
   /* =========================================================
      Filtered products
@@ -413,6 +462,8 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                     {/* Other branch balance - show detailed if variants exist */}
                     {(() => {
                       const otherVariants = otherBranchVariantsMap[product.id];
+                      const otherBranchVariantQty =
+                        otherBranchVariantQtyMap[product.id];
 
                       if (otherVariants && otherVariants.length > 1) {
                         if (branchId === 1) {
@@ -474,6 +525,136 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                             (retailGroups[retailPkg] || 0) +
                             (Number(vs.quantity) || 0);
                         });
+
+                        const retailEntries = Object.entries(retailGroups);
+                        if (retailEntries.length === 1) {
+                          const onlyQty = retailEntries[0]?.[1] ?? 0;
+                          return (
+                            <span
+                              className={
+                                onlyQty > 0
+                                  ? "text-blue-600 dark:text-blue-400 font-semibold"
+                                  : "text-red-500 font-semibold"
+                              }
+                            >
+                              رصيد القطاعي: {onlyQty}
+                            </span>
+                          );
+                        }
+
+                        return (
+                          <div className="flex flex-wrap gap-x-3 gap-y-1">
+                            <span className="text-muted-foreground">
+                              رصيد القطاعي:
+                            </span>
+                            {retailEntries.map(([pkg, qty]) => (
+                              <span
+                                key={pkg}
+                                className={
+                                  qty > 0
+                                    ? "text-blue-600 dark:text-blue-400 font-semibold"
+                                    : "text-red-500 font-semibold"
+                                }
+                              >
+                                {pkg}: {qty}
+                              </span>
+                            ))}
+                          </div>
+                        );
+                      }
+
+                      if (
+                        otherBranchVariantQty &&
+                        Object.keys(otherBranchVariantQty).length > 0
+                      ) {
+                        if (branchId === 1) {
+                          // Fallback: build wholesale packages from current variants
+                          const variantPkgMap = new Map<number, string>();
+                          product.variant_stock?.forEach(
+                            (vs: {
+                              variant_id: number;
+                              package_name: string;
+                            }) => {
+                              variantPkgMap.set(
+                                Number(vs.variant_id ?? 0),
+                                String(vs.package_name || "-"),
+                              );
+                            },
+                          );
+
+                          const wholesaleGroups: Record<string, number> = {};
+                          Object.entries(otherBranchVariantQty).forEach(
+                            ([variantId, qty]) => {
+                              const pkg =
+                                variantPkgMap.get(Number(variantId)) ||
+                                product.wholesale_package ||
+                                "-";
+                              wholesaleGroups[pkg] =
+                                (wholesaleGroups[pkg] || 0) +
+                                (Number(qty) || 0);
+                            },
+                          );
+
+                          const wholesaleEntries = Object.entries(wholesaleGroups);
+                          if (wholesaleEntries.length === 1) {
+                            const onlyQty = wholesaleEntries[0]?.[1] ?? 0;
+                            return (
+                              <span
+                                className={
+                                  onlyQty > 0
+                                    ? "text-orange-600 dark:text-orange-400 font-semibold"
+                                    : "text-red-500 font-semibold"
+                                }
+                              >
+                                رصيد الجملة: {onlyQty}
+                              </span>
+                            );
+                          }
+
+                          return (
+                            <div className="flex flex-wrap gap-x-3 gap-y-1">
+                              <span className="text-muted-foreground">
+                                رصيد الجملة:
+                              </span>
+                              {wholesaleEntries.map(([pkg, qty]) => (
+                                <span
+                                  key={pkg}
+                                  className={
+                                    qty > 0
+                                      ? "text-orange-600 dark:text-orange-400 font-semibold"
+                                      : "text-red-500 font-semibold"
+                                  }
+                                >
+                                  {pkg}: {qty}
+                                </span>
+                              ))}
+                            </div>
+                          );
+                        }
+
+                        // Fallback: build retail packages from current variants
+                        const retailGroups: Record<string, number> = {};
+                        const variantRetailMap = new Map<number, string>();
+                        product.variant_stock?.forEach(
+                          (vs: { variant_id: number; retail_package?: string }) => {
+                            variantRetailMap.set(
+                              Number(vs.variant_id ?? 0),
+                              String(vs.retail_package || product.retail_package || "-"),
+                            );
+                          },
+                        );
+
+                        Object.entries(otherBranchVariantQty).forEach(
+                          ([variantId, qty]) => {
+                            const retailPkg =
+                              variantRetailMap.get(Number(variantId)) ||
+                              product.retail_package ||
+                              "-";
+                            retailGroups[retailPkg] =
+                              (retailGroups[retailPkg] || 0) +
+                              (Number(qty) || 0);
+                          },
+                        );
 
                         const retailEntries = Object.entries(retailGroups);
                         if (retailEntries.length === 1) {
