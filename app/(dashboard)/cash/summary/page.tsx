@@ -141,7 +141,8 @@ export default function CashSummaryPage() {
           }),
         );
         const visibleCashIn = mappedCashIn.filter(
-          (item) => !String(item.notes || "").includes(DISCOUNT_DIFF_MARKER),
+          (item: CashInItem) =>
+            !String(item.notes || "").includes(DISCOUNT_DIFF_MARKER),
         );
 
         setCashIn(visibleCashIn);
