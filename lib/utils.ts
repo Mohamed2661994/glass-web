@@ -17,6 +17,12 @@ export function toEnDigits(s: string): string {
     .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
 }
 
+/** Normalize number input: convert Hindi/Arabic digits to English digits */
+export function normalizeNumberInput(value: string): string {
+  if (!value) return "";
+  return toEnDigits(value);
+}
+
 /** Remove all whitespace from a string (for space-insensitive search) */
 export function noSpaces(s: string): string {
   return s.replace(/\s/g, "");
