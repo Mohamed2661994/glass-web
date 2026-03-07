@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -30,6 +31,11 @@ import { Pencil, Trash2 } from "lucide-react";
 import api from "@/services/api";
 import { useRouter } from "next/navigation";
 import { useRealtime } from "@/hooks/use-realtime";
+import {
+  MobileTableCard,
+  MobileTableWrapper,
+} from "@/components/mobile-table-card";
+import { ResponsiveTableContainer } from "@/components/responsive-table-container";
 
 const DISCOUNT_DIFF_MARKER = "{{discount_diff}}";
 
@@ -167,76 +173,127 @@ export default function DiscountDiffsPage() {
 
       <Card>
         <CardContent className="p-0 overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-right">#</TableHead>
-                <TableHead className="text-right">اسم العميل</TableHead>
-                <TableHead className="text-right">قيمة فرق الخصم</TableHead>
-                <TableHead className="text-right">التاريخ</TableHead>
-                <TableHead className="text-right">إجراء</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    {Array.from({ length: 5 }).map((__, j) => (
-                      <TableCell key={j}>
-                        <Skeleton className="h-4 w-full" />
+          <ResponsiveTableContainer
+            desktop={
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right">#</TableHead>
+                    <TableHead className="text-right">اسم العميل</TableHead>
+                    <TableHead className="text-right">قيمة فرق الخصم</TableHead>
+                    <TableHead className="text-right">التاريخ</TableHead>
+                    <TableHead className="text-right">إجراء</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <TableRow key={i}>
+                        {Array.from({ length: 5 }).map((__, j) => (
+                          <TableCell key={j}>
+                            <Skeleton className="h-4 w-full" />
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : filtered.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={5}
+                        className="text-center py-8 text-muted-foreground"
+                      >
+                        لا يوجد فروقات خصم
                       </TableCell>
-                    ))}
-                  </TableRow>
-                ))
+                    </TableRow>
+                  ) : (
+                    filtered.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>{item.id}</TableCell>
+                        <TableCell className="font-semibold">
+                          {item.customer_name || "-"}
+                        </TableCell>
+                        <TableCell className="text-amber-600 font-bold">
+                          {Math.round(Number(item.amount || 0)).toLocaleString()} ج
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {formatDate(item.transaction_date)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() =>
+                                router.push(`/cash/in/edit/${item.id}`)
+                              }
+                            >
+                              <Pencil className="h-4 w-4 text-blue-500" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => setDeleteItem(item)}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            }
+            mobile={
+              loading ? (
+                <div className="space-y-3 p-4">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Card key={i} className="p-4 space-y-2">
+                      <Skeleton className="h-5 w-1/2" />
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-4/5" />
+                    </Card>
+                  ))}
+                </div>
               ) : filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="text-center py-8 text-muted-foreground"
-                  >
-                    لا يوجد فروقات خصم
-                  </TableCell>
-                </TableRow>
+                <p className="text-center py-8 text-muted-foreground">
+                  لا يوجد فروقات خصم
+                </p>
               ) : (
-                filtered.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.id}</TableCell>
-                    <TableCell className="font-semibold">
-                      {item.customer_name || "-"}
-                    </TableCell>
-                    <TableCell className="text-amber-600 font-bold">
-                      {Math.round(Number(item.amount || 0)).toLocaleString()} ج
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      {formatDate(item.transaction_date)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() =>
-                            router.push(`/cash/in/edit/${item.id}`)
-                          }
-                        >
-                          <Pencil className="h-4 w-4 text-blue-500" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => setDeleteItem(item)}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                <MobileTableWrapper className="p-4">
+                  {filtered.map((item) => (
+                    <MobileTableCard
+                      key={item.id}
+                      fields={[
+                        { label: "#", value: item.id },
+                        {
+                          label: "اسم العميل",
+                          value: item.customer_name || "-",
+                        },
+                        {
+                          label: "قيمة فرق الخصم",
+                          value: `${Math.round(Number(item.amount || 0)).toLocaleString()} ج`,
+                          color: "warning",
+                        },
+                        {
+                          label: "التاريخ",
+                          value: formatDate(item.transaction_date),
+                        },
+                        {
+                          label: "النوع",
+                          value: <Badge variant="secondary">فرق خصم</Badge>,
+                        },
+                      ]}
+                      onEdit={() => router.push(`/cash/in/edit/${item.id}`)}
+                      onDelete={() => setDeleteItem(item)}
+                    />
+                  ))}
+                </MobileTableWrapper>
+              )
+            }
+          />
         </CardContent>
       </Card>
 

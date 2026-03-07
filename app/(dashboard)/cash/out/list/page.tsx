@@ -30,6 +30,11 @@ import { toast } from "sonner";
 import { Pencil, Trash2 } from "lucide-react";
 import api from "@/services/api";
 import { useRouter } from "next/navigation";
+import {
+  MobileTableCard,
+  MobileTableWrapper,
+} from "@/components/mobile-table-card";
+import { ResponsiveTableContainer } from "@/components/responsive-table-container";
 
 interface CashOutItem {
   id: number;
@@ -157,98 +162,165 @@ export default function CashOutListPage() {
       {/* Table */}
       <Card>
         <CardContent className="p-0 overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-right">رقم الإذن</TableHead>
-                <TableHead className="text-right">الاسم</TableHead>
-                <TableHead className="text-right">النوع</TableHead>
-                <TableHead className="text-right">المبلغ</TableHead>
-                <TableHead className="text-right">التاريخ</TableHead>
-                <TableHead className="text-right">ملاحظات</TableHead>
-                <TableHead className="text-right">إجراء</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    {Array.from({ length: 7 }).map((_, j) => (
-                      <TableCell key={j}>
-                        <Skeleton className="h-4 w-full" />
-                      </TableCell>
-                    ))}
+          <ResponsiveTableContainer
+            desktop={
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right">رقم الإذن</TableHead>
+                    <TableHead className="text-right">الاسم</TableHead>
+                    <TableHead className="text-right">النوع</TableHead>
+                    <TableHead className="text-right">المبلغ</TableHead>
+                    <TableHead className="text-right">التاريخ</TableHead>
+                    <TableHead className="text-right">ملاحظات</TableHead>
+                    <TableHead className="text-right">إجراء</TableHead>
                   </TableRow>
-                ))
-              ) : filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="text-center py-8 text-muted-foreground"
-                  >
-                    لا يوجد منصرفات
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-mono text-xs">
-                      {item.permission_number}
-                    </TableCell>
-                    <TableCell className="font-semibold">{item.name}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          item.entry_type === "expense"
-                            ? "destructive"
-                            : item.entry_type === "supplier_payment"
-                              ? "secondary"
-                              : "default"
-                        }
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <TableRow key={i}>
+                        {Array.from({ length: 7 }).map((_, j) => (
+                          <TableCell key={j}>
+                            <Skeleton className="h-4 w-full" />
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : filtered.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={7}
+                        className="text-center py-8 text-muted-foreground"
                       >
-                        {item.entry_type === "expense"
-                          ? "مصروفات"
-                          : item.entry_type === "supplier_payment"
-                            ? "دفعة مورد"
-                            : "مشتريات"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-red-500 font-bold">
-                      {Math.round(item.amount).toLocaleString()} ج
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      {formatDate(item.transaction_date)}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">
-                      {item.notes || "—"}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() =>
-                            router.push(`/cash/out?edit=${item.id}`)
-                          }
-                        >
-                          <Pencil className="h-4 w-4 text-blue-500" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => setDeleteItem(item)}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                        لا يوجد منصرفات
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filtered.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-mono text-xs">
+                          {item.permission_number}
+                        </TableCell>
+                        <TableCell className="font-semibold">
+                          {item.name}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              item.entry_type === "expense"
+                                ? "destructive"
+                                : item.entry_type === "supplier_payment"
+                                  ? "secondary"
+                                  : "default"
+                            }
+                          >
+                            {item.entry_type === "expense"
+                              ? "مصروفات"
+                              : item.entry_type === "supplier_payment"
+                                ? "دفعة مورد"
+                                : "مشتريات"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-red-500 font-bold">
+                          {Math.round(item.amount).toLocaleString()} ج
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {formatDate(item.transaction_date)}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">
+                          {item.notes || "—"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() =>
+                                router.push(`/cash/out?edit=${item.id}`)
+                              }
+                            >
+                              <Pencil className="h-4 w-4 text-blue-500" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => setDeleteItem(item)}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            }
+            mobile={
+              loading ? (
+                <div className="space-y-3 p-4">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Card key={i} className="p-4 space-y-2">
+                      <Skeleton className="h-5 w-1/2" />
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-4/5" />
+                    </Card>
+                  ))}
+                </div>
+              ) : filtered.length === 0 ? (
+                <p className="text-center py-8 text-muted-foreground">
+                  لا يوجد منصرفات
+                </p>
+              ) : (
+                <MobileTableWrapper className="p-4">
+                  {filtered.map((item) => (
+                    <MobileTableCard
+                      key={item.id}
+                      fields={[
+                        { label: "رقم الإذن", value: item.permission_number },
+                        { label: "الاسم", value: item.name },
+                        {
+                          label: "النوع",
+                          value: (
+                            <Badge
+                              variant={
+                                item.entry_type === "expense"
+                                  ? "destructive"
+                                  : item.entry_type === "supplier_payment"
+                                    ? "secondary"
+                                    : "default"
+                              }
+                            >
+                              {item.entry_type === "expense"
+                                ? "مصروفات"
+                                : item.entry_type === "supplier_payment"
+                                  ? "دفعة مورد"
+                                  : "مشتريات"}
+                            </Badge>
+                          ),
+                        },
+                        {
+                          label: "المبلغ",
+                          value: `${Math.round(item.amount).toLocaleString()} ج`,
+                          color: "danger",
+                        },
+                        {
+                          label: "التاريخ",
+                          value: formatDate(item.transaction_date),
+                        },
+                        { label: "ملاحظات", value: item.notes || "—" },
+                      ]}
+                      onEdit={() => router.push(`/cash/out?edit=${item.id}`)}
+                      onDelete={() => setDeleteItem(item)}
+                    />
+                  ))}
+                </MobileTableWrapper>
+              )
+            }
+          />
         </CardContent>
       </Card>
 

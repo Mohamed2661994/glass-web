@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Trash2, Edit2 } from 'lucide-react';
+import React from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Trash2, Edit2 } from "lucide-react";
 
 interface DataField {
   label: string;
   value: React.ReactNode;
   className?: string;
-  color?: 'default' | 'success' | 'warning' | 'danger' | 'info';
+  color?: "default" | "success" | "warning" | "danger" | "info";
 }
 
 interface MobileTableCardProps {
@@ -28,7 +28,7 @@ export function MobileTableCard({
   fields,
   onEdit,
   onDelete,
-  className = '',
+  className = "",
 }: MobileTableCardProps) {
   return (
     <Card className={`p-4 space-y-3 md:hidden ${className}`}>
@@ -43,24 +43,29 @@ export function MobileTableCard({
       {/* Data fields */}
       <div className="space-y-2">
         {fields.slice(1).map((field, index) => (
-          <div key={index} className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground font-medium">{field.label}</span>
+          <div
+            key={index}
+            className="flex items-center justify-between text-sm"
+          >
+            <span className="text-muted-foreground font-medium">
+              {field.label}
+            </span>
             <div className={field.className}>
-              {typeof field.value === 'string' && field.color ? (
+              {typeof field.value === "string" && field.color ? (
                 <Badge
                   variant={
-                    field.color === 'success'
-                      ? 'default'
-                      : field.color === 'danger'
-                        ? 'destructive'
-                        : 'secondary'
+                    field.color === "success"
+                      ? "default"
+                      : field.color === "danger"
+                        ? "destructive"
+                        : "secondary"
                   }
                   className={
-                    field.color === 'success'
-                      ? 'bg-green-500/10 text-green-700 dark:text-green-400'
-                      : field.color === 'danger'
-                        ? 'bg-red-500/10 text-red-700 dark:text-red-400'
-                        : ''
+                    field.color === "success"
+                      ? "bg-green-500/10 text-green-700 dark:text-green-400"
+                      : field.color === "danger"
+                        ? "bg-red-500/10 text-red-700 dark:text-red-400"
+                        : ""
                   }
                 >
                   {field.value}
@@ -109,14 +114,12 @@ export function MobileTableCard({
  */
 export function MobileTableWrapper({
   children,
-  className = '',
+  className = "",
 }: {
   children: React.ReactNode;
   className?: string;
 }) {
   return (
-    <div className={`space-y-3 md:space-y-0 ${className}`}>
-      {children}
-    </div>
+    <div className={`space-y-3 md:space-y-0 ${className}`}>{children}</div>
   );
 }

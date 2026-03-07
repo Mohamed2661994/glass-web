@@ -14,18 +14,18 @@ export interface WhatsAppMessage {
  */
 export function formatWhatsAppPhone(phone: string): string {
   if (!phone) return "";
-  
+
   let cleaned = phone.replace(/\D/g, ""); // Remove non-digits
-  
+
   // Handle Egyptian numbers
   if (cleaned.startsWith("0")) {
     cleaned = "20" + cleaned.substring(1); // 01234567890 → 201234567890
   }
-  
+
   if (!cleaned.startsWith("+")) {
     cleaned = "+" + cleaned;
   }
-  
+
   return cleaned;
 }
 
@@ -47,7 +47,7 @@ export function generateInvoiceMessage(
 ${invoiceUrl ? `الرابط: ${invoiceUrl}` : ""}
 
 شكراً لتعاملك معنا!`;
-  
+
   return message;
 }
 
@@ -60,15 +60,15 @@ export function openWhatsAppChat(phone: string, message?: string): void {
     alert("رقم التليفون مفقود");
     return;
   }
-  
+
   const formattedPhone = formatWhatsAppPhone(phone);
   const baseUrl = "https://wa.me/";
   let url = `${baseUrl}${formattedPhone.replace("+", "")}`;
-  
+
   if (message) {
     url += `?text=${encodeURIComponent(message)}`;
   }
-  
+
   // Open in new tab
   window.open(url, "_blank", "noopener,noreferrer");
 }
@@ -84,6 +84,11 @@ export function sendWhatsAppInvoice(
   total: number,
   invoiceUrl?: string,
 ): void {
-  const message = generateInvoiceMessage(customerName, invoiceId, total, invoiceUrl);
+  const message = generateInvoiceMessage(
+    customerName,
+    invoiceId,
+    total,
+    invoiceUrl,
+  );
   openWhatsAppChat(phone, message);
 }

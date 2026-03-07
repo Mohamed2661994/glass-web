@@ -425,7 +425,15 @@ function InvoicePrintPage() {
 
   const getDayName = (dateStr?: string) => {
     if (!dateStr) return "";
-    const days = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+    const days = [
+      "الأحد",
+      "الاثنين",
+      "الثلاثاء",
+      "الأربعاء",
+      "الخميس",
+      "الجمعة",
+      "السبت",
+    ];
     const date = new Date(dateStr);
     return days[date.getDay()] || "";
   };
