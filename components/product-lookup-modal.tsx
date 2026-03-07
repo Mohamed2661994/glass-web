@@ -445,19 +445,50 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
                   {/* Row 3: Branch Balances */}
                   <div className="text-xs mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
-                    {/* Current branch balance always comes from available_quantity */}
-                    <span
-                      className={
-                        Number(product.available_quantity) > 0
-                          ? branchId === 1
-                            ? "text-blue-600 dark:text-blue-400 font-semibold"
-                            : "text-orange-600 dark:text-orange-400 font-semibold"
-                          : "text-red-500 font-semibold"
-                      }
-                    >
-                      رصيد {branchId === 1 ? "القطاعي" : "الجملة"}:{" "}
-                      {product.available_quantity}
-                    </span>
+                    {/* Current branch balance */}
+                    {branchId === 2 &&
+                    product.variant_stock &&
+                    product.variant_stock.length > 1 ? (
+                      <div className="flex flex-wrap gap-x-3 gap-y-1">
+                        <span className="text-muted-foreground">
+                          رصيد الجملة:
+                        </span>
+                        {product.variant_stock.map(
+                          (
+                            vs: {
+                              variant_id: number;
+                              package_name: string;
+                              quantity: number;
+                            },
+                            idx: number,
+                          ) => (
+                            <span
+                              key={vs.variant_id ?? idx}
+                              className={
+                                Number(vs.quantity) > 0
+                                  ? "text-orange-600 dark:text-orange-400 font-semibold"
+                                  : "text-red-500 font-semibold"
+                              }
+                            >
+                              {vs.package_name}: {vs.quantity}
+                            </span>
+                          ),
+                        )}
+                      </div>
+                    ) : (
+                      <span
+                        className={
+                          Number(product.available_quantity) > 0
+                            ? branchId === 1
+                              ? "text-blue-600 dark:text-blue-400 font-semibold"
+                              : "text-orange-600 dark:text-orange-400 font-semibold"
+                            : "text-red-500 font-semibold"
+                        }
+                      >
+                        رصيد {branchId === 1 ? "القطاعي" : "الجملة"}: {" "}
+                        {product.available_quantity}
+                      </span>
+                    )}
 
                     {/* Other branch balance - show detailed if variants exist */}
                     {(() => {
@@ -476,7 +507,8 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                               (Number(vs.quantity) || 0);
                           });
 
-                          const wholesaleEntries = Object.entries(wholesaleGroups);
+                          const wholesaleEntries =
+                            Object.entries(wholesaleGroups);
                           if (wholesaleEntries.length === 1) {
                             const onlyQty = wholesaleEntries[0]?.[1] ?? 0;
                             return (
@@ -497,20 +529,18 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                               <span className="text-muted-foreground">
                                 رصيد الجملة:
                               </span>
-                              {wholesaleEntries.map(
-                                ([pkg, qty]) => (
-                                  <span
-                                    key={pkg}
-                                    className={
-                                      qty > 0
-                                        ? "text-orange-600 dark:text-orange-400 font-semibold"
-                                        : "text-red-500 font-semibold"
-                                    }
-                                  >
-                                    {pkg}: {qty}
-                                  </span>
-                                ),
-                              )}
+                              {wholesaleEntries.map(([pkg, qty]) => (
+                                <span
+                                  key={pkg}
+                                  className={
+                                    qty > 0
+                                      ? "text-orange-600 dark:text-orange-400 font-semibold"
+                                      : "text-red-500 font-semibold"
+                                  }
+                                >
+                                  {pkg}: {qty}
+                                </span>
+                              ))}
                             </div>
                           );
                         }
@@ -595,7 +625,8 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                             },
                           );
 
-                          const wholesaleEntries = Object.entries(wholesaleGroups);
+                          const wholesaleEntries =
+                            Object.entries(wholesaleGroups);
                           if (wholesaleEntries.length === 1) {
                             const onlyQty = wholesaleEntries[0]?.[1] ?? 0;
                             return (
@@ -636,10 +667,17 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                         const retailGroups: Record<string, number> = {};
                         const variantRetailMap = new Map<number, string>();
                         product.variant_stock?.forEach(
-                          (vs: { variant_id: number; retail_package?: string }) => {
+                          (vs: {
+                            variant_id: number;
+                            retail_package?: string;
+                          }) => {
                             variantRetailMap.set(
                               Number(vs.variant_id ?? 0),
-                              String(vs.retail_package || product.retail_package || "-"),
+                              String(
+                                vs.retail_package ||
+                                  product.retail_package ||
+                                  "-",
+                              ),
                             );
                           },
                         );
