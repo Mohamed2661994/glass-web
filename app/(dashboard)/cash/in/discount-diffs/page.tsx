@@ -68,7 +68,7 @@ export default function DiscountDiffsPage() {
     }
   }, []);
 
-  useRealtime("data:cash", fetchData);
+  useRealtime(["data:cash", "data:cash-in"], fetchData);
 
   useEffect(() => {
     fetchData();
@@ -216,7 +216,9 @@ export default function DiscountDiffsPage() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          onClick={() => router.push(`/cash/in/edit/${item.id}`)}
+                          onClick={() =>
+                            router.push(`/cash/in/edit/${item.id}`)
+                          }
                         >
                           <Pencil className="h-4 w-4 text-blue-500" />
                         </Button>

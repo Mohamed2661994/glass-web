@@ -94,7 +94,7 @@ export default function CustomerDebtDetailsPage() {
     fetchDetails();
   }, [fetchDetails]);
 
-  useRealtime(["data:invoices", "data:cash"], fetchDetails);
+  useRealtime(["data:invoices", "data:cash", "data:cash-in"], fetchDetails);
 
   /* ========== Totals ========== */
   const totalAll = useMemo(

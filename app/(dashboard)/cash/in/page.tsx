@@ -321,7 +321,8 @@ function CashInPage() {
                 ? "اسم العميل"
                 : "الاسم"}
             </Label>
-            {entryType === "customer_payment" || entryType === "discount_diff" ? (
+            {entryType === "customer_payment" ||
+            entryType === "discount_diff" ? (
               <div className="relative mt-2" ref={dropdownRef}>
                 <Input
                   value={sourceName}
@@ -460,7 +461,8 @@ function CashInPage() {
           </div>
 
           {/* المديونية والمتبقي */}
-          {(entryType === "customer_payment" || entryType === "discount_diff") &&
+          {(entryType === "customer_payment" ||
+            entryType === "discount_diff") &&
             customerDebt !== null &&
             customerDebt > 0 && (
               <Card className="border-dashed bg-muted/30">
@@ -488,13 +490,15 @@ function CashInPage() {
                 </CardContent>
               </Card>
             )}
-          {(entryType === "customer_payment" || entryType === "discount_diff") &&
+          {(entryType === "customer_payment" ||
+            entryType === "discount_diff") &&
             debtLoading && (
-            <p className="text-xs text-muted-foreground text-center">
-              جاري تحميل المديونية...
-            </p>
-          )}
-          {(entryType === "customer_payment" || entryType === "discount_diff") &&
+              <p className="text-xs text-muted-foreground text-center">
+                جاري تحميل المديونية...
+              </p>
+            )}
+          {(entryType === "customer_payment" ||
+            entryType === "discount_diff") &&
             customerDebt !== null &&
             customerDebt === 0 &&
             sourceName.trim() && (

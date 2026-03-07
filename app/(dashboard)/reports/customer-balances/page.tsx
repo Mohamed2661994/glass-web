@@ -82,7 +82,7 @@ export default function CustomerBalancesPage() {
     return () => clearTimeout(timer);
   }, [fetchReport]);
 
-  useRealtime(["data:invoices", "data:cash"], fetchReport);
+  useRealtime(["data:invoices", "data:cash", "data:cash-in"], fetchReport);
 
   /* ========== Totals ========== */
   const totalBalance = useMemo(

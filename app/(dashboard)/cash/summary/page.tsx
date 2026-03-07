@@ -115,7 +115,7 @@ export default function CashSummaryPage() {
   const [printOptionsOpen, setPrintOptionsOpen] = useState(false);
   const [cashRefreshKey, setCashRefreshKey] = useState(0);
 
-  useRealtime("data:cash", () => setCashRefreshKey((k) => k + 1), 1000);
+  useRealtime(["data:cash", "data:cash-in"], () => setCashRefreshKey((k) => k + 1), 1000);
 
   const today = formatLocalDate(new Date());
   const [fromDate, setFromDate] = useState(today);

@@ -80,7 +80,7 @@ export default function CashInListPage() {
     }
   }, []);
 
-  useRealtime("data:cash", fetchData);
+  useRealtime(["data:cash", "data:cash-in"], fetchData);
 
   useEffect(() => {
     fetchData();

@@ -485,7 +485,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                             : "text-red-500 font-semibold"
                         }
                       >
-                        رصيد {branchId === 1 ? "القطاعي" : "الجملة"}: {" "}
+                        رصيد {branchId === 1 ? "القطاعي" : "الجملة"}:{" "}
                         {product.available_quantity}
                       </span>
                     )}
