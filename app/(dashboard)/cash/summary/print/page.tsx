@@ -322,10 +322,10 @@ function CashSummaryPrintInner() {
               <span>إجمالي المنصرف : </span>
               <span className="font-bold">{formatMoney(summary.totalOut)}</span>
             </div>
-            <div>
-              <span>الرصيد : </span>
-              <span className="font-bold">{formatMoney(summary.balance)}</span>
-            </div>
+          </div>
+          <div className={`text-center mt-2 ${fontStyles.summary}`}>
+            <span>الرصيد : </span>
+            <span className="font-bold">{formatMoney(summary.balance)}</span>
           </div>
         </div>
 
