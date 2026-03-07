@@ -139,11 +139,9 @@ export default function EditCashInPage() {
           source_type: sourceType,
         };
         if (sourceType === "manual") {
-          payload.amount = Number(amount);
+          payload.amount = Number(amount) || 0;
         } else {
-          payload.paid_amount = Number(paidAmount);
-          payload.amount = Number(amount);
-          payload.remaining_amount = Number(amount) - Number(paidAmount);
+          payload.amount = Number(paidAmount || amount) || 0;
         }
         // Backend doesn't support PUT → DELETE then re-create
         await api.delete(`/cash-in/${id}`);
@@ -151,8 +149,8 @@ export default function EditCashInPage() {
       }
       toast.success("تم حفظ التعديل");
       router.back();
-    } catch {
-      toast.error("حصل خطأ أثناء الحفظ");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "حصل خطأ أثناء الحفظ");
     } finally {
       setSaving(false);
     }
@@ -424,7 +422,21 @@ export default function EditCashInPage() {
               إلغاء
             </Button>
             <Button
-              onClick={submitEdit}
+              onClick={() => {
+                if (!sourceName.trim()) {
+                  toast.error("برجاء إدخال الاسم");
+                  return;
+                }
+                const baseAmount =
+                  sourceType === "customer_payment"
+                    ? Number(paidAmount || amount) || 0
+                    : Number(amount) || 0;
+                if (baseAmount <= 0) {
+                  toast.error("برجاء إدخال مبلغ صحيح");
+                  return;
+                }
+                submitEdit();
+              }}
               disabled={saving}
               className="bg-green-600 hover:bg-green-700"
             >
