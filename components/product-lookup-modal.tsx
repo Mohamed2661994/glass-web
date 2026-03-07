@@ -314,13 +314,15 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                   </div>
 
                   {/* Row 1: Retail details + Manufacturer */}
-                  <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-4 gap-y-1">
-                    <span>
+                  <div className="text-xs mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                    <span className="text-muted-foreground">
                       المصنع:{" "}
                       {highlightText(product.manufacturer || "-", search)}
                     </span>
-                    <span>العبوة: {product.retail_package || "-"}</span>
-                    <span className="font-semibold text-foreground">
+                    <span className="text-blue-600 dark:text-blue-400">
+                      العبوة: {product.retail_package || "-"}
+                    </span>
+                    <span className="font-semibold text-blue-700 dark:text-blue-300">
                       السعر:{" "}
                       {invoiceType === "retail"
                         ? product.price
@@ -335,7 +337,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
                   {/* Row 2: Wholesale details */}
                   {product.wholesale_package && (
-                    <div className="text-xs mt-1 flex flex-wrap gap-x-4 gap-y-1 text-blue-600 dark:text-blue-400">
+                    <div className="text-xs mt-1 flex flex-wrap gap-x-4 gap-y-1 text-orange-600 dark:text-orange-400">
                       {/* Show prices per variant if multiple variants with different prices */}
                       {product.variant_stock &&
                       product.variant_stock.length > 1 ? (
@@ -416,7 +418,9 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                       <span
                         className={
                           Number(product.available_quantity) > 0
-                            ? "text-green-600 dark:text-green-400 font-semibold"
+                            ? branchId === 1
+                              ? "text-blue-600 dark:text-blue-400 font-semibold"
+                              : "text-orange-600 dark:text-orange-400 font-semibold"
                             : "text-red-500 font-semibold"
                         }
                       >
@@ -427,7 +431,9 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                     <span
                       className={
                         (otherBranchQtyMap[product.id] || 0) > 0
-                          ? "text-green-600 dark:text-green-400 font-semibold"
+                          ? branchId === 1
+                            ? "text-orange-600 dark:text-orange-400 font-semibold"
+                            : "text-blue-600 dark:text-blue-400 font-semibold"
                           : "text-red-500 font-semibold"
                       }
                     >
