@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import api from "@/services/api";
+import { noSpaces, normalizeArabic } from "@/lib/utils";
 
 /* ========== Types ========== */
 type Invoice = {
@@ -29,23 +30,60 @@ function CustomerStatementPrintInner() {
   const warehouseId = searchParams.get("warehouse_id");
 
   const [data, setData] = useState<Invoice[]>([]);
+  const [cashInDateById, setCashInDateById] = useState<
+    Record<string, string>
+  >({});
+  const [cashInDateByNumber, setCashInDateByNumber] = useState<
+    Record<string, string>
+  >({});
   const [loading, setLoading] = useState(true);
 
   /* ========== Fetch ========== */
   const fetchDetails = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get("/reports/customer-debt-details", {
-        params: {
-          customer_name: customerName,
-          from: from || undefined,
-          to: to || undefined,
-          warehouse_id: warehouseId || undefined,
-        },
+      const [detailsRes, cashInRes] = await Promise.all([
+        api.get("/reports/customer-debt-details", {
+          params: {
+            customer_name: customerName,
+            from: from || undefined,
+            to: to || undefined,
+            warehouse_id: warehouseId || undefined,
+          },
+        }),
+        api.get("/cash-in", {
+          params: {
+            branch_id: warehouseId || undefined,
+            limit: 100000,
+          },
+        }),
+      ]);
+      setData(detailsRes.data || []);
+      const cashInRows = cashInRes.data?.data || cashInRes.data || [];
+      const byId: Record<string, string> = {};
+      const byNumber: Record<string, string> = {};
+      const targetName = normalizeArabic(
+        noSpaces(customerName || "").toLowerCase(),
+      );
+      cashInRows.forEach((row: any) => {
+        if (!row || !row.transaction_date) return;
+        const rowName = normalizeArabic(
+          noSpaces(row.customer_name || "").toLowerCase(),
+        );
+        if (rowName !== targetName) return;
+        if (row.id != null) {
+          byId[String(row.id)] = row.transaction_date;
+        }
+        if (row.cash_in_number != null) {
+          byNumber[String(row.cash_in_number)] = row.transaction_date;
+        }
       });
-      setData(res.data || []);
+      setCashInDateById(byId);
+      setCashInDateByNumber(byNumber);
     } catch {
       setData([]);
+      setCashInDateById({});
+      setCashInDateByNumber({});
     } finally {
       setLoading(false);
     }
@@ -104,6 +142,28 @@ function CustomerStatementPrintInner() {
     }
     return balances;
   }, [data]);
+
+  const getRowDate = useCallback(
+    (row: Invoice) => {
+      if (row.record_type === "invoice") return row.invoice_date;
+      const key = String(row.invoice_id);
+      return (
+        cashInDateById[key] ||
+        cashInDateByNumber[key] ||
+        (row as any).transaction_date ||
+        (row as any).record_date ||
+        row.invoice_date
+      );
+    },
+    [cashInDateById, cashInDateByNumber],
+  );
+
+  const formatDateOnly = (value?: string) => {
+    if (!value) return "—";
+    const d = value.substring(0, 10).split("-");
+    if (d.length !== 3) return value;
+    return `${d[2]}/${d[1]}/${d[0]}`;
+  };
 
   const dateRange =
     from || to
@@ -195,7 +255,7 @@ function CustomerStatementPrintInner() {
                   </td>
                   <td style={tdStyle}>{inv.invoice_id}</td>
                   <td style={tdStyle}>
-                    {new Date(inv.invoice_date).toLocaleDateString("ar-EG")}
+                    {formatDateOnly(getRowDate(inv))}
                   </td>
                   <td style={tdStyle}>
                     {runningBalances[idx] === 0

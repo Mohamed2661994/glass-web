@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import api from "@/services/api";
 import { useAuth } from "@/app/context/auth-context";
 import { PageContainer } from "@/components/layout/page-container";
+import { noSpaces, normalizeArabic } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,12 @@ export default function CustomerDebtDetailsPage() {
   const customerName = decodeURIComponent(params.name as string);
 
   const [data, setData] = useState<Invoice[]>([]);
+  const [cashInDateById, setCashInDateById] = useState<
+    Record<string, string>
+  >({});
+  const [cashInDateByNumber, setCashInDateByNumber] = useState<
+    Record<string, string>
+  >({});
   const [loading, setLoading] = useState(true);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -74,17 +81,48 @@ export default function CustomerDebtDetailsPage() {
   const fetchDetails = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get("/reports/customer-debt-details", {
-        params: {
-          customer_name: customerName,
-          from: fromDate || undefined,
-          to: toDate || undefined,
-          warehouse_id: user?.branch_id || undefined,
-        },
+      const [detailsRes, cashInRes] = await Promise.all([
+        api.get("/reports/customer-debt-details", {
+          params: {
+            customer_name: customerName,
+            from: fromDate || undefined,
+            to: toDate || undefined,
+            warehouse_id: user?.branch_id || undefined,
+          },
+        }),
+        api.get("/cash-in", {
+          params: {
+            branch_id: user?.branch_id || undefined,
+            limit: 100000,
+          },
+        }),
+      ]);
+      setData(detailsRes.data || []);
+      const cashInRows = cashInRes.data?.data || cashInRes.data || [];
+      const byId: Record<string, string> = {};
+      const byNumber: Record<string, string> = {};
+      const targetName = normalizeArabic(
+        noSpaces(customerName || "").toLowerCase(),
+      );
+      cashInRows.forEach((row: any) => {
+        if (!row || !row.transaction_date) return;
+        const rowName = normalizeArabic(
+          noSpaces(row.customer_name || "").toLowerCase(),
+        );
+        if (rowName !== targetName) return;
+        if (row.id != null) {
+          byId[String(row.id)] = row.transaction_date;
+        }
+        if (row.cash_in_number != null) {
+          byNumber[String(row.cash_in_number)] = row.transaction_date;
+        }
       });
-      setData(res.data || []);
+      setCashInDateById(byId);
+      setCashInDateByNumber(byNumber);
     } catch {
       setData([]);
+      setCashInDateById({});
+      setCashInDateByNumber({});
     } finally {
       setLoading(false);
     }
@@ -144,6 +182,28 @@ export default function CustomerDebtDetailsPage() {
     }
     return balances;
   }, [data, openingBalance]);
+
+  const getRowDate = useCallback(
+    (row: Invoice) => {
+      if (row.record_type === "invoice") return row.invoice_date;
+      const key = String(row.invoice_id);
+      return (
+        cashInDateById[key] ||
+        cashInDateByNumber[key] ||
+        (row as any).transaction_date ||
+        (row as any).record_date ||
+        row.invoice_date
+      );
+    },
+    [cashInDateById, cashInDateByNumber],
+  );
+
+  const formatDateOnly = (value?: string) => {
+    if (!value) return "—";
+    const d = value.substring(0, 10).split("-");
+    if (d.length !== 3) return value;
+    return `${d[2]}/${d[1]}/${d[0]}`;
+  };
 
   // صافي المديونية = الإجمالي - الخصم + الرصيد الافتتاحي - المدفوع
   // للقطاعي: لا نحسب الخصم
@@ -278,9 +338,7 @@ export default function CustomerDebtDetailsPage() {
                             {inv.invoice_id}
                           </TableCell>
                           <TableCell className="text-center text-xs">
-                            {new Date(inv.invoice_date).toLocaleDateString(
-                              "ar-EG",
-                            )}
+                            {formatDateOnly(getRowDate(inv))}
                           </TableCell>
                           <TableCell className="text-center font-medium">
                             {runningBalances[idx] === 0
@@ -358,9 +416,7 @@ export default function CustomerDebtDetailsPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground">
-                          {new Date(inv.invoice_date).toLocaleDateString(
-                            "ar-EG",
-                          )}
+                          {formatDateOnly(getRowDate(inv))}
                         </span>
                         {inv.record_type === "invoice" && (
                           <Button
