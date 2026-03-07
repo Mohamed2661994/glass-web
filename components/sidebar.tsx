@@ -152,6 +152,7 @@ export function Sidebar({
       { label: "عرض المنصرف", icon: List, href: "/cash/out/list" },
       { label: "وارد الخزنة", icon: Wallet, href: "/cash/in" },
       { label: "عرض الوارد", icon: List, href: "/cash/in/list" },
+      { label: "عرض فرق الخصمات", icon: List, href: "/cash/in/discount-diffs" },
       { label: "اليومية", icon: BookOpen, href: "/cash/summary" },
     ],
   };
