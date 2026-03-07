@@ -105,49 +105,6 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     }
   };
 
-  useEffect(() => {
-    if (!open) return;
-
-    const candidates = filteredProducts.slice(0, 30);
-    candidates.forEach((product) => {
-      const hasOtherVariants =
-        (otherBranchVariantsMap[product.id] || []).length > 1;
-      const hasCurrentVariants =
-        product.variant_stock && product.variant_stock.length > 1;
-
-      if (hasOtherVariants || !hasCurrentVariants) return;
-      if (otherBranchVariantQtyMap[product.id]) return;
-      if (otherBranchQtyLoadingRef.current[product.id]) return;
-
-      otherBranchQtyLoadingRef.current[product.id] = true;
-      api
-        .get("/stock/quantity-all", {
-          params: { product_id: product.id, branch_id: otherBranchId },
-        })
-        .then((res) => {
-          setOtherBranchVariantQtyMap((prev) => ({
-            ...prev,
-            [product.id]: res.data || {},
-          }));
-        })
-        .catch(() => {
-          setOtherBranchVariantQtyMap((prev) => ({
-            ...prev,
-            [product.id]: {},
-          }));
-        })
-        .finally(() => {
-          otherBranchQtyLoadingRef.current[product.id] = false;
-        });
-    });
-  }, [
-    open,
-    filteredProducts,
-    otherBranchId,
-    otherBranchVariantsMap,
-    otherBranchVariantQtyMap,
-  ]);
-
   /* =========================================================
      Filtered products
      ========================================================= */
@@ -197,6 +154,49 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
       return String(a.name || "").localeCompare(String(b.name || ""), "ar");
     });
   }, [products, search]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const candidates = filteredProducts.slice(0, 30);
+    candidates.forEach((product) => {
+      const hasOtherVariants =
+        (otherBranchVariantsMap[product.id] || []).length > 1;
+      const hasCurrentVariants =
+        product.variant_stock && product.variant_stock.length > 1;
+
+      if (hasOtherVariants || !hasCurrentVariants) return;
+      if (otherBranchVariantQtyMap[product.id]) return;
+      if (otherBranchQtyLoadingRef.current[product.id]) return;
+
+      otherBranchQtyLoadingRef.current[product.id] = true;
+      api
+        .get("/stock/quantity-all", {
+          params: { product_id: product.id, branch_id: otherBranchId },
+        })
+        .then((res) => {
+          setOtherBranchVariantQtyMap((prev) => ({
+            ...prev,
+            [product.id]: res.data || {},
+          }));
+        })
+        .catch(() => {
+          setOtherBranchVariantQtyMap((prev) => ({
+            ...prev,
+            [product.id]: {},
+          }));
+        })
+        .finally(() => {
+          otherBranchQtyLoadingRef.current[product.id] = false;
+        });
+    });
+  }, [
+    open,
+    filteredProducts,
+    otherBranchId,
+    otherBranchVariantsMap,
+    otherBranchVariantQtyMap,
+  ]);
 
   /* =========================================================
      Keyboard navigation
