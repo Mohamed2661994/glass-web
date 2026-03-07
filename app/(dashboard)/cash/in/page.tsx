@@ -269,7 +269,7 @@ function CashInPage() {
       setLoading(true);
       const sourceType = entryType === "manual" ? "manual" : "customer_payment";
       const { data } = await api.post("/cash/in", {
-        transaction_date: date,
+        transaction_date: `${date}T12:00:00`,
         customer_name: sourceName,
         description: finalDescription,
         amount: Number(amount),
