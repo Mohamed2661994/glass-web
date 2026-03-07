@@ -423,8 +423,15 @@ function InvoicePrintPage() {
     return text;
   };
 
+  const getDayName = (dateStr?: string) => {
+    if (!dateStr) return "";
+    const days = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+    const date = new Date(dateStr);
+    return days[date.getDay()] || "";
+  };
+
   const formattedDate = invoice.invoice_date
-    ? new Date(invoice.invoice_date).toLocaleDateString("ar-EG")
+    ? `${getDayName(invoice.invoice_date)} ${new Date(invoice.invoice_date).toLocaleDateString("ar-EG")}`
     : "-";
   const invoiceUserName = (
     invoice.updated_by_name ||
