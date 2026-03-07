@@ -314,9 +314,15 @@ function CashSummaryPrintInner() {
       >
         {/* Header */}
         <div className="text-center mb-3">
-          <h1 className={`${fontStyles.title} ${isBold ? "font-black" : "font-bold"}`}>اليومية</h1>
+          <h1
+            className={`${fontStyles.title} ${isBold ? "font-black" : "font-bold"}`}
+          >
+            اليومية
+          </h1>
           {toDate && (
-            <p className={`${fontStyles.date} ${isBold ? "font-bold" : "font-semibold"} mt-1`}>
+            <p
+              className={`${fontStyles.date} ${isBold ? "font-bold" : "font-semibold"} mt-1`}
+            >
               {getArabicDayName(toDate)} - {toDate.toLocaleDateString("ar-EG")}
             </p>
           )}

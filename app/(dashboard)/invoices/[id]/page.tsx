@@ -133,12 +133,22 @@ export default function InvoiceDetailsPage() {
     Math.round(
       items.reduce((sum, item) => {
         const qty = toNumber(item.quantity);
-        return sum + (item.is_return ? -qty : qty);
+        return sum + qty;
+      }, 0) * 100,
+    ) / 100;
+  const returnedQuantity =
+    Math.round(
+      items.reduce((sum, item) => {
+        if (!item.is_return) return sum;
+        return sum + toNumber(item.quantity);
       }, 0) * 100,
     ) / 100;
   const quantityDisplay = Number.isInteger(totalQuantity)
     ? totalQuantity.toString()
     : totalQuantity.toFixed(2);
+  const returnedQuantityDisplay = Number.isInteger(returnedQuantity)
+    ? returnedQuantity.toString()
+    : returnedQuantity.toFixed(2);
   const invoiceDateValue = invoice.invoice_date || invoice.created_at;
   const formattedInvoiceDate = invoiceDateValue
     ? new Date(invoiceDateValue).toLocaleDateString("ar-EG")
@@ -277,6 +287,11 @@ export default function InvoiceDetailsPage() {
                       colSpan={isWholesale || invoice.apply_items_discount ? 6 : 5}
                     >
                       مجموع الكمية
+                      {returnedQuantity > 0 && (
+                        <span className="mr-2 text-xs font-normal text-orange-600">
+                          (منها مرتجع: {returnedQuantityDisplay})
+                        </span>
+                      )}
                     </td>
                     <td className="p-2">{quantityDisplay}</td>
                     <td className="p-2" />

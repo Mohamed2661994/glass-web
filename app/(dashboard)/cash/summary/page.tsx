@@ -465,7 +465,9 @@ export default function CashSummaryPage() {
                     key={option.key}
                     variant={fontWeight === option.key ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setFontWeight(option.key as typeof fontWeight)}
+                    onClick={() =>
+                      setFontWeight(option.key as typeof fontWeight)
+                    }
                     className="flex-1"
                   >
                     {option.label}
