@@ -34,7 +34,15 @@ const toDateOnly = (d: Date) =>
 const formatMoney = (n: number) => Math.round(n).toLocaleString("ar-EG");
 
 const getArabicDayName = (d: Date) => {
-  const days = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+  const days = [
+    "الأحد",
+    "الإثنين",
+    "الثلاثاء",
+    "الأربعاء",
+    "الخميس",
+    "الجمعة",
+    "السبت",
+  ];
   return days[d.getDay()];
 };
 
@@ -74,9 +82,12 @@ function CashSummaryPrintInner() {
   const includeOpeningBalance = searchParams.get("includeOpeningBalance");
   const orientation = searchParams.get("orientation") || "portrait";
   const fontSize = searchParams.get("fontSize") || "medium";
-  const tableOrderParam = searchParams.get("tableOrder") || "revenue,expenses,purchases,supplier";
+  const fontWeight = searchParams.get("fontWeight") || "normal";
+  const tableOrderParam =
+    searchParams.get("tableOrder") || "revenue,expenses,purchases,supplier";
   const tableOrder = tableOrderParam.split(",");
   const isLandscape = orientation === "landscape";
+  const isBold = fontWeight === "bold";
 
   const showOpeningBalance = includeOpeningBalance === "1";
 
@@ -214,7 +225,12 @@ function CashSummaryPrintInner() {
     },
   };
 
-  const fontStyles = fontSizeClasses[fontSize as keyof typeof fontSizeClasses] || fontSizeClasses.medium;
+  const fontStyles =
+    fontSizeClasses[fontSize as keyof typeof fontSizeClasses] ||
+    fontSizeClasses.medium;
+
+  // Font weight class
+  const weightClass = isBold ? "font-bold" : "font-normal";
 
   // Render table based on key
   const renderTable = (key: string) => {
@@ -226,6 +242,7 @@ function CashSummaryPrintInner() {
             title="الوارد"
             thirdColumnHeader="المتبقي"
             fontStyles={fontStyles}
+            isBold={isBold}
             rows={filteredIn.map((i) => {
               const meta = parseMetadata(i.notes);
               const remaining = meta
@@ -245,6 +262,7 @@ function CashSummaryPrintInner() {
             key="expenses"
             title="المنصرف (مصروفات)"
             fontStyles={fontStyles}
+            isBold={isBold}
             rows={expenses.map((o) => [o.name, o.amount, o.notes || "-"])}
           />
         );
@@ -254,6 +272,7 @@ function CashSummaryPrintInner() {
             key="purchases"
             title="المنصرف (مشتريات)"
             fontStyles={fontStyles}
+            isBold={isBold}
             rows={purchases.map((o) => [o.name, o.amount, o.notes || "-"])}
           />
         ) : null;
@@ -263,6 +282,7 @@ function CashSummaryPrintInner() {
             key="supplier"
             title="المنصرف (دفعات موردين)"
             fontStyles={fontStyles}
+            isBold={isBold}
             rows={supplierPayments.map((o) => [
               o.name,
               o.amount,
@@ -286,7 +306,7 @@ function CashSummaryPrintInner() {
   return (
     <div
       dir="rtl"
-      className="bg-white text-black min-h-screen"
+      className={`bg-white text-black min-h-screen ${weightClass}`}
       style={{ colorScheme: "light" }}
     >
       <div
@@ -294,9 +314,9 @@ function CashSummaryPrintInner() {
       >
         {/* Header */}
         <div className="text-center mb-3">
-          <h1 className={`${fontStyles.title} font-bold`}>اليومية</h1>
+          <h1 className={`${fontStyles.title} ${isBold ? "font-black" : "font-bold"}`}>اليومية</h1>
           {toDate && (
-            <p className={`${fontStyles.date} font-semibold mt-1`}>
+            <p className={`${fontStyles.date} ${isBold ? "font-bold" : "font-semibold"} mt-1`}>
               {getArabicDayName(toDate)} - {toDate.toLocaleDateString("ar-EG")}
             </p>
           )}
@@ -307,7 +327,13 @@ function CashSummaryPrintInner() {
           {showOpeningBalance && (
             <>
               <div className={`text-center mb-2 ${fontStyles.summary}`}>
-                <span>الرصيد المُرحَّل{lastPrevDate ? ` (حتى ${lastPrevDate.toLocaleDateString("ar-EG")})` : ""} : </span>
+                <span>
+                  الرصيد المُرحَّل
+                  {lastPrevDate
+                    ? ` (حتى ${lastPrevDate.toLocaleDateString("ar-EG")})`
+                    : ""}{" "}
+                  :{" "}
+                </span>
                 <span className="font-bold">{formatMoney(openingBalance)}</span>
               </div>
               <hr className="border-gray-300 my-1" />
@@ -349,7 +375,15 @@ function CashSummaryPrintInner() {
 
 /* ================= SUMMARY ROW ================= */
 
-function SummaryRow({ label, value, className = "text-sm" }: { label: string; value: number; className?: string }) {
+function SummaryRow({
+  label,
+  value,
+  className = "text-sm",
+}: {
+  label: string;
+  value: number;
+  className?: string;
+}) {
   return (
     <div className={`flex justify-between items-center mb-2 ${className}`}>
       <span>{label} :</span>
@@ -374,24 +408,34 @@ function DataTable({
   rows,
   thirdColumnHeader = "ملاحظات",
   fontStyles,
+  isBold = false,
 }: {
   title: string;
   rows: (string | number | null | undefined)[][];
   thirdColumnHeader?: string;
   fontStyles?: FontStyles;
+  isBold?: boolean;
 }) {
   const tableClass = fontStyles?.table || "text-xs";
   const titleClass = fontStyles?.tableTitle || "text-[15px]";
   const cellClass = fontStyles?.cell || "p-1.5";
+  const weightClass = isBold ? "font-bold" : "font-normal";
+  const titleWeight = isBold ? "font-black" : "font-bold";
 
   return (
     <div className="flex-1 min-w-[200px]">
-      <h3 className={`font-bold ${titleClass} mb-2 mt-2`}>{title}</h3>
-      <table className={`w-full border-collapse border border-black ${tableClass}`}>
+      <h3 className={`${titleWeight} ${titleClass} mb-2 mt-2`}>{title}</h3>
+      <table
+        className={`w-full border-collapse border border-black ${tableClass} ${weightClass}`}
+      >
         <thead>
           <tr className="bg-gray-100">
-            <th className={`border border-black ${cellClass} text-right`}>الاسم</th>
-            <th className={`border border-black ${cellClass} text-center`}>المبلغ</th>
+            <th className={`border border-black ${cellClass} text-right`}>
+              الاسم
+            </th>
+            <th className={`border border-black ${cellClass} text-center`}>
+              المبلغ
+            </th>
             <th className={`border border-black ${cellClass} text-right`}>
               {thirdColumnHeader}
             </th>
@@ -404,7 +448,9 @@ function DataTable({
               <td className={`border border-black ${cellClass} text-center`}>
                 {formatMoney(Number(r[1]))}
               </td>
-              <td className={`border border-black ${cellClass}`}>{r[2] || "-"}</td>
+              <td className={`border border-black ${cellClass}`}>
+                {r[2] || "-"}
+              </td>
             </tr>
           ))}
         </tbody>

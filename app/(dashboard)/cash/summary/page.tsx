@@ -27,6 +27,8 @@ import {
   GripVertical,
   ChevronUp,
   ChevronDown,
+  Settings2,
+  Bold,
 } from "lucide-react";
 import api from "@/services/api";
 import { useAuth } from "@/app/context/auth-context";
@@ -98,8 +100,17 @@ export default function CashSummaryPage() {
   const [loading, setLoading] = useState(true);
   const [includeOpeningBalance, setIncludeOpeningBalance] = useState(true);
   const [actualCash, setActualCash] = useState<string>("");
-  const [fontSize, setFontSize] = useState<"small" | "medium" | "large">("medium");
-  const [tableOrder, setTableOrder] = useState<string[]>(["revenue", "expenses", "purchases", "supplier"]);
+  const [fontSize, setFontSize] = useState<"small" | "medium" | "large">(
+    "medium",
+  );
+  const [fontWeight, setFontWeight] = useState<"normal" | "bold">("normal");
+  const [tableOrder, setTableOrder] = useState<string[]>([
+    "revenue",
+    "expenses",
+    "purchases",
+    "supplier",
+  ]);
+  const [printOptionsOpen, setPrintOptionsOpen] = useState(false);
   const [cashRefreshKey, setCashRefreshKey] = useState(0);
 
   useRealtime("data:cash", () => setCashRefreshKey((k) => k + 1), 1000);
@@ -233,6 +244,7 @@ export default function CashSummaryPage() {
       to: toDate,
       includeOpeningBalance: includeOpeningBalance ? "1" : "0",
       fontSize: fontSize,
+      fontWeight: fontWeight,
       tableOrder: tableOrder.join(","),
       ...(landscape ? { orientation: "landscape" } : {}),
     });
@@ -244,24 +256,35 @@ export default function CashSummaryPage() {
   const moveTableUp = (index: number) => {
     if (index === 0) return;
     const newOrder = [...tableOrder];
-    [newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
+    [newOrder[index - 1], newOrder[index]] = [
+      newOrder[index],
+      newOrder[index - 1],
+    ];
     setTableOrder(newOrder);
   };
 
   const moveTableDown = (index: number) => {
     if (index === tableOrder.length - 1) return;
     const newOrder = [...tableOrder];
-    [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+    [newOrder[index], newOrder[index + 1]] = [
+      newOrder[index + 1],
+      newOrder[index],
+    ];
     setTableOrder(newOrder);
   };
 
   const getTableLabel = (key: string) => {
     switch (key) {
-      case "revenue": return "الوارد";
-      case "expenses": return "المصروفات";
-      case "purchases": return "المشتريات";
-      case "supplier": return "دفعات الموردين";
-      default: return key;
+      case "revenue":
+        return "الوارد";
+      case "expenses":
+        return "المصروفات";
+      case "purchases":
+        return "المشتريات";
+      case "supplier":
+        return "دفعات الموردين";
+      default:
+        return key;
     }
   };
 
@@ -384,69 +407,114 @@ export default function CashSummaryPage() {
       {/* Print Customization */}
       <Card>
         <CardContent className="p-0">
-          {/* Font Size */}
-          <div className="p-4 border-b">
-            <div className="flex items-center gap-2 mb-3">
-              <Type className="h-4 w-4 text-muted-foreground" />
-              <p className="font-semibold text-sm">حجم الخط في الطباعة</p>
+          {/* Collapsible Header */}
+          <div
+            className="p-4 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => setPrintOptionsOpen(!printOptionsOpen)}
+          >
+            <div className="flex items-center gap-2">
+              <Settings2 className="h-4 w-4 text-muted-foreground" />
+              <p className="font-semibold text-sm">إعدادات الطباعة</p>
             </div>
-            <div className="flex gap-2">
-              {[
-                { key: "small", label: "صغير" },
-                { key: "medium", label: "متوسط" },
-                { key: "large", label: "كبير" },
-              ].map((option) => (
-                <Button
-                  key={option.key}
-                  variant={fontSize === option.key ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setFontSize(option.key as typeof fontSize)}
-                  className="flex-1"
-                >
-                  {option.label}
-                </Button>
-              ))}
-            </div>
+            <ChevronDown
+              className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${printOptionsOpen ? "rotate-180" : ""}`}
+            />
           </div>
 
-          {/* Table Order */}
-          <div className="p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-              <p className="font-semibold text-sm">ترتيب الجداول</p>
+          {/* Collapsible Content */}
+          <div
+            className={`overflow-hidden transition-all duration-300 ease-in-out ${printOptionsOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"}`}
+          >
+            {/* Font Size */}
+            <div className="p-4 border-t border-b">
+              <div className="flex items-center gap-2 mb-3">
+                <Type className="h-4 w-4 text-muted-foreground" />
+                <p className="font-semibold text-sm">حجم الخط</p>
+              </div>
+              <div className="flex gap-2">
+                {[
+                  { key: "small", label: "صغير" },
+                  { key: "medium", label: "متوسط" },
+                  { key: "large", label: "كبير" },
+                ].map((option) => (
+                  <Button
+                    key={option.key}
+                    variant={fontSize === option.key ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setFontSize(option.key as typeof fontSize)}
+                    className="flex-1"
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
             </div>
-            <div className="space-y-2">
-              {tableOrder.map((key, index) => (
-                <div
-                  key={key}
-                  className="flex items-center justify-between p-2 rounded-lg border bg-muted/30"
-                >
-                  <div className="flex items-center gap-2">
-                    <GripVertical className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{getTableLabel(key)}</span>
+
+            {/* Font Weight */}
+            <div className="p-4 border-b">
+              <div className="flex items-center gap-2 mb-3">
+                <Bold className="h-4 w-4 text-muted-foreground" />
+                <p className="font-semibold text-sm">سمك الخط</p>
+              </div>
+              <div className="flex gap-2">
+                {[
+                  { key: "normal", label: "رفيع" },
+                  { key: "bold", label: "عريض" },
+                ].map((option) => (
+                  <Button
+                    key={option.key}
+                    variant={fontWeight === option.key ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setFontWeight(option.key as typeof fontWeight)}
+                    className="flex-1"
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Table Order */}
+            <div className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                <p className="font-semibold text-sm">ترتيب الجداول</p>
+              </div>
+              <div className="space-y-2">
+                {tableOrder.map((key, index) => (
+                  <div
+                    key={key}
+                    className="flex items-center justify-between p-2 rounded-lg border bg-muted/30"
+                  >
+                    <div className="flex items-center gap-2">
+                      <GripVertical className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">
+                        {getTableLabel(key)}
+                      </span>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => moveTableUp(index)}
+                        disabled={index === 0}
+                        className="h-7 w-7 p-0"
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => moveTableDown(index)}
+                        disabled={index === tableOrder.length - 1}
+                        className="h-7 w-7 p-0"
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => moveTableUp(index)}
-                      disabled={index === 0}
-                      className="h-7 w-7 p-0"
-                    >
-                      <ChevronUp className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => moveTableDown(index)}
-                      disabled={index === tableOrder.length - 1}
-                      className="h-7 w-7 p-0"
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </CardContent>
