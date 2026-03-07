@@ -406,7 +406,8 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                           : "text-red-500 font-semibold"
                       }
                     >
-                      رصيد {branchId === 1 ? "القطاعي" : "الجملة"}: {product.available_quantity}
+                      رصيد {branchId === 1 ? "القطاعي" : "الجملة"}:{" "}
+                      {product.available_quantity}
                     </span>
 
                     {/* Other branch balance - show detailed if variants exist */}
@@ -420,24 +421,45 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                           otherVariants.forEach((vs: any) => {
                             const pkg = String(vs.package_name || "-");
                             wholesaleGroups[pkg] =
-                              (wholesaleGroups[pkg] || 0) + (Number(vs.quantity) || 0);
+                              (wholesaleGroups[pkg] || 0) +
+                              (Number(vs.quantity) || 0);
                           });
+
+                          const wholesaleEntries = Object.entries(wholesaleGroups);
+                          if (wholesaleEntries.length === 1) {
+                            const onlyQty = wholesaleEntries[0]?.[1] ?? 0;
+                            return (
+                              <span
+                                className={
+                                  onlyQty > 0
+                                    ? "text-orange-600 dark:text-orange-400 font-semibold"
+                                    : "text-red-500 font-semibold"
+                                }
+                              >
+                                رصيد الجملة: {onlyQty}
+                              </span>
+                            );
+                          }
 
                           return (
                             <div className="flex flex-wrap gap-x-3 gap-y-1">
-                              <span className="text-muted-foreground">رصيد الجملة:</span>
-                              {Object.entries(wholesaleGroups).map(([pkg, qty]) => (
-                                <span
-                                  key={pkg}
-                                  className={
-                                    qty > 0
-                                      ? "text-orange-600 dark:text-orange-400 font-semibold"
-                                      : "text-red-500 font-semibold"
-                                  }
-                                >
-                                  {pkg}: {qty}
-                                </span>
-                              ))}
+                              <span className="text-muted-foreground">
+                                رصيد الجملة:
+                              </span>
+                              {wholesaleEntries.map(
+                                ([pkg, qty]) => (
+                                  <span
+                                    key={pkg}
+                                    className={
+                                      qty > 0
+                                        ? "text-orange-600 dark:text-orange-400 font-semibold"
+                                        : "text-red-500 font-semibold"
+                                    }
+                                  >
+                                    {pkg}: {qty}
+                                  </span>
+                                ),
+                              )}
                             </div>
                           );
                         }
@@ -445,16 +467,36 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                         // Current user is wholesale -> aggregate retail packages with same name
                         const retailGroups: Record<string, number> = {};
                         otherVariants.forEach((vs: any) => {
-                          const retailPkg =
-                            String(vs.retail_package || product.retail_package || "-");
+                          const retailPkg = String(
+                            vs.retail_package || product.retail_package || "-",
+                          );
                           retailGroups[retailPkg] =
-                            (retailGroups[retailPkg] || 0) + (Number(vs.quantity) || 0);
+                            (retailGroups[retailPkg] || 0) +
+                            (Number(vs.quantity) || 0);
                         });
+
+                        const retailEntries = Object.entries(retailGroups);
+                        if (retailEntries.length === 1) {
+                          const onlyQty = retailEntries[0]?.[1] ?? 0;
+                          return (
+                            <span
+                              className={
+                                onlyQty > 0
+                                  ? "text-blue-600 dark:text-blue-400 font-semibold"
+                                  : "text-red-500 font-semibold"
+                              }
+                            >
+                              رصيد القطاعي: {onlyQty}
+                            </span>
+                          );
+                        }
 
                         return (
                           <div className="flex flex-wrap gap-x-3 gap-y-1">
-                            <span className="text-muted-foreground">رصيد القطاعي:</span>
-                            {Object.entries(retailGroups).map(([pkg, qty]) => (
+                            <span className="text-muted-foreground">
+                              رصيد القطاعي:
+                            </span>
+                            {retailEntries.map(([pkg, qty]) => (
                               <span
                                 key={pkg}
                                 className={
@@ -481,7 +523,8 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                               : "text-red-500 font-semibold"
                           }
                         >
-                          رصيد {branchId === 1 ? "الجملة" : "القطاعي"}: {otherBranchQtyMap[product.id] ?? "-"}
+                          رصيد {branchId === 1 ? "الجملة" : "القطاعي"}:{" "}
+                          {otherBranchQtyMap[product.id] ?? "-"}
                         </span>
                       );
                     })()}
