@@ -129,6 +129,20 @@ export default function InvoiceDetailsPage() {
     Math.round((netTotal + toNumber(invoice.previous_balance)) * 100) / 100;
   const computedRemaining =
     Math.round((totalWithPrevious - toNumber(invoice.paid_amount)) * 100) / 100;
+  const totalQuantity =
+    Math.round(
+      items.reduce((sum, item) => {
+        const qty = toNumber(item.quantity);
+        return sum + (item.is_return ? -qty : qty);
+      }, 0) * 100,
+    ) / 100;
+  const quantityDisplay = Number.isInteger(totalQuantity)
+    ? totalQuantity.toString()
+    : totalQuantity.toFixed(2);
+  const invoiceDateValue = invoice.invoice_date || invoice.created_at;
+  const formattedInvoiceDate = invoiceDateValue
+    ? new Date(invoiceDateValue).toLocaleDateString("ar-EG")
+    : "-";
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto" dir="rtl">
@@ -167,6 +181,9 @@ export default function InvoiceDetailsPage() {
               )}
             </>
           )}
+          <p>
+            <strong>تاريخ الفاتورة:</strong> {formattedInvoiceDate}
+          </p>
           <p>
             <strong>الإجمالي:</strong> {totalWithPrevious.toFixed(2)}
           </p>
@@ -254,6 +271,16 @@ export default function InvoiceDetailsPage() {
                       </tr>
                     );
                   })}
+                  <tr className="bg-muted/40 font-semibold">
+                    <td
+                      className="p-2 text-left"
+                      colSpan={isWholesale || invoice.apply_items_discount ? 6 : 5}
+                    >
+                      مجموع الكمية
+                    </td>
+                    <td className="p-2">{quantityDisplay}</td>
+                    <td className="p-2" />
+                  </tr>
                 </tbody>
               </table>
             </div>
