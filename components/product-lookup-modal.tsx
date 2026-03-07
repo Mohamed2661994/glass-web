@@ -396,195 +396,95 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
                   {/* Row 3: Branch Balances */}
                   <div className="text-xs mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
-                    {/* Show balances - group retail, keep wholesale separate */}
-                    {product.variant_stock &&
-                    product.variant_stock.length > 1 ? (
-                      (() => {
-                        // Group by retail_package to aggregate quantities
-                        const retailGroups: Record<
-                          string,
-                          { retail: string; quantity: number }
-                        > = {};
-                        const wholesaleItems: Array<{
-                          package_name: string;
-                          quantity: number;
-                        }> = [];
+                    {/* Current branch balance always comes from available_quantity */}
+                    <span
+                      className={
+                        Number(product.available_quantity) > 0
+                          ? branchId === 1
+                            ? "text-blue-600 dark:text-blue-400 font-semibold"
+                            : "text-orange-600 dark:text-orange-400 font-semibold"
+                          : "text-red-500 font-semibold"
+                      }
+                    >
+                      رصيد {branchId === 1 ? "القطاعي" : "الجملة"}: {product.available_quantity}
+                    </span>
 
-                        product.variant_stock.forEach(
-                          (vs: {
-                            variant_id: number;
-                            package_name: string;
-                            quantity: number;
-                            price: number | null;
-                            retail_package?: string;
-                          }) => {
-                            const retailPkg =
-                              vs.retail_package || product.retail_package || "-";
-                            
-                            // Group retail packages with same name
-                            if (!retailGroups[retailPkg]) {
-                              retailGroups[retailPkg] = {
-                                retail: retailPkg,
-                                quantity: 0,
-                              };
-                            }
-                            retailGroups[retailPkg].quantity += Number(vs.quantity) || 0;
+                    {/* Other branch balance - show detailed if variants exist */}
+                    {(() => {
+                      const otherVariants = otherBranchVariantsMap[product.id];
 
-                            // Keep wholesale packages separate
-                            wholesaleItems.push({
-                              package_name: vs.package_name,
-                              quantity: Number(vs.quantity) || 0,
-                            });
-                          },
-                        );
+                      if (otherVariants && otherVariants.length > 1) {
+                        if (branchId === 1) {
+                          // Current user is retail -> show wholesale variants separately
+                          const wholesaleGroups: Record<string, number> = {};
+                          otherVariants.forEach((vs: any) => {
+                            const pkg = String(vs.package_name || "-");
+                            wholesaleGroups[pkg] =
+                              (wholesaleGroups[pkg] || 0) + (Number(vs.quantity) || 0);
+                          });
 
-                        const retailEntries = Object.values(retailGroups);
-
-                        return (
-                          <>
-                            {/* Show retail balances (grouped by package name) */}
+                          return (
                             <div className="flex flex-wrap gap-x-3 gap-y-1">
-                              <span className="text-muted-foreground">
-                                رصيد القطاعي:
-                              </span>
-                              {retailEntries.map((entry, idx) => (
+                              <span className="text-muted-foreground">رصيد الجملة:</span>
+                              {Object.entries(wholesaleGroups).map(([pkg, qty]) => (
                                 <span
-                                  key={idx}
+                                  key={pkg}
                                   className={
-                                    entry.quantity > 0
-                                      ? "text-blue-600 dark:text-blue-400 font-semibold"
-                                      : "text-red-500 font-semibold"
-                                  }
-                                >
-                                  {entry.retail}: {entry.quantity}
-                                </span>
-                              ))}
-                            </div>
-                            {/* Show wholesale balances (separate for each variant) */}
-                            <div className="flex flex-wrap gap-x-3 gap-y-1">
-                              <span className="text-muted-foreground">
-                                رصيد الجملة:
-                              </span>
-                              {wholesaleItems.map((item, idx) => (
-                                <span
-                                  key={idx}
-                                  className={
-                                    item.quantity > 0
+                                    qty > 0
                                       ? "text-orange-600 dark:text-orange-400 font-semibold"
                                       : "text-red-500 font-semibold"
                                   }
                                 >
-                                  {item.package_name}: {item.quantity}
+                                  {pkg}: {qty}
                                 </span>
                               ))}
                             </div>
-                          </>
+                          );
+                        }
+
+                        // Current user is wholesale -> aggregate retail packages with same name
+                        const retailGroups: Record<string, number> = {};
+                        otherVariants.forEach((vs: any) => {
+                          const retailPkg =
+                            String(vs.retail_package || product.retail_package || "-");
+                          retailGroups[retailPkg] =
+                            (retailGroups[retailPkg] || 0) + (Number(vs.quantity) || 0);
+                        });
+
+                        return (
+                          <div className="flex flex-wrap gap-x-3 gap-y-1">
+                            <span className="text-muted-foreground">رصيد القطاعي:</span>
+                            {Object.entries(retailGroups).map(([pkg, qty]) => (
+                              <span
+                                key={pkg}
+                                className={
+                                  qty > 0
+                                    ? "text-blue-600 dark:text-blue-400 font-semibold"
+                                    : "text-red-500 font-semibold"
+                                }
+                              >
+                                {pkg}: {qty}
+                              </span>
+                            ))}
+                          </div>
                         );
-                      })()
-                    ) : (
-                      <>
+                      }
+
+                      // No variants or single variant in other branch -> show total
+                      return (
                         <span
                           className={
-                            Number(product.available_quantity) > 0
+                            (otherBranchQtyMap[product.id] || 0) > 0
                               ? branchId === 1
-                                ? "text-blue-600 dark:text-blue-400 font-semibold"
-                                : "text-orange-600 dark:text-orange-400 font-semibold"
+                                ? "text-orange-600 dark:text-orange-400 font-semibold"
+                                : "text-blue-600 dark:text-blue-400 font-semibold"
                               : "text-red-500 font-semibold"
                           }
                         >
-                          رصيد {branchId === 1 ? "القطاعي" : "الجملة"}:{" "}
-                          {product.available_quantity}
+                          رصيد {branchId === 1 ? "الجملة" : "القطاعي"}: {otherBranchQtyMap[product.id] ?? "-"}
                         </span>
-
-                        {/* Other branch balance - show detailed if variants exist */}
-                        {(() => {
-                          const otherVariants = otherBranchVariantsMap[product.id];
-
-                          if (otherVariants && otherVariants.length > 1) {
-                            // Other branch has multiple variants - show them
-                            if (branchId === 1) {
-                              // Current: retail, Other: wholesale - show wholesale details
-                              return (
-                                <div className="flex flex-wrap gap-x-3 gap-y-1">
-                                  <span className="text-muted-foreground">
-                                    رصيد الجملة:
-                                  </span>
-                                  {otherVariants.map((vs: any, idx: number) => (
-                                    <span
-                                      key={vs.variant_id ?? idx}
-                                      className={
-                                        Number(vs.quantity) > 0
-                                          ? "text-orange-600 dark:text-orange-400 font-semibold"
-                                          : "text-red-500 font-semibold"
-                                      }
-                                    >
-                                      {vs.package_name}: {vs.quantity}
-                                    </span>
-                                  ))}
-                                </div>
-                              );
-                            }
-
-                            // Current: wholesale, Other: retail - group by retail package
-                            const retailGroups: Record<
-                              string,
-                              { retail: string; quantity: number }
-                            > = {};
-
-                            otherVariants.forEach((vs: any) => {
-                              const retailPkg =
-                                vs.retail_package || product.retail_package || "-";
-                              if (!retailGroups[retailPkg]) {
-                                retailGroups[retailPkg] = {
-                                  retail: retailPkg,
-                                  quantity: 0,
-                                };
-                              }
-                              retailGroups[retailPkg].quantity +=
-                                Number(vs.quantity) || 0;
-                            });
-
-                            const retailEntries = Object.values(retailGroups);
-
-                            return (
-                              <div className="flex flex-wrap gap-x-3 gap-y-1">
-                                <span className="text-muted-foreground">
-                                  رصيد القطاعي:
-                                </span>
-                                {retailEntries.map((entry, idx) => (
-                                  <span
-                                    key={idx}
-                                    className={
-                                      entry.quantity > 0
-                                        ? "text-blue-600 dark:text-blue-400 font-semibold"
-                                        : "text-red-500 font-semibold"
-                                    }
-                                  >
-                                    {entry.retail}: {entry.quantity}
-                                  </span>
-                                ))}
-                              </div>
-                            );
-                          }
-
-                          // No variants or single variant - show total
-                          return (
-                            <span
-                              className={
-                                (otherBranchQtyMap[product.id] || 0) > 0
-                                  ? branchId === 1
-                                    ? "text-orange-600 dark:text-orange-400 font-semibold"
-                                    : "text-blue-600 dark:text-blue-400 font-semibold"
-                                  : "text-red-500 font-semibold"
-                              }
-                            >
-                              رصيد {branchId === 1 ? "الجملة" : "القطاعي"}:{" "}
-                              {otherBranchQtyMap[product.id] ?? "-"}
-                            </span>
-                          );
-                        })()}
-                      </>
-                    )}
+                      );
+                    })()}
                   </div>
 
                   {/* Row 3: Description if exists */}
