@@ -128,8 +128,10 @@ function InvoicePrintPage() {
         if (s.fontSize) setFontSize(s.fontSize);
         if (s.borderWidth !== undefined) setBorderWidth(s.borderWidth);
         if (s.borderColor) setBorderColor(s.borderColor);
-        if (s.verticalBorderWidth !== undefined) setVerticalBorderWidth(s.verticalBorderWidth);
-        if (s.verticalBorderColor) setVerticalBorderColor(s.verticalBorderColor);
+        if (s.verticalBorderWidth !== undefined)
+          setVerticalBorderWidth(s.verticalBorderWidth);
+        if (s.verticalBorderColor)
+          setVerticalBorderColor(s.verticalBorderColor);
         if (s.showLogo !== undefined) setShowLogo(s.showLogo);
         if (s.showPhone !== undefined) setShowPhone(s.showPhone);
         if (s.customPhone !== undefined) setCustomPhone(s.customPhone);
@@ -225,9 +227,9 @@ function InvoicePrintPage() {
         .logo-phone { font-size:${fontSize}px; font-weight:bold; }
         table { width:100%; border-collapse:collapse; font-size:${fontSize}px; }
         thead th { background:#f3f3f3; font-weight:bold; border-bottom:2px solid #000; }
-        thead th:first-child, thead th:nth-child(3), thead th:nth-child(4), thead th:nth-child(5) { ${verticalBorderWidth > 0 ? `border-left:${verticalBorderWidth}px solid ${verticalBorderColor};` : ''} }
+        thead th:first-child, thead th:nth-child(3), thead th:nth-child(4), thead th:nth-child(5) { ${verticalBorderWidth > 0 ? `border-left:${verticalBorderWidth}px solid ${verticalBorderColor};` : ""} }
         tbody td { border-bottom:${borderWidth}px solid ${borderColor}; }
-        tbody td:first-child, tbody td:nth-child(3), tbody td:nth-child(4), tbody td:nth-child(5) { ${verticalBorderWidth > 0 ? `border-left:${verticalBorderWidth}px solid ${verticalBorderColor};` : ''} }
+        tbody td:first-child, tbody td:nth-child(3), tbody td:nth-child(4), tbody td:nth-child(5) { ${verticalBorderWidth > 0 ? `border-left:${verticalBorderWidth}px solid ${verticalBorderColor};` : ""} }
         th,td { padding:3px 4px; text-align:center; }
         tfoot td { border-left:none !important; border-right:none !important; }
         tfoot tr:first-child { border-top:3px solid #000; }
@@ -591,9 +593,9 @@ body { background:#3b3b3b; font-family:${fontFamily}; color:#000; }
 .logo-phone { font-weight:bold; color:#000; }
 table { width:100%; border-collapse:collapse; background:#fff !important; color:#000; }
 thead th { background:#f3f3f3 !important; font-weight:bold; border-bottom:2px solid #000; color:#000 !important; }
-thead th:first-child, thead th:nth-child(3), thead th:nth-child(4), thead th:nth-child(5) { ${verticalBorderWidth > 0 ? `border-left:${verticalBorderWidth}px solid ${verticalBorderColor};` : ''} }
+thead th:first-child, thead th:nth-child(3), thead th:nth-child(4), thead th:nth-child(5) { ${verticalBorderWidth > 0 ? `border-left:${verticalBorderWidth}px solid ${verticalBorderColor};` : ""} }
 tbody td { border-bottom:${borderWidth}px solid ${borderColor}; color:#000 !important; background:#fff !important; }
-tbody td:first-child, tbody td:nth-child(3), tbody td:nth-child(4), tbody td:nth-child(5) { ${verticalBorderWidth > 0 ? `border-left:${verticalBorderWidth}px solid ${verticalBorderColor};` : ''} }
+tbody td:first-child, tbody td:nth-child(3), tbody td:nth-child(4), tbody td:nth-child(5) { ${verticalBorderWidth > 0 ? `border-left:${verticalBorderWidth}px solid ${verticalBorderColor};` : ""} }
 th,td { padding:3px 4px; text-align:center; }
 tfoot td { border-left:none !important; border-right:none !important; }
 tfoot tr:first-child { border-top:3px solid #000; background:#fafafa !important; }

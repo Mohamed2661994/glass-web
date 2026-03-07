@@ -33,6 +33,11 @@ const toDateOnly = (d: Date) =>
 
 const formatMoney = (n: number) => Math.round(n).toLocaleString("ar-EG");
 
+const getArabicDayName = (d: Date) => {
+  const days = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+  return days[d.getDay()];
+};
+
 const getPreviousDay = (d: Date) =>
   new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
 
@@ -68,6 +73,9 @@ function CashSummaryPrintInner() {
   const to = searchParams.get("to");
   const includeOpeningBalance = searchParams.get("includeOpeningBalance");
   const orientation = searchParams.get("orientation") || "portrait";
+  const fontSize = searchParams.get("fontSize") || "medium";
+  const tableOrderParam = searchParams.get("tableOrder") || "revenue,expenses,purchases,supplier";
+  const tableOrder = tableOrderParam.split(",");
   const isLandscape = orientation === "landscape";
 
   const showOpeningBalance = includeOpeningBalance === "1";
@@ -178,6 +186,95 @@ function CashSummaryPrintInner() {
     return { totalIn, totalOut, balance: totalIn - totalOut };
   }, [filteredIn, filteredOut, openingBalance]);
 
+  // Font size configuration
+  const fontSizeClasses = {
+    small: {
+      title: "text-lg",
+      date: "text-xs",
+      summary: "text-xs",
+      tableTitle: "text-[13px]",
+      table: "text-[10px]",
+      cell: "p-1",
+    },
+    medium: {
+      title: "text-xl",
+      date: "text-sm",
+      summary: "text-sm",
+      tableTitle: "text-[15px]",
+      table: "text-xs",
+      cell: "p-1.5",
+    },
+    large: {
+      title: "text-2xl",
+      date: "text-base",
+      summary: "text-base",
+      tableTitle: "text-[17px]",
+      table: "text-sm",
+      cell: "p-2",
+    },
+  };
+
+  const fontStyles = fontSizeClasses[fontSize as keyof typeof fontSizeClasses] || fontSizeClasses.medium;
+
+  // Render table based on key
+  const renderTable = (key: string) => {
+    switch (key) {
+      case "revenue":
+        return (
+          <DataTable
+            key="revenue"
+            title="الوارد"
+            thirdColumnHeader="المتبقي"
+            fontStyles={fontStyles}
+            rows={filteredIn.map((i) => {
+              const meta = parseMetadata(i.notes);
+              const remaining = meta
+                ? meta.remaining
+                : Number(i.remaining_amount || 0);
+              return [
+                i.customer_name,
+                effectivePaid(i),
+                remaining !== 0 ? remaining : "-",
+              ];
+            })}
+          />
+        );
+      case "expenses":
+        return (
+          <DataTable
+            key="expenses"
+            title="المنصرف (مصروفات)"
+            fontStyles={fontStyles}
+            rows={expenses.map((o) => [o.name, o.amount, o.notes || "-"])}
+          />
+        );
+      case "purchases":
+        return purchases.length > 0 ? (
+          <DataTable
+            key="purchases"
+            title="المنصرف (مشتريات)"
+            fontStyles={fontStyles}
+            rows={purchases.map((o) => [o.name, o.amount, o.notes || "-"])}
+          />
+        ) : null;
+      case "supplier":
+        return supplierPayments.length > 0 ? (
+          <DataTable
+            key="supplier"
+            title="المنصرف (دفعات موردين)"
+            fontStyles={fontStyles}
+            rows={supplierPayments.map((o) => [
+              o.name,
+              o.amount,
+              o.notes || "-",
+            ])}
+          />
+        ) : null;
+      default:
+        return null;
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-10 text-center text-lg">
@@ -197,10 +294,10 @@ function CashSummaryPrintInner() {
       >
         {/* Header */}
         <div className="text-center mb-3">
-          <h1 className="text-xl font-bold">اليومية</h1>
+          <h1 className={`${fontStyles.title} font-bold`}>اليومية</h1>
           {toDate && (
-            <p className="text-sm font-semibold mt-1">
-              {toDate.toLocaleDateString("ar-EG")}
+            <p className={`${fontStyles.date} font-semibold mt-1`}>
+              {getArabicDayName(toDate)} - {toDate.toLocaleDateString("ar-EG")}
             </p>
           )}
         </div>
@@ -209,62 +306,32 @@ function CashSummaryPrintInner() {
         <div className="border border-black p-3 mb-5">
           {showOpeningBalance && (
             <>
-              <SummaryRow
-                label={`الرصيد المُرحَّل${lastPrevDate ? ` (حتى ${lastPrevDate.toLocaleDateString("ar-EG")})` : ""}`}
-                value={openingBalance}
-              />
+              <div className={`text-center mb-2 ${fontStyles.summary}`}>
+                <span>الرصيد المُرحَّل{lastPrevDate ? ` (حتى ${lastPrevDate.toLocaleDateString("ar-EG")})` : ""} : </span>
+                <span className="font-bold">{formatMoney(openingBalance)}</span>
+              </div>
               <hr className="border-gray-300 my-1" />
             </>
           )}
-          <SummaryRow label="إجمالي الوارد" value={summary.totalIn} />
-          <SummaryRow label="إجمالي المنصرف" value={summary.totalOut} />
-          <SummaryRow label="الرصيد" value={summary.balance} />
+          <div className={`flex justify-center gap-8 ${fontStyles.summary}`}>
+            <div>
+              <span>إجمالي الوارد : </span>
+              <span className="font-bold">{formatMoney(summary.totalIn)}</span>
+            </div>
+            <div>
+              <span>إجمالي المنصرف : </span>
+              <span className="font-bold">{formatMoney(summary.totalOut)}</span>
+            </div>
+            <div>
+              <span>الرصيد : </span>
+              <span className="font-bold">{formatMoney(summary.balance)}</span>
+            </div>
+          </div>
         </div>
 
         {/* Tables */}
         <div className="flex gap-4 items-start flex-wrap">
-          {/* الوارد */}
-          <DataTable
-            title="الوارد"
-            thirdColumnHeader="المتبقي"
-            rows={filteredIn.map((i) => {
-              const meta = parseMetadata(i.notes);
-              const remaining = meta
-                ? meta.remaining
-                : Number(i.remaining_amount || 0);
-              return [
-                i.customer_name,
-                effectivePaid(i),
-                remaining !== 0 ? remaining : "-",
-              ];
-            })}
-          />
-
-          {/* المصروفات */}
-          <DataTable
-            title="المنصرف (مصروفات)"
-            rows={expenses.map((o) => [o.name, o.amount, o.notes || "-"])}
-          />
-
-          {/* المشتريات */}
-          {purchases.length > 0 && (
-            <DataTable
-              title="المنصرف (مشتريات)"
-              rows={purchases.map((o) => [o.name, o.amount, o.notes || "-"])}
-            />
-          )}
-
-          {/* دفعات الموردين */}
-          {supplierPayments.length > 0 && (
-            <DataTable
-              title="المنصرف (دفعات موردين)"
-              rows={supplierPayments.map((o) => [
-                o.name,
-                o.amount,
-                o.notes || "-",
-              ])}
-            />
-          )}
+          {tableOrder.map((key) => renderTable(key))}
         </div>
       </div>
 
@@ -282,9 +349,9 @@ function CashSummaryPrintInner() {
 
 /* ================= SUMMARY ROW ================= */
 
-function SummaryRow({ label, value }: { label: string; value: number }) {
+function SummaryRow({ label, value, className = "text-sm" }: { label: string; value: number; className?: string }) {
   return (
-    <div className="flex justify-between items-center mb-2 text-sm">
+    <div className={`flex justify-between items-center mb-2 ${className}`}>
       <span>{label} :</span>
       <span className="font-bold">{formatMoney(value)}</span>
     </div>
@@ -293,24 +360,39 @@ function SummaryRow({ label, value }: { label: string; value: number }) {
 
 /* ================= DATA TABLE ================= */
 
+type FontStyles = {
+  title: string;
+  date: string;
+  summary: string;
+  tableTitle: string;
+  table: string;
+  cell: string;
+};
+
 function DataTable({
   title,
   rows,
   thirdColumnHeader = "ملاحظات",
+  fontStyles,
 }: {
   title: string;
   rows: (string | number | null | undefined)[][];
   thirdColumnHeader?: string;
+  fontStyles?: FontStyles;
 }) {
+  const tableClass = fontStyles?.table || "text-xs";
+  const titleClass = fontStyles?.tableTitle || "text-[15px]";
+  const cellClass = fontStyles?.cell || "p-1.5";
+
   return (
     <div className="flex-1 min-w-[200px]">
-      <h3 className="font-bold text-[15px] mb-2 mt-2">{title}</h3>
-      <table className="w-full border-collapse border border-black text-xs">
+      <h3 className={`font-bold ${titleClass} mb-2 mt-2`}>{title}</h3>
+      <table className={`w-full border-collapse border border-black ${tableClass}`}>
         <thead>
           <tr className="bg-gray-100">
-            <th className="border border-black p-1.5 text-right">الاسم</th>
-            <th className="border border-black p-1.5 text-center">المبلغ</th>
-            <th className="border border-black p-1.5 text-right">
+            <th className={`border border-black ${cellClass} text-right`}>الاسم</th>
+            <th className={`border border-black ${cellClass} text-center`}>المبلغ</th>
+            <th className={`border border-black ${cellClass} text-right`}>
               {thirdColumnHeader}
             </th>
           </tr>
@@ -318,11 +400,11 @@ function DataTable({
         <tbody>
           {rows.map((r, i) => (
             <tr key={i}>
-              <td className="border border-black p-1.5">{r[0]}</td>
-              <td className="border border-black p-1.5 text-center">
+              <td className={`border border-black ${cellClass}`}>{r[0]}</td>
+              <td className={`border border-black ${cellClass} text-center`}>
                 {formatMoney(Number(r[1]))}
               </td>
-              <td className="border border-black p-1.5">{r[2] || "-"}</td>
+              <td className={`border border-black ${cellClass}`}>{r[2] || "-"}</td>
             </tr>
           ))}
         </tbody>
