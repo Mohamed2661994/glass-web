@@ -284,7 +284,9 @@ export default function InvoiceDetailsPage() {
                   <tr className="bg-muted/40 font-semibold">
                     <td
                       className="p-2 text-left"
-                      colSpan={isWholesale || invoice.apply_items_discount ? 6 : 5}
+                      colSpan={
+                        isWholesale || invoice.apply_items_discount ? 6 : 5
+                      }
                     >
                       مجموع الكمية
                       {returnedQuantity > 0 && (

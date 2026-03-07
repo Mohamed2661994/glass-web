@@ -34,6 +34,8 @@ interface InvoiceData {
   remaining_amount: number;
   payment_status: string;
   apply_items_discount: boolean;
+  created_by_name?: string;
+  updated_by_name?: string;
   items: InvoiceItem[];
 }
 
@@ -424,6 +426,8 @@ function InvoicePrintPage() {
   const formattedDate = invoice.invoice_date
     ? new Date(invoice.invoice_date).toLocaleDateString("ar-EG")
     : "-";
+  const invoiceUserName =
+    (invoice.updated_by_name || invoice.created_by_name || "").trim();
 
   /* ──── مقياس المعاينة ──── */
   const previewScale = Math.min(1, 520 / ((pageW / 25.4) * 96));
@@ -1107,22 +1111,66 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                         (e.target as HTMLImageElement).style.display = "none";
                       }}
                     />
-                    {customPhone && showCustomPhone && (
+                    {(invoiceUserName || (customPhone && showCustomPhone)) && (
                       <div
-                        className="logo-phone"
-                        style={{ fontSize: `${fontSize}px` }}
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          lineHeight: 1.25,
+                          gap: 1,
+                        }}
                       >
-                        {customPhone}
+                        {invoiceUserName && (
+                          <div
+                            style={{
+                              fontSize: `${Math.max(fontSize - 1, 7)}px`,
+                              fontWeight: "bold",
+                            }}
+                          >
+                            {invoiceUserName}
+                          </div>
+                        )}
+                        {customPhone && showCustomPhone && (
+                          <div
+                            className="logo-phone"
+                            style={{ fontSize: `${fontSize}px` }}
+                          >
+                            {customPhone}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
                 )}
-                {!showLogo && customPhone && showCustomPhone && (
+                {!showLogo && (invoiceUserName || (customPhone && showCustomPhone)) && (
                   <div
-                    className="logo-phone"
-                    style={{ fontSize: `${fontSize}px`, fontWeight: "bold" }}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      lineHeight: 1.25,
+                      gap: 1,
+                    }}
                   >
-                    {customPhone}
+                    {invoiceUserName && (
+                      <div
+                        style={{
+                          fontSize: `${Math.max(fontSize - 1, 7)}px`,
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {invoiceUserName}
+                      </div>
+                    )}
+                    {customPhone && showCustomPhone && (
+                      <div
+                        className="logo-phone"
+                        style={{ fontSize: `${fontSize}px`, fontWeight: "bold" }}
+                      >
+                        {customPhone}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
