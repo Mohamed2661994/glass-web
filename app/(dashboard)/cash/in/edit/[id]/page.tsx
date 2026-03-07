@@ -139,7 +139,9 @@ export default function EditCashInPage() {
       setSaving(true);
       if (sourceType === "invoice") {
         // For invoices, only update the date
-        await api.put(`/cash-in/${id}`, { transaction_date: `${date}T12:00:00` });
+        await api.put(`/cash-in/${id}`, {
+          transaction_date: `${date}T12:00:00`,
+        });
       } else {
         // For manual and customer_payment, update all fields
         const finalDescription = isDiscountDiff

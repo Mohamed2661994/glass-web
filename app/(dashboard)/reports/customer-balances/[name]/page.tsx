@@ -48,9 +48,9 @@ export default function CustomerDebtDetailsPage() {
   const customerName = decodeURIComponent(params.name as string);
 
   const [data, setData] = useState<Invoice[]>([]);
-  const [cashInDateById, setCashInDateById] = useState<
-    Record<string, string>
-  >({});
+  const [cashInDateById, setCashInDateById] = useState<Record<string, string>>(
+    {},
+  );
   const [cashInDateByNumber, setCashInDateByNumber] = useState<
     Record<string, string>
   >({});
@@ -134,55 +134,6 @@ export default function CustomerDebtDetailsPage() {
 
   useRealtime(["data:invoices", "data:cash", "data:cash-in"], fetchDetails);
 
-  /* ========== Totals ========== */
-  const totalAll = useMemo(
-    () =>
-      data
-        .filter((i) => i.record_type === "invoice")
-        .reduce((s, i) => s + Number(i.subtotal), 0),
-    [data],
-  );
-
-  const totalDiscount = useMemo(
-    () =>
-      data
-        .filter((i) => i.record_type === "invoice")
-        .reduce((s, i) => s + Number(i.discount_total), 0),
-    [data],
-  );
-
-  const totalPaid = useMemo(
-    () => data.reduce((s, i) => s + Number(i.paid_amount), 0),
-    [data],
-  );
-
-  /* ========== Running Balance (الحساب السابق) ========== */
-  // نحسب الرصيد الافتتاحي من أول فاتورة (الحساب السابق المُضمَّن فيها)
-  const openingBalance = useMemo(() => {
-    const firstInvoice = data.find((r) => r.record_type === "invoice");
-    if (!firstInvoice) return 0;
-    // الحساب السابق = المتبقي - (الإجمالي - المدفوع)
-    const embedded =
-      Number(firstInvoice.remaining_amount) -
-      (Number(firstInvoice.total) - Number(firstInvoice.paid_amount));
-    return embedded > 0 ? embedded : 0;
-  }, [data]);
-
-  const runningBalances = useMemo(() => {
-    const balances: number[] = [];
-    let balance = openingBalance;
-    for (let i = 0; i < data.length; i++) {
-      balances.push(balance);
-      const row = data[i];
-      if (row.record_type === "invoice") {
-        balance += Number(row.total) - Number(row.paid_amount);
-      } else {
-        balance -= Number(row.paid_amount);
-      }
-    }
-    return balances;
-  }, [data, openingBalance]);
-
   const getRowDate = useCallback(
     (row: Invoice) => {
       if (row.record_type === "invoice") return row.invoice_date;
@@ -205,6 +156,66 @@ export default function CustomerDebtDetailsPage() {
     return `${d[2]}/${d[1]}/${d[0]}`;
   };
 
+  const visibleData = useMemo(() => {
+    if (!fromDate && !toDate) return data;
+    return data.filter((row) => {
+      const dateStr = (getRowDate(row) || "").substring(0, 10);
+      if (!dateStr) return false;
+      if (fromDate && dateStr < fromDate) return false;
+      if (toDate && dateStr > toDate) return false;
+      return true;
+    });
+  }, [data, fromDate, toDate, getRowDate]);
+
+  /* ========== Totals ========== */
+  const totalAll = useMemo(
+    () =>
+      visibleData
+        .filter((i) => i.record_type === "invoice")
+        .reduce((s, i) => s + Number(i.subtotal), 0),
+    [visibleData],
+  );
+
+  const totalDiscount = useMemo(
+    () =>
+      visibleData
+        .filter((i) => i.record_type === "invoice")
+        .reduce((s, i) => s + Number(i.discount_total), 0),
+    [visibleData],
+  );
+
+  const totalPaid = useMemo(
+    () => visibleData.reduce((s, i) => s + Number(i.paid_amount), 0),
+    [visibleData],
+  );
+
+  /* ========== Running Balance (الحساب السابق) ========== */
+  // نحسب الرصيد الافتتاحي من أول فاتورة (الحساب السابق المُضمَّن فيها)
+  const openingBalance = useMemo(() => {
+    const firstInvoice = visibleData.find((r) => r.record_type === "invoice");
+    if (!firstInvoice) return 0;
+    // الحساب السابق = المتبقي - (الإجمالي - المدفوع)
+    const embedded =
+      Number(firstInvoice.remaining_amount) -
+      (Number(firstInvoice.total) - Number(firstInvoice.paid_amount));
+    return embedded > 0 ? embedded : 0;
+  }, [visibleData]);
+
+  const runningBalances = useMemo(() => {
+    const balances: number[] = [];
+    let balance = openingBalance;
+    for (let i = 0; i < visibleData.length; i++) {
+      balances.push(balance);
+      const row = visibleData[i];
+      if (row.record_type === "invoice") {
+        balance += Number(row.total) - Number(row.paid_amount);
+      } else {
+        balance -= Number(row.paid_amount);
+      }
+    }
+    return balances;
+  }, [visibleData, openingBalance]);
+
   // صافي المديونية = الإجمالي - الخصم + الرصيد الافتتاحي - المدفوع
   // للقطاعي: لا نحسب الخصم
   const discountToSubtract = user?.branch_id === 1 ? 0 : totalDiscount;
@@ -220,7 +231,7 @@ export default function CustomerDebtDetailsPage() {
           <CardContent className="p-4 text-center">
             <p className="text-muted-foreground text-sm">اسم العميل</p>
             <p className="text-lg font-bold">{customerName}</p>
-            {!loading && data.length > 0 && (
+            {!loading && visibleData.length > 0 && (
               <Button
                 variant="outline"
                 size="sm"
@@ -294,7 +305,7 @@ export default function CustomerDebtDetailsPage() {
         )}
 
         {/* Table (Desktop) + Cards (Mobile) */}
-        {!loading && data.length > 0 && (
+        {!loading && visibleData.length > 0 && (
           <>
             {/* Desktop Table */}
             <Card className="hidden md:block">
@@ -319,7 +330,7 @@ export default function CustomerDebtDetailsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {data.map((inv, idx) => (
+                      {visibleData.map((inv, idx) => (
                         <TableRow key={`${inv.record_type}-${inv.invoice_id}`}>
                           <TableCell className="text-center">
                             <Badge
@@ -391,7 +402,7 @@ export default function CustomerDebtDetailsPage() {
 
             {/* Mobile Cards */}
             <div className="md:hidden space-y-2">
-              {data.map((inv, idx) => (
+              {visibleData.map((inv, idx) => (
                 <Card
                   key={`m-${inv.record_type}-${inv.invoice_id}`}
                   className="overflow-hidden"
@@ -486,14 +497,14 @@ export default function CustomerDebtDetailsPage() {
         )}
 
         {/* Empty */}
-        {!loading && data.length === 0 && (
+        {!loading && visibleData.length === 0 && (
           <div className="text-center py-16 text-muted-foreground">
             لا توجد بيانات لهذا العميل
           </div>
         )}
 
         {/* Summary */}
-        {!loading && data.length > 0 && (
+        {!loading && visibleData.length > 0 && (
           <Card>
             <CardContent className="p-4">
               <div className="flex flex-wrap gap-4 justify-center text-sm">
