@@ -141,6 +141,7 @@ export default function EditCashInPage() {
         // For invoices, only update the date
         await api.put(`/cash-in/${id}`, { transaction_date: date });
       } else {
+        // For manual and customer_payment, update all fields
         const finalDescription = isDiscountDiff
           ? `${description.replace(DISCOUNT_DIFF_MARKER, "").trim() || "فرقات خصم"} ${DISCOUNT_DIFF_MARKER}`.trim()
           : description;
@@ -152,12 +153,11 @@ export default function EditCashInPage() {
         };
         if (sourceType === "manual") {
           payload.amount = Number(amount) || 0;
-        } else {
+        } else if (sourceType === "customer_payment") {
           payload.amount = Number(paidAmount || amount) || 0;
         }
-        // Backend doesn't support PUT → DELETE then re-create
-        await api.delete(`/cash-in/${id}`);
-        await api.post("/cash/in", payload);
+        // Use PUT to update the record
+        await api.put(`/cash-in/${id}`, payload);
       }
       toast.success("تم حفظ التعديل");
       router.back();
