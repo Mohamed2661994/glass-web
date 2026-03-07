@@ -33,6 +33,8 @@ import {
 import api from "@/services/api";
 import { useAuth } from "@/app/context/auth-context";
 
+const DISCOUNT_DIFF_MARKER = "{{discount_diff}}";
+
 /* ================= TYPES ================= */
 
 type CashInItem = {
@@ -138,8 +140,11 @@ export default function CashSummaryPage() {
             notes: item.notes ?? (item as any).description ?? null,
           }),
         );
+        const visibleCashIn = mappedCashIn.filter(
+          (item) => !String(item.notes || "").includes(DISCOUNT_DIFF_MARKER),
+        );
 
-        setCashIn(mappedCashIn);
+        setCashIn(visibleCashIn);
         setCashOut(outRes.data.data || []);
       } catch {
         console.error("SUMMARY FETCH ERROR");

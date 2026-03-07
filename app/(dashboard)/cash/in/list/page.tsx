@@ -39,6 +39,8 @@ import api from "@/services/api";
 import { useRouter } from "next/navigation";
 import { useRealtime } from "@/hooks/use-realtime";
 
+const DISCOUNT_DIFF_MARKER = "{{discount_diff}}";
+
 interface CashInItem {
   id: number;
   customer_name: string;
@@ -86,6 +88,8 @@ export default function CashInListPage() {
 
   const filtered = useMemo(() => {
     return data.filter((item) => {
+      const rawNotes = item.notes || (item as any).description || "";
+      if ((rawNotes || "").includes(DISCOUNT_DIFF_MARKER)) return false;
       if (
         searchName.trim() &&
         !noSpaces(item.customer_name || "")

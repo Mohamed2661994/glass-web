@@ -19,6 +19,8 @@ import { toast } from "sonner";
 import api from "@/services/api";
 import { useParams, useRouter } from "next/navigation";
 
+const DISCOUNT_DIFF_MARKER = "{{discount_diff}}";
+
 const sourceLabel = (s: string) => {
   switch (s) {
     case "manual":
@@ -45,6 +47,7 @@ export default function EditCashInPage() {
   const [description, setDescription] = useState("");
   const [date, setDate] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [isDiscountDiff, setIsDiscountDiff] = useState(false);
 
   /* ========== Customer Autocomplete ========== */
   const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
@@ -93,7 +96,13 @@ export default function EditCashInPage() {
         setPaidAmount(String(item.paid_amount || 0));
         // Clean metadata from notes
         const rawNotes = item.notes || item.description || "";
-        setDescription(rawNotes.replace(/\{\{[-\d.|]+\}\}/, "").trim());
+        const hasDiscountDiff = rawNotes.includes(DISCOUNT_DIFF_MARKER);
+        setIsDiscountDiff(hasDiscountDiff);
+        const cleaned = rawNotes
+          .replace(DISCOUNT_DIFF_MARKER, "")
+          .replace(/\{\{[-\d.|]+\}\}/, "")
+          .trim();
+        setDescription(cleaned);
         if (item.transaction_date) {
           setDate(item.transaction_date.substring(0, 10));
         }
@@ -132,9 +141,12 @@ export default function EditCashInPage() {
         // For invoices, only update the date
         await api.put(`/cash-in/${id}`, { transaction_date: date });
       } else {
+        const finalDescription = isDiscountDiff
+          ? `${description.replace(DISCOUNT_DIFF_MARKER, "").trim() || "فرقات خصم"} ${DISCOUNT_DIFF_MARKER}`.trim()
+          : description;
         const payload: any = {
           customer_name: sourceName,
-          description,
+          description: finalDescription,
           transaction_date: date,
           source_type: sourceType,
         };

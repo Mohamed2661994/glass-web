@@ -45,6 +45,8 @@ import { toast } from "sonner";
 import { List, Pencil, Trash2 } from "lucide-react";
 import api from "@/services/api";
 
+const DISCOUNT_DIFF_MARKER = "{{discount_diff}}";
+
 export default function CashInPageWrapper() {
   return (
     <Suspense>
@@ -57,9 +59,9 @@ function CashInPage() {
   const [sourceName, setSourceName] = useState("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
-  const [entryType, setEntryType] = useState<"manual" | "customer_payment">(
-    "manual",
-  );
+  const [entryType, setEntryType] = useState<
+    "manual" | "customer_payment" | "discount_diff"
+  >("manual");
   const [date, setDate] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -90,6 +92,9 @@ function CashInPage() {
   const [modalSearch, setModalSearch] = useState("");
   const [deleteItem, setDeleteItem] = useState<CashInItem | null>(null);
 
+  const isDiscountDiff = (notes?: string | null) =>
+    (notes || "").includes(DISCOUNT_DIFF_MARKER);
+
   /** Parse {{total|paid|remaining}} from notes */
   const parseMetadata = (notes?: string | null) => {
     const m = notes?.match(/\{\{(-?[\d.]+)\|(-?[\d.]+)\|(-?[\d.]+)\}\}/);
@@ -115,21 +120,20 @@ function CashInPage() {
   }, [sourceName]);
 
   const filteredModal = useMemo(() => {
-    if (!modalSearch.trim()) return modalData;
     const q = normalizeArabic(noSpaces(modalSearch).toLowerCase());
-    return modalData.filter(
-      (item) =>
+    return modalData.filter((item) => {
+      const rawNotes = item.notes || item.description || "";
+      if (isDiscountDiff(rawNotes)) return false;
+      if (!modalSearch.trim()) return true;
+      return (
         normalizeArabic(
           noSpaces(item.customer_name || "").toLowerCase(),
         ).includes(q) ||
         String(item.cash_in_number)?.includes(q) ||
-        (item.notes &&
-          normalizeArabic(noSpaces(item.notes).toLowerCase()).includes(q)) ||
-        (item.description &&
-          normalizeArabic(noSpaces(item.description).toLowerCase()).includes(
-            q,
-          )),
-    );
+        (rawNotes &&
+          normalizeArabic(noSpaces(rawNotes).toLowerCase()).includes(q))
+      );
+    });
   }, [modalData, modalSearch]);
 
   const handleModalDelete = async () => {
@@ -236,8 +240,17 @@ function CashInPage() {
     };
   }, []);
 
+  const baseDescription =
+    description ||
+    (entryType === "customer_payment"
+      ? "سند دفع"
+      : entryType === "discount_diff"
+        ? "فرقات خصم"
+        : "وارد نقدي");
   const finalDescription =
-    description || (entryType === "customer_payment" ? "سند دفع" : "وارد نقدي");
+    entryType === "discount_diff"
+      ? `${baseDescription.replace(DISCOUNT_DIFF_MARKER, "").trim()} ${DISCOUNT_DIFF_MARKER}`.trim()
+      : baseDescription;
 
   const handleSave = () => {
     if (!sourceName.trim()) {
@@ -254,12 +267,13 @@ function CashInPage() {
   const submitCashIn = async () => {
     try {
       setLoading(true);
+      const sourceType = entryType === "manual" ? "manual" : "customer_payment";
       const { data } = await api.post("/cash/in", {
         transaction_date: date,
         customer_name: sourceName,
         description: finalDescription,
         amount: Number(amount),
-        source_type: entryType,
+        source_type: sourceType,
       });
 
       setConfirmOpen(false);
@@ -303,9 +317,11 @@ function CashInPage() {
           {/* الاسم */}
           <div>
             <Label>
-              {entryType === "customer_payment" ? "اسم العميل" : "الاسم"}
+              {entryType === "customer_payment" || entryType === "discount_diff"
+                ? "اسم العميل"
+                : "الاسم"}
             </Label>
-            {entryType === "customer_payment" ? (
+            {entryType === "customer_payment" || entryType === "discount_diff" ? (
               <div className="relative mt-2" ref={dropdownRef}>
                 <Input
                   value={sourceName}
@@ -412,6 +428,14 @@ function CashInPage() {
               >
                 سند دفع عميل
               </Button>
+              <Button
+                type="button"
+                variant={entryType === "discount_diff" ? "default" : "outline"}
+                className={`flex-1 ${entryType === "discount_diff" ? "bg-amber-600 hover:bg-amber-700" : ""}`}
+                onClick={() => setEntryType("discount_diff")}
+              >
+                فرقات خصم
+              </Button>
             </div>
           </div>
 
@@ -436,7 +460,7 @@ function CashInPage() {
           </div>
 
           {/* المديونية والمتبقي */}
-          {entryType === "customer_payment" &&
+          {(entryType === "customer_payment" || entryType === "discount_diff") &&
             customerDebt !== null &&
             customerDebt > 0 && (
               <Card className="border-dashed bg-muted/30">
@@ -464,12 +488,13 @@ function CashInPage() {
                 </CardContent>
               </Card>
             )}
-          {entryType === "customer_payment" && debtLoading && (
+          {(entryType === "customer_payment" || entryType === "discount_diff") &&
+            debtLoading && (
             <p className="text-xs text-muted-foreground text-center">
               جاري تحميل المديونية...
             </p>
           )}
-          {entryType === "customer_payment" &&
+          {(entryType === "customer_payment" || entryType === "discount_diff") &&
             customerDebt !== null &&
             customerDebt === 0 &&
             sourceName.trim() && (

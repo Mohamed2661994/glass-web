@@ -4,6 +4,8 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import api from "@/services/api";
 
+const DISCOUNT_DIFF_MARKER = "{{discount_diff}}";
+
 /* ================= TYPES ================= */
 
 type CashInItem = {
@@ -111,7 +113,11 @@ function CashSummaryPrintInner() {
             params: { branch_id: branchId, limit: 100000 },
           }),
         ]);
-        setCashIn(inRes.data.data || []);
+        const visibleCashIn = (inRes.data.data || []).filter((item: any) => {
+          const rawNotes = item.notes ?? item.description ?? "";
+          return !String(rawNotes || "").includes(DISCOUNT_DIFF_MARKER);
+        });
+        setCashIn(visibleCashIn);
         setCashOut(outRes.data.data || []);
       } catch {
         console.error("CASH SUMMARY LOAD ERROR");
