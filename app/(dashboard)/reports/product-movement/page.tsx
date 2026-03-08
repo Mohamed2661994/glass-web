@@ -53,6 +53,7 @@ type MovementItem = {
   invoice_type?: string | null;
   invoice_movement_type?: string | null;
   package_name?: string | null;
+  variant_id?: number | null;
   invoice_id?: number | null;
 };
 
@@ -96,6 +97,24 @@ function ProductMovementPageContent() {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
+
+  const normalizePackageName = useCallback((name?: string | null) => {
+    const toWesternDigits = (value: string) =>
+      value.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+
+    const cleaned = toWesternDigits(String(name || "بدون عبوة"))
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const withoutTrailingPiece = cleaned.replace(/\s+(قطعة|قطع|قطعه)$/i, "");
+    const tokens = withoutTrailingPiece.split(" ").filter(Boolean);
+
+    if (tokens.length === 2 && /^\d+$/.test(tokens[0]) && !/^\d+$/.test(tokens[1])) {
+      return `${tokens[1]} ${tokens[0]}`;
+    }
+
+    return withoutTrailingPiece;
+  }, []);
 
   /* ========== Fetch Products ========== */
   const fetchProducts = useCallback(async () => {
@@ -209,38 +228,50 @@ function ProductMovementPageContent() {
   const { totalIn, totalOut, packageTotals } = useMemo(() => {
     let inQty = 0;
     let outQty = 0;
-    // حساب الإجماليات لكل عبوة على حدة
-    const byPackage: Record<string, { inQty: number; outQty: number }> = {};
+    const byPackage = new Map<
+      string,
+      { label: string; inQty: number; outQty: number }
+    >();
 
     for (const item of filteredData) {
       const mt = item.movement_type || item.invoice_movement_type || "";
       const isIn = ["purchase", "transfer_in", "replace_in", "in"].includes(mt);
       const qty = Number(item.quantity);
-      const pkg = item.package_name || "بدون عبوة";
+      const pkgLabel = normalizePackageName(item.package_name);
+      const pkgKey =
+        item.variant_id !== undefined && item.variant_id !== null
+          ? `variant:${Number(item.variant_id)}`
+          : `label:${pkgLabel}`;
 
-      if (!byPackage[pkg]) {
-        byPackage[pkg] = { inQty: 0, outQty: 0 };
+      if (!byPackage.has(pkgKey)) {
+        byPackage.set(pkgKey, { label: pkgLabel, inQty: 0, outQty: 0 });
+      }
+
+      const entry = byPackage.get(pkgKey)!;
+      if (pkgLabel.length > entry.label.length) {
+        entry.label = pkgLabel;
       }
 
       if (isIn) {
         inQty += qty;
-        byPackage[pkg].inQty += qty;
+        entry.inQty += qty;
       } else {
         outQty += qty;
-        byPackage[pkg].outQty += qty;
+        entry.outQty += qty;
       }
     }
 
-    // تحويل إلى مصفوفة مع حساب الرصيد
-    const packageTotals = Object.entries(byPackage).map(([pkg, totals]) => ({
-      package: pkg,
-      totalIn: totals.inQty,
-      totalOut: totals.outQty,
-      balance: totals.inQty - totals.outQty,
-    }));
+    const packageTotals = Array.from(byPackage.values())
+      .map((totals) => ({
+        package: totals.label,
+        totalIn: totals.inQty,
+        totalOut: totals.outQty,
+        balance: totals.inQty - totals.outQty,
+      }))
+      .sort((a, b) => a.package.localeCompare(b.package, "ar"));
 
     return { totalIn: inQty, totalOut: outQty, packageTotals };
-  }, [filteredData]);
+  }, [filteredData, normalizePackageName]);
 
   /* ========== Export columns ========== */
   const exportColumns: ExportColumn[] = [
