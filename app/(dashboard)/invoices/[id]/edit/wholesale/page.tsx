@@ -158,6 +158,20 @@ export default function EditWholesaleInvoicePage() {
   const listRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  const totalQuantity = useMemo(() => {
+    return items.reduce((sum, item) => {
+      const qty = Number(item.quantity) || 0;
+      return sum + qty;
+    }, 0);
+  }, [items]);
+
+  const returnQuantity = useMemo(() => {
+    return items.reduce((sum, item) => {
+      const qty = Number(item.quantity) || 0;
+      return sum + (item.is_return ? qty : 0);
+    }, 0);
+  }, [items]);
+
   /* =========================================================
      4️⃣ Invoice Payment States
      ========================================================= */
@@ -1258,6 +1272,25 @@ export default function EditWholesaleInvoicePage() {
                         </td>
                       </tr>
                     ))}
+                    <tr className="border-t bg-muted/40">
+                      <td className="p-3 text-center text-muted-foreground">
+                        —
+                      </td>
+                      <td className="p-3 text-right font-semibold" colSpan={2}>
+                        مجموع الكمية
+                      </td>
+                      <td className="p-3 text-center font-semibold">
+                        <div className="flex flex-col items-center gap-1">
+                          <span>{totalQuantity.toLocaleString()}</span>
+                          {returnQuantity > 0 && (
+                            <span className="text-xs text-muted-foreground">
+                              مرتجع: {returnQuantity.toLocaleString()}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-3" colSpan={4} />
+                    </tr>
                   </tbody>
                 </table>
               </div>
