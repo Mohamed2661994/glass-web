@@ -22,25 +22,37 @@ function Input({
   const isNumeric = type === "number";
   const isMobile = useIsMobile();
 
+  // On mobile: use type="text" + inputMode="decimal" so Arabic-Indic digits are accepted
+  // On desktop: keep native type="number" with spinners and validation
+  const resolvedType = isNumeric && isMobile ? "text" : type;
+  const resolvedInputMode = isNumeric && isMobile ? "decimal" : undefined;
+
+  const shouldNormalizeDigits =
+    isMobile &&
+    resolvedType !== "password" &&
+    resolvedType !== "email" &&
+    resolvedType !== "url";
+
   const handleChange = React.useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (isNumeric) {
+      if (shouldNormalizeDigits) {
         // Normalize Arabic-Indic (٠-٩) and extended (۰-۹) digits to Western (0-9)
         const raw = e.target.value;
-        const normalized = toEnDigits(raw);
+        let normalized = toEnDigits(raw);
+
+        // For numeric fields, also normalize Arabic decimal separators.
+        if (isNumeric) {
+          normalized = normalized.replace(/[٫،]/g, ".");
+        }
+
         if (raw !== normalized) {
           e.target.value = normalized;
         }
       }
       onChange?.(e);
     },
-    [isNumeric, onChange],
+    [isNumeric, onChange, shouldNormalizeDigits],
   );
-
-  // On mobile: use type="text" + inputMode="decimal" so Arabic-Indic digits are accepted
-  // On desktop: keep native type="number" with spinners and validation
-  const resolvedType = isNumeric && isMobile ? "text" : type;
-  const resolvedInputMode = isNumeric && isMobile ? "decimal" : undefined;
 
   return (
     <input
