@@ -137,12 +137,36 @@ function ProductMovementPageContent() {
 
         const allowedIds = new Set<number>();
         for (const p of adminItems) {
+          const isActive =
+            p?.is_active === true ||
+            p?.is_active === "true" ||
+            p?.is_active === 1 ||
+            p?.is_active === "1";
+
+          if (!isActive) continue;
+
           const hasWholesaleFlag = p?.has_wholesale;
           const wp = String(p?.wholesale_package || "").trim();
           const validByPackage =
-            wp !== "" && wp !== "0" && wp !== "كرتونة 0" && wp !== "-";
+            wp !== "" &&
+            wp !== "0" &&
+            wp !== "كرتونة 0" &&
+            wp !== "-" &&
+            wp !== "بدون عبوة";
 
-          if (hasWholesaleFlag === true || (hasWholesaleFlag !== false && validByPackage)) {
+          const hasWholesaleByFlag =
+            hasWholesaleFlag === true ||
+            hasWholesaleFlag === "true" ||
+            hasWholesaleFlag === 1 ||
+            hasWholesaleFlag === "1";
+
+          const hasWholesalePrice = Number(p?.wholesale_price || 0) > 0;
+
+          if (
+            (hasWholesaleByFlag || validByPackage) &&
+            validByPackage &&
+            hasWholesalePrice
+          ) {
             allowedIds.add(Number(p.id));
           }
         }
