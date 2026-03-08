@@ -44,6 +44,7 @@ import {
 import { toast } from "sonner";
 import { List, Pencil, Trash2 } from "lucide-react";
 import api from "@/services/api";
+import { useAuth } from "@/app/context/auth-context";
 
 const DISCOUNT_DIFF_MARKER = "{{discount_diff}}";
 
@@ -56,6 +57,9 @@ export default function CashInPageWrapper() {
 }
 
 function CashInPage() {
+  const { user } = useAuth();
+  const isWholesaleUser = user?.branch_id === 2;
+
   const [sourceName, setSourceName] = useState("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
@@ -240,6 +244,12 @@ function CashInPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isWholesaleUser && entryType === "discount_diff") {
+      setEntryType("manual");
+    }
+  }, [isWholesaleUser, entryType]);
+
   const baseDescription =
     description ||
     (entryType === "customer_payment"
@@ -263,14 +273,16 @@ function CashInPage() {
     }
     setConfirmOpen(true);
   };
-
-  const submitCashIn = async () => {
-    try {
-      setLoading(true);
-      const sourceType = entryType === "manual" ? "manual" : "customer_payment";
-      const { data } = await api.post("/cash/in", {
-        transaction_date: `${date}T12:00:00`,
-        customer_name: sourceName,
+              {isWholesaleUser && (
+                <Button
+                  type="button"
+                  variant={entryType === "discount_diff" ? "default" : "outline"}
+                  className={`flex-1 ${entryType === "discount_diff" ? "bg-amber-600 hover:bg-amber-700" : ""}`}
+                  onClick={() => setEntryType("discount_diff")}
+                >
+                  فرقات خصم
+                </Button>
+              )}
         description: finalDescription,
         amount: Number(amount),
         source_type: sourceType,
