@@ -33,6 +33,10 @@ type CustomerBalanceItem = {
   last_invoice_date?: string | null;
 };
 
+type CustomerItem = {
+  name: string;
+};
+
 /* ========== Component ========== */
 export default function CustomerBalancesPage() {
   const { user } = useAuth();
@@ -42,6 +46,7 @@ export default function CustomerBalancesPage() {
   const [customerSearch, setCustomerSearch] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [showAllCustomers, setShowAllCustomers] = useState(false);
   const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(
     new Set(),
   );
@@ -66,13 +71,53 @@ export default function CustomerBalancesPage() {
         ? balancesRes.data
         : [];
 
+      if (showAllCustomers) {
+        const params: any = {};
+        if (customerSearch.trim().length >= 2) {
+          params.search = customerSearch.trim();
+        }
+        const customersRes = await api.get("/customers", { params });
+        const customers: CustomerItem[] = Array.isArray(customersRes.data)
+          ? customersRes.data
+          : [];
+
+        const byName = new Map<string, CustomerBalanceItem>();
+        for (const item of balances) {
+          byName.set(item.customer_name, {
+            customer_name: item.customer_name,
+            total_sales: Number(item.total_sales || 0),
+            total_paid: Number(item.total_paid || 0),
+            balance_due: Number(item.balance_due || 0),
+            last_invoice_date: item.last_invoice_date || null,
+          });
+        }
+
+        for (const c of customers) {
+          if (!byName.has(c.name)) {
+            byName.set(c.name, {
+              customer_name: c.name,
+              total_sales: 0,
+              total_paid: 0,
+              balance_due: 0,
+              last_invoice_date: null,
+            });
+          }
+        }
+
+        balances = Array.from(byName.values()).sort((a, b) => {
+          const diff = Number(b.balance_due || 0) - Number(a.balance_due || 0);
+          if (diff !== 0) return diff;
+          return a.customer_name.localeCompare(b.customer_name, "ar");
+        });
+      }
+
       setData(balances);
     } catch {
       setData([]);
     } finally {
       setLoading(false);
     }
-  }, [customerSearch, fromDate, toDate, user?.branch_id]);
+  }, [customerSearch, fromDate, toDate, user?.branch_id, showAllCustomers]);
 
   /* Auto-search */
   useEffect(() => {
@@ -192,6 +237,15 @@ export default function CustomerBalancesPage() {
                   مسح الفلاتر
                 </Button>
               )}
+              <Button
+                variant={showAllCustomers ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowAllCustomers((prev) => !prev)}
+              >
+                {showAllCustomers
+                  ? "عرض المديونين فقط"
+                  : "عرض جميع العملاء"}
+              </Button>
             </div>
           </CardContent>
         </Card>
