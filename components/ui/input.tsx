@@ -28,7 +28,6 @@ function Input({
   const resolvedInputMode = isNumeric && isMobile ? "decimal" : undefined;
 
   const shouldNormalizeDigits =
-    isMobile &&
     resolvedType !== "password" &&
     resolvedType !== "email" &&
     resolvedType !== "url";
