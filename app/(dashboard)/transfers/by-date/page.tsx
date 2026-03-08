@@ -31,6 +31,7 @@ import { useRealtime } from "@/hooks/use-realtime";
 
 interface TransferRow {
   id: number;
+  item_id?: number;
   transfer_id: number;
   product_id: number;
   product_name: string;
@@ -68,6 +69,13 @@ export default function TransfersByDatePage() {
 
   const isRetail = user?.branch_id === 1;
 
+  const getItemId = (row: Partial<TransferRow>) => {
+    const rawId = row.item_id ?? row.id;
+    if (rawId === undefined || rawId === null) return null;
+    const parsed = Number(rawId);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
   /* ========== Fetch ========== */
   const fetchTransfers = useCallback(async () => {
     if (!date) return;
@@ -100,11 +108,17 @@ export default function TransfersByDatePage() {
       setShowCancelConfirm(null);
       fetchTransfers(); // Reload
     } catch (err: any) {
-      toast.error(
-        err?.response?.data?.error ||
-          err?.response?.data?.message ||
-          "فشل إلغاء الصنف",
-      );
+      const status = err?.response?.status;
+      const apiMessage =
+        err?.response?.data?.error || err?.response?.data?.message || "";
+
+      if (status === 400 && /رصيد\s*المخزن\s*المستلم\s*غير\s*كافي/.test(apiMessage)) {
+        toast.error(
+          "لا يمكن إلغاء الصنف لأن الكمية غير كافية حاليًا في المخزن المستلم بعد حركات لاحقة.",
+        );
+      } else {
+        toast.error(apiMessage || "فشل إلغاء الصنف");
+      }
     } finally {
       setCancellingItem(null);
     }
@@ -118,7 +132,9 @@ export default function TransfersByDatePage() {
         received: !current,
       });
       setRows((prev) =>
-        prev.map((r) => (r.id === itemId ? { ...r, received: !current } : r)),
+        prev.map((r) =>
+          getItemId(r) === itemId ? { ...r, received: !current } : r,
+        ),
       );
     } catch {
       toast.error("فشل تحديث حالة الاستلام");
@@ -231,9 +247,10 @@ export default function TransfersByDatePage() {
                 <TableBody>
                   {rows.map((row) => {
                     const isCancelled = row.status === "cancelled";
+                    const itemId = getItemId(row);
                     return (
                       <TableRow
-                        key={row.id}
+                        key={`${row.transfer_id}-${itemId ?? row.product_id}`}
                         className={isCancelled ? "opacity-40 line-through" : ""}
                       >
                         <TableCell className="text-center">
@@ -242,11 +259,16 @@ export default function TransfersByDatePage() {
                             disabled={
                               !isRetail ||
                               isCancelled ||
-                              togglingReceived === row.id
+                              itemId === null ||
+                              togglingReceived === itemId
                             }
-                            onCheckedChange={() =>
-                              toggleReceived(row.id, !!row.received)
-                            }
+                            onCheckedChange={() => {
+                              if (itemId === null) {
+                                toast.error("تعذر تحديد الصنف المطلوب تحديثه");
+                                return;
+                              }
+                              toggleReceived(itemId, !!row.received);
+                            }}
                           />
                         </TableCell>
                         <TableCell className="text-right font-medium">
@@ -280,7 +302,14 @@ export default function TransfersByDatePage() {
                               variant="ghost"
                               size="sm"
                               className="text-red-500 hover:text-red-600 text-xs"
-                              onClick={() => setShowCancelConfirm(row.id)}
+                              disabled={itemId === null}
+                              onClick={() => {
+                                if (itemId === null) {
+                                  toast.error("تعذر تحديد الصنف المطلوب إلغاؤه");
+                                  return;
+                                }
+                                setShowCancelConfirm(itemId);
+                              }}
                             >
                               إلغاء
                             </Button>
@@ -327,7 +356,10 @@ export default function TransfersByDatePage() {
               variant="destructive"
               className="flex-1"
               disabled={cancellingItem !== null}
-              onClick={() => showCancelConfirm && cancelItem(showCancelConfirm)}
+              onClick={() => {
+                if (showCancelConfirm === null) return;
+                cancelItem(showCancelConfirm);
+              }}
             >
               {cancellingItem !== null ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
