@@ -42,11 +42,6 @@ type LowStockItem = {
   variant_id?: number;
 };
 
-type WholesaleStockItem = {
-  product_id: number;
-  quantity: number;
-};
-
 type CartItem = {
   product_id: number;
   product_name: string;
@@ -60,6 +55,7 @@ export default function LowStockReorderPage() {
   const router = useRouter();
 
   const [data, setData] = useState<LowStockItem[]>([]);
+  const [retailStock, setRetailStock] = useState<Record<number, number>>({});
   const [wholesaleStock, setWholesaleStock] = useState<Record<number, number>>(
     {},
   );
@@ -73,12 +69,24 @@ export default function LowStockReorderPage() {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const [lowStockRes, wholesaleRes] = await Promise.all([
+      const [lowStockRes, retailProductsRes, wholesaleProductsRes] =
+        await Promise.all([
         api.get("/reports/low-stock", {
           params: { limit_quantity: 5 },
         }),
-        api.get("/reports/low-stock", {
-          params: { limit_quantity: 999999, warehouse_id: 2 },
+        api.get("/products", {
+          params: {
+            branch_id: 1,
+            invoice_type: "retail",
+            movement_type: "sale",
+          },
+        }),
+        api.get("/products", {
+          params: {
+            branch_id: 2,
+            invoice_type: "wholesale",
+            movement_type: "sale",
+          },
         }),
       ]);
 
@@ -87,22 +95,28 @@ export default function LowStockReorderPage() {
         : [];
       setData(lowItems);
 
-      // Build wholesale stock map
-      const wsItems: LowStockItem[] = Array.isArray(wholesaleRes.data)
-        ? wholesaleRes.data
+      const retailProducts: any[] = Array.isArray(retailProductsRes.data)
+        ? retailProductsRes.data
+        : [];
+      const retailMap: Record<number, number> = {};
+      for (const item of retailProducts) {
+        retailMap[Number(item.id)] = Number(item.available_quantity) || 0;
+      }
+      setRetailStock(retailMap);
+
+      // Build wholesale stock map from aggregated /products endpoint (same as lookup modal)
+      const wsItems: any[] = Array.isArray(wholesaleProductsRes.data)
+        ? wholesaleProductsRes.data
         : [];
       const wsMap: Record<number, number> = {};
       for (const item of wsItems) {
-        if (item.warehouse_name === "المخزن الرئيسي") {
-          wsMap[item.product_id] = Math.max(
-            wsMap[item.product_id] || 0,
-            item.current_stock,
-          );
-        }
+        wsMap[Number(item.id)] = Number(item.available_quantity) || 0;
       }
       setWholesaleStock(wsMap);
     } catch {
       setData([]);
+      setRetailStock({});
+      setWholesaleStock({});
     } finally {
       setLoading(false);
     }
@@ -117,18 +131,19 @@ export default function LowStockReorderPage() {
   /* ========== Filter — show only retail warehouse items with stock ≤ 5 ========== */
   const filteredData = useMemo(() => {
     let result = data.filter((i) => {
+      const retailQty = retailStock[i.product_id] ?? Number(i.current_stock) ?? 0;
       const wsQty = wholesaleStock[i.product_id] ?? 0;
 
       if (
         i.warehouse_name !== "مخزن المعرض" ||
-        i.current_stock > 5 ||
-        i.current_stock < 0 ||
+        retailQty > 5 ||
+        retailQty < 0 ||
         !i.wholesale_package
       ) {
         return false;
       }
 
-      if (!(i.current_stock > 0 || wsQty > 0)) {
+      if (!(retailQty > 0 || wsQty > 0)) {
         return false;
       }
 
@@ -138,6 +153,18 @@ export default function LowStockReorderPage() {
 
       return true;
     });
+
+    // Keep one row per product and show total retail stock to match product lookup.
+    const byProduct = new Map<number, LowStockItem>();
+    for (const item of result) {
+      if (byProduct.has(item.product_id)) continue;
+      byProduct.set(item.product_id, {
+        ...item,
+        current_stock:
+          retailStock[item.product_id] ?? Number(item.current_stock) ?? 0,
+      });
+    }
+    result = Array.from(byProduct.values());
 
     if (search.trim()) {
       result = result.filter((item) =>
@@ -151,7 +178,13 @@ export default function LowStockReorderPage() {
     }
 
     return result.sort((a, b) => a.current_stock - b.current_stock);
-  }, [data, search, wholesaleStock, onlyWithWholesaleStock]);
+  }, [
+    data,
+    search,
+    retailStock,
+    wholesaleStock,
+    onlyWithWholesaleStock,
+  ]);
 
   /* ========== Cart actions ========== */
   const addToCart = (item: LowStockItem) => {
