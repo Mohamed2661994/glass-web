@@ -69,6 +69,10 @@ export default function TransfersByDatePage() {
   const [blockedCancelRow, setBlockedCancelRow] = useState<TransferRow | null>(
     null,
   );
+  const [blockedCancelItemId, setBlockedCancelItemId] = useState<number | null>(
+    null,
+  );
+  const [reconcilingAndRetrying, setReconcilingAndRetrying] = useState(false);
 
   const isRetail = user?.branch_id === 1;
 
@@ -123,6 +127,7 @@ export default function TransfersByDatePage() {
 
       if (status === 400 && /رصيد\s*المخزن\s*المستلم\s*غير\s*كافي/.test(apiMessage)) {
         setBlockedCancelRow(row);
+        setBlockedCancelItemId(itemId);
         toast.error(
           "لا يمكن إلغاء الصنف لأن الكمية غير كافية حاليًا في المخزن المستلم بعد حركات لاحقة.",
         );
@@ -409,14 +414,48 @@ export default function TransfersByDatePage() {
                 if (!blockedCancelRow) return;
                 openProductMovement(blockedCancelRow);
                 setBlockedCancelRow(null);
+                setBlockedCancelItemId(null);
               }}
             >
               عرض حركة الصنف
             </Button>
             <Button
+              variant="secondary"
+              className="flex-1"
+              disabled={reconcilingAndRetrying || blockedCancelItemId === null}
+              onClick={async () => {
+                if (!blockedCancelRow || blockedCancelItemId === null) return;
+                try {
+                  setReconcilingAndRetrying(true);
+                  await api.post("/stock/reconcile");
+                  toast.success("تمت مزامنة المخزون، جاري إعادة المحاولة...");
+
+                  // Close helper modal before retry to avoid stacked dialogs.
+                  setBlockedCancelRow(null);
+                  await cancelItem(blockedCancelItemId, blockedCancelRow);
+                } catch (err: any) {
+                  toast.error(
+                    err?.response?.data?.error ||
+                      "فشل مزامنة المخزون، حاول مرة أخرى",
+                  );
+                } finally {
+                  setReconcilingAndRetrying(false);
+                }
+              }}
+            >
+              {reconcilingAndRetrying ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "مزامنة المخزون ثم إعادة المحاولة"
+              )}
+            </Button>
+            <Button
               variant="outline"
               className="flex-1"
-              onClick={() => setBlockedCancelRow(null)}
+              onClick={() => {
+                setBlockedCancelRow(null);
+                setBlockedCancelItemId(null);
+              }}
             >
               إغلاق
             </Button>
