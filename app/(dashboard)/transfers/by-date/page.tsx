@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import api from "@/services/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -62,10 +62,11 @@ export default function TransfersByDatePage() {
   const [rows, setRows] = useState<TransferRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancellingItem, setCancellingItem] = useState<number | null>(null);
-  const [showCancelConfirm, setShowCancelConfirm] = useState<number | null>(
+  const [showCancelConfirm, setShowCancelConfirm] = useState<TransferRow | null>(
     null,
   );
   const [togglingReceived, setTogglingReceived] = useState<number | null>(null);
+  const resolvedItemIds = useRef<Record<string, number>>({});
 
   const isRetail = user?.branch_id === 1;
 
@@ -74,6 +75,72 @@ export default function TransfersByDatePage() {
     if (rawId === undefined || rawId === null) return null;
     const parsed = Number(rawId);
     return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const rowKey = (row: Partial<TransferRow>) => {
+    return [
+      Number(row.transfer_id ?? 0),
+      Number(row.product_id ?? 0),
+      String(row.from_quantity ?? ""),
+      String(row.to_quantity ?? ""),
+    ].join("|");
+  };
+
+  const resolveItemId = async (row: TransferRow) => {
+    const direct = getItemId(row);
+
+    // If backend explicitly sends item_id, trust it.
+    if (Number.isFinite(Number(row.item_id))) {
+      return Number(row.item_id);
+    }
+
+    // If id is different from transfer_id, it is very likely the item id already.
+    if (direct !== null && row.transfer_id && direct !== Number(row.transfer_id)) {
+      return direct;
+    }
+
+    const cacheKey = rowKey(row);
+    const cached = resolvedItemIds.current[cacheKey];
+    if (Number.isFinite(cached)) {
+      return cached;
+    }
+
+    try {
+      const { data } = await api.get(`/stock-transfers/${row.transfer_id}`);
+      const items: any[] = Array.isArray(data?.items) ? data.items : [];
+      if (!items.length) return direct;
+
+      const strictMatches = items.filter((item) => {
+        return (
+          Number(item.product_id) === Number(row.product_id) &&
+          Number(item.from_quantity) === Number(row.from_quantity) &&
+          Number(item.to_quantity) === Number(row.to_quantity) &&
+          String(item.status || "").toLowerCase() !== "cancelled"
+        );
+      });
+
+      const fallbackMatches = items.filter((item) => {
+        return (
+          Number(item.product_id) === Number(row.product_id) &&
+          String(item.status || "").toLowerCase() !== "cancelled"
+        );
+      });
+
+      const resolved =
+        strictMatches.length === 1
+          ? Number(strictMatches[0].id)
+          : fallbackMatches.length === 1
+            ? Number(fallbackMatches[0].id)
+            : direct;
+
+      if (resolved !== null && Number.isFinite(Number(resolved))) {
+        resolvedItemIds.current[cacheKey] = Number(resolved);
+        return Number(resolved);
+      }
+      return null;
+    } catch {
+      return direct;
+    }
   };
 
   /* ========== Fetch ========== */
@@ -125,15 +192,21 @@ export default function TransfersByDatePage() {
   };
 
   /* ========== Toggle Received ========== */
-  const toggleReceived = async (itemId: number, current: boolean) => {
+  const toggleReceived = async (row: TransferRow) => {
+    const itemId = await resolveItemId(row);
+    if (itemId === null) {
+      toast.error("تعذر تحديد الصنف المطلوب تحديثه");
+      return;
+    }
+
     try {
       setTogglingReceived(itemId);
       await api.patch(`/stock-transfers/items/${itemId}`, {
-        received: !current,
+        received: !row.received,
       });
       setRows((prev) =>
         prev.map((r) =>
-          getItemId(r) === itemId ? { ...r, received: !current } : r,
+          rowKey(r) === rowKey(row) ? { ...r, received: !row.received } : r,
         ),
       );
     } catch {
@@ -248,9 +321,14 @@ export default function TransfersByDatePage() {
                   {rows.map((row) => {
                     const isCancelled = row.status === "cancelled";
                     const itemId = getItemId(row);
+                    const effectiveItemId =
+                      Number.isFinite(Number(row.item_id)) ||
+                      (itemId !== null && itemId !== Number(row.transfer_id))
+                        ? itemId
+                        : resolvedItemIds.current[rowKey(row)] ?? null;
                     return (
                       <TableRow
-                        key={`${row.transfer_id}-${itemId ?? row.product_id}`}
+                        key={`${row.transfer_id}-${row.product_id}-${row.from_quantity}-${row.to_quantity}`}
                         className={isCancelled ? "opacity-40 line-through" : ""}
                       >
                         <TableCell className="text-center">
@@ -259,16 +337,9 @@ export default function TransfersByDatePage() {
                             disabled={
                               !isRetail ||
                               isCancelled ||
-                              itemId === null ||
-                              togglingReceived === itemId
+                              togglingReceived === effectiveItemId
                             }
-                            onCheckedChange={() => {
-                              if (itemId === null) {
-                                toast.error("تعذر تحديد الصنف المطلوب تحديثه");
-                                return;
-                              }
-                              toggleReceived(itemId, !!row.received);
-                            }}
+                            onCheckedChange={() => toggleReceived(row)}
                           />
                         </TableCell>
                         <TableCell className="text-right font-medium">
@@ -302,14 +373,7 @@ export default function TransfersByDatePage() {
                               variant="ghost"
                               size="sm"
                               className="text-red-500 hover:text-red-600 text-xs"
-                              disabled={itemId === null}
-                              onClick={() => {
-                                if (itemId === null) {
-                                  toast.error("تعذر تحديد الصنف المطلوب إلغاؤه");
-                                  return;
-                                }
-                                setShowCancelConfirm(itemId);
-                              }}
+                              onClick={() => setShowCancelConfirm(row)}
                             >
                               إلغاء
                             </Button>
@@ -356,9 +420,14 @@ export default function TransfersByDatePage() {
               variant="destructive"
               className="flex-1"
               disabled={cancellingItem !== null}
-              onClick={() => {
+              onClick={async () => {
                 if (showCancelConfirm === null) return;
-                cancelItem(showCancelConfirm);
+                const resolvedId = await resolveItemId(showCancelConfirm);
+                if (resolvedId === null) {
+                  toast.error("تعذر تحديد الصنف المطلوب إلغاؤه");
+                  return;
+                }
+                cancelItem(resolvedId);
               }}
             >
               {cancellingItem !== null ? (
