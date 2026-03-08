@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import api from "@/services/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -66,7 +66,9 @@ export default function TransfersByDatePage() {
     null,
   );
   const [togglingReceived, setTogglingReceived] = useState<number | null>(null);
-  const resolvedItemIds = useRef<Record<string, number>>({});
+  const [blockedCancelRow, setBlockedCancelRow] = useState<TransferRow | null>(
+    null,
+  );
 
   const isRetail = user?.branch_id === 1;
 
@@ -77,70 +79,10 @@ export default function TransfersByDatePage() {
     return Number.isFinite(parsed) ? parsed : null;
   };
 
-  const rowKey = (row: Partial<TransferRow>) => {
-    return [
-      Number(row.transfer_id ?? 0),
-      Number(row.product_id ?? 0),
-      String(row.from_quantity ?? ""),
-      String(row.to_quantity ?? ""),
-    ].join("|");
-  };
-
-  const resolveItemId = async (row: TransferRow) => {
-    const direct = getItemId(row);
-
-    // If backend explicitly sends item_id, trust it.
-    if (Number.isFinite(Number(row.item_id))) {
-      return Number(row.item_id);
-    }
-
-    // If id is different from transfer_id, it is very likely the item id already.
-    if (direct !== null && row.transfer_id && direct !== Number(row.transfer_id)) {
-      return direct;
-    }
-
-    const cacheKey = rowKey(row);
-    const cached = resolvedItemIds.current[cacheKey];
-    if (Number.isFinite(cached)) {
-      return cached;
-    }
-
-    try {
-      const { data } = await api.get(`/stock-transfers/${row.transfer_id}`);
-      const items: any[] = Array.isArray(data?.items) ? data.items : [];
-      if (!items.length) return direct;
-
-      const strictMatches = items.filter((item) => {
-        return (
-          Number(item.product_id) === Number(row.product_id) &&
-          Number(item.from_quantity) === Number(row.from_quantity) &&
-          Number(item.to_quantity) === Number(row.to_quantity) &&
-          String(item.status || "").toLowerCase() !== "cancelled"
-        );
-      });
-
-      const fallbackMatches = items.filter((item) => {
-        return (
-          Number(item.product_id) === Number(row.product_id) &&
-          String(item.status || "").toLowerCase() !== "cancelled"
-        );
-      });
-
-      const resolved =
-        strictMatches.length === 1
-          ? Number(strictMatches[0].id)
-          : fallbackMatches.length === 1
-            ? Number(fallbackMatches[0].id)
-            : direct;
-
-      if (resolved !== null && Number.isFinite(Number(resolved))) {
-        resolvedItemIds.current[cacheKey] = Number(resolved);
-        return Number(resolved);
-      }
-      return null;
-    } catch {
-      return direct;
-    }
+  const openProductMovement = (row: TransferRow) => {
+    router.push(
+      `/reports/product-movement?product=${encodeURIComponent(row.product_name)}`,
+    );
   };
 
   /* ========== Fetch ========== */
@@ -167,7 +109,7 @@ export default function TransfersByDatePage() {
   }, [fetchTransfers]);
 
   /* ========== Cancel Item ========== */
-  const cancelItem = async (itemId: number) => {
+  const cancelItem = async (itemId: number, row: TransferRow) => {
     try {
       setCancellingItem(itemId);
       await api.post(`/stock-transfers/items/${itemId}/cancel`);
@@ -180,6 +122,7 @@ export default function TransfersByDatePage() {
         err?.response?.data?.error || err?.response?.data?.message || "";
 
       if (status === 400 && /رصيد\s*المخزن\s*المستلم\s*غير\s*كافي/.test(apiMessage)) {
+        setBlockedCancelRow(row);
         toast.error(
           "لا يمكن إلغاء الصنف لأن الكمية غير كافية حاليًا في المخزن المستلم بعد حركات لاحقة.",
         );
@@ -193,7 +136,7 @@ export default function TransfersByDatePage() {
 
   /* ========== Toggle Received ========== */
   const toggleReceived = async (row: TransferRow) => {
-    const itemId = await resolveItemId(row);
+    const itemId = getItemId(row);
     if (itemId === null) {
       toast.error("تعذر تحديد الصنف المطلوب تحديثه");
       return;
@@ -205,9 +148,7 @@ export default function TransfersByDatePage() {
         received: !row.received,
       });
       setRows((prev) =>
-        prev.map((r) =>
-          rowKey(r) === rowKey(row) ? { ...r, received: !row.received } : r,
-        ),
+        prev.map((r) => (r.id === row.id ? { ...r, received: !row.received } : r)),
       );
     } catch {
       toast.error("فشل تحديث حالة الاستلام");
@@ -321,14 +262,9 @@ export default function TransfersByDatePage() {
                   {rows.map((row) => {
                     const isCancelled = row.status === "cancelled";
                     const itemId = getItemId(row);
-                    const effectiveItemId =
-                      Number.isFinite(Number(row.item_id)) ||
-                      (itemId !== null && itemId !== Number(row.transfer_id))
-                        ? itemId
-                        : resolvedItemIds.current[rowKey(row)] ?? null;
                     return (
                       <TableRow
-                        key={`${row.transfer_id}-${row.product_id}-${row.from_quantity}-${row.to_quantity}`}
+                        key={`${row.transfer_id}-${row.id}`}
                         className={isCancelled ? "opacity-40 line-through" : ""}
                       >
                         <TableCell className="text-center">
@@ -337,7 +273,8 @@ export default function TransfersByDatePage() {
                             disabled={
                               !isRetail ||
                               isCancelled ||
-                              togglingReceived === effectiveItemId
+                              itemId === null ||
+                              togglingReceived === itemId
                             }
                             onCheckedChange={() => toggleReceived(row)}
                           />
@@ -422,12 +359,12 @@ export default function TransfersByDatePage() {
               disabled={cancellingItem !== null}
               onClick={async () => {
                 if (showCancelConfirm === null) return;
-                const resolvedId = await resolveItemId(showCancelConfirm);
-                if (resolvedId === null) {
+                const itemId = getItemId(showCancelConfirm);
+                if (itemId === null) {
                   toast.error("تعذر تحديد الصنف المطلوب إلغاؤه");
                   return;
                 }
-                cancelItem(resolvedId);
+                cancelItem(itemId, showCancelConfirm);
               }}
             >
               {cancellingItem !== null ? (
@@ -442,6 +379,46 @@ export default function TransfersByDatePage() {
               onClick={() => setShowCancelConfirm(null)}
             >
               رجوع
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ===== Blocked Cancel Help ===== */}
+      <Dialog
+        open={blockedCancelRow !== null}
+        onOpenChange={() => setBlockedCancelRow(null)}
+      >
+        <DialogContent dir="rtl" className="max-w-sm text-center">
+          <DialogHeader>
+            <DialogTitle>تعذر إلغاء الصنف</DialogTitle>
+          </DialogHeader>
+          <p className="py-2 text-sm text-muted-foreground leading-7">
+            تم صرف جزء من الكمية بعد التحويل من المخزن المستلم، لذلك لا يمكن عكس
+            التحويل الآن.
+          </p>
+          {blockedCancelRow && (
+            <p className="text-xs text-muted-foreground pb-2">
+              الصنف: <span className="font-semibold">{blockedCancelRow.product_name}</span>
+            </p>
+          )}
+          <div className="flex gap-3">
+            <Button
+              className="flex-1"
+              onClick={() => {
+                if (!blockedCancelRow) return;
+                openProductMovement(blockedCancelRow);
+                setBlockedCancelRow(null);
+              }}
+            >
+              عرض حركة الصنف
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setBlockedCancelRow(null)}
+            >
+              إغلاق
             </Button>
           </div>
         </DialogContent>
