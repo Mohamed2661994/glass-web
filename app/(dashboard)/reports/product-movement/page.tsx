@@ -62,8 +62,6 @@ type Product = {
   name: string;
   manufacturer?: string | null;
   manufacturer_name?: string | null;
-  wholesale_package?: string | null;
-  has_wholesale?: boolean | null;
 };
 
 type WarehouseFilter = "الكل" | "المخزن الرئيسي" | "مخزن المعرض";
@@ -127,13 +125,38 @@ function ProductMovementPageContent() {
     try {
       setProductsLoading(true);
       const res = await api.get("/reports/products");
-      setProducts(Array.isArray(res.data) ? res.data : []);
+      let list: Product[] = Array.isArray(res.data) ? res.data : [];
+
+      if (isWarehouseUser) {
+        const adminRes = await api.get("/admin/products", {
+          params: { active: "all" },
+        });
+        const adminItems: any[] = Array.isArray(adminRes.data)
+          ? adminRes.data
+          : [];
+
+        const allowedIds = new Set<number>();
+        for (const p of adminItems) {
+          const hasWholesaleFlag = p?.has_wholesale;
+          const wp = String(p?.wholesale_package || "").trim();
+          const validByPackage =
+            wp !== "" && wp !== "0" && wp !== "كرتونة 0" && wp !== "-";
+
+          if (hasWholesaleFlag === true || (hasWholesaleFlag !== false && validByPackage)) {
+            allowedIds.add(Number(p.id));
+          }
+        }
+
+        list = list.filter((p) => allowedIds.has(Number(p.id)));
+      }
+
+      setProducts(list);
     } catch {
       /* ignore */
     } finally {
       setProductsLoading(false);
     }
-  }, []);
+  }, [isWarehouseUser]);
 
   useEffect(() => {
     fetchProducts();
@@ -203,21 +226,9 @@ function ProductMovementPageContent() {
 
   /* ========== Product list filter ========== */
   const filteredProducts = useMemo(() => {
-    const hasWholesalePackage = (p: Product) => {
-      if (p.has_wholesale === false) return false;
-      if (p.has_wholesale === true) return true;
+    if (!productSearch.trim()) return products;
 
-      const wp = String(p.wholesale_package || "").trim();
-      return wp !== "" && wp !== "0" && wp !== "كرتونة 0" && wp !== "-";
-    };
-
-    let result = isWarehouseUser
-      ? products.filter((p) => hasWholesalePackage(p))
-      : products;
-
-    if (!productSearch.trim()) return result;
-
-    result = result.filter((p) =>
+    return products.filter((p) =>
       multiWordMatch(
         productSearch,
         String(p.id),
@@ -225,9 +236,7 @@ function ProductMovementPageContent() {
         p.manufacturer || p.manufacturer_name || "",
       ),
     );
-
-    return result;
-  }, [products, productSearch, isWarehouseUser]);
+  }, [products, productSearch]);
 
   /* ========== Warehouse buttons ========== */
   const warehouseOptions: WarehouseFilter[] =
