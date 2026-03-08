@@ -62,6 +62,8 @@ type Product = {
   name: string;
   manufacturer?: string | null;
   manufacturer_name?: string | null;
+  wholesale_package?: string | null;
+  has_wholesale?: boolean | null;
 };
 
 type WarehouseFilter = "الكل" | "المخزن الرئيسي" | "مخزن المعرض";
@@ -109,7 +111,11 @@ function ProductMovementPageContent() {
     const withoutTrailingPiece = cleaned.replace(/\s+(قطعة|قطع|قطعه)$/i, "");
     const tokens = withoutTrailingPiece.split(" ").filter(Boolean);
 
-    if (tokens.length === 2 && /^\d+$/.test(tokens[0]) && !/^\d+$/.test(tokens[1])) {
+    if (
+      tokens.length === 2 &&
+      /^\d+$/.test(tokens[0]) &&
+      !/^\d+$/.test(tokens[1])
+    ) {
       return `${tokens[1]} ${tokens[0]}`;
     }
 
@@ -197,8 +203,21 @@ function ProductMovementPageContent() {
 
   /* ========== Product list filter ========== */
   const filteredProducts = useMemo(() => {
-    if (!productSearch.trim()) return products;
-    return products.filter((p) =>
+    const hasWholesalePackage = (p: Product) => {
+      if (p.has_wholesale === false) return false;
+      if (p.has_wholesale === true) return true;
+
+      const wp = String(p.wholesale_package || "").trim();
+      return wp !== "" && wp !== "0" && wp !== "كرتونة 0" && wp !== "-";
+    };
+
+    let result = isWarehouseUser
+      ? products.filter((p) => hasWholesalePackage(p))
+      : products;
+
+    if (!productSearch.trim()) return result;
+
+    result = result.filter((p) =>
       multiWordMatch(
         productSearch,
         String(p.id),
@@ -206,7 +225,9 @@ function ProductMovementPageContent() {
         p.manufacturer || p.manufacturer_name || "",
       ),
     );
-  }, [products, productSearch]);
+
+    return result;
+  }, [products, productSearch, isWarehouseUser]);
 
   /* ========== Warehouse buttons ========== */
   const warehouseOptions: WarehouseFilter[] =
