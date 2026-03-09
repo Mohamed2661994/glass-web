@@ -71,24 +71,24 @@ export default function LowStockReorderPage() {
       setLoading(true);
       const [lowStockRes, retailProductsRes, wholesaleProductsRes] =
         await Promise.all([
-        api.get("/reports/low-stock", {
-          params: { limit_quantity: 5 },
-        }),
-        api.get("/products", {
-          params: {
-            branch_id: 1,
-            invoice_type: "retail",
-            movement_type: "sale",
-          },
-        }),
-        api.get("/products", {
-          params: {
-            branch_id: 2,
-            invoice_type: "wholesale",
-            movement_type: "sale",
-          },
-        }),
-      ]);
+          api.get("/reports/low-stock", {
+            params: { limit_quantity: 5 },
+          }),
+          api.get("/products", {
+            params: {
+              branch_id: 1,
+              invoice_type: "retail",
+              movement_type: "sale",
+            },
+          }),
+          api.get("/products", {
+            params: {
+              branch_id: 2,
+              invoice_type: "wholesale",
+              movement_type: "sale",
+            },
+          }),
+        ]);
 
       const lowItems: LowStockItem[] = Array.isArray(lowStockRes.data)
         ? lowStockRes.data
@@ -131,7 +131,8 @@ export default function LowStockReorderPage() {
   /* ========== Filter — show only retail warehouse items with stock ≤ 5 ========== */
   const filteredData = useMemo(() => {
     let result = data.filter((i) => {
-      const retailQty = retailStock[i.product_id] ?? Number(i.current_stock) ?? 0;
+      const retailQty =
+        retailStock[i.product_id] ?? Number(i.current_stock) ?? 0;
       const wsQty = wholesaleStock[i.product_id] ?? 0;
 
       if (
@@ -178,13 +179,7 @@ export default function LowStockReorderPage() {
     }
 
     return result.sort((a, b) => a.current_stock - b.current_stock);
-  }, [
-    data,
-    search,
-    retailStock,
-    wholesaleStock,
-    onlyWithWholesaleStock,
-  ]);
+  }, [data, search, retailStock, wholesaleStock, onlyWithWholesaleStock]);
 
   /* ========== Cart actions ========== */
   const addToCart = (item: LowStockItem) => {

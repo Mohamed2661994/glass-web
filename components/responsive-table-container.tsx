@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import React, { ReactNode } from 'react';
-import { Card } from '@/components/ui/card';
+import React, { ReactNode } from "react";
+import { Card } from "@/components/ui/card";
 
 /**
  * ResponsiveTableContainer - Wrapper يدعم عرض الجدول على desktop والبطاقات على موبايل
- * 
+ *
  * الاستخدام:
  * <ResponsiveTableContainer
  *   desktop={<Table>...</Table>}
@@ -23,7 +23,7 @@ export function ResponsiveTableContainer({
   children,
   desktop,
   mobile,
-  className = '',
+  className = "",
 }: ResponsiveTableContainerProps) {
   return (
     <>
@@ -33,9 +33,7 @@ export function ResponsiveTableContainer({
       </div>
 
       {/* Mobile View - الظهور على screens أصغر من md */}
-      <div className={`block md:hidden ${className}`}>
-        {mobile || children}
-      </div>
+      <div className={`block md:hidden ${className}`}>{mobile || children}</div>
     </>
   );
 }
@@ -43,7 +41,7 @@ export function ResponsiveTableContainer({
 /**
  * TableSkeleton - Loading state للجدول على الموبيل
  */
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function TableSkeleton({ rows = 5 }: { rows?: number }) {
   return (

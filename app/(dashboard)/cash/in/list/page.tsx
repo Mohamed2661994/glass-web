@@ -338,7 +338,9 @@ export default function CashInListPage() {
                         {
                           label: "النوع",
                           value: (
-                            <Badge variant={sourceBadgeVariant(item.source_type)}>
+                            <Badge
+                              variant={sourceBadgeVariant(item.source_type)}
+                            >
                               {sourceLabel(item.source_type)}
                             </Badge>
                           ),

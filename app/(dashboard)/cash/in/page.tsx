@@ -277,8 +277,7 @@ function CashInPage() {
   const submitCashIn = async () => {
     try {
       setLoading(true);
-      const sourceType =
-        entryType === "manual" ? "manual" : "customer_payment";
+      const sourceType = entryType === "manual" ? "manual" : "customer_payment";
       const { data } = await api.post("/cash/in", {
         transaction_date: `${date}T12:00:00`,
         customer_name: sourceName,
@@ -443,7 +442,9 @@ function CashInPage() {
               {isWholesaleUser && (
                 <Button
                   type="button"
-                  variant={entryType === "discount_diff" ? "default" : "outline"}
+                  variant={
+                    entryType === "discount_diff" ? "default" : "outline"
+                  }
                   className={`flex-1 ${entryType === "discount_diff" ? "bg-amber-600 hover:bg-amber-700" : ""}`}
                   onClick={() => setEntryType("discount_diff")}
                 >

@@ -242,9 +242,7 @@ export default function CustomerBalancesPage() {
                 size="sm"
                 onClick={() => setShowAllCustomers((prev) => !prev)}
               >
-                {showAllCustomers
-                  ? "عرض المديونين فقط"
-                  : "عرض جميع العملاء"}
+                {showAllCustomers ? "عرض المديونين فقط" : "عرض جميع العملاء"}
               </Button>
             </div>
           </CardContent>

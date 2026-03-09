@@ -213,7 +213,10 @@ export default function DiscountDiffsPage() {
                           {item.customer_name || "-"}
                         </TableCell>
                         <TableCell className="text-amber-600 font-bold">
-                          {Math.round(Number(item.amount || 0)).toLocaleString()} ج
+                          {Math.round(
+                            Number(item.amount || 0),
+                          ).toLocaleString()}{" "}
+                          ج
                         </TableCell>
                         <TableCell className="text-xs">
                           {formatDate(item.transaction_date)}

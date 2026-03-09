@@ -15,7 +15,10 @@
 #### الاستخدام:
 
 ```tsx
-import { MobileTableCard, MobileTableWrapper } from "@/components/mobile-table-card";
+import {
+  MobileTableCard,
+  MobileTableWrapper,
+} from "@/components/mobile-table-card";
 
 <MobileTableWrapper>
   <MobileTableCard
@@ -23,12 +26,16 @@ import { MobileTableCard, MobileTableWrapper } from "@/components/mobile-table-c
       { label: "#", value: item.id },
       { label: "الاسم", value: item.name },
       { label: "المبلغ", value: item.amount, color: "success" },
-      { label: "المتبقي", value: item.remaining, color: item.remaining > 0 ? "danger" : "default" },
+      {
+        label: "المتبقي",
+        value: item.remaining,
+        color: item.remaining > 0 ? "danger" : "default",
+      },
     ]}
     onEdit={() => handleEdit(item)}
     onDelete={() => handleDelete(item)}
   />
-</MobileTableWrapper>
+</MobileTableWrapper>;
 ```
 
 #### Props:
@@ -53,17 +60,9 @@ import { MobileTableCard, MobileTableWrapper } from "@/components/mobile-table-c
 import { ResponsiveTableContainer } from "@/components/responsive-table-container";
 
 <ResponsiveTableContainer
-  desktop={
-    <Table>
-      {/* Desktop table content */}
-    </Table>
-  }
-  mobile={
-    <MobileTableWrapper>
-      {/* Mobile card content */}
-    </MobileTableWrapper>
-  }
-/>
+  desktop={<Table>{/* Desktop table content */}</Table>}
+  mobile={<MobileTableWrapper>{/* Mobile card content */}</MobileTableWrapper>}
+/>;
 ```
 
 ### 3. Hook `useTableResponsive`
@@ -75,7 +74,11 @@ import { ResponsiveTableContainer } from "@/components/responsive-table-containe
 #### الاستخدام:
 
 ```tsx
-import { useTableResponsive, formatCurrency, formatDate } from "@/hooks/use-table-responsive";
+import {
+  useTableResponsive,
+  formatCurrency,
+  formatDate,
+} from "@/hooks/use-table-responsive";
 
 const { isMobile, isDesktop } = useTableResponsive();
 
@@ -91,7 +94,10 @@ if (isMobile) {
 ### مثال 1: تطبيق على صفحة الواردات (cash/in/page.tsx)
 
 ```tsx
-import { MobileTableCard, MobileTableWrapper } from "@/components/mobile-table-card";
+import {
+  MobileTableCard,
+  MobileTableWrapper,
+} from "@/components/mobile-table-card";
 import { ResponsiveTableContainer } from "@/components/responsive-table-container";
 
 // في جزء الجدول:
@@ -107,11 +113,17 @@ import { ResponsiveTableContainer } from "@/components/responsive-table-containe
         </TableRow>
       </TableHeader>
       <TableBody>
-        {items.map(item => (
+        {items.map((item) => (
           <TableRow key={item.id}>
-            <TableCell className="font-mono text-xs">{item.cash_in_number}</TableCell>
-            <TableCell className="font-semibold">{item.customer_name}</TableCell>
-            <TableCell className="font-bold">{item.amount.toLocaleString()} ج</TableCell>
+            <TableCell className="font-mono text-xs">
+              {item.cash_in_number}
+            </TableCell>
+            <TableCell className="font-semibold">
+              {item.customer_name}
+            </TableCell>
+            <TableCell className="font-bold">
+              {item.amount.toLocaleString()} ج
+            </TableCell>
             <TableCell>
               <Badge>{item.source_type}</Badge>
             </TableCell>
@@ -122,13 +134,17 @@ import { ResponsiveTableContainer } from "@/components/responsive-table-containe
   }
   mobile={
     <MobileTableWrapper>
-      {items.map(item => (
+      {items.map((item) => (
         <MobileTableCard
           key={item.id}
           fields={[
             { label: "رقم القيد", value: item.cash_in_number },
             { label: "الاسم", value: item.customer_name },
-            { label: "المبلغ", value: `${item.amount.toLocaleString()} ج`, color: "success" },
+            {
+              label: "المبلغ",
+              value: `${item.amount.toLocaleString()} ج`,
+              color: "success",
+            },
             { label: "النوع", value: item.source_type },
           ]}
           onDelete={() => handleDelete(item)}
@@ -136,7 +152,7 @@ import { ResponsiveTableContainer } from "@/components/responsive-table-containe
       ))}
     </MobileTableWrapper>
   }
-/>
+/>;
 ```
 
 ### مثال 2: استخدام الخيار المرن (Hidden Columns)
@@ -149,19 +165,25 @@ import { ResponsiveTableContainer } from "@/components/responsive-table-containe
     <TableRow>
       <TableHead className="text-right">رقم الفاتورة</TableHead>
       <TableHead className="text-right">العميل</TableHead>
-      <TableHead className="text-right hidden md:table-cell">البريد الإلكتروني</TableHead>
+      <TableHead className="text-right hidden md:table-cell">
+        البريد الإلكتروني
+      </TableHead>
       <TableHead className="text-right">الإجمالي</TableHead>
-      <TableHead className="text-right hidden lg:table-cell">الملاحظات</TableHead>
+      <TableHead className="text-right hidden lg:table-cell">
+        الملاحظات
+      </TableHead>
     </TableRow>
   </TableHeader>
   <TableBody>
-    {items.map(item => (
+    {items.map((item) => (
       <TableRow key={item.id}>
         <TableCell>{item.id}</TableCell>
         <TableCell>{item.customer}</TableCell>
         <TableCell className="hidden md:table-cell">{item.email}</TableCell>
         <TableCell>{item.total}</TableCell>
-        <TableCell className="hidden lg:table-cell text-xs">{item.notes}</TableCell>
+        <TableCell className="hidden lg:table-cell text-xs">
+          {item.notes}
+        </TableCell>
       </TableRow>
     ))}
   </TableBody>
@@ -195,7 +217,7 @@ xl: 1280px
 5. **app/(dashboard)/customers/page.tsx** - العملاء
 6. **app/(dashboard)/products/page.tsx** - المنتجات
 7. **app/(dashboard)/invoices/page.tsx** - الفواتير
-8. **app/(dashboard)/reports/\**/page.tsx** - التقارير
+8. **app/(dashboard)/reports/\*\*/page.tsx** - التقارير
 9. **app/(dashboard)/stock-transfer/page.tsx** - تحويلات المخزن
 10. **app/(dashboard)/transfers/by-date/page.tsx** - التحويلات حسب التاريخ
 

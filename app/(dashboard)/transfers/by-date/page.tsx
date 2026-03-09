@@ -62,9 +62,8 @@ export default function TransfersByDatePage() {
   const [rows, setRows] = useState<TransferRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancellingItem, setCancellingItem] = useState<number | null>(null);
-  const [showCancelConfirm, setShowCancelConfirm] = useState<TransferRow | null>(
-    null,
-  );
+  const [showCancelConfirm, setShowCancelConfirm] =
+    useState<TransferRow | null>(null);
   const [togglingReceived, setTogglingReceived] = useState<number | null>(null);
   const [blockedCancelRow, setBlockedCancelRow] = useState<TransferRow | null>(
     null,
@@ -125,7 +124,10 @@ export default function TransfersByDatePage() {
       const apiMessage =
         err?.response?.data?.error || err?.response?.data?.message || "";
 
-      if (status === 400 && /رصيد\s*المخزن\s*المستلم\s*غير\s*كافي/.test(apiMessage)) {
+      if (
+        status === 400 &&
+        /رصيد\s*المخزن\s*المستلم\s*غير\s*كافي/.test(apiMessage)
+      ) {
         setBlockedCancelRow(row);
         setBlockedCancelItemId(itemId);
         toast.error(
@@ -153,7 +155,9 @@ export default function TransfersByDatePage() {
         received: !row.received,
       });
       setRows((prev) =>
-        prev.map((r) => (r.id === row.id ? { ...r, received: !row.received } : r)),
+        prev.map((r) =>
+          r.id === row.id ? { ...r, received: !row.received } : r,
+        ),
       );
     } catch {
       toast.error("فشل تحديث حالة الاستلام");
@@ -404,7 +408,10 @@ export default function TransfersByDatePage() {
           </p>
           {blockedCancelRow && (
             <p className="text-xs text-muted-foreground pb-2">
-              الصنف: <span className="font-semibold">{blockedCancelRow.product_name}</span>
+              الصنف:{" "}
+              <span className="font-semibold">
+                {blockedCancelRow.product_name}
+              </span>
             </p>
           )}
           <div className="flex gap-3">

@@ -1,20 +1,32 @@
-'use client';
+"use client";
 
 /**
  * Mobile Responsive Tables Demo
  * ==========================
- * 
+ *
  * هذه الصفحة توضح كيفية استخدام المكونات الجديدة
  * قم بزيارة هذه الصفحة واختبرها على الموبيل والـ desktop
  */
 
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Trash2, Edit2, Smartphone, Monitor } from 'lucide-react';
-import { MobileTableCard, MobileTableWrapper } from '@/components/mobile-table-card';
-import { ResponsiveTableContainer, TableSkeleton } from '@/components/responsive-table-container';
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Trash2, Edit2, Smartphone, Monitor } from "lucide-react";
+import {
+  MobileTableCard,
+  MobileTableWrapper,
+} from "@/components/mobile-table-card";
+import {
+  ResponsiveTableContainer,
+  TableSkeleton,
+} from "@/components/responsive-table-container";
 import {
   Table,
   TableBody,
@@ -22,46 +34,46 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { useTableResponsive } from '@/hooks/use-table-responsive';
+} from "@/components/ui/table";
+import { useTableResponsive } from "@/hooks/use-table-responsive";
 
 // Sample data
 const SAMPLE_DATA = [
   {
     id: 1,
-    name: 'محمد أحمد',
+    name: "محمد أحمد",
     amount: 1500,
-    status: 'active' as const,
-    date: '07/03/2026',
-    type: 'سند دفع',
-    notes: 'دفعة أولى من الفاتورة',
+    status: "active" as const,
+    date: "07/03/2026",
+    type: "سند دفع",
+    notes: "دفعة أولى من الفاتورة",
   },
   {
     id: 2,
-    name: 'فاطمة علي',
+    name: "فاطمة علي",
     amount: 2300,
-    status: 'pending' as const,
-    date: '06/03/2026',
-    type: 'وارد عادي',
-    notes: 'تحويل من حساب آخر',
+    status: "pending" as const,
+    date: "06/03/2026",
+    type: "وارد عادي",
+    notes: "تحويل من حساب آخر",
   },
   {
     id: 3,
-    name: 'أحمد محمود',
+    name: "أحمد محمود",
     amount: 850,
-    status: 'active' as const,
-    date: '05/03/2026',
-    type: 'فاتورة',
-    notes: 'باقي الدفعة السابقة',
+    status: "active" as const,
+    date: "05/03/2026",
+    type: "فاتورة",
+    notes: "باقي الدفعة السابقة",
   },
   {
     id: 4,
-    name: 'ليلى إبراهيم',
+    name: "ليلى إبراهيم",
     amount: 3200,
-    status: 'inactive' as const,
-    date: '04/03/2026',
-    type: 'فرقات خصم',
-    notes: 'تصحيح الخصم السابق',
+    status: "inactive" as const,
+    date: "04/03/2026",
+    type: "فرقات خصم",
+    notes: "تصحيح الخصم السابق",
   },
 ];
 
@@ -125,7 +137,8 @@ export default function MobileResponsiveDemo() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              تظهر بطاقات بجميع البيانات مع أزرار التعديل والحذف على الشاشات الصغيرة
+              تظهر بطاقات بجميع البيانات مع أزرار التعديل والحذف على الشاشات
+              الصغيرة
             </p>
           </CardContent>
         </Card>
@@ -150,16 +163,24 @@ export default function MobileResponsiveDemo() {
                     <TableHead className="text-right">المبلغ</TableHead>
                     <TableHead className="text-right">النوع</TableHead>
                     <TableHead className="text-right">الحالة</TableHead>
-                    <TableHead className="text-right hidden lg:table-cell">التاريخ</TableHead>
-                    <TableHead className="text-right hidden lg:table-cell">ملاحظات</TableHead>
+                    <TableHead className="text-right hidden lg:table-cell">
+                      التاريخ
+                    </TableHead>
+                    <TableHead className="text-right hidden lg:table-cell">
+                      ملاحظات
+                    </TableHead>
                     <TableHead className="text-right">إجراء</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {SAMPLE_DATA.map((item) => (
                     <TableRow key={item.id}>
-                      <TableCell className="font-mono text-xs py-2">{item.id}</TableCell>
-                      <TableCell className="font-semibold py-2">{item.name}</TableCell>
+                      <TableCell className="font-mono text-xs py-2">
+                        {item.id}
+                      </TableCell>
+                      <TableCell className="font-semibold py-2">
+                        {item.name}
+                      </TableCell>
                       <TableCell className="font-bold py-2">
                         {item.amount.toLocaleString()} ج
                       </TableCell>
@@ -167,18 +188,18 @@ export default function MobileResponsiveDemo() {
                       <TableCell className="py-2">
                         <Badge
                           variant={
-                            item.status === 'active'
-                              ? 'default'
-                              : item.status === 'pending'
-                                ? 'secondary'
-                                : 'outline'
+                            item.status === "active"
+                              ? "default"
+                              : item.status === "pending"
+                                ? "secondary"
+                                : "outline"
                           }
                         >
-                          {item.status === 'active'
-                            ? 'نشط'
-                            : item.status === 'pending'
-                              ? 'قيد الانتظار'
-                              : 'غير نشط'}
+                          {item.status === "active"
+                            ? "نشط"
+                            : item.status === "pending"
+                              ? "قيد الانتظار"
+                              : "غير نشط"}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-xs py-2 hidden lg:table-cell">
@@ -218,31 +239,31 @@ export default function MobileResponsiveDemo() {
                   <MobileTableCard
                     key={item.id}
                     fields={[
-                      { label: '#', value: item.id },
-                      { label: 'الاسم', value: item.name },
+                      { label: "#", value: item.id },
+                      { label: "الاسم", value: item.name },
                       {
-                        label: 'المبلغ',
+                        label: "المبلغ",
                         value: `${item.amount.toLocaleString()} ج`,
-                        color: 'info',
+                        color: "info",
                       },
-                      { label: 'النوع', value: item.type },
+                      { label: "النوع", value: item.type },
                       {
-                        label: 'الحالة',
+                        label: "الحالة",
                         value:
-                          item.status === 'active'
-                            ? 'نشط'
-                            : item.status === 'pending'
-                              ? 'قيد الانتظار'
-                              : 'غير نشط',
+                          item.status === "active"
+                            ? "نشط"
+                            : item.status === "pending"
+                              ? "قيد الانتظار"
+                              : "غير نشط",
                         color:
-                          item.status === 'active'
-                            ? 'success'
-                            : item.status === 'pending'
-                              ? 'warning'
-                              : 'danger',
+                          item.status === "active"
+                            ? "success"
+                            : item.status === "pending"
+                              ? "warning"
+                              : "danger",
                       },
-                      { label: 'التاريخ', value: item.date },
-                      { label: 'ملاحظات', value: item.notes },
+                      { label: "التاريخ", value: item.date },
+                      { label: "ملاحظات", value: item.notes },
                     ]}
                     onEdit={() => handleEdit(item)}
                     onDelete={() => handleDelete(item)}
@@ -258,9 +279,7 @@ export default function MobileResponsiveDemo() {
       <Card>
         <CardHeader>
           <CardTitle>حالة التحميل</CardTitle>
-          <CardDescription>
-            اضغط على الزر لرؤية حالة التحميل
-          </CardDescription>
+          <CardDescription>اضغط على الزر لرؤية حالة التحميل</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Button
@@ -270,7 +289,7 @@ export default function MobileResponsiveDemo() {
             }}
             disabled={isLoading}
           >
-            {isLoading ? 'جاري التحميل...' : 'محاكاة التحميل'}
+            {isLoading ? "جاري التحميل..." : "محاكاة التحميل"}
           </Button>
           {isLoading && <TableSkeleton rows={4} />}
         </CardContent>
@@ -293,7 +312,9 @@ export default function MobileResponsiveDemo() {
             </li>
             <li className="flex gap-2">
               <span className="text-green-600 font-bold">✓</span>
-              <span>معالجة الحالات المختلفة (النشط، قيد الانتظار، غير النشط)</span>
+              <span>
+                معالجة الحالات المختلفة (النشط، قيد الانتظار، غير النشط)
+              </span>
             </li>
             <li className="flex gap-2">
               <span className="text-green-600 font-bold">✓</span>
