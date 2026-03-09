@@ -153,6 +153,13 @@ export default function EditRetailInvoicePage() {
   const listRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  const totalQuantity = useMemo(() => {
+    return items.reduce((sum, item) => {
+      const qty = Number(item.quantity) || 0;
+      return sum + qty;
+    }, 0);
+  }, [items]);
+
   /* =========================================================
      3.5 Barcode State
      ========================================================= */
@@ -1630,6 +1637,14 @@ export default function EditRetailInvoicePage() {
                   </div>
                 );
               })}
+              {items.length > 0 && (
+                <div className="border rounded-xl p-3 bg-muted/30 flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">إجمالي الكمية</span>
+                  <span className="font-semibold">
+                    {totalQuantity.toLocaleString()}
+                  </span>
+                </div>
+              )}
             </div>
           </>
         )}

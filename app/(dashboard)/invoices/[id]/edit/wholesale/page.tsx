@@ -1584,6 +1584,14 @@ export default function EditWholesaleInvoicePage() {
                   </div>
                 );
               })}
+              {items.length > 0 && (
+                <div className="border rounded-xl p-3 bg-muted/30 flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">إجمالي الكمية</span>
+                  <span className="font-semibold">
+                    {totalQuantity.toLocaleString()}
+                  </span>
+                </div>
+              )}
             </div>
           </>
         )}
