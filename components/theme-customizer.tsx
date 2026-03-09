@@ -493,9 +493,16 @@ export function ThemeCustomizer() {
       for (const def of COLOR_DEFS) {
         if (saved[def.key]) {
           setCSSVar(def.cssVar, saved[def.key]!);
+        } else {
+          removeCSSVar(def.cssVar);
         }
       }
       applySemanticOverrides(saved);
+    } else {
+      for (const def of COLOR_DEFS) {
+        removeCSSVar(def.cssVar);
+      }
+      removeSemanticOverrides();
     }
   }, [mode, prefs.customColors]);
 
