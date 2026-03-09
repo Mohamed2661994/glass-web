@@ -289,7 +289,13 @@ function ProductMovementPageContent() {
 
     for (const item of filteredData) {
       const mt = item.movement_type || item.invoice_movement_type || "";
-      const isIn = ["purchase", "transfer_in", "replace_in", "return_sale", "in"].includes(mt);
+      const isIn = [
+        "purchase",
+        "transfer_in",
+        "replace_in",
+        "return_sale",
+        "in",
+      ].includes(mt);
       const qty = Number(item.quantity);
       const pkgLabel = normalizePackageName(item.package_name);
       const pkgKey =
@@ -341,7 +347,13 @@ function ProductMovementPageContent() {
 
   const exportData = filteredData.map((item) => {
     const mt = item.movement_type || item.invoice_movement_type || "";
-    const isIn = ["purchase", "transfer_in", "replace_in", "return_sale", "in"].includes(mt);
+    const isIn = [
+      "purchase",
+      "transfer_in",
+      "replace_in",
+      "return_sale",
+      "in",
+    ].includes(mt);
     return {
       ...item,
       date_formatted: getDate(item),
