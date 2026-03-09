@@ -22,7 +22,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { prefs } = useUserPreferences();
   const router = useRouter();
-  const { setTheme } = useTheme();
+  const { setTheme, resolvedTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [productDialogOpen, setProductDialogOpen] = useState(false);
@@ -65,12 +65,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user?.id) return;
     const savedColors = prefs.customColors;
-    if (!savedColors) return;
-    const mode = document.documentElement.classList.contains("dark")
-      ? "dark"
-      : "light";
-    const colors = savedColors[mode];
-    if (!colors) return;
+    const isDark =
+      resolvedTheme === "dark" ||
+      document.documentElement.classList.contains("dark");
+    const mode = isDark ? "dark" : "light";
+    const colors = savedColors?.[mode];
+
     const cssVarMap: Record<string, string> = {
       background: "--background",
       foreground: "--foreground",
@@ -85,14 +85,22 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       accent: "--accent",
       destructive: "--destructive",
     };
-    for (const [key, cssVar] of Object.entries(cssVarMap)) {
-      const val = (colors as Record<string, string | undefined>)[key];
-      if (val) document.documentElement.style.setProperty(cssVar, val);
+
+    if (colors) {
+      for (const [key, cssVar] of Object.entries(cssVarMap)) {
+        const val = (colors as Record<string, string | undefined>)[key];
+        if (val) document.documentElement.style.setProperty(cssVar, val);
+        else document.documentElement.style.removeProperty(cssVar);
+      }
+    } else {
+      for (const cssVar of Object.values(cssVarMap)) {
+        document.documentElement.style.removeProperty(cssVar);
+      }
     }
 
     // Inject semantic number color overrides
     const semanticRules: string[] = [];
-    if (colors.success) {
+    if (colors?.success) {
       const c = colors.success;
       semanticRules.push(
         `.text-green-600, .text-green-500, .text-green-400, .text-green-700, .text-emerald-600, .text-emerald-500, .text-emerald-400, .dark\\:text-green-400, .dark\\:text-green-300, .dark\\:text-green-500, .dark\\:text-emerald-400, .dark\\:text-emerald-300 { color: ${c} !important; }`,
@@ -116,7 +124,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         `.border-green-200, .border-emerald-200, .border-green-500\\/20, .border-emerald-500\\/20, .border-green-500, .dark\\:border-green-800 { border-color: color-mix(in srgb, ${c} 30%, transparent) !important; }`,
       );
     }
-    if (colors.danger) {
+    if (colors?.danger) {
       const c = colors.danger;
       semanticRules.push(
         `.text-red-600, .text-red-500, .text-red-400, .text-red-700, .text-rose-600, .text-rose-500, .text-rose-400, .text-rose-700, .dark\\:text-red-400, .dark\\:text-red-300, .dark\\:text-red-500, .dark\\:text-rose-400, .dark\\:text-rose-300 { color: ${c} !important; }`,
@@ -140,7 +148,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         `.border-red-200, .border-rose-200, .border-red-500, .border-red-500\\/20, .dark\\:border-red-800, .dark\\:border-rose-800 { border-color: color-mix(in srgb, ${c} 30%, transparent) !important; }`,
       );
     }
-    if (colors.info) {
+    if (colors?.info) {
       const c = colors.info;
       semanticRules.push(
         `.text-blue-600, .text-blue-500, .text-blue-400, .text-blue-700, .dark\\:text-blue-400, .dark\\:text-blue-300, .dark\\:text-blue-500 { color: ${c} !important; }`,
@@ -158,7 +166,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         `.border-blue-200, .border-blue-500\\/20, .border-blue-800, .border-blue-900, .dark\\:border-blue-800 { border-color: color-mix(in srgb, ${c} 30%, transparent) !important; }`,
       );
     }
-    if (colors.warning) {
+    if (colors?.warning) {
       const c = colors.warning;
       semanticRules.push(
         `.text-amber-600, .text-amber-500, .text-orange-600, .text-orange-500, .text-orange-400, .text-yellow-700, .text-yellow-600, .text-yellow-500, .dark\\:text-amber-400, .dark\\:text-orange-400, .dark\\:text-yellow-400, .dark\\:text-yellow-500 { color: ${c} !important; }`,
@@ -189,7 +197,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     } else {
       styleEl?.remove();
     }
-  }, [user?.id, prefs.customColors]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.id, prefs.customColors, resolvedTheme]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ✅ لو مفيش توكن → يروح لصفحة الدخول
   useEffect(() => {
