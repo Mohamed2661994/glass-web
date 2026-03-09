@@ -53,7 +53,7 @@ function ProductDropdown({
   const listRef = useRef<HTMLDivElement>(null);
 
   const filtered = products.filter((p) =>
-    multiWordMatch(search, String(p.id), p.name, p.manufacturer),
+    p.wholesale_package && multiWordMatch(search, String(p.id), p.name, p.manufacturer),
   );
 
   // Reset focused index when filtered list changes
