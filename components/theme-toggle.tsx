@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
@@ -12,20 +12,30 @@ export function ThemeToggle() {
   const { user } = useAuth();
   const { prefs, loaded, setThemePref } = useUserPreferences();
   const [mounted, setMounted] = useState(false);
+  // Tracks whether the initial one-time sync has fired for this user session.
+  // Prevents a stale backend response from reverting the theme after the user toggles.
+  const initialSyncDone = useRef(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  /* ── Sync server-side theme pref to next-themes on load ── */
+  // Reset sync flag whenever the user changes (login/logout)
+  useEffect(() => {
+    initialSyncDone.current = false;
+  }, [user?.id]);
+
+  /* ── Sync server-side theme pref to next-themes — ONE TIME per session ── */
   useEffect(() => {
     if (!loaded || !prefs.theme || !mounted) return;
-    // Only sync next-themes internal state — don't touch DOM directly
-    // The head script already applied the correct class before first paint
+    if (initialSyncDone.current) return; // already synced once — don't let backend override later
+    initialSyncDone.current = true;
+    // The head script already applied the correct class before first paint.
+    // Only override if next-themes resolved to something different.
     if (prefs.theme !== resolvedTheme) {
       setTheme(prefs.theme);
     }
-    // Also sync localStorage.theme so next-themes finds the right value on next load
+    // Keep localStorage.theme in sync so next-themes finds the right value on next load
     localStorage.setItem("theme", prefs.theme);
   }, [loaded, prefs.theme, mounted]); // eslint-disable-line react-hooks/exhaustive-deps
 

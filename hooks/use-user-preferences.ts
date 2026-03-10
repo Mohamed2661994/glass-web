@@ -161,6 +161,11 @@ export function useUserPreferences() {
           const serverPrefs = data as UserPreferences;
           setPrefsState((prev) => {
             const merged = { ...prev, ...serverPrefs };
+            // theme and customColors are local-first: the inline script + client
+            // already applied the correct value from localStorage. Prevent a
+            // stale backend value (not yet synced via debounce) from reverting them.
+            if (prev.theme) merged.theme = prev.theme;
+            if (prev.customColors) merged.customColors = prev.customColors;
             localStorage.setItem(PREFS_KEY(userId), JSON.stringify(merged));
             return merged;
           });
