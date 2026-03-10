@@ -464,6 +464,8 @@ export function ThemeCustomizer() {
   const [originalValues, setOriginalValues] = useState<Record<string, string>>(
     {},
   );
+  // Tracks which preset (if any) is currently staged — so save can persist both modes
+  const [selectedPreset, setSelectedPreset] = useState<ThemePreset | null>(null);
 
   // Read current CSS var values as hex
   const currentHexValues = useMemo(() => {
@@ -509,6 +511,7 @@ export function ThemeCustomizer() {
   const updateDraftColor = useCallback(
     (key: keyof CustomColors, value: string) => {
       setDraft((prev) => ({ ...prev, [key]: value }));
+      setSelectedPreset(null); // manual edit breaks preset link
     },
     [],
   );
@@ -555,21 +558,34 @@ export function ThemeCustomizer() {
       removeSemanticOverrides();
     }
     setPreviewing(false);
+    setSelectedPreset(null);
     toast.info("تم إلغاء المعاينة");
   }, [originalValues, prefs.customColors, mode]);
 
   const handleSave = useCallback(() => {
-    // Keep draft applied and save to prefs
-    const newCustomColors = {
-      ...(prefs.customColors || {}),
-      [mode]: { ...draft },
-    };
+    let newCustomColors: { light?: Partial<CustomColors>; dark?: Partial<CustomColors> };
+
+    if (selectedPreset) {
+      // Preset selected → persist both light AND dark so theme works when mode switches
+      newCustomColors = {
+        light: { ...selectedPreset.light },
+        dark: { ...selectedPreset.dark },
+      };
+    } else {
+      // Manual edit → save only the current mode
+      newCustomColors = {
+        ...(prefs.customColors || {}),
+        [mode]: { ...draft },
+      };
+    }
+
     setPrefs((prev) => ({ ...prev, customColors: newCustomColors }));
     // Ensure semantic overrides persist
     applySemanticOverrides(draft);
     setPreviewing(false);
+    setSelectedPreset(null);
     toast.success("تم حفظ الألوان بنجاح ✨");
-  }, [draft, mode, prefs.customColors, setPrefs]);
+  }, [draft, mode, prefs.customColors, setPrefs, selectedPreset]);
 
   const handleReset = useCallback(() => {
     // Remove all custom CSS vars
@@ -578,20 +594,25 @@ export function ThemeCustomizer() {
     }
     // Remove semantic overrides
     removeSemanticOverrides();
-    // Clear saved colors for current mode
-    const newCustomColors = { ...(prefs.customColors || {}) };
-    delete newCustomColors[mode];
-    setPrefs((prev) => ({ ...prev, customColors: newCustomColors }));
+    // Clear saved colors for BOTH modes (presets save both, so reset both)
+    setPrefs((prev) => ({ ...prev, customColors: {} }));
     setDraft({});
     setPreviewing(false);
+    setSelectedPreset(null);
     toast.success("تم إعادة الألوان للافتراضي");
-  }, [mode, prefs.customColors, setPrefs]);
+  }, [setPrefs]);
 
   const applyPreset = useCallback(
     (preset: ThemePreset) => {
       const colors = isDark ? preset.dark : preset.light;
-      setDraft((prev) => ({ ...prev, ...colors }));
-      // Apply immediately for preview
+      // Replace draft entirely (don't merge) so no stale manual colors remain
+      setDraft(colors);
+      setSelectedPreset(preset);
+      // Clear any existing inline overrides first
+      for (const def of COLOR_DEFS) {
+        removeCSSVar(def.cssVar);
+      }
+      // Apply current mode's colors immediately for preview
       for (const def of COLOR_DEFS) {
         const val = colors[def.key];
         if (val) setCSSVar(def.cssVar, val);
