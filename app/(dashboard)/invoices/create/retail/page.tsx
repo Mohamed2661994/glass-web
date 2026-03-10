@@ -300,6 +300,11 @@ export default function CreateRetailInvoicePage() {
   const [supplierPaymentAmount, setSupplierPaymentAmount] = useState("");
   const [supplierPaymentNotes, setSupplierPaymentNotes] = useState("");
   const [supplierPaymentSaving, setSupplierPaymentSaving] = useState(false);
+  const [supplierPaymentBalance, setSupplierPaymentBalance] = useState<
+    number | null
+  >(null);
+  const [supplierPaymentBalanceLoading, setSupplierPaymentBalanceLoading] =
+    useState(false);
   const supplierPaymentAmountRef = useRef<HTMLInputElement>(null);
 
   /* =========================================================
@@ -701,7 +706,41 @@ export default function CreateRetailInvoicePage() {
     setSupplierPhone(s.phone || "");
     setShowSupplierDropdown(false);
     setSupplierSuggestions([]);
+    void applySupplierPreviousBalance(s.name);
   };
+
+  const getSupplierBalanceByName = useCallback(async (name: string) => {
+    try {
+      const res = await api.get("/reports/supplier-balances", {
+        params: { supplier_name: name.trim(), _t: Date.now() },
+      });
+      const rows = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      const exact = rows.find(
+        (r: any) =>
+          String(r?.supplier_name || r?.name || "").trim() === name.trim(),
+      );
+      const row = exact || rows[0];
+      const balance = Number(row?.balance_due ?? row?.balance ?? 0);
+      return Number.isFinite(balance) ? balance : 0;
+    } catch {
+      return 0;
+    }
+  }, []);
+
+  const applySupplierPreviousBalance = useCallback(
+    async (name: string) => {
+      const balance = await getSupplierBalanceByName(name);
+      setPreviousBalance(String(balance));
+      return balance;
+    },
+    [getSupplierBalanceByName],
+  );
+
+  useEffect(() => {
+    if (movementType !== "purchase") return;
+    if (!supplierId || !supplierName.trim()) return;
+    void applySupplierPreviousBalance(supplierName);
+  }, [movementType, supplierId, supplierName, applySupplierPreviousBalance]);
 
   const openSupplierPaymentModal = useCallback(() => {
     if (movementType !== "purchase") {
@@ -722,6 +761,7 @@ export default function CreateRetailInvoicePage() {
     setSupplierPaymentNotes(
       `دفعة مورد لفاتورة شراء قطاعي بتاريخ ${invoiceDate}`,
     );
+    setSupplierPaymentBalance(null);
     setSupplierPaymentOpen(true);
   }, [movementType, supplierName, supplierId, paidAmount, invoiceDate]);
 
@@ -733,6 +773,22 @@ export default function CreateRetailInvoicePage() {
     }, 80);
     return () => clearTimeout(t);
   }, [supplierPaymentOpen]);
+
+  useEffect(() => {
+    if (!supplierPaymentOpen || !supplierName.trim()) return;
+    let active = true;
+    setSupplierPaymentBalanceLoading(true);
+    void getSupplierBalanceByName(supplierName)
+      .then((balance) => {
+        if (active) setSupplierPaymentBalance(balance);
+      })
+      .finally(() => {
+        if (active) setSupplierPaymentBalanceLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [supplierPaymentOpen, supplierName, getSupplierBalanceByName]);
 
   const saveSupplierPayment = useCallback(async () => {
     if (!supplierId || !supplierName.trim()) {
@@ -1607,6 +1663,8 @@ export default function CreateRetailInvoicePage() {
                     const v = e.target.value;
                     setSupplierId(null);
                     setSupplierName(v);
+                    setPreviousBalance("0");
+                    setSupplierPaymentBalance(null);
                     if (v.trim().length >= 1) {
                       searchSuppliers(v);
                     } else {
@@ -2578,6 +2636,26 @@ export default function CreateRetailInvoicePage() {
               <div>
                 <label className="text-sm mb-2 block">اسم المورد</label>
                 <Input value={supplierName} disabled />
+              </div>
+              <div className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">حساب المورد الحالي</span>
+                  {supplierPaymentBalanceLoading ? (
+                    <span className="text-muted-foreground">جاري التحميل...</span>
+                  ) : (
+                    <span
+                      className={`font-bold ${
+                        (supplierPaymentBalance ?? 0) > 0
+                          ? "text-red-500"
+                          : (supplierPaymentBalance ?? 0) < 0
+                            ? "text-green-600"
+                            : ""
+                      }`}
+                    >
+                      {(supplierPaymentBalance ?? 0).toLocaleString()} ج.م
+                    </span>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="text-sm mb-2 block">المبلغ</label>

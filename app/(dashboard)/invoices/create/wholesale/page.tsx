@@ -104,6 +104,7 @@ export default function CreateWholesaleInvoicePage() {
   const [previewBeforeSaveOpen, setPreviewBeforeSaveOpen] = useState(false);
 
   /* Supplier states (purchase invoices only) */
+  const [supplierId, setSupplierId] = useState<number | null>(null);
   const [supplierName, setSupplierName] = useState("");
   const [supplierPhone, setSupplierPhone] = useState("");
   const [supplierSuggestions, setSupplierSuggestions] = useState<any[]>([]);
@@ -237,6 +238,9 @@ export default function CreateWholesaleInvoicePage() {
       if (draft.invoiceNotes != null) setInvoiceNotes(draft.invoiceNotes);
       if (draft.extraDiscount) setExtraDiscount(draft.extraDiscount);
       if (draft.paidAmount) setPaidAmount(draft.paidAmount);
+      if (draft.supplierId) setSupplierId(draft.supplierId);
+      if (draft.supplierName) setSupplierName(draft.supplierName);
+      if (draft.supplierPhone) setSupplierPhone(draft.supplierPhone);
       if (draft.applyItemsDiscount !== undefined)
         setApplyItemsDiscount(draft.applyItemsDiscount);
       if (draft.items?.length) setItems(draft.items);
@@ -267,6 +271,9 @@ export default function CreateWholesaleInvoicePage() {
       previousBalance,
       extraDiscount,
       paidAmount,
+      supplierId,
+      supplierName,
+      supplierPhone,
       applyItemsDiscount,
       items,
     };
@@ -281,6 +288,9 @@ export default function CreateWholesaleInvoicePage() {
     previousBalance,
     extraDiscount,
     paidAmount,
+    supplierId,
+    supplierName,
+    supplierPhone,
     applyItemsDiscount,
     items,
   ]);
@@ -298,6 +308,9 @@ export default function CreateWholesaleInvoicePage() {
     setInvoiceNotes("");
     setExtraDiscount("0");
     setPaidAmount("0");
+    setSupplierId(null);
+    setSupplierName("");
+    setSupplierPhone("");
     setApplyItemsDiscount(true);
     setMovementType("sale");
     setInvoiceDate(getTodayDate());
@@ -484,11 +497,46 @@ export default function CreateWholesaleInvoicePage() {
   };
 
   const selectSupplier = (supplier: any) => {
+    setSupplierId(Number(supplier.id) || null);
     setSupplierName(supplier.name);
     setSupplierPhone(supplier.phone || "");
     setShowSupplierDropdown(false);
     setSupplierSuggestions([]);
+    void applySupplierPreviousBalance(supplier.name);
   };
+
+  const getSupplierBalanceByName = useCallback(async (name: string) => {
+    try {
+      const res = await api.get("/reports/supplier-balances", {
+        params: { supplier_name: name.trim(), _t: Date.now() },
+      });
+      const rows = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      const exact = rows.find(
+        (r: any) =>
+          String(r?.supplier_name || r?.name || "").trim() === name.trim(),
+      );
+      const row = exact || rows[0];
+      const balance = Number(row?.balance_due ?? row?.balance ?? 0);
+      return Number.isFinite(balance) ? balance : 0;
+    } catch {
+      return 0;
+    }
+  }, []);
+
+  const applySupplierPreviousBalance = useCallback(
+    async (name: string) => {
+      const balance = await getSupplierBalanceByName(name);
+      setPreviousBalance(String(balance));
+      return balance;
+    },
+    [getSupplierBalanceByName],
+  );
+
+  useEffect(() => {
+    if (movementType !== "purchase") return;
+    if (!supplierId || !supplierName.trim()) return;
+    void applySupplierPreviousBalance(supplierName);
+  }, [movementType, supplierId, supplierName, applySupplierPreviousBalance]);
 
   /* =========================================================
      8️⃣ Fetch Customer Balance
@@ -775,6 +823,7 @@ export default function CreateWholesaleInvoicePage() {
       setInvoiceNotes("");
       setExtraDiscount("0");
       setPaidAmount("0");
+      setSupplierId(null);
       setSupplierName("");
       setSupplierPhone("");
     } catch (err: any) {
@@ -1234,7 +1283,9 @@ export default function CreateWholesaleInvoicePage() {
                   placeholder="اكتب اسم المورد..."
                   onChange={(e) => {
                     const v = e.target.value;
+                    setSupplierId(null);
                     setSupplierName(v);
+                    setPreviousBalance("0");
                     if (v.trim().length >= 1) {
                       searchSuppliers(v);
                     } else {
