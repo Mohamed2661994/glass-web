@@ -40,7 +40,15 @@ export function ThemeToggle() {
   }, [loaded, prefs.theme, mounted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleToggle = () => {
-    const current = resolvedTheme || "light";
+    const current =
+      resolvedTheme === "dark"
+        ? "dark"
+        : resolvedTheme === "light"
+          ? "light"
+          : document.documentElement.classList.contains("dark") ||
+              localStorage.getItem("theme") === "dark"
+            ? "dark"
+            : "light";
     const newTheme = current === "dark" ? "light" : "dark";
 
     // 1. Update next-themes (handles DOM class + colorScheme)

@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { ReactNode, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Sidebar } from "@/components/sidebar";
@@ -22,7 +22,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { prefs } = useUserPreferences();
   const router = useRouter();
-  const { setTheme, resolvedTheme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [productDialogOpen, setProductDialogOpen] = useState(false);
@@ -46,29 +46,18 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  // استعادة ثيم اليوزر عند الدخول (only once on mount, not on prefs change)
-  const themeRestoredRef = useRef(false);
-  useEffect(() => {
-    if (user?.id && !themeRestoredRef.current) {
-      themeRestoredRef.current = true;
-      const savedTheme =
-        prefs.theme || localStorage.getItem(`theme_user_${user.id}`);
-      if (savedTheme) {
-        setTheme(savedTheme);
-        document.documentElement.classList.remove("light", "dark");
-        document.documentElement.classList.add(savedTheme);
-      }
-    }
-  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // Apply saved custom colors after theme is set
   useEffect(() => {
     if (!user?.id) return;
     const savedColors = prefs.customColors;
-    const isDark =
-      resolvedTheme === "dark" ||
-      document.documentElement.classList.contains("dark");
-    const mode = isDark ? "dark" : "light";
+    const mode =
+      resolvedTheme === "dark"
+        ? "dark"
+        : resolvedTheme === "light"
+          ? "light"
+          : localStorage.getItem("theme") === "dark"
+            ? "dark"
+            : "light";
     const colors = savedColors?.[mode];
 
     const cssVarMap: Record<string, string> = {

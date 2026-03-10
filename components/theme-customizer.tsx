@@ -465,7 +465,9 @@ export function ThemeCustomizer() {
     {},
   );
   // Tracks which preset (if any) is currently staged — so save can persist both modes
-  const [selectedPreset, setSelectedPreset] = useState<ThemePreset | null>(null);
+  const [selectedPreset, setSelectedPreset] = useState<ThemePreset | null>(
+    null,
+  );
 
   // Read current CSS var values as hex
   const currentHexValues = useMemo(() => {
@@ -563,7 +565,10 @@ export function ThemeCustomizer() {
   }, [originalValues, prefs.customColors, mode]);
 
   const handleSave = useCallback(() => {
-    let newCustomColors: { light?: Partial<CustomColors>; dark?: Partial<CustomColors> };
+    let newCustomColors: {
+      light?: Partial<CustomColors>;
+      dark?: Partial<CustomColors>;
+    };
 
     if (selectedPreset) {
       // Preset selected → persist both light AND dark so theme works when mode switches
