@@ -675,17 +675,20 @@ export default function CreateRetailInvoicePage() {
 
   /* Supplier search & select */
   const searchSuppliers = async (q: string) => {
-    if (q.trim().length < 2) {
+    const term = q.trim();
+    if (term.length < 1) {
       setSupplierSuggestions([]);
       setShowSupplierDropdown(false);
       return;
     }
     try {
       const { data } = await api.get("/suppliers/search", {
-        params: { q: q.trim() },
+        // Keep both keys for backward compatibility with backend versions
+        params: { name: term, q: term },
       });
-      setSupplierSuggestions(Array.isArray(data) ? data : []);
-      setShowSupplierDropdown(data.length > 0);
+      const rows = Array.isArray(data) ? data : data?.data || [];
+      setSupplierSuggestions(Array.isArray(rows) ? rows : []);
+      setShowSupplierDropdown(Array.isArray(rows) && rows.length > 0);
       setHighlightedSupplierIndex(-1);
     } catch {
       setSupplierSuggestions([]);
@@ -713,9 +716,12 @@ export default function CreateRetailInvoicePage() {
       toast.error("اختَر المورد من القائمة حتى يتم ربط الدفعة بالمورد الصحيح");
       return;
     }
-    const defaultAmount = Number(paidAmount) > 0 ? String(Number(paidAmount)) : "";
+    const defaultAmount =
+      Number(paidAmount) > 0 ? String(Number(paidAmount)) : "";
     setSupplierPaymentAmount(defaultAmount);
-    setSupplierPaymentNotes(`دفعة مورد لفاتورة شراء قطاعي بتاريخ ${invoiceDate}`);
+    setSupplierPaymentNotes(
+      `دفعة مورد لفاتورة شراء قطاعي بتاريخ ${invoiceDate}`,
+    );
     setSupplierPaymentOpen(true);
   }, [movementType, supplierName, supplierId, paidAmount, invoiceDate]);
 
@@ -760,7 +766,13 @@ export default function CreateRetailInvoicePage() {
     } finally {
       setSupplierPaymentSaving(false);
     }
-  }, [supplierId, supplierName, supplierPaymentAmount, supplierPaymentNotes, invoiceDate]);
+  }, [
+    supplierId,
+    supplierName,
+    supplierPaymentAmount,
+    supplierPaymentNotes,
+    invoiceDate,
+  ]);
 
   /* Close dropdowns on outside click */
   useEffect(() => {
@@ -1595,7 +1607,7 @@ export default function CreateRetailInvoicePage() {
                     const v = e.target.value;
                     setSupplierId(null);
                     setSupplierName(v);
-                    if (v.trim().length >= 2) {
+                    if (v.trim().length >= 1) {
                       searchSuppliers(v);
                     } else {
                       setSupplierSuggestions([]);
@@ -1603,8 +1615,11 @@ export default function CreateRetailInvoicePage() {
                     }
                   }}
                   onFocus={() => {
-                    if (supplierSuggestions.length > 0)
+                    if (supplierName.trim().length >= 1) {
+                      searchSuppliers(supplierName);
+                    } else if (supplierSuggestions.length > 0) {
                       setShowSupplierDropdown(true);
+                    }
                   }}
                   onKeyDown={(e) => {
                     if (
@@ -2551,7 +2566,10 @@ export default function CreateRetailInvoicePage() {
         />
 
         {/* ===== مودل صرف نقدي (دفعة مورد) ===== */}
-        <Dialog open={supplierPaymentOpen} onOpenChange={setSupplierPaymentOpen}>
+        <Dialog
+          open={supplierPaymentOpen}
+          onOpenChange={setSupplierPaymentOpen}
+        >
           <DialogContent dir="rtl" className="max-w-md">
             <DialogHeader>
               <DialogTitle>صرف نقدي - دفعة مورد</DialogTitle>

@@ -465,17 +465,20 @@ export default function CreateWholesaleInvoicePage() {
      ========================================================= */
 
   const searchSuppliers = async (query: string) => {
-    if (query.length < 2) {
+    const term = query.trim();
+    if (term.length < 1) {
       setSupplierSuggestions([]);
       setShowSupplierDropdown(false);
       return;
     }
     try {
       const res = await api.get("/suppliers/search", {
-        params: { name: query },
+        // Keep both keys for backward compatibility with backend versions
+        params: { name: term, q: term },
       });
-      setSupplierSuggestions(res.data || []);
-      setShowSupplierDropdown((res.data || []).length > 0);
+      const rows = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      setSupplierSuggestions(Array.isArray(rows) ? rows : []);
+      setShowSupplierDropdown(Array.isArray(rows) && rows.length > 0);
       setHighlightedSupplierIndex(-1);
     } catch {}
   };
@@ -1232,7 +1235,7 @@ export default function CreateWholesaleInvoicePage() {
                   onChange={(e) => {
                     const v = e.target.value;
                     setSupplierName(v);
-                    if (v.trim().length >= 2) {
+                    if (v.trim().length >= 1) {
                       searchSuppliers(v);
                     } else {
                       setSupplierSuggestions([]);
@@ -1240,8 +1243,11 @@ export default function CreateWholesaleInvoicePage() {
                     }
                   }}
                   onFocus={() => {
-                    if (supplierSuggestions.length > 0)
+                    if (supplierName.trim().length >= 1) {
+                      searchSuppliers(supplierName);
+                    } else if (supplierSuggestions.length > 0) {
                       setShowSupplierDropdown(true);
+                    }
                   }}
                   onKeyDown={(e) => {
                     if (
