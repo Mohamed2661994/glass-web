@@ -22,6 +22,7 @@ import {
   ChevronDown,
   Eye,
   StickyNote,
+  Wallet,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -137,6 +138,7 @@ export default function CreateRetailInvoicePage() {
   const phoneDropdownRef = useRef<HTMLDivElement>(null);
 
   /* Supplier fields (purchase only) */
+  const [supplierId, setSupplierId] = useState<number | null>(null);
   const [supplierName, setSupplierName] = useState("");
   const [supplierPhone, setSupplierPhone] = useState("");
   const [supplierSuggestions, setSupplierSuggestions] = useState<any[]>([]);
@@ -293,6 +295,13 @@ export default function CreateRetailInvoicePage() {
   const [paidAmount, setPaidAmount] = useState("0");
   const [applyItemsDiscount, setApplyItemsDiscount] = useState(false);
 
+  /* Supplier payment modal (cash out) */
+  const [supplierPaymentOpen, setSupplierPaymentOpen] = useState(false);
+  const [supplierPaymentAmount, setSupplierPaymentAmount] = useState("");
+  const [supplierPaymentNotes, setSupplierPaymentNotes] = useState("");
+  const [supplierPaymentSaving, setSupplierPaymentSaving] = useState(false);
+  const supplierPaymentAmountRef = useRef<HTMLInputElement>(null);
+
   /* =========================================================
      4.5 Draft Auto-Save & Restore
      ========================================================= */
@@ -316,6 +325,9 @@ export default function CreateRetailInvoicePage() {
       if (draft.invoiceNotes != null) setInvoiceNotes(draft.invoiceNotes);
       if (draft.extraDiscount) setExtraDiscount(draft.extraDiscount);
       if (draft.paidAmount) setPaidAmount(draft.paidAmount);
+      if (draft.supplierId) setSupplierId(draft.supplierId);
+      if (draft.supplierName) setSupplierName(draft.supplierName);
+      if (draft.supplierPhone) setSupplierPhone(draft.supplierPhone);
       if (draft.applyItemsDiscount !== undefined)
         setApplyItemsDiscount(draft.applyItemsDiscount);
       if (draft.items?.length) setItems(draft.items);
@@ -345,6 +357,9 @@ export default function CreateRetailInvoicePage() {
       previousBalance,
       extraDiscount,
       paidAmount,
+      supplierId,
+      supplierName,
+      supplierPhone,
       applyItemsDiscount,
       items,
     };
@@ -359,6 +374,9 @@ export default function CreateRetailInvoicePage() {
     previousBalance,
     extraDiscount,
     paidAmount,
+    supplierId,
+    supplierName,
+    supplierPhone,
     applyItemsDiscount,
     items,
   ]);
@@ -377,6 +395,9 @@ export default function CreateRetailInvoicePage() {
     setExtraDiscount("0");
     setPaidAmount("0");
     setApplyItemsDiscount(true);
+    setSupplierId(null);
+    setSupplierName("");
+    setSupplierPhone("");
     setMovementType("sale");
     setInvoiceDate(getTodayDate());
     clearDraft();
@@ -672,11 +693,74 @@ export default function CreateRetailInvoicePage() {
     }
   };
   const selectSupplier = (s: any) => {
+    setSupplierId(Number(s.id) || null);
     setSupplierName(s.name);
     setSupplierPhone(s.phone || "");
     setShowSupplierDropdown(false);
     setSupplierSuggestions([]);
   };
+
+  const openSupplierPaymentModal = useCallback(() => {
+    if (movementType !== "purchase") {
+      toast.error("زر الصرف النقدي متاح لفاتورة الشراء فقط");
+      return;
+    }
+    if (!supplierName.trim()) {
+      toast.error("اختَر المورد أولاً من بيانات الفاتورة");
+      return;
+    }
+    if (!supplierId) {
+      toast.error("اختَر المورد من القائمة حتى يتم ربط الدفعة بالمورد الصحيح");
+      return;
+    }
+    const defaultAmount = Number(paidAmount) > 0 ? String(Number(paidAmount)) : "";
+    setSupplierPaymentAmount(defaultAmount);
+    setSupplierPaymentNotes(`دفعة مورد لفاتورة شراء قطاعي بتاريخ ${invoiceDate}`);
+    setSupplierPaymentOpen(true);
+  }, [movementType, supplierName, supplierId, paidAmount, invoiceDate]);
+
+  useEffect(() => {
+    if (!supplierPaymentOpen) return;
+    const t = setTimeout(() => {
+      supplierPaymentAmountRef.current?.focus();
+      supplierPaymentAmountRef.current?.select();
+    }, 80);
+    return () => clearTimeout(t);
+  }, [supplierPaymentOpen]);
+
+  const saveSupplierPayment = useCallback(async () => {
+    if (!supplierId || !supplierName.trim()) {
+      toast.error("بيانات المورد غير مكتملة");
+      return;
+    }
+    const amountNum = Number(supplierPaymentAmount);
+    if (!Number.isFinite(amountNum) || amountNum <= 0) {
+      toast.error("أدخل مبلغًا صحيحًا أكبر من صفر");
+      return;
+    }
+
+    setSupplierPaymentSaving(true);
+    try {
+      const { data } = await api.post("/cash/out", {
+        name: supplierName.trim(),
+        amount: amountNum,
+        notes: supplierPaymentNotes.trim() || null,
+        date: invoiceDate,
+        entry_type: "supplier_payment",
+        supplier_id: supplierId,
+      });
+      setSupplierPaymentOpen(false);
+      toast.success(
+        data?.permission_number
+          ? `تم حفظ إذن الصرف رقم ${data.permission_number}`
+          : "تم حفظ إذن الصرف بنجاح",
+      );
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "فشل حفظ إذن الصرف");
+    } finally {
+      setSupplierPaymentSaving(false);
+    }
+  }, [supplierId, supplierName, supplierPaymentAmount, supplierPaymentNotes, invoiceDate]);
 
   /* Close dropdowns on outside click */
   useEffect(() => {
@@ -1067,6 +1151,7 @@ export default function CreateRetailInvoicePage() {
       setExtraDiscount("0");
       setApplyItemsDiscount(true);
       setPaidAmount("0");
+      setSupplierId(null);
       setSupplierName("");
       setSupplierPhone("");
     } catch (err: any) {
@@ -1508,6 +1593,7 @@ export default function CreateRetailInvoicePage() {
                   placeholder="اكتب اسم المورد..."
                   onChange={(e) => {
                     const v = e.target.value;
+                    setSupplierId(null);
                     setSupplierName(v);
                     if (v.trim().length >= 2) {
                       searchSuppliers(v);
@@ -2360,6 +2446,17 @@ export default function CreateRetailInvoicePage() {
                   "حفظ الفاتورة"
                 )}
               </Button>
+              {movementType === "purchase" && (
+                <Button
+                  variant="outline"
+                  size="lg"
+                  disabled={saving || items.length === 0}
+                  onClick={openSupplierPaymentModal}
+                >
+                  <Wallet className="h-4 w-4 ml-1" />
+                  صرف نقدي
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 size="lg"
@@ -2452,6 +2549,71 @@ export default function CreateRetailInvoicePage() {
           onSave={saveInvoice}
           saving={saving}
         />
+
+        {/* ===== مودل صرف نقدي (دفعة مورد) ===== */}
+        <Dialog open={supplierPaymentOpen} onOpenChange={setSupplierPaymentOpen}>
+          <DialogContent dir="rtl" className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>صرف نقدي - دفعة مورد</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm mb-2 block">اسم المورد</label>
+                <Input value={supplierName} disabled />
+              </div>
+              <div>
+                <label className="text-sm mb-2 block">المبلغ</label>
+                <Input
+                  ref={supplierPaymentAmountRef}
+                  type="number"
+                  inputMode="decimal"
+                  value={supplierPaymentAmount}
+                  onChange={(e) => setSupplierPaymentAmount(e.target.value)}
+                  placeholder="0.00"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      saveSupplierPayment();
+                    }
+                  }}
+                />
+              </div>
+              <div>
+                <label className="text-sm mb-2 block">ملاحظات</label>
+                <Textarea
+                  value={supplierPaymentNotes}
+                  onChange={(e) => setSupplierPaymentNotes(e.target.value)}
+                  placeholder="ملاحظة اختيارية"
+                  className="min-h-[80px]"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setSupplierPaymentOpen(false)}
+                  disabled={supplierPaymentSaving}
+                >
+                  إلغاء
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={saveSupplierPayment}
+                  disabled={supplierPaymentSaving}
+                >
+                  {supplierPaymentSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 ml-2 animate-spin" />
+                      جارٍ الحفظ...
+                    </>
+                  ) : (
+                    "حفظ المنصرف"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* ===== مودل تم الحفظ ===== */}
         <Dialog open={showSavedModal} onOpenChange={setShowSavedModal}>
