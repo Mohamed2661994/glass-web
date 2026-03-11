@@ -4,6 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 
 const INVENTORY_SUMMARY_PRINT_STORAGE_KEY = "inventorySummaryPrintData";
 
+const getWholesalePackageOnly = (value?: string) => {
+  if (!value) return "";
+  const firstPart = value.split("/")[0]?.trim();
+  return firstPart || "";
+};
+
 type PrintRow = {
   product_id: number;
   product_name: string;
@@ -232,7 +238,7 @@ export default function InventorySummaryPrintPage() {
                 <td className="name">
                   {[
                     row.product_name,
-                    row.package_name?.trim() || "",
+                    getWholesalePackageOnly(row.package_name),
                     row.manufacturer_name?.trim() || "",
                   ]
                     .filter(Boolean)

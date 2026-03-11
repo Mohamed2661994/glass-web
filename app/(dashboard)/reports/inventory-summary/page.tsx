@@ -25,6 +25,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const INVENTORY_SUMMARY_PRINT_STORAGE_KEY = "inventorySummaryPrintData";
 
+const getWholesalePackageOnly = (value?: string | null) => {
+  if (!value) return "";
+  const firstPart = String(value).split("/")[0]?.trim();
+  return firstPart || "";
+};
+
 /* ========== Types ========== */
 type InventoryItem = {
   product_id: number;
@@ -166,7 +172,7 @@ export default function InventorySummaryPage() {
       return {
         product_id: item.product_id,
         product_name: item.product_name,
-        package_name: item.package_name || "",
+        package_name: getWholesalePackageOnly(item.package_name),
         manufacturer_name: item.manufacturer_name || "",
         warehouse_name: item.warehouse_name || "",
         balance: totalIn - totalOut,
