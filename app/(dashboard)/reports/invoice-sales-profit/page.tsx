@@ -20,6 +20,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -78,12 +79,15 @@ export default function InvoiceSalesProfitPage() {
     if (!user) return;
     if (user.branch_id === 1) {
       setBranchFilter("1");
+      setInvoiceType("retail");
       return;
     }
     if (user.branch_id === 2) {
       setBranchFilter("2");
+      setInvoiceType("wholesale");
       return;
     }
+    setInvoiceType("all");
     setBranchFilter(null);
   }, [user]);
 
@@ -191,19 +195,27 @@ export default function InvoiceSalesProfitPage() {
                 />
               </div>
 
-              <Select
-                value={invoiceType}
-                onValueChange={(value) => setInvoiceType(value as InvoiceTypeFilter)}
-              >
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="نوع الفاتورة" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">كل الأنواع</SelectItem>
-                  <SelectItem value="retail">قطاعي</SelectItem>
-                  <SelectItem value="wholesale">جملة</SelectItem>
-                </SelectContent>
-              </Select>
+              {isShowroomUser || isWarehouseUser ? (
+                <Button variant="outline" size="sm" className="cursor-default">
+                  {`نوع الفاتورة: ${invoiceTypeLabel(invoiceType as "retail" | "wholesale")}`}
+                </Button>
+              ) : (
+                <Select
+                  value={invoiceType}
+                  onValueChange={(value) =>
+                    setInvoiceType(value as InvoiceTypeFilter)
+                  }
+                >
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="نوع الفاتورة" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">كل الأنواع</SelectItem>
+                    <SelectItem value="retail">قطاعي</SelectItem>
+                    <SelectItem value="wholesale">جملة</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
 
               <Input
                 type="date"
@@ -325,6 +337,28 @@ export default function InvoiceSalesProfitPage() {
                     ))
                   )}
                 </TableBody>
+                {!loading && rows.length > 0 && (
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center font-bold">
+                        الإجماليات
+                      </TableCell>
+                      <TableCell className="text-center font-bold">
+                        {formatMoney(totals.sales)}
+                      </TableCell>
+                      <TableCell
+                        className={`text-center font-bold ${totals.profit >= 0 ? "text-green-600" : "text-red-600"}`}
+                      >
+                        {formatMoney(totals.profit)}
+                      </TableCell>
+                      <TableCell
+                        className={`text-center font-bold ${totals.profit >= 0 ? "text-green-600" : "text-red-600"}`}
+                      >
+                        {formatPercent(getProfitPercentage(totals.sales, totals.profit))}
+                      </TableCell>
+                    </TableRow>
+                  </TableFooter>
+                )}
               </Table>
             </div>
           </CardContent>
