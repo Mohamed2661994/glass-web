@@ -43,6 +43,8 @@ type PaperSize = "A5" | "A4" | "A6";
 type Orientation = "portrait" | "landscape";
 type MarginSize = "normal" | "narrow" | "none";
 
+const FIXED_INVOICE_PAPER_SIZE: PaperSize = "A5";
+
 const PAPER_DIMS: Record<PaperSize, { w: number; h: number }> = {
   A4: { w: 210, h: 297 },
   A5: { w: 148, h: 210 },
@@ -91,7 +93,6 @@ function InvoicePrintPage() {
 
   /* ──── إعدادات الطباعة ──── */
   const [copies, setCopies] = useState(1);
-  const [paperSize, setPaperSize] = useState<PaperSize>("A5");
   const [orientation, setOrientation] = useState<Orientation>("portrait");
   const [margins, setMargins] = useState<MarginSize>("normal");
   const [printBold, setPrintBold] = useState(false);
@@ -109,6 +110,7 @@ function InvoicePrintPage() {
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const invoiceRef = useRef<HTMLDivElement>(null);
+  const paperSize = FIXED_INVOICE_PAPER_SIZE;
 
   /* ──── تحميل الإعدادات من localStorage ──── */
   useEffect(() => {
@@ -124,7 +126,6 @@ function InvoicePrintPage() {
       if (raw) {
         const s = JSON.parse(raw);
         if (s.copies) setCopies(s.copies);
-        if (s.paperSize) setPaperSize(s.paperSize);
         if (s.orientation) setOrientation(s.orientation);
         if (s.margins) setMargins(s.margins);
         if (s.fontSize) setFontSize(s.fontSize);
@@ -153,7 +154,7 @@ function InvoicePrintPage() {
         const next = {
           ...prev,
           copies,
-          paperSize,
+          paperSize: FIXED_INVOICE_PAPER_SIZE,
           orientation,
           margins,
           fontSize,
@@ -167,6 +168,7 @@ function InvoicePrintPage() {
           showCustomPhone,
           fontFamily,
           ...patch,
+          paperSize: FIXED_INVOICE_PAPER_SIZE,
         };
         localStorage.setItem("printSettings", JSON.stringify(next));
       } catch {}
@@ -205,7 +207,7 @@ function InvoicePrintPage() {
   }, [id]);
 
   /* ──── أبعاد الورقة الفعلية ──── */
-  const paper = PAPER_DIMS[paperSize];
+  const paper = PAPER_DIMS[FIXED_INVOICE_PAPER_SIZE];
   const pageW = orientation === "portrait" ? paper.w : paper.h;
   const pageH = orientation === "portrait" ? paper.h : paper.w;
   const marginMM = MARGIN_VALUES[margins];
@@ -683,19 +685,21 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
               {/* حجم الورق */}
               <div className="setting-group">
                 <label className="setting-label">حجم الورق</label>
-                <select
+                <div
                   className="s-select"
-                  value={paperSize}
-                  onChange={(e) => {
-                    const v = e.target.value as PaperSize;
-                    setPaperSize(v);
-                    savePrintSettings({ paperSize: v });
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    background: "#f8fafc",
+                    cursor: "default",
                   }}
                 >
-                  <option value="A5">A5 (148 × 210 مم)</option>
-                  <option value="A4">A4 (210 × 297 مم)</option>
-                  <option value="A6">A6 (105 × 148 مم)</option>
-                </select>
+                  <span>A5</span>
+                  <span style={{ fontSize: 12, color: "#64748b" }}>
+                    ثابت لكل الفواتير
+                  </span>
+                </div>
               </div>
 
               {/* اتجاه الورقة */}

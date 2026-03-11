@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import api from "@/services/api";
 
 const DISCOUNT_DIFF_MARKER = "{{discount_diff}}";
+const ARABIC_LOCALE = "ar-EG-u-nu-arab";
+const FIXED_CASH_SUMMARY_PAPER_SIZE = "A4";
 
 /* ================= TYPES ================= */
 
@@ -33,7 +35,32 @@ type CashOutItem = {
 const toDateOnly = (d: Date) =>
   new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 
-const formatMoney = (n: number) => Math.round(n).toLocaleString("ar-EG");
+const arabicDigits = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
+
+const formatMoney = (n: number) =>
+  Math.round(Number(n) || 0).toLocaleString(ARABIC_LOCALE);
+
+const formatDateAr = (date: Date) => date.toLocaleDateString(ARABIC_LOCALE);
+
+const toArabicDigits = (value: string) =>
+  value
+    .replace(/\d/g, (digit) => arabicDigits[Number(digit)])
+    .replace(/,/g, "،");
+
+const formatCellValue = (value: string | number | null | undefined) => {
+  if (value === null || value === undefined || value === "") return "-";
+  if (typeof value === "number") return formatMoney(value);
+
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === "-") return "-";
+
+  const normalizedNumeric = trimmed.replace(/,/g, "");
+  if (/^-?\d+(\.\d+)?$/.test(normalizedNumeric)) {
+    return Number(normalizedNumeric).toLocaleString(ARABIC_LOCALE);
+  }
+
+  return toArabicDigits(value);
+};
 
 const getArabicDayName = (d: Date) => {
   const days = [
@@ -329,7 +356,7 @@ function CashSummaryPrintInner() {
             <p
               className={`${fontStyles.date} ${isBold ? "font-bold" : "font-semibold"} mt-1`}
             >
-              {getArabicDayName(toDate)} - {toDate.toLocaleDateString("ar-EG")}
+              {getArabicDayName(toDate)} - {formatDateAr(toDate)}
             </p>
           )}
         </div>
@@ -342,7 +369,7 @@ function CashSummaryPrintInner() {
                 <span>
                   الرصيد المُرحَّل
                   {lastPrevDate
-                    ? ` (حتى ${lastPrevDate.toLocaleDateString("ar-EG")})`
+                    ? ` (حتى ${formatDateAr(lastPrevDate)})`
                     : ""}{" "}
                   :{" "}
                 </span>
@@ -376,7 +403,7 @@ function CashSummaryPrintInner() {
       {/* Print styles */}
       <style>{`
         @media print {
-          @page { size: ${isLandscape ? "A4 landscape" : "A4"}; margin: 15mm; }
+          @page { size: ${isLandscape ? `${FIXED_CASH_SUMMARY_PAPER_SIZE} landscape` : FIXED_CASH_SUMMARY_PAPER_SIZE}; margin: 15mm; }
           body { background: #fff !important; }
           * { overflow: visible !important; }
         }
@@ -456,12 +483,14 @@ function DataTable({
         <tbody>
           {rows.map((r, i) => (
             <tr key={i}>
-              <td className={`border border-black ${cellClass}`}>{r[0]}</td>
+              <td className={`border border-black ${cellClass}`}>
+                {formatCellValue(r[0])}
+              </td>
               <td className={`border border-black ${cellClass} text-center`}>
                 {formatMoney(Number(r[1]))}
               </td>
               <td className={`border border-black ${cellClass}`}>
-                {r[2] || "-"}
+                {formatCellValue(r[2])}
               </td>
             </tr>
           ))}
