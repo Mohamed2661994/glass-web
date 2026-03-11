@@ -154,7 +154,6 @@ function InvoicePrintPage() {
         const next = {
           ...prev,
           copies,
-          paperSize: FIXED_INVOICE_PAPER_SIZE,
           orientation,
           margins,
           fontSize,
