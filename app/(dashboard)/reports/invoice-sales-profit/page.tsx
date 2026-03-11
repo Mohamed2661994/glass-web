@@ -42,6 +42,14 @@ type InvoiceTypeFilter = "all" | "retail" | "wholesale";
 
 const formatMoney = (value: number) => Math.round(Number(value || 0)).toLocaleString("en-US");
 
+const getProfitPercentage = (salesTotal: number, netProfit: number) => {
+  const total = Number(salesTotal || 0);
+  if (total === 0) return 0;
+  return (Number(netProfit || 0) / total) * 100;
+};
+
+const formatPercent = (value: number) => `${Number(value || 0).toFixed(2)}%`;
+
 const formatDate = (value?: string) => {
   if (!value) return "-";
   const date = new Date(value);
@@ -123,6 +131,7 @@ export default function InvoiceSalesProfitPage() {
     { header: "نوع الفاتورة", key: "invoice_type_label", width: 14 },
     { header: "إجمالي بعد الخصم", key: "items_total_after_discount", width: 18 },
     { header: "صافي الربح", key: "net_profit", width: 14 },
+    { header: "نسبة الربح %", key: "profit_percentage", width: 14 },
   ];
 
   const exportData = rows.map((row) => ({
@@ -131,6 +140,11 @@ export default function InvoiceSalesProfitPage() {
     invoice_type_label: invoiceTypeLabel(row.invoice_type),
     items_total_after_discount: Number(row.items_total_after_discount || 0),
     net_profit: Number(row.net_profit || 0),
+    profit_percentage: Number(
+      getProfitPercentage(row.items_total_after_discount, row.net_profit).toFixed(
+        2,
+      ),
+    ),
   }));
 
   const branchOptions =
@@ -264,18 +278,19 @@ export default function InvoiceSalesProfitPage() {
                     <TableHead className="text-center">النوع</TableHead>
                     <TableHead className="text-center">إجمالي بعد الخصم</TableHead>
                     <TableHead className="text-center">صافي الربح</TableHead>
+                    <TableHead className="text-center">نسبة الربح %</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-10">
+                      <TableCell colSpan={7} className="text-center py-10">
                         جاري التحميل...
                       </TableCell>
                     </TableRow>
                   ) : rows.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
                         لا توجد بيانات
                       </TableCell>
                     </TableRow>
@@ -295,6 +310,16 @@ export default function InvoiceSalesProfitPage() {
                           className={`text-center font-bold ${row.net_profit >= 0 ? "text-green-600" : "text-red-600"}`}
                         >
                           {formatMoney(row.net_profit)}
+                        </TableCell>
+                        <TableCell
+                          className={`text-center font-bold ${row.net_profit >= 0 ? "text-green-600" : "text-red-600"}`}
+                        >
+                          {formatPercent(
+                            getProfitPercentage(
+                              row.items_total_after_discount,
+                              row.net_profit,
+                            ),
+                          )}
                         </TableCell>
                       </TableRow>
                     ))
