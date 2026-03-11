@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import api from "@/services/api";
 
 const DISCOUNT_DIFF_MARKER = "{{discount_diff}}";
-const ARABIC_LOCALE = "ar-EG-u-nu-arab";
+const WESTERN_NUMBER_LOCALE = "en-US";
 const FIXED_CASH_SUMMARY_PAPER_SIZE = "A4";
 
 /* ================= TYPES ================= */
@@ -35,17 +35,21 @@ type CashOutItem = {
 const toDateOnly = (d: Date) =>
   new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 
-const arabicDigits = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
+const easternArabicDigits = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
 
 const formatMoney = (n: number) =>
-  Math.round(Number(n) || 0).toLocaleString(ARABIC_LOCALE);
+  Math.round(Number(n) || 0).toLocaleString(WESTERN_NUMBER_LOCALE);
 
-const formatDateAr = (date: Date) => date.toLocaleDateString(ARABIC_LOCALE);
+const formatDateAr = (date: Date) =>
+  `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
 
-const toArabicDigits = (value: string) =>
+const toWesternDigits = (value: string) =>
   value
-    .replace(/\d/g, (digit) => arabicDigits[Number(digit)])
-    .replace(/,/g, "،");
+    .replace(/[٠-٩]/g, (digit) =>
+      String(easternArabicDigits.indexOf(digit)),
+    )
+    .replace(/٬/g, ",")
+    .replace(/٫/g, ".");
 
 const formatCellValue = (value: string | number | null | undefined) => {
   if (value === null || value === undefined || value === "") return "-";
@@ -56,10 +60,10 @@ const formatCellValue = (value: string | number | null | undefined) => {
 
   const normalizedNumeric = trimmed.replace(/,/g, "");
   if (/^-?\d+(\.\d+)?$/.test(normalizedNumeric)) {
-    return Number(normalizedNumeric).toLocaleString(ARABIC_LOCALE);
+    return Number(normalizedNumeric).toLocaleString(WESTERN_NUMBER_LOCALE);
   }
 
-  return toArabicDigits(value);
+  return toWesternDigits(value);
 };
 
 const getArabicDayName = (d: Date) => {
