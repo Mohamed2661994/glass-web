@@ -18,10 +18,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Printer, Search } from "lucide-react";
 import { ExportButtons, type ExportColumn } from "@/components/export-buttons";
 import { useRealtime } from "@/hooks/use-realtime";
 import { Skeleton } from "@/components/ui/skeleton";
+
+const INVENTORY_SUMMARY_PRINT_STORAGE_KEY = "inventorySummaryPrintData";
 
 /* ========== Types ========== */
 type InventoryItem = {
@@ -156,6 +158,33 @@ export default function InventorySummaryPage() {
     balance: Number(item.total_in || 0) - Number(item.total_out || 0),
   }));
 
+  const handlePrint = useCallback(() => {
+    const printRows = filteredData.map((item) => {
+      const totalIn = Number(item.total_in || 0);
+      const totalOut = Number(item.total_out || 0);
+
+      return {
+        product_id: item.product_id,
+        product_name: item.product_name,
+        manufacturer_name: item.manufacturer_name || "",
+        warehouse_name: item.warehouse_name || "",
+        balance: totalIn - totalOut,
+      };
+    });
+
+    localStorage.setItem(
+      INVENTORY_SUMMARY_PRINT_STORAGE_KEY,
+      JSON.stringify({
+        rows: printRows,
+        selectedWarehouse,
+        searchText: searchText.trim(),
+        printedAt: new Date().toISOString(),
+      }),
+    );
+
+    window.open("/reports/inventory-summary/print", "_blank");
+  }, [filteredData, searchText, selectedWarehouse]);
+
   /* ========== Warehouse buttons (only if not locked) ========== */
   const warehouseOptions: WarehouseFilter[] =
     !isShowroomUser && !isWarehouseUser
@@ -196,7 +225,11 @@ export default function InventorySummaryPage() {
 
         {/* Export buttons */}
         {!loading && filteredData.length > 0 && (
-          <div className="flex justify-center">
+          <div className="flex justify-center gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onClick={handlePrint}>
+              <Printer className="h-4 w-4" />
+              طباعة الاسم والرصيد
+            </Button>
             <ExportButtons
               tableRef={tableRef}
               columns={exportColumns}
