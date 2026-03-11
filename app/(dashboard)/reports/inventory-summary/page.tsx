@@ -28,7 +28,10 @@ const INVENTORY_SUMMARY_PRINT_STORAGE_KEY = "inventorySummaryPrintData";
 const getWholesalePackageOnly = (value?: string | null) => {
   if (!value) return "";
   const firstPart = String(value).split("/")[0]?.trim();
-  return firstPart || "";
+  const withoutCartonWord = (firstPart || "")
+    .replace(/^\s*كرتون(?:ة|ه)?\s*/, "")
+    .trim();
+  return withoutCartonWord || firstPart || "";
 };
 
 /* ========== Types ========== */
