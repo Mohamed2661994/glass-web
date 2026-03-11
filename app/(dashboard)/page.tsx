@@ -641,6 +641,7 @@ const ALL_PAGES: { label: string; href: string }[] = [
   { label: "نقص المخزون", href: "/reports/low-stock" },
   { label: "أصناف سالبة", href: "/reports/negative-stock" },
   { label: "حركة الأصناف", href: "/reports/product-movement" },
+  { label: "ربحية الفواتير", href: "/reports/invoice-sales-profit" },
   /* ── أخرى ── */
   { label: "استبدال", href: "/replace" },
   { label: "رصيد افتتاحي", href: "/opening-stock" },

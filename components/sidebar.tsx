@@ -195,6 +195,11 @@ export function Sidebar({
         icon: BarChart3,
         href: "/reports/product-movement",
       },
+      {
+        label: "ربحية الفواتير",
+        icon: DollarSign,
+        href: "/reports/invoice-sales-profit",
+      },
     ],
   };
 
