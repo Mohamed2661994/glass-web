@@ -7,6 +7,7 @@ const INVENTORY_SUMMARY_PRINT_STORAGE_KEY = "inventorySummaryPrintData";
 type PrintRow = {
   product_id: number;
   product_name: string;
+  package_name?: string;
   manufacturer_name?: string;
   warehouse_name?: string;
   balance: number;
@@ -19,7 +20,8 @@ type PrintPayload = {
   printedAt?: string;
 };
 
-const formatNumber = (value: number) => Number(value || 0).toLocaleString("en-US");
+const formatNumber = (value: number) =>
+  Number(value || 0).toLocaleString("en-US");
 
 const formatPrintedAt = (value?: string) => {
   if (!value) return "-";
@@ -66,7 +68,10 @@ export default function InventorySummaryPrintPage() {
 
   if (rows.length === 0) {
     return (
-      <div dir="rtl" className="min-h-screen flex items-center justify-center text-lg">
+      <div
+        dir="rtl"
+        className="min-h-screen flex items-center justify-center text-lg"
+      >
         لا توجد بيانات جاهزة للطباعة
       </div>
     );
@@ -216,7 +221,7 @@ export default function InventorySummaryPrintPage() {
           <thead>
             <tr>
               <th style={{ width: "8%" }}>#</th>
-              <th style={{ width: "72%" }}>اسم الصنف</th>
+              <th style={{ width: "72%" }}>اسم الصنف - العبوة - المصنع</th>
               <th style={{ width: "20%" }}>الرصيد</th>
             </tr>
           </thead>
@@ -225,8 +230,13 @@ export default function InventorySummaryPrintPage() {
               <tr key={`${row.product_id}-${index}`}>
                 <td>{formatNumber(index + 1)}</td>
                 <td className="name">
-                  {row.product_name}
-                  {row.manufacturer_name ? ` - ${row.manufacturer_name}` : ""}
+                  {[
+                    row.product_name,
+                    row.package_name?.trim() || "",
+                    row.manufacturer_name?.trim() || "",
+                  ]
+                    .filter(Boolean)
+                    .join(" - ")}
                 </td>
                 <td>{formatNumber(row.balance)}</td>
               </tr>

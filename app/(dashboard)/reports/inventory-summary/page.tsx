@@ -166,6 +166,7 @@ export default function InventorySummaryPage() {
       return {
         product_id: item.product_id,
         product_name: item.product_name,
+        package_name: item.package_name || "",
         manufacturer_name: item.manufacturer_name || "",
         warehouse_name: item.warehouse_name || "",
         balance: totalIn - totalOut,
