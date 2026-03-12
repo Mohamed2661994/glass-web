@@ -916,7 +916,7 @@ export default function CashSummaryPage() {
         <DialogContent className="max-w-4xl w-[95vw] h-[92vh] p-0 overflow-hidden" dir="rtl">
           <iframe
             key={cashInFrameKey}
-            src="/cash/in"
+            src="/cash/in?embed=1"
             title="وارد الخزنة"
             className="w-full h-full border-0"
           />
@@ -927,7 +927,7 @@ export default function CashSummaryPage() {
         <DialogContent className="max-w-4xl w-[95vw] h-[92vh] p-0 overflow-hidden" dir="rtl">
           <iframe
             key={cashOutFrameKey}
-            src="/cash/out"
+            src="/cash/out?embed=1"
             title="صرف نقدي"
             className="w-full h-full border-0"
           />

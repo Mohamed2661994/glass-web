@@ -1,7 +1,7 @@
 "use client";
 
-import { ReactNode, useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { ReactNode, Suspense, useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Sidebar } from "@/components/sidebar";
 import { MobileSidebar } from "@/components/mobile-sidebar";
@@ -18,10 +18,11 @@ import { SocketProvider } from "@/app/context/socket-context";
 import { NavLoadingProvider } from "@/app/context/nav-loading-context";
 import api, { API_URL } from "@/services/api";
 
-export default function DashboardLayout({ children }: { children: ReactNode }) {
+function DashboardLayoutContent({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { prefs } = useUserPreferences();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { resolvedTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -257,6 +258,22 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         ? "فرع الجملة"
         : "النظام";
 
+  const isEmbedMode = searchParams.get("embed") === "1";
+
+  if (isEmbedMode) {
+    return (
+      <SocketProvider>
+        <NavLoadingProvider>
+          <div className="h-dvh bg-background overflow-hidden">
+            <main className="h-full min-h-0 overflow-auto">
+              <div className="w-full">{children}</div>
+            </main>
+          </div>
+        </NavLoadingProvider>
+      </SocketProvider>
+    );
+  }
+
   return (
     <SocketProvider>
       <NavLoadingProvider>
@@ -337,5 +354,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </div>
       </NavLoadingProvider>
     </SocketProvider>
+  );
+}
+
+export default function DashboardLayout({ children }: { children: ReactNode }) {
+  return (
+    <Suspense fallback={<div className="h-dvh bg-background" />}>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+    </Suspense>
   );
 }
