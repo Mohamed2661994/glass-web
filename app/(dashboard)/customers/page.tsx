@@ -254,7 +254,7 @@ export default function CustomersPage() {
     setLoadingInvoices(true);
     try {
       const { data } = await api.get("/invoices", {
-        params: { customer_name: c.name, limit: 200 },
+        params: { customer_id: c.id, limit: 200 },
       });
       setCustomerInvoices(Array.isArray(data) ? data : data.invoices || []);
     } catch {
@@ -582,7 +582,10 @@ export default function CustomersPage() {
           open={!!invoicesCustomer}
           onOpenChange={(o) => !o && setInvoicesCustomer(null)}
         >
-          <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col" dir="rtl">
+          <DialogContent
+            className="max-w-2xl max-h-[90vh] flex flex-col"
+            dir="rtl"
+          >
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
@@ -592,7 +595,9 @@ export default function CustomersPage() {
 
             {/* Rename in invoices */}
             <div className="border rounded-lg p-3 bg-muted/30 space-y-2">
-              <p className="text-sm font-medium">تغيير اسم العميل في الفواتير</p>
+              <p className="text-sm font-medium">
+                تغيير اسم العميل في الفواتير
+              </p>
               <div className="flex gap-2">
                 <Input
                   value={renameTarget}
@@ -717,7 +722,10 @@ export default function CustomersPage() {
             </p>
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => setInvoicesCustomer(null)}>
+              <Button
+                variant="outline"
+                onClick={() => setInvoicesCustomer(null)}
+              >
                 إغلاق
               </Button>
             </DialogFooter>
