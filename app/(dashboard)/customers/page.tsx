@@ -277,18 +277,13 @@ export default function CustomersPage() {
     try {
       setRenaming(true);
       const { data } = await api.put("/invoices/rename-customer", {
+        customer_id: invoicesCustomer.id,
         old_name: invoicesCustomer.name,
         new_name: renameTarget.trim(),
       });
       toast.success(data.message || "تم تحديث الاسم");
       const newName = renameTarget.trim();
-      setCustomerInvoices((prev) =>
-        prev.map((inv) =>
-          inv.customer_name === invoicesCustomer.name
-            ? { ...inv, customer_name: newName }
-            : inv,
-        ),
-      );
+      setCustomerInvoices((prev) => prev.map((inv) => ({ ...inv, customer_name: newName })));
       setInvoicesCustomer((prev) => (prev ? { ...prev, name: newName } : null));
       setCustomers((prev) =>
         prev.map((c) =>
