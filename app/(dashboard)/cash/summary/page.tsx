@@ -6,13 +6,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   Printer,
   CalendarDays,
@@ -35,7 +34,6 @@ import {
 } from "lucide-react";
 import api from "@/services/api";
 import { useAuth } from "@/app/context/auth-context";
-import { toast } from "sonner";
 
 const DISCOUNT_DIFF_MARKER = "{{discount_diff}}";
 
@@ -131,18 +129,8 @@ export default function CashSummaryPage() {
 
   const [cashInModalOpen, setCashInModalOpen] = useState(false);
   const [cashOutModalOpen, setCashOutModalOpen] = useState(false);
-
-  const [cashInName, setCashInName] = useState("وارد يدوي");
-  const [cashInAmount, setCashInAmount] = useState("");
-  const [cashInDate, setCashInDate] = useState(today);
-  const [cashInNotes, setCashInNotes] = useState("");
-  const [savingCashIn, setSavingCashIn] = useState(false);
-
-  const [cashOutName, setCashOutName] = useState("");
-  const [cashOutAmount, setCashOutAmount] = useState("");
-  const [cashOutDate, setCashOutDate] = useState(today);
-  const [cashOutNotes, setCashOutNotes] = useState("");
-  const [savingCashOut, setSavingCashOut] = useState(false);
+  const [cashInFrameKey, setCashInFrameKey] = useState(0);
+  const [cashOutFrameKey, setCashOutFrameKey] = useState(0);
 
   /* ================= FETCH ================= */
 
@@ -281,74 +269,23 @@ export default function CashSummaryPage() {
   };
 
   const openCashInModal = () => {
-    setCashInName("وارد يدوي");
-    setCashInAmount("");
-    setCashInDate(today);
-    setCashInNotes("");
+    setCashInFrameKey((k) => k + 1);
     setCashInModalOpen(true);
   };
 
   const openCashOutModal = () => {
-    setCashOutName("");
-    setCashOutAmount("");
-    setCashOutDate(today);
-    setCashOutNotes("");
+    setCashOutFrameKey((k) => k + 1);
     setCashOutModalOpen(true);
   };
 
-  const submitCashIn = async () => {
-    if (!cashInAmount || Number(cashInAmount) <= 0) {
-      toast.error("ادخل مبلغ وارد صحيح");
-      return;
-    }
-
-    try {
-      setSavingCashIn(true);
-      await api.post("/cash/in", {
-        transaction_date: cashInDate || today,
-        customer_name: cashInName.trim() || "وارد يدوي",
-        description: "وارد الخزنة من اليومية",
-        amount: Number(cashInAmount),
-        notes: cashInNotes.trim() || null,
-        source_type: "manual",
-      });
-      toast.success("تم تسجيل الوارد بنجاح");
-      setCashInModalOpen(false);
-      setCashRefreshKey((k) => k + 1);
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || "فشل تسجيل الوارد");
-    } finally {
-      setSavingCashIn(false);
-    }
+  const handleCashInModalChange = (open: boolean) => {
+    setCashInModalOpen(open);
+    if (!open) setCashRefreshKey((k) => k + 1);
   };
 
-  const submitCashOut = async () => {
-    if (!cashOutName.trim()) {
-      toast.error("ادخل اسم جهة الصرف");
-      return;
-    }
-    if (!cashOutAmount || Number(cashOutAmount) <= 0) {
-      toast.error("ادخل مبلغ صرف صحيح");
-      return;
-    }
-
-    try {
-      setSavingCashOut(true);
-      await api.post("/cash/out", {
-        name: cashOutName.trim(),
-        amount: Number(cashOutAmount),
-        notes: cashOutNotes.trim() || null,
-        date: cashOutDate || today,
-        entry_type: "expense",
-      });
-      toast.success("تم تسجيل المنصرف بنجاح");
-      setCashOutModalOpen(false);
-      setCashRefreshKey((k) => k + 1);
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || "فشل تسجيل المنصرف");
-    } finally {
-      setSavingCashOut(false);
-    }
+  const handleCashOutModalChange = (open: boolean) => {
+    setCashOutModalOpen(open);
+    if (!open) setCashRefreshKey((k) => k + 1);
   };
 
   /* ================= TABLE ORDER HELPERS ================= */
@@ -975,125 +912,25 @@ export default function CashSummaryPage() {
         </Card>
       </div>
 
-      <Dialog open={cashInModalOpen} onOpenChange={setCashInModalOpen}>
-        <DialogContent className="max-w-md" dir="rtl">
-          <DialogHeader>
-            <DialogTitle>وارد الخزنة</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-3">
-            <div>
-              <Label className="text-xs text-muted-foreground">الاسم</Label>
-              <Input
-                value={cashInName}
-                onChange={(e) => setCashInName(e.target.value)}
-                placeholder="اسم المصدر"
-                className="mt-1.5"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">المبلغ</Label>
-              <Input
-                type="number"
-                inputMode="decimal"
-                value={cashInAmount}
-                onChange={(e) => setCashInAmount(e.target.value)}
-                placeholder="0"
-                className="mt-1.5"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">التاريخ</Label>
-              <Input
-                type="date"
-                value={cashInDate}
-                onChange={(e) => setCashInDate(e.target.value)}
-                className="mt-1.5"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">ملاحظات</Label>
-              <Textarea
-                value={cashInNotes}
-                onChange={(e) => setCashInNotes(e.target.value)}
-                placeholder="اختياري"
-                className="mt-1.5 min-h-[90px]"
-              />
-            </div>
-            <div className="flex justify-end gap-2 pt-1">
-              <Button
-                variant="outline"
-                onClick={() => setCashInModalOpen(false)}
-                disabled={savingCashIn}
-              >
-                إلغاء
-              </Button>
-              <Button onClick={submitCashIn} disabled={savingCashIn}>
-                {savingCashIn ? "جارٍ الحفظ..." : "حفظ"}
-              </Button>
-            </div>
-          </div>
+      <Dialog open={cashInModalOpen} onOpenChange={handleCashInModalChange}>
+        <DialogContent className="max-w-4xl w-[95vw] h-[92vh] p-0 overflow-hidden" dir="rtl">
+          <iframe
+            key={cashInFrameKey}
+            src="/cash/in"
+            title="وارد الخزنة"
+            className="w-full h-full border-0"
+          />
         </DialogContent>
       </Dialog>
 
-      <Dialog open={cashOutModalOpen} onOpenChange={setCashOutModalOpen}>
-        <DialogContent className="max-w-md" dir="rtl">
-          <DialogHeader>
-            <DialogTitle>صرف نقدي</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-3">
-            <div>
-              <Label className="text-xs text-muted-foreground">الاسم</Label>
-              <Input
-                value={cashOutName}
-                onChange={(e) => setCashOutName(e.target.value)}
-                placeholder="جهة الصرف"
-                className="mt-1.5"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">المبلغ</Label>
-              <Input
-                type="number"
-                inputMode="decimal"
-                value={cashOutAmount}
-                onChange={(e) => setCashOutAmount(e.target.value)}
-                placeholder="0"
-                className="mt-1.5"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">التاريخ</Label>
-              <Input
-                type="date"
-                value={cashOutDate}
-                onChange={(e) => setCashOutDate(e.target.value)}
-                className="mt-1.5"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">ملاحظات</Label>
-              <Textarea
-                value={cashOutNotes}
-                onChange={(e) => setCashOutNotes(e.target.value)}
-                placeholder="اختياري"
-                className="mt-1.5 min-h-[90px]"
-              />
-            </div>
-            <div className="flex justify-end gap-2 pt-1">
-              <Button
-                variant="outline"
-                onClick={() => setCashOutModalOpen(false)}
-                disabled={savingCashOut}
-              >
-                إلغاء
-              </Button>
-              <Button onClick={submitCashOut} disabled={savingCashOut}>
-                {savingCashOut ? "جارٍ الحفظ..." : "حفظ"}
-              </Button>
-            </div>
-          </div>
+      <Dialog open={cashOutModalOpen} onOpenChange={handleCashOutModalChange}>
+        <DialogContent className="max-w-4xl w-[95vw] h-[92vh] p-0 overflow-hidden" dir="rtl">
+          <iframe
+            key={cashOutFrameKey}
+            src="/cash/out"
+            title="صرف نقدي"
+            className="w-full h-full border-0"
+          />
         </DialogContent>
       </Dialog>
     </div>
