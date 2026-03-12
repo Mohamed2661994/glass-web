@@ -24,10 +24,30 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Search, Phone, Plus, Trash2, Pencil, X, Loader2 } from "lucide-react";
+import {
+  Search,
+  Phone,
+  Plus,
+  Trash2,
+  Pencil,
+  X,
+  Loader2,
+  FileText,
+  RefreshCw,
+} from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
 import { useRealtime } from "@/hooks/use-realtime";
 import { Skeleton } from "@/components/ui/skeleton";
+
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 type CustomerPhone = { id: number; phone: string };
 type Customer = {
@@ -35,6 +55,18 @@ type Customer = {
   name: string;
   apply_items_discount: boolean;
   phones: CustomerPhone[];
+};
+
+type CustomerInvoice = {
+  id: number;
+  invoice_type: string;
+  movement_type: string;
+  is_return?: boolean;
+  customer_name: string;
+  total: number;
+  payment_status: string;
+  invoice_date: string;
+  created_at: string;
 };
 
 export default function CustomersPage() {
@@ -62,6 +94,17 @@ export default function CustomersPage() {
     phoneId: number;
     phone: string;
   } | null>(null);
+
+  // Customer invoices dialog
+  const [invoicesCustomer, setInvoicesCustomer] = useState<Customer | null>(
+    null,
+  );
+  const [customerInvoices, setCustomerInvoices] = useState<CustomerInvoice[]>(
+    [],
+  );
+  const [loadingInvoices, setLoadingInvoices] = useState(false);
+  const [renameTarget, setRenameTarget] = useState("");
+  const [renaming, setRenaming] = useState(false);
 
   const fetchCustomers = async (q?: string) => {
     try {
@@ -204,6 +247,58 @@ export default function CustomersPage() {
     }
   };
 
+  const openCustomerInvoices = async (c: Customer) => {
+    setInvoicesCustomer(c);
+    setRenameTarget(c.name);
+    setCustomerInvoices([]);
+    setLoadingInvoices(true);
+    try {
+      const { data } = await api.get("/invoices", {
+        params: { customer_name: c.name, limit: 200 },
+      });
+      setCustomerInvoices(Array.isArray(data) ? data : data.invoices || []);
+    } catch {
+      toast.error("فشل تحميل الفواتير");
+    } finally {
+      setLoadingInvoices(false);
+    }
+  };
+
+  const renameInInvoices = async () => {
+    if (
+      !invoicesCustomer ||
+      !renameTarget.trim() ||
+      renameTarget.trim() === invoicesCustomer.name
+    )
+      return;
+    try {
+      setRenaming(true);
+      const { data } = await api.put("/invoices/rename-customer", {
+        old_name: invoicesCustomer.name,
+        new_name: renameTarget.trim(),
+      });
+      toast.success(data.message || "تم تحديث الاسم");
+      const newName = renameTarget.trim();
+      setCustomerInvoices((prev) =>
+        prev.map((inv) =>
+          inv.customer_name === invoicesCustomer.name
+            ? { ...inv, customer_name: newName }
+            : inv,
+        ),
+      );
+      setInvoicesCustomer((prev) => (prev ? { ...prev, name: newName } : null));
+      setCustomers((prev) =>
+        prev.map((c) =>
+          c.id === invoicesCustomer.id ? { ...c, name: newName } : c,
+        ),
+      );
+    } catch {
+      toast.error("فشل تحديث الاسم");
+    } finally {
+      setRenaming(false);
+    }
+  };
+
   return (
     <PageContainer>
       <div className="max-w-3xl mx-auto" dir="rtl">
@@ -274,6 +369,18 @@ export default function CustomersPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openCustomerInvoices(c);
+                      }}
+                      title="عرض فواتير العميل"
+                    >
+                      <FileText className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -469,6 +576,153 @@ export default function CustomersPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Customer Invoices Dialog */}
+        <Dialog
+          open={!!invoicesCustomer}
+          onOpenChange={(o) => !o && setInvoicesCustomer(null)}
+        >
+          <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col" dir="rtl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                فواتير العميل: {invoicesCustomer?.name}
+              </DialogTitle>
+            </DialogHeader>
+
+            {/* Rename in invoices */}
+            <div className="border rounded-lg p-3 bg-muted/30 space-y-2">
+              <p className="text-sm font-medium">تغيير اسم العميل في الفواتير</p>
+              <div className="flex gap-2">
+                <Input
+                  value={renameTarget}
+                  onChange={(e) => setRenameTarget(e.target.value)}
+                  placeholder="الاسم الجديد..."
+                  className="flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") renameInInvoices();
+                  }}
+                />
+                <Button
+                  size="sm"
+                  disabled={
+                    renaming ||
+                    !renameTarget.trim() ||
+                    renameTarget.trim() === invoicesCustomer?.name
+                  }
+                  onClick={renameInInvoices}
+                  className="gap-1"
+                >
+                  {renaming ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      تغيير في كل الفواتير
+                    </>
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                سيتم تغيير الاسم في كل الفواتير المسجلة بالاسم الحالي بالضبط
+              </p>
+            </div>
+
+            {/* Invoices list */}
+            <div className="flex-1 overflow-auto min-h-0">
+              {loadingInvoices ? (
+                <div className="space-y-2 py-2">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-10 w-full" />
+                  ))}
+                </div>
+              ) : customerInvoices.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">
+                  لا توجد فواتير بهذا الاسم
+                </p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-right">#</TableHead>
+                      <TableHead className="text-right">التاريخ</TableHead>
+                      <TableHead className="text-right">النوع</TableHead>
+                      <TableHead className="text-right">الحركة</TableHead>
+                      <TableHead className="text-right">الإجمالي</TableHead>
+                      <TableHead className="text-right">الحالة</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {customerInvoices.map((inv) => (
+                      <TableRow key={inv.id}>
+                        <TableCell className="font-medium">{inv.id}</TableCell>
+                        <TableCell>
+                          {inv.invoice_date
+                            ? new Date(inv.invoice_date).toLocaleDateString(
+                                "ar-EG",
+                              )
+                            : new Date(inv.created_at).toLocaleDateString(
+                                "ar-EG",
+                              )}
+                        </TableCell>
+                        <TableCell>
+                          {inv.invoice_type === "retail" ? "تجزئة" : "جملة"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              inv.is_return
+                                ? "destructive"
+                                : inv.movement_type === "sale"
+                                  ? "default"
+                                  : "secondary"
+                            }
+                          >
+                            {inv.is_return
+                              ? "مرتجع"
+                              : inv.movement_type === "sale"
+                                ? "بيع"
+                                : "شراء"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {Number(inv.total).toLocaleString("ar-EG")} ج
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              inv.payment_status === "paid"
+                                ? "default"
+                                : inv.payment_status === "partial"
+                                  ? "secondary"
+                                  : "destructive"
+                            }
+                          >
+                            {inv.payment_status === "paid"
+                              ? "مدفوع"
+                              : inv.payment_status === "partial"
+                                ? "جزئي"
+                                : "غير مدفوع"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+
+            <p className="text-xs text-muted-foreground text-center">
+              إجمالي {customerInvoices.length} فاتورة
+            </p>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setInvoicesCustomer(null)}>
+                إغلاق
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </PageContainer>
   );
