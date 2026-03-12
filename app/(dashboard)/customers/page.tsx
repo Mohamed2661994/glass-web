@@ -30,11 +30,13 @@ import {
   Plus,
   Trash2,
   Pencil,
+  Eye,
   X,
   Loader2,
   FileText,
   RefreshCw,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { PageContainer } from "@/components/layout/page-container";
 import { useRealtime } from "@/hooks/use-realtime";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -70,6 +72,7 @@ type CustomerInvoice = {
 };
 
 export default function CustomersPage() {
+  const router = useRouter();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -655,6 +658,7 @@ export default function CustomersPage() {
                       <TableHead className="text-right">الحركة</TableHead>
                       <TableHead className="text-right">الإجمالي</TableHead>
                       <TableHead className="text-right">الحالة</TableHead>
+                      <TableHead className="text-right">فتح</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -709,6 +713,20 @@ export default function CustomersPage() {
                                 ? "جزئي"
                                 : "غير مدفوع"}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              setInvoicesCustomer(null);
+                              router.push(`/invoices/${inv.id}`);
+                            }}
+                            title="فتح الفاتورة"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
