@@ -67,6 +67,7 @@ export default function CashOutListPage() {
       const params: Record<string, string> = {};
       if (fromDate) params.from_date = fromDate;
       if (toDate) params.to_date = toDate;
+      if (searchName.trim()) params.search_name = searchName.trim();
       const { data } = await api.get("/cash/out", { params });
       setData(data.data || []);
     } catch {
@@ -74,10 +75,14 @@ export default function CashOutListPage() {
     } finally {
       setLoading(false);
     }
-  }, [fromDate, toDate]);
+  }, [fromDate, toDate, searchName]);
 
   useEffect(() => {
-    fetchData();
+    const timer = window.setTimeout(() => {
+      fetchData();
+    }, 300);
+
+    return () => window.clearTimeout(timer);
   }, [fetchData]);
 
   const filtered = useMemo(() => {
