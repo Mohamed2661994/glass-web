@@ -2,7 +2,8 @@
 
 import { createContext, useContext, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import api from "@/services/api";
+import { io, type Socket } from "socket.io-client";
+import api, { API_URL } from "@/services/api";
 import type { UserPermissions } from "@/lib/permissions";
 
 interface User {
@@ -46,6 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     let isCancelled = false;
+    let socket: Socket | null = null;
 
     const refreshCurrentUser = async () => {
       try {
@@ -75,6 +77,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     refreshCurrentUser();
 
+    socket = io(API_URL, {
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionDelay: 2000,
+      reconnectionAttempts: Infinity,
+    });
+
+    socket.on("connect", () => {
+      socket?.emit("register_user", {
+        user_id: JSON.parse(localStorage.getItem("user") || "null")?.id,
+      });
+    });
+
+    socket.on("data:users", () => {
+      refreshCurrentUser();
+    });
+
     const handleWindowFocus = () => {
       refreshCurrentUser();
     };
@@ -84,6 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isCancelled = true;
       window.removeEventListener("focus", handleWindowFocus);
+      socket?.disconnect();
     };
   }, []);
 
