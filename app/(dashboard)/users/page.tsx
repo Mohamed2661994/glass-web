@@ -427,8 +427,7 @@ export default function UsersPage() {
   const branchLabel = (id: number) =>
     id === 1 ? "المعرض" : id === 2 ? "المخزن" : "غير محدد";
 
-  const roleLabel = (role?: string) =>
-    role === "admin" ? "أدمن" : "مستخدم";
+  const roleLabel = (role?: string) => (role === "admin" ? "أدمن" : "مستخدم");
 
   return (
     <PageContainer size="lg">
@@ -837,11 +836,13 @@ export default function UsersPage() {
                   </div>
                   <div className="space-y-3 rounded-lg border p-3 bg-background/60">
                     <div>
-                      <p className="text-sm font-medium">صلاحيات التعديل والحذف</p>
+                      <p className="text-sm font-medium">
+                        صلاحيات التعديل والحذف
+                      </p>
                       <p className="text-xs text-muted-foreground mt-1">
                         {newUserRole === "admin"
                           ? "الأدمن يمتلك كل الصلاحيات تلقائيًا داخل فرعه."
-                          : "حدد ما يمكن للمستخدم فعله في الوارد والمنصرف."}
+                          : "حدد ما يمكن للمستخدم فعله في الفواتير والوارد والمنصرف."}
                       </p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -905,7 +906,8 @@ export default function UsersPage() {
             <DialogHeader>
               <DialogTitle>تعديل دور وصلاحيات المستخدم</DialogTitle>
               <DialogDescription>
-                ضبط الفرع والدور وصلاحيات المستخدم &ldquo;{accessDialog.username}
+                ضبط الفرع والدور وصلاحيات المستخدم &ldquo;
+                {accessDialog.username}
                 &rdquo;
               </DialogDescription>
             </DialogHeader>
@@ -968,7 +970,7 @@ export default function UsersPage() {
                   <p className="text-xs text-muted-foreground mt-1">
                     {accessDialog.role === "admin"
                       ? "الأدمن يمتلك كل الصلاحيات تلقائيًا داخل فرعه."
-                      : "اختر صلاحيات تعديل وحذف قيود الوارد والمنصرف."}
+                      : "اختر صلاحيات تعديل وحذف الفواتير وقيود الوارد والمنصرف."}
                   </p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

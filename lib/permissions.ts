@@ -3,6 +3,8 @@ export const permissionKeys = [
   "cash_in_delete",
   "cash_out_edit",
   "cash_out_delete",
+  "invoice_edit",
+  "invoice_delete",
 ] as const;
 
 export type PermissionKey = (typeof permissionKeys)[number];
@@ -14,6 +16,8 @@ export const defaultPermissions: UserPermissions = {
   cash_in_delete: false,
   cash_out_edit: false,
   cash_out_delete: false,
+  invoice_edit: false,
+  invoice_delete: false,
 };
 
 export const permissionLabels: Record<PermissionKey, string> = {
@@ -21,6 +25,8 @@ export const permissionLabels: Record<PermissionKey, string> = {
   cash_in_delete: "حذف الوارد",
   cash_out_edit: "تعديل المنصرف",
   cash_out_delete: "حذف المنصرف",
+  invoice_edit: "تعديل الفاتورة",
+  invoice_delete: "حذف الفاتورة",
 };
 
 export function normalizePermissions(
@@ -31,6 +37,8 @@ export function normalizePermissions(
     cash_in_delete: Boolean(permissions?.cash_in_delete),
     cash_out_edit: Boolean(permissions?.cash_out_edit),
     cash_out_delete: Boolean(permissions?.cash_out_delete),
+    invoice_edit: Boolean(permissions?.invoice_edit),
+    invoice_delete: Boolean(permissions?.invoice_delete),
   };
 }
 

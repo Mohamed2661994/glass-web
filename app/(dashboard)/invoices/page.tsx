@@ -21,6 +21,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/auth-context";
 import { useRealtime } from "@/hooks/use-realtime";
 import { onUpdate, broadcastUpdate } from "@/lib/broadcast";
+import { hasPermission } from "@/lib/permissions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -116,6 +117,8 @@ export default function InvoicesPage() {
   >({});
   const router = useRouter();
   const { user } = useAuth();
+  const canEditInvoice = hasPermission(user, "invoice_edit");
+  const canDeleteInvoice = hasPermission(user, "invoice_delete");
 
   // branch_id 1 = retail, branch_id 2 = wholesale
   const invoiceType =
@@ -559,26 +562,30 @@ export default function InvoicesPage() {
                             <Eye size={16} />
                           </Button>
 
-                          <Button
-                            size="icon"
-                            variant="outline"
-                            onClick={() =>
-                              router.push(
-                                `/invoices/${invoice.id}/edit/${invoice.invoice_type}`,
-                              )
-                            }
-                          >
-                            <Pencil size={16} />
-                          </Button>
+                          {canEditInvoice && (
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              onClick={() =>
+                                router.push(
+                                  `/invoices/${invoice.id}/edit/${invoice.invoice_type}`,
+                                )
+                              }
+                            >
+                              <Pencil size={16} />
+                            </Button>
+                          )}
 
-                          <Button
-                            size="icon"
-                            variant="outline"
-                            disabled={deleting === invoice.id}
-                            onClick={() => confirmDelete(invoice.id)}
-                          >
-                            <Trash2 size={16} />
-                          </Button>
+                          {canDeleteInvoice && (
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              disabled={deleting === invoice.id}
+                              onClick={() => confirmDelete(invoice.id)}
+                            >
+                              <Trash2 size={16} />
+                            </Button>
+                          )}
 
                           <Button
                             size="icon"
@@ -723,27 +730,31 @@ export default function InvoicesPage() {
                       >
                         <Eye size={14} />
                       </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7"
-                        onClick={() =>
-                          router.push(
-                            `/invoices/${invoice.id}/edit/${invoice.invoice_type}`,
-                          )
-                        }
-                      >
-                        <Pencil size={14} />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7"
-                        disabled={deleting === invoice.id}
-                        onClick={() => confirmDelete(invoice.id)}
-                      >
-                        <Trash2 size={14} />
-                      </Button>
+                      {canEditInvoice && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          onClick={() =>
+                            router.push(
+                              `/invoices/${invoice.id}/edit/${invoice.invoice_type}`,
+                            )
+                          }
+                        >
+                          <Pencil size={14} />
+                        </Button>
+                      )}
+                      {canDeleteInvoice && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          disabled={deleting === invoice.id}
+                          onClick={() => confirmDelete(invoice.id)}
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      )}
                       <Button
                         size="icon"
                         variant="ghost"
