@@ -40,6 +40,14 @@ type Invoice = {
   remaining_amount: number;
 };
 
+const parseAmountInput = (value: string) => {
+  const normalized = value.replace(/,/g, "").trim();
+  if (!normalized) return 0;
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 /* ========== Component ========== */
 export default function CustomerDebtDetailsPage() {
   const params = useParams();
@@ -57,6 +65,7 @@ export default function CustomerDebtDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [manualOpeningBalance, setManualOpeningBalance] = useState("");
 
   /* ========== Invoice Preview Modal ========== */
   const [previewInvoice, setPreviewInvoice] = useState<any>(null);
@@ -220,6 +229,7 @@ export default function CustomerDebtDetailsPage() {
   // للقطاعي: لا نحسب الخصم
   const discountToSubtract = user?.branch_id === 1 ? 0 : totalDiscount;
   const netDebt = totalAll - discountToSubtract + openingBalance - totalPaid;
+  const manualOpeningBalanceValue = parseAmountInput(manualOpeningBalance);
 
   return (
     <PageContainer size="xl">
@@ -231,17 +241,37 @@ export default function CustomerDebtDetailsPage() {
           <CardContent className="p-4 text-center">
             <p className="text-muted-foreground text-sm">اسم العميل</p>
             <p className="text-lg font-bold">{customerName}</p>
+            <div className="mt-4 flex flex-col items-center gap-3">
+              <div className="w-full max-w-xs text-right">
+                <label className="mb-1 block text-xs text-muted-foreground">
+                  رصيد أول المدة
+                </label>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  min="0"
+                  value={manualOpeningBalance}
+                  onChange={(e) => setManualOpeningBalance(e.target.value)}
+                  placeholder="اكتب رصيد أول المدة"
+                />
+              </div>
             {!loading && visibleData.length > 0 && (
               <Button
                 variant="outline"
                 size="sm"
-                className="mt-3"
                 onClick={() => {
                   const params = new URLSearchParams();
                   if (fromDate) params.set("from", fromDate);
                   if (toDate) params.set("to", toDate);
                   if (user?.branch_id)
                     params.set("warehouse_id", String(user.branch_id));
+                  if (manualOpeningBalanceValue > 0) {
+                    params.set(
+                      "opening_balance",
+                      String(manualOpeningBalanceValue),
+                    );
+                  }
                   const qs = params.toString();
                   router.push(
                     `/reports/customer-balances/${encodeURIComponent(customerName)}/print${qs ? `?${qs}` : ""}`,
@@ -252,6 +282,7 @@ export default function CustomerDebtDetailsPage() {
                 طباعة كشف الحساب
               </Button>
             )}
+            </div>
           </CardContent>
         </Card>
 

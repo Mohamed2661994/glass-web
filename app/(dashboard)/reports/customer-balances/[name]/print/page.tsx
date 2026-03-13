@@ -20,10 +20,17 @@ type Invoice = {
 /* ========== Helpers ========== */
 const formatMoney = (n: number) => Number(n).toFixed(2);
 
+const parseAmountParam = (value: string | null) => {
+  if (!value) return 0;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 const formatArabicDate = (value?: string, includeWeekday = false) => {
   if (!value) return "—";
 
-  const normalized = value.length >= 10 ? `${value.substring(0, 10)}T00:00:00` : value;
+  const normalized =
+    value.length >= 10 ? `${value.substring(0, 10)}T00:00:00` : value;
   const date = new Date(normalized);
   if (Number.isNaN(date.getTime())) return value;
 
@@ -45,6 +52,9 @@ function CustomerStatementPrintInner() {
   const from = searchParams.get("from");
   const to = searchParams.get("to");
   const warehouseId = searchParams.get("warehouse_id");
+  const manualOpeningBalance = parseAmountParam(
+    searchParams.get("opening_balance"),
+  );
 
   const [data, setData] = useState<Invoice[]>([]);
   const [cashInDateById, setCashInDateById] = useState<Record<string, string>>(
@@ -134,15 +144,16 @@ function CustomerStatementPrintInner() {
   );
 
   const visibleData = useMemo(() => {
-    const filtered = (!from && !to)
-      ? data
-      : data.filter((row) => {
-      const dateStr = (getRowDate(row) || "").substring(0, 10);
-      if (!dateStr) return false;
-      if (from && dateStr < from) return false;
-      if (to && dateStr > to) return false;
-      return true;
-    });
+    const filtered =
+      !from && !to
+        ? data
+        : data.filter((row) => {
+            const dateStr = (getRowDate(row) || "").substring(0, 10);
+            if (!dateStr) return false;
+            if (from && dateStr < from) return false;
+            if (to && dateStr > to) return false;
+            return true;
+          });
 
     return [...filtered].sort((left, right) => {
       if (left.record_type !== right.record_type) {
@@ -162,8 +173,8 @@ function CustomerStatementPrintInner() {
     () =>
       visibleData
         .filter((i) => i.record_type === "invoice")
-        .reduce((s, i) => s + Number(i.total), 0),
-    [visibleData],
+        .reduce((s, i) => s + Number(i.total), 0) + manualOpeningBalance,
+    [manualOpeningBalance, visibleData],
   );
 
   const totalPaid = useMemo(
@@ -176,7 +187,7 @@ function CustomerStatementPrintInner() {
   /* ========== Running Balance ========== */
   const runningBalances = useMemo(() => {
     const balances: number[] = [];
-    let balance = 0;
+    let balance = manualOpeningBalance;
     for (let i = 0; i < visibleData.length; i++) {
       balances.push(balance);
       const row = visibleData[i];
@@ -187,7 +198,7 @@ function CustomerStatementPrintInner() {
       }
     }
     return balances;
-  }, [visibleData]);
+  }, [manualOpeningBalance, visibleData]);
 
   const dateRange =
     from || to
@@ -236,11 +247,19 @@ function CustomerStatementPrintInner() {
         <div style={{ marginBottom: 20 }}>
           <p style={{ fontSize: 14, marginBottom: 4 }}>
             <span style={{ fontWeight: "bold" }}>اسم العميل:</span>{" "}
-            <span style={{ fontSize: 18, fontWeight: "bold" }}>{customerName}</span>
+            <span style={{ fontSize: 18, fontWeight: "bold" }}>
+              {customerName}
+            </span>
           </p>
           <p style={{ fontSize: 14 }}>
             <span style={{ fontWeight: "bold" }}>الفترة:</span> {dateRange}
           </p>
+          {manualOpeningBalance > 0 && (
+            <p style={{ fontSize: 14, marginTop: 4 }}>
+              <span style={{ fontWeight: "bold" }}>رصيد أول المدة:</span>{" "}
+              {formatMoney(manualOpeningBalance)}
+            </p>
+          )}
         </div>
 
         {/* Table */}
@@ -277,7 +296,9 @@ function CustomerStatementPrintInner() {
                     {inv.record_type === "invoice" ? "فاتورة" : "سند دفع"}
                   </td>
                   <td style={tdStyle}>{inv.invoice_id}</td>
-                  <td style={tdStyle}>{formatArabicDate(getRowDate(inv), true)}</td>
+                  <td style={tdStyle}>
+                    {formatArabicDate(getRowDate(inv), true)}
+                  </td>
                   <td style={tdStyle}>
                     {runningBalances[idx] === 0
                       ? "—"
