@@ -56,6 +56,7 @@ type Customer = {
   id: number;
   name: string;
   apply_items_discount: boolean;
+  is_market_customer: boolean;
   phones: CustomerPhone[];
 };
 
@@ -81,10 +82,14 @@ export default function CustomersPage() {
   // Edit dialog
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null);
   const [editName, setEditName] = useState("");
+  const [editIsMarketCustomer, setEditIsMarketCustomer] = useState(false);
   const [editPhones, setEditPhones] = useState<CustomerPhone[]>([]);
   const [newPhone, setNewPhone] = useState("");
   const [savingName, setSavingName] = useState(false);
   const [savingPhone, setSavingPhone] = useState(false);
+  const [togglingMarketCustomerId, setTogglingMarketCustomerId] = useState<
+    number | null
+  >(null);
 
   // Delete customer confirm
   const [deleteCustomerTarget, setDeleteCustomerTarget] =
@@ -138,6 +143,7 @@ export default function CustomersPage() {
   const openEdit = (c: Customer) => {
     setEditCustomer(c);
     setEditName(c.name);
+    setEditIsMarketCustomer(Boolean(c.is_market_customer));
     setEditPhones([...c.phones]);
     setNewPhone("");
   };
@@ -145,29 +151,51 @@ export default function CustomersPage() {
   const closeEdit = () => {
     setEditCustomer(null);
     setEditName("");
+    setEditIsMarketCustomer(false);
     setEditPhones([]);
     setNewPhone("");
   };
 
   const saveCustomerName = async () => {
     if (!editCustomer || !editName.trim()) return;
+    const trimmedName = editName.trim();
+    const marketCustomer = Boolean(editIsMarketCustomer);
+    if (
+      trimmedName === editCustomer.name &&
+      marketCustomer === Boolean(editCustomer.is_market_customer)
+    ) {
+      return;
+    }
     try {
       setSavingName(true);
       await api.put(`/customers/${editCustomer.id}`, {
-        name: editName.trim(),
+        name: trimmedName,
+        is_market_customer: marketCustomer,
       });
-      toast.success("تم تحديث الاسم");
+      toast.success("تم تحديث بيانات العميل");
       // Update locally
       setCustomers((prev) =>
         prev.map((c) =>
-          c.id === editCustomer.id ? { ...c, name: editName.trim() } : c,
+          c.id === editCustomer.id
+            ? {
+                ...c,
+                name: trimmedName,
+                is_market_customer: marketCustomer,
+              }
+            : c,
         ),
       );
       setEditCustomer((prev) =>
-        prev ? { ...prev, name: editName.trim() } : null,
+        prev
+          ? {
+              ...prev,
+              name: trimmedName,
+              is_market_customer: marketCustomer,
+            }
+          : null,
       );
     } catch {
-      toast.error("فشل تحديث الاسم");
+      toast.error("فشل تحديث بيانات العميل");
     } finally {
       setSavingName(false);
     }
@@ -195,6 +223,36 @@ export default function CustomersPage() {
       toast.error("فشل إضافة الرقم - ربما مسجل بالفعل");
     } finally {
       setSavingPhone(false);
+    }
+  };
+
+  const toggleMarketCustomer = async (customer: Customer) => {
+    try {
+      setTogglingMarketCustomerId(customer.id);
+      const nextValue = !customer.is_market_customer;
+      await api.put(`/customers/${customer.id}`, {
+        is_market_customer: nextValue,
+      });
+      setCustomers((prev) =>
+        prev.map((item) =>
+          item.id === customer.id
+            ? { ...item, is_market_customer: nextValue }
+            : item,
+        ),
+      );
+      setEditCustomer((prev) =>
+        prev && prev.id === customer.id
+          ? { ...prev, is_market_customer: nextValue }
+          : prev,
+      );
+      setEditIsMarketCustomer((prev) =>
+        editCustomer?.id === customer.id ? nextValue : prev,
+      );
+      toast.success(nextValue ? "تم تعليم العميل كسوق" : "تم إلغاء عميل السوق");
+    } catch {
+      toast.error("فشل تحديث علامة عميل السوق");
+    } finally {
+      setTogglingMarketCustomerId(null);
     }
   };
 
@@ -353,7 +411,14 @@ export default function CustomersPage() {
               >
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold truncate">{c.name}</p>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <p className="font-semibold truncate">{c.name}</p>
+                      {c.is_market_customer && (
+                        <Badge variant="secondary" className="shrink-0">
+                          سوق
+                        </Badge>
+                      )}
+                    </div>
                     {c.phones.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-1">
                         {c.phones.map((p) => (
@@ -369,6 +434,29 @@ export default function CustomersPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant={c.is_market_customer ? "default" : "outline"}
+                      size="sm"
+                      className="h-8"
+                      disabled={togglingMarketCustomerId === c.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleMarketCustomer(c);
+                      }}
+                      title={
+                        c.is_market_customer
+                          ? "إلغاء تعليم عميل السوق"
+                          : "تعليم كعميل سوق"
+                      }
+                    >
+                      {togglingMarketCustomerId === c.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : c.is_market_customer ? (
+                        "سوق"
+                      ) : (
+                        "تحديد سوق"
+                      )}
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -436,7 +524,9 @@ export default function CustomersPage() {
                     disabled={
                       savingName ||
                       !editName.trim() ||
-                      editName.trim() === editCustomer?.name
+                      (editName.trim() === editCustomer?.name &&
+                        editIsMarketCustomer ===
+                          Boolean(editCustomer?.is_market_customer))
                     }
                     onClick={saveCustomerName}
                   >
@@ -447,6 +537,21 @@ export default function CustomersPage() {
                     )}
                   </Button>
                 </div>
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border px-3 py-3">
+                <div>
+                  <Label className="text-sm font-medium">عميل سوق</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    علِّم هذا العميل لو كنت تحتاج تقرير حسابه الأسبوعي.
+                  </p>
+                </div>
+                <Checkbox
+                  checked={editIsMarketCustomer}
+                  onCheckedChange={(checked) =>
+                    setEditIsMarketCustomer(checked === true)
+                  }
+                />
               </div>
 
               {/* Phones */}

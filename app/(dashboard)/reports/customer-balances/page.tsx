@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useRealtime } from "@/hooks/use-realtime";
 import { Skeleton } from "@/components/ui/skeleton";
+import { noSpaces, normalizeArabic } from "@/lib/utils";
 
 /* ========== Types ========== */
 type CustomerBalanceItem = {
@@ -31,11 +32,16 @@ type CustomerBalanceItem = {
   total_paid: number;
   balance_due: number;
   last_invoice_date?: string | null;
+  is_market_customer?: boolean;
 };
 
 type CustomerItem = {
   name: string;
+  is_market_customer?: boolean;
 };
+
+const getCustomerLookupKey = (value: string) =>
+  normalizeArabic(noSpaces(value || "").toLowerCase());
 
 /* ========== Component ========== */
 export default function CustomerBalancesPage() {
@@ -47,6 +53,7 @@ export default function CustomerBalancesPage() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [showAllCustomers, setShowAllCustomers] = useState(false);
+  const [showMarketCustomersOnly, setShowMarketCustomersOnly] = useState(false);
   const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(
     new Set(),
   );
@@ -58,29 +65,51 @@ export default function CustomerBalancesPage() {
     try {
       setLoading(true);
 
+      const customersParams: Record<string, string> = {};
+      if (customerSearch.trim().length >= 2) {
+        customersParams.search = customerSearch.trim();
+      }
+      if (showMarketCustomersOnly) {
+        customersParams.market_only = "1";
+      }
+
       // جلب تقرير المديونية مع فلترة server-side حسب الفرع
-      const balancesRes = await api.get("/reports/customer-balances", {
-        params: {
-          customer_name: customerSearch || undefined,
-          from: fromDate || undefined,
-          to: toDate || undefined,
-          warehouse_id: user?.branch_id || undefined,
-        },
-      });
+      const [balancesRes, customersRes] = await Promise.all([
+        api.get("/reports/customer-balances", {
+          params: {
+            customer_name: customerSearch || undefined,
+            from: fromDate || undefined,
+            to: toDate || undefined,
+            warehouse_id: user?.branch_id || undefined,
+          },
+        }),
+        api.get("/customers", { params: customersParams }),
+      ]);
+
       let balances: CustomerBalanceItem[] = Array.isArray(balancesRes.data)
         ? balancesRes.data
         : [];
 
-      if (showAllCustomers) {
-        const params: any = {};
-        if (customerSearch.trim().length >= 2) {
-          params.search = customerSearch.trim();
-        }
-        const customersRes = await api.get("/customers", { params });
-        const customers: CustomerItem[] = Array.isArray(customersRes.data)
-          ? customersRes.data
-          : [];
+      const customers: CustomerItem[] = Array.isArray(customersRes.data)
+        ? customersRes.data
+        : [];
+      const marketLookup = new Map(
+        customers.map((customer) => [
+          getCustomerLookupKey(customer.name),
+          Boolean(customer.is_market_customer),
+        ]),
+      );
 
+      balances = balances.map((item) => ({
+        ...item,
+        total_sales: Number(item.total_sales || 0),
+        total_paid: Number(item.total_paid || 0),
+        balance_due: Number(item.balance_due || 0),
+        is_market_customer:
+          marketLookup.get(getCustomerLookupKey(item.customer_name)) ?? false,
+      }));
+
+      if (showAllCustomers) {
         const byName = new Map<string, CustomerBalanceItem>();
         for (const item of balances) {
           byName.set(item.customer_name, {
@@ -89,6 +118,7 @@ export default function CustomerBalancesPage() {
             total_paid: Number(item.total_paid || 0),
             balance_due: Number(item.balance_due || 0),
             last_invoice_date: item.last_invoice_date || null,
+            is_market_customer: Boolean(item.is_market_customer),
           });
         }
 
@@ -100,6 +130,7 @@ export default function CustomerBalancesPage() {
               total_paid: 0,
               balance_due: 0,
               last_invoice_date: null,
+              is_market_customer: Boolean(c.is_market_customer),
             });
           }
         }
@@ -111,13 +142,24 @@ export default function CustomerBalancesPage() {
         });
       }
 
+      if (showMarketCustomersOnly) {
+        balances = balances.filter((item) => Boolean(item.is_market_customer));
+      }
+
       setData(balances);
     } catch {
       setData([]);
     } finally {
       setLoading(false);
     }
-  }, [customerSearch, fromDate, toDate, user?.branch_id, showAllCustomers]);
+  }, [
+    customerSearch,
+    fromDate,
+    toDate,
+    user?.branch_id,
+    showAllCustomers,
+    showMarketCustomersOnly,
+  ]);
 
   /* Auto-search */
   useEffect(() => {
@@ -127,7 +169,20 @@ export default function CustomerBalancesPage() {
     return () => clearTimeout(timer);
   }, [fetchReport]);
 
-  useRealtime(["data:invoices", "data:cash", "data:cash-in"], fetchReport);
+  useEffect(() => {
+    setSelectedCustomers((prev) => {
+      const visibleCustomers = new Set(data.map((item) => item.customer_name));
+      const next = new Set(
+        [...prev].filter((name) => visibleCustomers.has(name)),
+      );
+      return next.size === prev.size ? prev : next;
+    });
+  }, [data]);
+
+  useRealtime(
+    ["data:invoices", "data:cash", "data:cash-in", "data:customers"],
+    fetchReport,
+  );
 
   /* ========== Totals ========== */
   const totalBalance = useMemo(
@@ -243,6 +298,13 @@ export default function CustomerBalancesPage() {
                 onClick={() => setShowAllCustomers((prev) => !prev)}
               >
                 {showAllCustomers ? "عرض المديونين فقط" : "عرض جميع العملاء"}
+              </Button>
+              <Button
+                variant={showMarketCustomersOnly ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowMarketCustomersOnly((prev) => !prev)}
+              >
+                {showMarketCustomersOnly ? "عرض كل العملاء" : "عملاء السوق فقط"}
               </Button>
             </div>
           </CardContent>
@@ -361,12 +423,17 @@ export default function CustomerBalancesPage() {
                           />
                         </TableCell>
                         <TableCell className="text-right font-medium">
-                          <Link
-                            href={`/reports/customer-balances/${encodeURIComponent(item.customer_name)}`}
-                            className="text-primary hover:underline"
-                          >
-                            {item.customer_name}
-                          </Link>
+                          <div className="flex items-center justify-end gap-2">
+                            {item.is_market_customer && (
+                              <Badge variant="secondary">سوق</Badge>
+                            )}
+                            <Link
+                              href={`/reports/customer-balances/${encodeURIComponent(item.customer_name)}`}
+                              className="text-primary hover:underline"
+                            >
+                              {item.customer_name}
+                            </Link>
+                          </div>
                         </TableCell>
                         <TableCell className="text-center text-xs text-muted-foreground">
                           {item.last_invoice_date
@@ -405,12 +472,17 @@ export default function CustomerBalancesPage() {
                       onCheckedChange={() => toggleCustomer(item.customer_name)}
                     />
                     <div>
-                      <Link
-                        href={`/reports/customer-balances/${encodeURIComponent(item.customer_name)}`}
-                        className="text-primary font-medium hover:underline"
-                      >
-                        {item.customer_name}
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/reports/customer-balances/${encodeURIComponent(item.customer_name)}`}
+                          className="text-primary font-medium hover:underline"
+                        >
+                          {item.customer_name}
+                        </Link>
+                        {item.is_market_customer && (
+                          <Badge variant="secondary">سوق</Badge>
+                        )}
+                      </div>
                       {item.last_invoice_date && (
                         <p className="text-xs text-muted-foreground">
                           آخر فاتورة:{" "}

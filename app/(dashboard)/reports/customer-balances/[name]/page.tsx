@@ -256,32 +256,32 @@ export default function CustomerDebtDetailsPage() {
                   placeholder="اكتب رصيد أول المدة"
                 />
               </div>
-            {!loading && visibleData.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const params = new URLSearchParams();
-                  if (fromDate) params.set("from", fromDate);
-                  if (toDate) params.set("to", toDate);
-                  if (user?.branch_id)
-                    params.set("warehouse_id", String(user.branch_id));
-                  if (manualOpeningBalanceValue > 0) {
-                    params.set(
-                      "opening_balance",
-                      String(manualOpeningBalanceValue),
+              {!loading && visibleData.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const params = new URLSearchParams();
+                    if (fromDate) params.set("from", fromDate);
+                    if (toDate) params.set("to", toDate);
+                    if (user?.branch_id)
+                      params.set("warehouse_id", String(user.branch_id));
+                    if (manualOpeningBalanceValue > 0) {
+                      params.set(
+                        "opening_balance",
+                        String(manualOpeningBalanceValue),
+                      );
+                    }
+                    const qs = params.toString();
+                    router.push(
+                      `/reports/customer-balances/${encodeURIComponent(customerName)}/print${qs ? `?${qs}` : ""}`,
                     );
-                  }
-                  const qs = params.toString();
-                  router.push(
-                    `/reports/customer-balances/${encodeURIComponent(customerName)}/print${qs ? `?${qs}` : ""}`,
-                  );
-                }}
-              >
-                <Printer className="h-4 w-4 ml-2" />
-                طباعة كشف الحساب
-              </Button>
-            )}
+                  }}
+                >
+                  <Printer className="h-4 w-4 ml-2" />
+                  طباعة كشف الحساب
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
