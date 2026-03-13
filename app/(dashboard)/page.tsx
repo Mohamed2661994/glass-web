@@ -271,6 +271,7 @@ interface DashboardStats {
   today_cash: number;
   low_stock_count: number;
   negative_stock_count: number;
+  today_profit_percentage: number;
 }
 
 interface CashInItem {
@@ -293,6 +294,8 @@ interface Notification {
   is_read: boolean;
   created_at: string;
 }
+
+const formatPercentValue = (value: number) => `${Number(value || 0).toFixed(2)}%`;
 
 /* ---------- widget config ---------- */
 type WidgetId =
@@ -1351,7 +1354,7 @@ export default function DashboardPage() {
     switch (id) {
       case "kpi_cards":
         return (
-          <div key={id} className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div key={id} className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <Card>
               <CardContent className="p-4 flex flex-col items-center text-center gap-2">
                 <div className="rounded-lg bg-blue-100 dark:bg-blue-900/30 p-2.5">
@@ -1382,6 +1385,30 @@ export default function DashboardPage() {
                   ) : (
                     <p className="text-lg font-bold mt-0.5">
                       {invoices.length}
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                <div className="rounded-lg bg-emerald-100 dark:bg-emerald-900/30 p-2.5">
+                  <Percent className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">نسبة ربح مبيعات اليوم</p>
+                  {loadingStats ? (
+                    <Skeleton className="h-6 w-16 mt-1 mx-auto" />
+                  ) : (
+                    <p
+                      className={`text-lg font-bold mt-0.5 ${
+                        Number(stats?.today_profit_percentage || 0) >= 0
+                          ? "text-emerald-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {formatPercentValue(stats?.today_profit_percentage ?? 0)}
                     </p>
                   )}
                 </div>
