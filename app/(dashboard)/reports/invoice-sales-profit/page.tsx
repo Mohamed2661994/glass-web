@@ -41,7 +41,8 @@ type SalesProfitRow = {
 
 type InvoiceTypeFilter = "all" | "retail" | "wholesale";
 
-const formatMoney = (value: number) => Math.round(Number(value || 0)).toLocaleString("en-US");
+const formatMoney = (value: number) =>
+  Math.round(Number(value || 0)).toLocaleString("en-US");
 
 const getProfitPercentage = (salesTotal: number, netProfit: number) => {
   const total = Number(salesTotal || 0);
@@ -133,7 +134,11 @@ export default function InvoiceSalesProfitPage() {
     { header: "التاريخ", key: "invoice_date_formatted", width: 16 },
     { header: "العميل", key: "customer_name", width: 24 },
     { header: "نوع الفاتورة", key: "invoice_type_label", width: 14 },
-    { header: "إجمالي بعد الخصم", key: "items_total_after_discount", width: 18 },
+    {
+      header: "إجمالي بعد الخصم",
+      key: "items_total_after_discount",
+      width: 18,
+    },
     { header: "صافي الربح", key: "net_profit", width: 14 },
     { header: "نسبة الربح %", key: "profit_percentage", width: 14 },
   ];
@@ -145,9 +150,10 @@ export default function InvoiceSalesProfitPage() {
     items_total_after_discount: Number(row.items_total_after_discount || 0),
     net_profit: Number(row.net_profit || 0),
     profit_percentage: Number(
-      getProfitPercentage(row.items_total_after_discount, row.net_profit).toFixed(
-        2,
-      ),
+      getProfitPercentage(
+        row.items_total_after_discount,
+        row.net_profit,
+      ).toFixed(2),
     ),
   }));
 
@@ -175,7 +181,9 @@ export default function InvoiceSalesProfitPage() {
                   {branchOptions.map((option) => (
                     <Button
                       key={option.label}
-                      variant={branchFilter === option.value ? "default" : "outline"}
+                      variant={
+                        branchFilter === option.value ? "default" : "outline"
+                      }
                       size="sm"
                       onClick={() => setBranchFilter(option.value)}
                     >
@@ -255,19 +263,29 @@ export default function InvoiceSalesProfitPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <Card>
               <CardContent className="p-4 text-center">
-                <div className="text-sm text-muted-foreground">عدد الفواتير</div>
-                <div className="text-xl font-bold mt-1">{formatMoney(rows.length)}</div>
+                <div className="text-sm text-muted-foreground">
+                  عدد الفواتير
+                </div>
+                <div className="text-xl font-bold mt-1">
+                  {formatMoney(rows.length)}
+                </div>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4 text-center">
-                <div className="text-sm text-muted-foreground">إجمالي بعد الخصم</div>
-                <div className="text-xl font-bold mt-1">{formatMoney(totals.sales)}</div>
+                <div className="text-sm text-muted-foreground">
+                  إجمالي بعد الخصم
+                </div>
+                <div className="text-xl font-bold mt-1">
+                  {formatMoney(totals.sales)}
+                </div>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4 text-center">
-                <div className="text-sm text-muted-foreground">إجمالي صافي الربح</div>
+                <div className="text-sm text-muted-foreground">
+                  إجمالي صافي الربح
+                </div>
                 <div
                   className={`text-xl font-bold mt-1 ${totals.profit >= 0 ? "text-green-600" : "text-red-600"}`}
                 >
@@ -288,7 +306,9 @@ export default function InvoiceSalesProfitPage() {
                     <TableHead className="text-center">التاريخ</TableHead>
                     <TableHead className="text-right">العميل</TableHead>
                     <TableHead className="text-center">النوع</TableHead>
-                    <TableHead className="text-center">إجمالي بعد الخصم</TableHead>
+                    <TableHead className="text-center">
+                      إجمالي بعد الخصم
+                    </TableHead>
                     <TableHead className="text-center">صافي الربح</TableHead>
                     <TableHead className="text-center">نسبة الربح %</TableHead>
                   </TableRow>
@@ -302,18 +322,29 @@ export default function InvoiceSalesProfitPage() {
                     </TableRow>
                   ) : rows.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                      <TableCell
+                        colSpan={7}
+                        className="text-center py-10 text-muted-foreground"
+                      >
                         لا توجد بيانات
                       </TableCell>
                     </TableRow>
                   ) : (
                     rows.map((row) => (
                       <TableRow key={row.invoice_id}>
-                        <TableCell className="text-center font-medium">{row.invoice_id}</TableCell>
-                        <TableCell className="text-center">{formatDate(row.invoice_date)}</TableCell>
-                        <TableCell className="text-right">{row.customer_name || "عميل نقدي"}</TableCell>
+                        <TableCell className="text-center font-medium">
+                          {row.invoice_id}
+                        </TableCell>
                         <TableCell className="text-center">
-                          <Badge variant="secondary">{invoiceTypeLabel(row.invoice_type)}</Badge>
+                          {formatDate(row.invoice_date)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {row.customer_name || "عميل نقدي"}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="secondary">
+                            {invoiceTypeLabel(row.invoice_type)}
+                          </Badge>
                         </TableCell>
                         <TableCell className="text-center font-semibold">
                           {formatMoney(row.items_total_after_discount)}
@@ -354,7 +385,9 @@ export default function InvoiceSalesProfitPage() {
                       <TableCell
                         className={`text-center font-bold ${totals.profit >= 0 ? "text-green-600" : "text-red-600"}`}
                       >
-                        {formatPercent(getProfitPercentage(totals.sales, totals.profit))}
+                        {formatPercent(
+                          getProfitPercentage(totals.sales, totals.profit),
+                        )}
                       </TableCell>
                     </TableRow>
                   </TableFooter>

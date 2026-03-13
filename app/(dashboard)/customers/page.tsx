@@ -283,7 +283,9 @@ export default function CustomersPage() {
       });
       toast.success(data.message || "تم تحديث الاسم");
       const newName = renameTarget.trim();
-      setCustomerInvoices((prev) => prev.map((inv) => ({ ...inv, customer_name: newName })));
+      setCustomerInvoices((prev) =>
+        prev.map((inv) => ({ ...inv, customer_name: newName })),
+      );
       setInvoicesCustomer((prev) => (prev ? { ...prev, name: newName } : null));
       setCustomers((prev) =>
         prev.map((c) =>

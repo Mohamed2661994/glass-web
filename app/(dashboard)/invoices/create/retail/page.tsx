@@ -2639,9 +2639,13 @@ export default function CreateRetailInvoicePage() {
               </div>
               <div className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">حساب المورد الحالي</span>
+                  <span className="text-muted-foreground">
+                    حساب المورد الحالي
+                  </span>
                   {supplierPaymentBalanceLoading ? (
-                    <span className="text-muted-foreground">جاري التحميل...</span>
+                    <span className="text-muted-foreground">
+                      جاري التحميل...
+                    </span>
                   ) : (
                     <span
                       className={`font-bold ${

@@ -45,9 +45,7 @@ const formatDateAr = (date: Date) =>
 
 const toWesternDigits = (value: string) =>
   value
-    .replace(/[٠-٩]/g, (digit) =>
-      String(easternArabicDigits.indexOf(digit)),
-    )
+    .replace(/[٠-٩]/g, (digit) => String(easternArabicDigits.indexOf(digit)))
     .replace(/٬/g, ",")
     .replace(/٫/g, ".");
 

@@ -913,7 +913,10 @@ export default function CashSummaryPage() {
       </div>
 
       <Dialog open={cashInModalOpen} onOpenChange={handleCashInModalChange}>
-        <DialogContent className="max-w-4xl w-[95vw] h-[92vh] p-0 overflow-hidden" dir="rtl">
+        <DialogContent
+          className="max-w-4xl w-[95vw] h-[92vh] p-0 overflow-hidden"
+          dir="rtl"
+        >
           <iframe
             key={cashInFrameKey}
             src="/cash/in?embed=1"
@@ -924,7 +927,10 @@ export default function CashSummaryPage() {
       </Dialog>
 
       <Dialog open={cashOutModalOpen} onOpenChange={handleCashOutModalChange}>
-        <DialogContent className="max-w-4xl w-[95vw] h-[92vh] p-0 overflow-hidden" dir="rtl">
+        <DialogContent
+          className="max-w-4xl w-[95vw] h-[92vh] p-0 overflow-hidden"
+          dir="rtl"
+        >
           <iframe
             key={cashOutFrameKey}
             src="/cash/out?embed=1"

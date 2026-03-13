@@ -14,9 +14,19 @@ type CustomerBalanceItem = {
 /* ========== Helpers ========== */
 const formatMoney = (n: number) => Number(n).toLocaleString();
 
+const formatTodayHeader = () => {
+  const today = new Date();
+  const weekday = new Intl.DateTimeFormat("ar-EG", {
+    weekday: "long",
+  }).format(today);
+
+  return `${weekday} ${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
+};
+
 export default function PrintSelectedCustomersPage() {
   const [data, setData] = useState<CustomerBalanceItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const reportDate = formatTodayHeader();
 
   useEffect(() => {
     const stored = localStorage.getItem("printSelectedCustomers");
@@ -77,8 +87,9 @@ export default function PrintSelectedCustomersPage() {
           }}
         >
           <h1 style={{ fontSize: 18, fontWeight: "bold", margin: 0 }}>
-            تقرير مديونية العملاء المختارين
+            حسابات السوق
           </h1>
+          <div style={{ fontSize: 14, marginTop: 6 }}>{reportDate}</div>
         </div>
 
         {/* Table */}
@@ -87,18 +98,18 @@ export default function PrintSelectedCustomersPage() {
             width: "100%",
             borderCollapse: "collapse",
             fontSize: 13,
+            tableLayout: "fixed",
           }}
         >
           <thead>
             <tr style={{ background: "#dce1e8" }}>
-              <th style={thWide}>&nbsp;</th>
-              <th style={thWide}>&nbsp;</th>
-              <th style={thFit}>اسم العميل</th>
-              <th style={thFit}>التاريخ</th>
-              <th style={thFit}>المديونية</th>
-              <th style={thWide}>فرق خصم</th>
-              <th style={thWide}>المدفوع</th>
-              <th style={thWide}>المتبقي</th>
+              <th style={thBlank}>&nbsp;</th>
+              <th style={thBlankExpanded}>&nbsp;</th>
+              <th style={thCustomer}>اسم العميل</th>
+              <th style={thDebt}>المديونية</th>
+              <th style={thCompact}>فرق خصم</th>
+              <th style={thCompact}>المدفوع</th>
+              <th style={thRemaining}>المتبقي</th>
             </tr>
           </thead>
           <tbody>
@@ -109,23 +120,10 @@ export default function PrintSelectedCustomersPage() {
                 <tr key={idx}>
                   <td style={tdStyle}>&nbsp;</td>
                   <td style={tdStyle}>&nbsp;</td>
-                  <td
-                    style={{
-                      ...tdStyle,
-                      fontWeight: "bold",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
+                  <td style={tdCustomer}>
                     {item.customer_name}
                   </td>
-                  <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>
-                    {item.last_invoice_date
-                      ? new Date(item.last_invoice_date).toLocaleDateString(
-                          "en-US",
-                        )
-                      : ""}
-                  </td>
-                  <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>
+                  <td style={tdMoney}>
                     {balanceDue > 0 ? formatMoney(balanceDue) : ""}
                   </td>
                   <td style={tdStyle}>&nbsp;</td>
@@ -142,24 +140,57 @@ export default function PrintSelectedCustomersPage() {
 }
 
 /* ========== Shared cell styles ========== */
-const thFit: React.CSSProperties = {
+const thBase: React.CSSProperties = {
   border: "1px solid #aaa",
   padding: "4px 6px",
   textAlign: "center",
   fontWeight: "bold",
   whiteSpace: "nowrap",
-  width: "1%",
 };
 
-const thWide: React.CSSProperties = {
-  border: "1px solid #aaa",
-  padding: "4px 6px",
-  textAlign: "center",
-  fontWeight: "bold",
+const thBlank: React.CSSProperties = {
+  ...thBase,
+  width: "8%",
+};
+
+const thBlankExpanded: React.CSSProperties = {
+  ...thBase,
+  width: "18%",
+};
+
+const thCustomer: React.CSSProperties = {
+  ...thBase,
+  width: "16%",
+};
+
+const thDebt: React.CSSProperties = {
+  ...thBase,
+  width: "12%",
+};
+
+const thCompact: React.CSSProperties = {
+  ...thBase,
+  width: "10%",
+};
+
+const thRemaining: React.CSSProperties = {
+  ...thBase,
+  width: "12%",
 };
 
 const tdStyle: React.CSSProperties = {
   border: "1px solid #ccc",
   padding: "4px 6px",
   textAlign: "center",
+};
+
+const tdCustomer: React.CSSProperties = {
+  ...tdStyle,
+  fontWeight: "bold",
+  whiteSpace: "nowrap",
+};
+
+const tdMoney: React.CSSProperties = {
+  ...tdStyle,
+  whiteSpace: "nowrap",
 };
