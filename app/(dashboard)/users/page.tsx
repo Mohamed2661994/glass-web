@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +36,16 @@ import {
 import { toast } from "sonner";
 import { useRealtime } from "@/hooks/use-realtime";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  defaultPermissions,
+  isAdminUser,
+  normalizePermissions,
+  permissionKeys,
+  permissionLabels,
+  summarizePermissions,
+  type PermissionKey,
+  type UserPermissions,
+} from "@/lib/permissions";
 
 /* ========== Admin check uses backend role ========== */
 
@@ -44,6 +55,18 @@ type ManagedUser = {
   username: string;
   branch_id: number;
   full_name?: string;
+  role?: string;
+  permissions?: Partial<UserPermissions>;
+};
+
+type AccessDialogState = {
+  open: boolean;
+  userId: number;
+  username: string;
+  full_name: string;
+  branch_id: number;
+  role: "admin" | "user";
+  permissions: UserPermissions;
 };
 
 /* ========== Section Card (collapsible) ========== */
@@ -102,7 +125,8 @@ function SectionCard({
 /* ========== Component ========== */
 export default function UsersPage() {
   const { user, setUser } = useAuth();
-  const isAdmin = user?.role === "admin" || user?.id === 7;
+  const isAdmin = isAdminUser(user);
+  const canManageAllBranches = user?.id === 7;
 
   /* ---- Edit username state ---- */
   const [editingName, setEditingName] = useState(false);
@@ -130,7 +154,21 @@ export default function UsersPage() {
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserBranch, setNewUserBranch] = useState(1);
   const [newUserFullName, setNewUserFullName] = useState("");
+  const [newUserRole, setNewUserRole] = useState<"admin" | "user">("user");
+  const [newUserPermissions, setNewUserPermissions] =
+    useState<UserPermissions>(defaultPermissions);
   const [addingUser, setAddingUser] = useState(false);
+
+  const [accessDialog, setAccessDialog] = useState<AccessDialogState>({
+    open: false,
+    userId: 0,
+    username: "",
+    full_name: "",
+    branch_id: 1,
+    role: "user",
+    permissions: defaultPermissions,
+  });
+  const [savingAccess, setSavingAccess] = useState(false);
 
   /* ---- Reset password dialog (admin only) ---- */
   const [resetDialog, setResetDialog] = useState<{
@@ -152,6 +190,44 @@ export default function UsersPage() {
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const resetNewUserForm = () => {
+    setNewUsername("");
+    setNewUserPassword("");
+    setNewUserFullName("");
+    setNewUserBranch(1);
+    setNewUserRole("user");
+    setNewUserPermissions(defaultPermissions);
+  };
+
+  const handleNewUserPermissionToggle = (permission: PermissionKey) => {
+    setNewUserPermissions((prev) => ({
+      ...prev,
+      [permission]: !prev[permission],
+    }));
+  };
+
+  const handleAccessPermissionToggle = (permission: PermissionKey) => {
+    setAccessDialog((prev) => ({
+      ...prev,
+      permissions: {
+        ...prev.permissions,
+        [permission]: !prev.permissions[permission],
+      },
+    }));
+  };
+
+  const openAccessDialog = (managedUser: ManagedUser) => {
+    setAccessDialog({
+      open: true,
+      userId: managedUser.id,
+      username: managedUser.username,
+      full_name: managedUser.full_name || "",
+      branch_id: managedUser.branch_id,
+      role: managedUser.role === "admin" ? "admin" : "user",
+      permissions: normalizePermissions(managedUser.permissions),
+    });
+  };
+
   /* ---- Fetch users ---- */
   const fetchUsers = useCallback(async () => {
     setLoadingUsers(true);
@@ -168,6 +244,12 @@ export default function UsersPage() {
   useEffect(() => {
     if (isAdmin) fetchUsers();
   }, [isAdmin, fetchUsers]);
+
+  useEffect(() => {
+    if (!canManageAllBranches && user?.branch_id) {
+      setNewUserBranch(user.branch_id);
+    }
+  }, [canManageAllBranches, user?.branch_id]);
 
   useRealtime("data:users", fetchUsers);
 
@@ -266,11 +348,11 @@ export default function UsersPage() {
         password: newUserPassword,
         branch_id: newUserBranch,
         full_name: newUserFullName,
+        role: newUserRole,
+        permissions: newUserPermissions,
       });
       toast.success("تم إضافة المستخدم بنجاح");
-      setNewUsername("");
-      setNewUserPassword("");
-      setNewUserFullName("");
+      resetNewUserForm();
       setShowAddUser(false);
       fetchUsers();
     } catch {
@@ -323,8 +405,30 @@ export default function UsersPage() {
     }
   };
 
+  const handleSaveAccess = async () => {
+    setSavingAccess(true);
+    try {
+      await api.put(`/users/${accessDialog.userId}/access`, {
+        full_name: accessDialog.full_name,
+        branch_id: accessDialog.branch_id,
+        role: accessDialog.role,
+        permissions: accessDialog.permissions,
+      });
+      toast.success(`تم تحديث صلاحيات المستخدم "${accessDialog.username}"`);
+      setAccessDialog((prev) => ({ ...prev, open: false }));
+      fetchUsers();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "فشل تحديث صلاحيات المستخدم");
+    } finally {
+      setSavingAccess(false);
+    }
+  };
+
   const branchLabel = (id: number) =>
     id === 1 ? "المعرض" : id === 2 ? "المخزن" : "غير محدد";
+
+  const roleLabel = (role?: string) =>
+    role === "admin" ? "أدمن" : "مستخدم";
 
   return (
     <PageContainer size="lg">
@@ -564,7 +668,7 @@ export default function UsersPage() {
           <SectionCard
             icon={Users}
             title="المستخدمين"
-            description="إضافة وحذف المستخدمين وإعادة تعيين كلمات المرور"
+            description="إضافة المستخدمين وتحديد الدور والصلاحيات وإعادة تعيين كلمات المرور"
             isOpen={openSections["users"] ?? false}
             onToggle={() => toggleSection("users")}
           >
@@ -609,6 +713,9 @@ export default function UsersPage() {
                           <p className="text-xs text-muted-foreground">
                             {u.username} • {branchLabel(u.branch_id)}
                           </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {summarizePermissions(u.role, u.permissions)}
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -616,10 +723,19 @@ export default function UsersPage() {
                           variant={u.id === user?.id ? "default" : "secondary"}
                           className="text-xs"
                         >
-                          {u.id === user?.id ? "أنت" : "مستخدم"}
+                          {u.id === user?.id ? "أنت" : roleLabel(u.role)}
                         </Badge>
                         {u.id !== user?.id && (
                           <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-primary"
+                              title="تعديل الدور والصلاحيات"
+                              onClick={() => openAccessDialog(u)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -694,6 +810,7 @@ export default function UsersPage() {
                       <select
                         className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
                         value={newUserBranch}
+                        disabled={!canManageAllBranches}
                         onChange={(e) =>
                           setNewUserBranch(Number(e.target.value))
                         }
@@ -701,6 +818,48 @@ export default function UsersPage() {
                         <option value={1}>المعرض (قطاعي)</option>
                         <option value={2}>المخزن (جملة)</option>
                       </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">الدور</Label>
+                      <select
+                        className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                        value={newUserRole}
+                        onChange={(e) =>
+                          setNewUserRole(
+                            e.target.value === "admin" ? "admin" : "user",
+                          )
+                        }
+                      >
+                        <option value="user">مستخدم</option>
+                        <option value="admin">أدمن</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="space-y-3 rounded-lg border p-3 bg-background/60">
+                    <div>
+                      <p className="text-sm font-medium">صلاحيات التعديل والحذف</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {newUserRole === "admin"
+                          ? "الأدمن يمتلك كل الصلاحيات تلقائيًا داخل فرعه."
+                          : "حدد ما يمكن للمستخدم فعله في الوارد والمنصرف."}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {permissionKeys.map((permission) => (
+                        <label
+                          key={permission}
+                          className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
+                        >
+                          <Checkbox
+                            checked={newUserPermissions[permission]}
+                            disabled={newUserRole === "admin"}
+                            onCheckedChange={() =>
+                              handleNewUserPermissionToggle(permission)
+                            }
+                          />
+                          <span>{permissionLabels[permission]}</span>
+                        </label>
+                      ))}
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -722,9 +881,7 @@ export default function UsersPage() {
                       size="sm"
                       onClick={() => {
                         setShowAddUser(false);
-                        setNewUsername("");
-                        setNewUserPassword("");
-                        setNewUserFullName("");
+                        resetNewUserForm();
                       }}
                     >
                       إلغاء
@@ -736,6 +893,124 @@ export default function UsersPage() {
           </SectionCard>
         )}
       </div>
+
+      {isAdmin && (
+        <Dialog
+          open={accessDialog.open}
+          onOpenChange={(open) =>
+            setAccessDialog((prev) => ({ ...prev, open }))
+          }
+        >
+          <DialogContent dir="rtl">
+            <DialogHeader>
+              <DialogTitle>تعديل دور وصلاحيات المستخدم</DialogTitle>
+              <DialogDescription>
+                ضبط الفرع والدور وصلاحيات المستخدم &ldquo;{accessDialog.username}
+                &rdquo;
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs">الاسم بالكامل</Label>
+                <Input
+                  value={accessDialog.full_name}
+                  onChange={(e) =>
+                    setAccessDialog((prev) => ({
+                      ...prev,
+                      full_name: e.target.value,
+                    }))
+                  }
+                  placeholder="الاسم بالكامل"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">الفرع</Label>
+                  <select
+                    className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                    value={accessDialog.branch_id}
+                    disabled={!canManageAllBranches}
+                    onChange={(e) =>
+                      setAccessDialog((prev) => ({
+                        ...prev,
+                        branch_id: Number(e.target.value),
+                      }))
+                    }
+                  >
+                    <option value={1}>المعرض (قطاعي)</option>
+                    <option value={2}>المخزن (جملة)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs">الدور</Label>
+                  <select
+                    className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                    value={accessDialog.role}
+                    onChange={(e) =>
+                      setAccessDialog((prev) => ({
+                        ...prev,
+                        role: e.target.value === "admin" ? "admin" : "user",
+                      }))
+                    }
+                  >
+                    <option value="user">مستخدم</option>
+                    <option value="admin">أدمن</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-3 rounded-lg border p-3 bg-muted/10">
+                <div>
+                  <p className="text-sm font-medium">صلاحيات التعديل والحذف</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {accessDialog.role === "admin"
+                      ? "الأدمن يمتلك كل الصلاحيات تلقائيًا داخل فرعه."
+                      : "اختر صلاحيات تعديل وحذف قيود الوارد والمنصرف."}
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {permissionKeys.map((permission) => (
+                    <label
+                      key={permission}
+                      className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
+                    >
+                      <Checkbox
+                        checked={accessDialog.permissions[permission]}
+                        disabled={accessDialog.role === "admin"}
+                        onCheckedChange={() =>
+                          handleAccessPermissionToggle(permission)
+                        }
+                      />
+                      <span>{permissionLabels[permission]}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  setAccessDialog((prev) => ({ ...prev, open: false }))
+                }
+              >
+                إلغاء
+              </Button>
+              <Button onClick={handleSaveAccess} disabled={savingAccess}>
+                {savingAccess ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "حفظ الصلاحيات"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* ═══════════════ Reset Password Dialog ═══════════════ */}
       {isAdmin && (

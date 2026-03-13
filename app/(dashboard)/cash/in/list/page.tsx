@@ -38,6 +38,8 @@ import { Pencil, Trash2 } from "lucide-react";
 import api from "@/services/api";
 import { useRouter } from "next/navigation";
 import { useRealtime } from "@/hooks/use-realtime";
+import { useAuth } from "@/app/context/auth-context";
+import { hasPermission } from "@/lib/permissions";
 import {
   MobileTableCard,
   MobileTableWrapper,
@@ -60,6 +62,7 @@ interface CashInItem {
 
 export default function CashInListPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [data, setData] = useState<CashInItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchName, setSearchName] = useState("");
@@ -72,6 +75,8 @@ export default function CashInListPage() {
   }, []);
   const [fromDate, setFromDate] = useState(todayStr);
   const [toDate, setToDate] = useState(todayStr);
+  const canEditCashIn = hasPermission(user, "cash_in_edit");
+  const canDeleteCashIn = hasPermission(user, "cash_in_delete");
 
   const fetchData = useCallback(async () => {
     try {
@@ -285,26 +290,36 @@ export default function CashInListPage() {
                           {item.notes || "—"}
                         </TableCell>
                         <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() =>
-                                router.push(`/cash/in/edit/${item.id}`)
-                              }
-                            >
-                              <Pencil className="h-4 w-4 text-blue-500" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => setDeleteItem(item)}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </div>
+                          {canEditCashIn || canDeleteCashIn ? (
+                            <div className="flex gap-2">
+                              {canEditCashIn && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() =>
+                                    router.push(`/cash/in/edit/${item.id}`)
+                                  }
+                                >
+                                  <Pencil className="h-4 w-4 text-blue-500" />
+                                </Button>
+                              )}
+                              {canDeleteCashIn && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => setDeleteItem(item)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              —
+                            </span>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))
@@ -365,8 +380,14 @@ export default function CashInListPage() {
                         },
                         { label: "ملاحظات", value: item.notes || "—" },
                       ]}
-                      onEdit={() => router.push(`/cash/in/edit/${item.id}`)}
-                      onDelete={() => setDeleteItem(item)}
+                      onEdit={
+                        canEditCashIn
+                          ? () => router.push(`/cash/in/edit/${item.id}`)
+                          : undefined
+                      }
+                      onDelete={
+                        canDeleteCashIn ? () => setDeleteItem(item) : undefined
+                      }
                     />
                   ))}
                 </MobileTableWrapper>

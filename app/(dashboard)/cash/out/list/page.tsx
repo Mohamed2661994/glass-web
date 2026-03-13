@@ -30,6 +30,8 @@ import { toast } from "sonner";
 import { Pencil, Trash2 } from "lucide-react";
 import api from "@/services/api";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/context/auth-context";
+import { hasPermission } from "@/lib/permissions";
 import {
   MobileTableCard,
   MobileTableWrapper,
@@ -48,6 +50,7 @@ interface CashOutItem {
 
 export default function CashOutListPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [data, setData] = useState<CashOutItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -58,6 +61,8 @@ export default function CashOutListPage() {
   }, []);
   const [fromDate, setFromDate] = useState(todayStr);
   const [toDate, setToDate] = useState(todayStr);
+  const canEditCashOut = hasPermission(user, "cash_out_edit");
+  const canDeleteCashOut = hasPermission(user, "cash_out_delete");
 
   const [deleteItem, setDeleteItem] = useState<CashOutItem | null>(null);
 
@@ -237,26 +242,36 @@ export default function CashOutListPage() {
                           {item.notes || "—"}
                         </TableCell>
                         <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() =>
-                                router.push(`/cash/out?edit=${item.id}`)
-                              }
-                            >
-                              <Pencil className="h-4 w-4 text-blue-500" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => setDeleteItem(item)}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </div>
+                          {canEditCashOut || canDeleteCashOut ? (
+                            <div className="flex gap-2">
+                              {canEditCashOut && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() =>
+                                    router.push(`/cash/out?edit=${item.id}`)
+                                  }
+                                >
+                                  <Pencil className="h-4 w-4 text-blue-500" />
+                                </Button>
+                              )}
+                              {canDeleteCashOut && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => setDeleteItem(item)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              —
+                            </span>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))
@@ -318,8 +333,16 @@ export default function CashOutListPage() {
                         },
                         { label: "ملاحظات", value: item.notes || "—" },
                       ]}
-                      onEdit={() => router.push(`/cash/out?edit=${item.id}`)}
-                      onDelete={() => setDeleteItem(item)}
+                      onEdit={
+                        canEditCashOut
+                          ? () => router.push(`/cash/out?edit=${item.id}`)
+                          : undefined
+                      }
+                      onDelete={
+                        canDeleteCashOut
+                          ? () => setDeleteItem(item)
+                          : undefined
+                      }
                     />
                   ))}
                 </MobileTableWrapper>

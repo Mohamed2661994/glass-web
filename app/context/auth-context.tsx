@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/services/api";
+import type { UserPermissions } from "@/lib/permissions";
 
 interface User {
   id: number;
@@ -11,6 +12,7 @@ interface User {
   theme?: string;
   full_name?: string;
   role?: string;
+  permissions?: Partial<UserPermissions>;
 }
 
 interface AuthContextType {

@@ -45,6 +45,7 @@ import { toast } from "sonner";
 import { List, Pencil, Trash2 } from "lucide-react";
 import api from "@/services/api";
 import { useAuth } from "@/app/context/auth-context";
+import { hasPermission } from "@/lib/permissions";
 
 const DISCOUNT_DIFF_MARKER = "{{discount_diff}}";
 
@@ -59,6 +60,7 @@ export default function CashInPageWrapper() {
 function CashInPage() {
   const { user } = useAuth();
   const isWholesaleUser = user?.branch_id === 2;
+  const canDeleteCashIn = hasPermission(user, "cash_in_delete");
 
   const [sourceName, setSourceName] = useState("");
   const [amount, setAmount] = useState("");
@@ -701,16 +703,22 @@ function CashInPage() {
                           {notes}
                         </TableCell>
                         <TableCell>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => setDeleteItem(item)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                            </Button>
-                          </div>
+                          {canDeleteCashIn ? (
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => setDeleteItem(item)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              —
+                            </span>
+                          )}
                         </TableCell>
                       </TableRow>
                     );

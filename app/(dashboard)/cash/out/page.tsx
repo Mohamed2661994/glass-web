@@ -44,7 +44,9 @@ import {
 import { toast } from "sonner";
 import { List, Pencil, Trash2 } from "lucide-react";
 import api from "@/services/api";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/app/context/auth-context";
+import { hasPermission } from "@/lib/permissions";
 
 export default function CashOutPageWrapper() {
   return (
@@ -55,9 +57,13 @@ export default function CashOutPageWrapper() {
 }
 
 function CashOutPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
   const editId = searchParams.get("edit");
   const isEdit = !!editId;
+  const canEditCashOut = hasPermission(user, "cash_out_edit");
+  const canDeleteCashOut = hasPermission(user, "cash_out_delete");
 
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
@@ -193,6 +199,14 @@ function CashOutPage() {
 
   /* load edit data */
   useEffect(() => {
+    if (!user) return;
+
+    if (isEdit && user && !canEditCashOut) {
+      toast.error("ليس لديك صلاحية تعديل المنصرف");
+      router.replace("/cash/out");
+      return;
+    }
+
     if (!editId) return;
     (async () => {
       try {
@@ -214,7 +228,7 @@ function CashOutPage() {
         toast.error("فشل تحميل بيانات المنصرف");
       }
     })();
-  }, [editId]);
+  }, [canEditCashOut, editId, isEdit, router, user]);
 
   const handleSave = async () => {
     if (entryType === "supplier_payment") {
@@ -631,27 +645,37 @@ function CashOutPage() {
                         {item.notes || "—"}
                       </TableCell>
                       <TableCell>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => {
-                              setModalOpen(false);
-                              window.location.href = `/cash/out?edit=${item.id}`;
-                            }}
-                          >
-                            <Pencil className="h-3.5 w-3.5 text-blue-500" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => setDeleteItem(item)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                          </Button>
-                        </div>
+                        {canEditCashOut || canDeleteCashOut ? (
+                          <div className="flex gap-1">
+                            {canEditCashOut && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => {
+                                  setModalOpen(false);
+                                  router.push(`/cash/out?edit=${item.id}`);
+                                }}
+                              >
+                                <Pencil className="h-3.5 w-3.5 text-blue-500" />
+                              </Button>
+                            )}
+                            {canDeleteCashOut && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => setDeleteItem(item)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                              </Button>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            —
+                          </span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

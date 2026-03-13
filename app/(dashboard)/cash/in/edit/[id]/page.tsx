@@ -18,6 +18,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import api from "@/services/api";
 import { useParams, useRouter } from "next/navigation";
+import { useAuth } from "@/app/context/auth-context";
+import { hasPermission } from "@/lib/permissions";
 
 const DISCOUNT_DIFF_MARKER = "{{discount_diff}}";
 
@@ -37,6 +39,8 @@ const sourceLabel = (s: string) => {
 export default function EditCashInPage() {
   const { id } = useParams();
   const router = useRouter();
+  const { user } = useAuth();
+  const canEditCashIn = hasPermission(user, "cash_in_edit");
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -79,6 +83,17 @@ export default function EditCashInPage() {
   };
 
   useEffect(() => {
+    if (!user) return;
+
+    if (user && !canEditCashIn) {
+      toast.error("ليس لديك صلاحية تعديل الوارد");
+      router.replace("/cash/in/list");
+    }
+  }, [canEditCashIn, router, user]);
+
+  useEffect(() => {
+    if (!user || !canEditCashIn) return;
+
     (async () => {
       try {
         const res = await api.get(`/cash-in/${id}`);
@@ -113,7 +128,7 @@ export default function EditCashInPage() {
         setLoading(false);
       }
     })();
-  }, [id, router]);
+  }, [canEditCashIn, id, router, user]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
