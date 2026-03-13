@@ -28,15 +28,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
     const storedUser = localStorage.getItem("user");
+
+    if (!token) {
+      localStorage.removeItem("user");
+      setUser(null);
+      return;
+    }
+
     if (storedUser) {
       try {
         setUser(JSON.parse(storedUser));
       } catch {
         localStorage.removeItem("user");
-        localStorage.removeItem("token");
       }
     }
+
+    let isCancelled = false;
+
+    const refreshCurrentUser = async () => {
+      try {
+        const res = await api.get("/auth/me");
+        const freshUser = res.data?.user;
+
+        if (!freshUser || isCancelled) {
+          return;
+        }
+
+        setUser(freshUser);
+        localStorage.setItem("user", JSON.stringify(freshUser));
+      } catch {
+        if (isCancelled) {
+          return;
+        }
+
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        setUser(null);
+
+        if (!window.location.pathname.includes("/login")) {
+          router.push("/login");
+        }
+      }
+    };
+
+    refreshCurrentUser();
+
+    const handleWindowFocus = () => {
+      refreshCurrentUser();
+    };
+
+    window.addEventListener("focus", handleWindowFocus);
+
+    return () => {
+      isCancelled = true;
+      window.removeEventListener("focus", handleWindowFocus);
+    };
   }, []);
 
   const logout = async () => {
