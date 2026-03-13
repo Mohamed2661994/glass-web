@@ -423,16 +423,16 @@ export default function CustomerBalancesPage() {
                           />
                         </TableCell>
                         <TableCell className="text-right font-medium">
-                          <div className="flex items-center justify-end gap-2">
-                            {item.is_market_customer && (
-                              <Badge variant="secondary">سوق</Badge>
-                            )}
+                          <div className="flex w-full items-center justify-end gap-2">
                             <Link
                               href={`/reports/customer-balances/${encodeURIComponent(item.customer_name)}`}
-                              className="text-primary hover:underline"
+                              className="text-primary hover:underline text-right"
                             >
                               {item.customer_name}
                             </Link>
+                            {item.is_market_customer && (
+                              <Badge variant="secondary">سوق</Badge>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="text-center text-xs text-muted-foreground">
