@@ -295,7 +295,8 @@ interface Notification {
   created_at: string;
 }
 
-const formatPercentValue = (value: number) => `${Number(value || 0).toFixed(2)}%`;
+const formatPercentValue = (value: number) =>
+  `${Number(value || 0).toFixed(2)}%`;
 
 /* ---------- widget config ---------- */
 type WidgetId =
@@ -1397,7 +1398,9 @@ export default function DashboardPage() {
                   <Percent className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">نسبة ربح مبيعات اليوم</p>
+                  <p className="text-xs text-muted-foreground">
+                    نسبة ربح مبيعات اليوم
+                  </p>
                   {loadingStats ? (
                     <Skeleton className="h-6 w-16 mt-1 mx-auto" />
                   ) : (

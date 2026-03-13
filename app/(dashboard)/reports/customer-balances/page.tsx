@@ -430,7 +430,10 @@ export default function CustomerBalancesPage() {
                             {item.customer_name}
                           </Link>
                           {item.is_market_customer && (
-                            <Badge variant="secondary" className="mr-2 align-middle">
+                            <Badge
+                              variant="secondary"
+                              className="mr-2 align-middle"
+                            >
                               سوق
                             </Badge>
                           )}
@@ -466,25 +469,28 @@ export default function CustomerBalancesPage() {
             {data.map((item, idx) => (
               <Card key={idx} className="p-3">
                 <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2">
                     <Checkbox
                       checked={selectedCustomers.has(item.customer_name)}
                       onCheckedChange={() => toggleCustomer(item.customer_name)}
                     />
                     <div>
-                        <div className="whitespace-nowrap text-right">
-                          <Link
-                            href={`/reports/customer-balances/${encodeURIComponent(item.customer_name)}`}
-                            className="text-primary font-medium hover:underline inline align-middle"
+                      <div className="whitespace-nowrap text-right">
+                        <Link
+                          href={`/reports/customer-balances/${encodeURIComponent(item.customer_name)}`}
+                          className="text-primary font-medium hover:underline inline align-middle"
+                        >
+                          {item.customer_name}
+                        </Link>
+                        {item.is_market_customer && (
+                          <Badge
+                            variant="secondary"
+                            className="mr-2 align-middle"
                           >
-                            {item.customer_name}
-                          </Link>
-                          {item.is_market_customer && (
-                            <Badge variant="secondary" className="mr-2 align-middle">
-                              سوق
-                            </Badge>
-                          )}
-                        </div>
+                            سوق
+                          </Badge>
+                        )}
+                      </div>
                       {item.last_invoice_date && (
                         <p className="text-xs text-muted-foreground">
                           آخر فاتورة:{" "}

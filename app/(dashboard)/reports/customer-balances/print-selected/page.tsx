@@ -120,9 +120,7 @@ export default function PrintSelectedCustomersPage() {
                 <tr key={idx}>
                   <td style={tdStyle}>&nbsp;</td>
                   <td style={tdStyle}>&nbsp;</td>
-                  <td style={tdCustomer}>
-                    {item.customer_name}
-                  </td>
+                  <td style={tdCustomer}>{item.customer_name}</td>
                   <td style={tdMoney}>
                     {balanceDue > 0 ? formatMoney(balanceDue) : ""}
                   </td>
