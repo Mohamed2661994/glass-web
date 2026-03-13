@@ -20,6 +20,23 @@ type Invoice = {
 /* ========== Helpers ========== */
 const formatMoney = (n: number) => Number(n).toFixed(2);
 
+const formatArabicDate = (value?: string, includeWeekday = false) => {
+  if (!value) return "—";
+
+  const normalized = value.length >= 10 ? `${value.substring(0, 10)}T00:00:00` : value;
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return value;
+
+  const formatter = new Intl.DateTimeFormat("ar-EG-u-nu-arab", {
+    weekday: includeWeekday ? "long" : undefined,
+    day: "numeric",
+    month: "numeric",
+    year: "numeric",
+  });
+
+  return formatter.format(date).replace("، ", " - ");
+};
+
 /* ========== Inner Component ========== */
 function CustomerStatementPrintInner() {
   const params = useParams();
@@ -116,38 +133,36 @@ function CustomerStatementPrintInner() {
     [cashInDateById, cashInDateByNumber],
   );
 
-  const formatDateOnly = (value?: string) => {
-    if (!value) return "—";
-    const d = value.substring(0, 10).split("-");
-    if (d.length !== 3) return value;
-    return `${d[2]}/${d[1]}/${d[0]}`;
-  };
-
   const visibleData = useMemo(() => {
-    if (!from && !to) return data;
-    return data.filter((row) => {
+    const filtered = (!from && !to)
+      ? data
+      : data.filter((row) => {
       const dateStr = (getRowDate(row) || "").substring(0, 10);
       if (!dateStr) return false;
       if (from && dateStr < from) return false;
       if (to && dateStr > to) return false;
       return true;
     });
+
+    return [...filtered].sort((left, right) => {
+      if (left.record_type !== right.record_type) {
+        return left.record_type === "invoice" ? -1 : 1;
+      }
+
+      const leftDate = (getRowDate(left) || "").substring(0, 10);
+      const rightDate = (getRowDate(right) || "").substring(0, 10);
+      if (leftDate !== rightDate) return leftDate.localeCompare(rightDate);
+
+      return Number(left.invoice_id) - Number(right.invoice_id);
+    });
   }, [data, from, to, getRowDate]);
 
   /* ========== Totals ========== */
-  const totalAll = useMemo(
+  const totalInvoices = useMemo(
     () =>
       visibleData
         .filter((i) => i.record_type === "invoice")
-        .reduce((s, i) => s + Number(i.subtotal), 0),
-    [visibleData],
-  );
-
-  const totalDiscount = useMemo(
-    () =>
-      visibleData
-        .filter((i) => i.record_type === "invoice")
-        .reduce((s, i) => s + Number(i.discount_total), 0),
+        .reduce((s, i) => s + Number(i.total), 0),
     [visibleData],
   );
 
@@ -156,9 +171,7 @@ function CustomerStatementPrintInner() {
     [visibleData],
   );
 
-  // للقطاعي: لا نحسب الخصم
-  const discountToSubtract = warehouseId === "1" ? 0 : totalDiscount;
-  const netDebt = totalAll - discountToSubtract - totalPaid;
+  const netDebt = totalInvoices - totalPaid;
 
   /* ========== Running Balance ========== */
   const runningBalances = useMemo(() => {
@@ -178,7 +191,7 @@ function CustomerStatementPrintInner() {
 
   const dateRange =
     from || to
-      ? `${from ? new Date(from).toLocaleDateString("ar-EG") : "--"} — ${to ? new Date(to).toLocaleDateString("ar-EG") : "---"}`
+      ? `${from ? formatArabicDate(from) : "--"} — ${to ? formatArabicDate(to) : "---"}`
       : "-- ---";
 
   if (loading) {
@@ -223,7 +236,7 @@ function CustomerStatementPrintInner() {
         <div style={{ marginBottom: 20 }}>
           <p style={{ fontSize: 14, marginBottom: 4 }}>
             <span style={{ fontWeight: "bold" }}>اسم العميل:</span>{" "}
-            {customerName}
+            <span style={{ fontSize: 18, fontWeight: "bold" }}>{customerName}</span>
           </p>
           <p style={{ fontSize: 14 }}>
             <span style={{ fontWeight: "bold" }}>الفترة:</span> {dateRange}
@@ -246,8 +259,7 @@ function CustomerStatementPrintInner() {
                 <th style={thStyle}>رقم</th>
                 <th style={thStyle}>التاريخ</th>
                 <th style={thStyle}>الحساب السابق</th>
-                <th style={thStyle}>الإجمالي</th>
-                {warehouseId !== "1" && <th style={thStyle}>الخصم</th>}
+                <th style={thStyle}>الإجمالي بعد الخصم</th>
                 <th style={thStyle}>المدفوع</th>
                 <th style={thStyle}>الباقي</th>
               </tr>
@@ -265,7 +277,7 @@ function CustomerStatementPrintInner() {
                     {inv.record_type === "invoice" ? "فاتورة" : "سند دفع"}
                   </td>
                   <td style={tdStyle}>{inv.invoice_id}</td>
-                  <td style={tdStyle}>{formatDateOnly(getRowDate(inv))}</td>
+                  <td style={tdStyle}>{formatArabicDate(getRowDate(inv), true)}</td>
                   <td style={tdStyle}>
                     {runningBalances[idx] === 0
                       ? "—"
@@ -273,25 +285,9 @@ function CustomerStatementPrintInner() {
                   </td>
                   <td style={tdStyle}>
                     {inv.record_type === "invoice"
-                      ? formatMoney(Number(inv.subtotal))
+                      ? formatMoney(Number(inv.total))
                       : "—"}
                   </td>
-                  {warehouseId !== "1" && (
-                    <td
-                      style={{
-                        ...tdStyle,
-                        color:
-                          Number(inv.discount_total) > 0
-                            ? "#dc2626"
-                            : undefined,
-                      }}
-                    >
-                      {inv.record_type === "invoice" &&
-                      Number(inv.discount_total) > 0
-                        ? formatMoney(Number(inv.discount_total))
-                        : "—"}
-                    </td>
-                  )}
                   <td style={tdStyle}>
                     {formatMoney(Number(inv.paid_amount))}
                   </td>
@@ -315,14 +311,8 @@ function CustomerStatementPrintInner() {
           <div style={{ textAlign: "right", fontSize: 14 }}>
             <p style={{ marginBottom: 4 }}>
               <span style={{ fontWeight: "bold" }}>إجمالي الفواتير:</span>{" "}
-              {formatMoney(totalAll)}
+              {formatMoney(totalInvoices)}
             </p>
-            {warehouseId !== "1" && totalDiscount > 0 && (
-              <p style={{ marginBottom: 4, color: "#dc2626" }}>
-                <span style={{ fontWeight: "bold" }}>إجمالي الخصم:</span>{" "}
-                {formatMoney(totalDiscount)}
-              </p>
-            )}
             <p style={{ marginBottom: 4 }}>
               <span style={{ fontWeight: "bold" }}>إجمالي المدفوع:</span>{" "}
               {formatMoney(totalPaid)}
