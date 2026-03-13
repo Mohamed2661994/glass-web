@@ -422,18 +422,18 @@ export default function CustomerBalancesPage() {
                             }
                           />
                         </TableCell>
-                        <TableCell className="text-right font-medium">
-                          <div className="flex w-full items-center justify-end gap-2">
-                            <Link
-                              href={`/reports/customer-balances/${encodeURIComponent(item.customer_name)}`}
-                              className="text-primary hover:underline text-right"
-                            >
-                              {item.customer_name}
-                            </Link>
-                            {item.is_market_customer && (
-                              <Badge variant="secondary">سوق</Badge>
-                            )}
-                          </div>
+                        <TableCell className="text-right font-medium whitespace-nowrap">
+                          <Link
+                            href={`/reports/customer-balances/${encodeURIComponent(item.customer_name)}`}
+                            className="text-primary hover:underline inline align-middle"
+                          >
+                            {item.customer_name}
+                          </Link>
+                          {item.is_market_customer && (
+                            <Badge variant="secondary" className="mr-2 align-middle">
+                              سوق
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell className="text-center text-xs text-muted-foreground">
                           {item.last_invoice_date
@@ -466,23 +466,25 @@ export default function CustomerBalancesPage() {
             {data.map((item, idx) => (
               <Card key={idx} className="p-3">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                     <Checkbox
                       checked={selectedCustomers.has(item.customer_name)}
                       onCheckedChange={() => toggleCustomer(item.customer_name)}
                     />
                     <div>
-                      <div className="flex items-center gap-2">
-                        <Link
-                          href={`/reports/customer-balances/${encodeURIComponent(item.customer_name)}`}
-                          className="text-primary font-medium hover:underline"
-                        >
-                          {item.customer_name}
-                        </Link>
-                        {item.is_market_customer && (
-                          <Badge variant="secondary">سوق</Badge>
-                        )}
-                      </div>
+                        <div className="whitespace-nowrap text-right">
+                          <Link
+                            href={`/reports/customer-balances/${encodeURIComponent(item.customer_name)}`}
+                            className="text-primary font-medium hover:underline inline align-middle"
+                          >
+                            {item.customer_name}
+                          </Link>
+                          {item.is_market_customer && (
+                            <Badge variant="secondary" className="mr-2 align-middle">
+                              سوق
+                            </Badge>
+                          )}
+                        </div>
                       {item.last_invoice_date && (
                         <p className="text-xs text-muted-foreground">
                           آخر فاتورة:{" "}
