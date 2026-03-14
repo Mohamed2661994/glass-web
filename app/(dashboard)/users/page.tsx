@@ -199,19 +199,34 @@ export default function UsersPage() {
     setNewUserPermissions(defaultPermissions);
   };
 
-  const handleNewUserPermissionToggle = (permission: PermissionKey) => {
+  const setAllPermissions = (value: boolean): UserPermissions =>
+    permissionKeys.reduce(
+      (acc, permission) => {
+        acc[permission] = value;
+        return acc;
+      },
+      { ...defaultPermissions },
+    );
+
+  const handleNewUserPermissionToggle = (
+    permission: PermissionKey,
+    checked: boolean | "indeterminate",
+  ) => {
     setNewUserPermissions((prev) => ({
       ...prev,
-      [permission]: !prev[permission],
+      [permission]: checked === true,
     }));
   };
 
-  const handleAccessPermissionToggle = (permission: PermissionKey) => {
+  const handleAccessPermissionToggle = (
+    permission: PermissionKey,
+    checked: boolean | "indeterminate",
+  ) => {
     setAccessDialog((prev) => ({
       ...prev,
       permissions: {
         ...prev.permissions,
-        [permission]: !prev.permissions[permission],
+        [permission]: checked === true,
       },
     }));
   };
@@ -408,12 +423,29 @@ export default function UsersPage() {
   const handleSaveAccess = async () => {
     setSavingAccess(true);
     try {
-      await api.put(`/users/${accessDialog.userId}/access`, {
+      const res = await api.put(`/users/${accessDialog.userId}/access`, {
         full_name: accessDialog.full_name,
         branch_id: accessDialog.branch_id,
         role: accessDialog.role,
         permissions: accessDialog.permissions,
       });
+      const savedUser = res.data?.user;
+
+      if (savedUser) {
+        setUsers((prev) =>
+          prev.map((managedUser) =>
+            managedUser.id === savedUser.id
+              ? {
+                  ...managedUser,
+                  ...savedUser,
+                  role: savedUser.role === "admin" ? "admin" : "user",
+                  permissions: normalizePermissions(savedUser.permissions),
+                }
+              : managedUser,
+          ),
+        );
+      }
+
       toast.success(`تم تحديث صلاحيات المستخدم "${accessDialog.username}"`);
       setAccessDialog((prev) => ({ ...prev, open: false }));
       fetchUsers();
@@ -845,6 +877,26 @@ export default function UsersPage() {
                           : "حدد ما يمكن للمستخدم فعله في الفواتير والوارد والمنصرف."}
                       </p>
                     </div>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={newUserRole === "admin"}
+                        onClick={() => setNewUserPermissions(setAllPermissions(true))}
+                      >
+                        تحديد الكل
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={newUserRole === "admin"}
+                        onClick={() => setNewUserPermissions(setAllPermissions(false))}
+                      >
+                        إلغاء الكل
+                      </Button>
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {permissionKeys.map((permission) => (
                         <label
@@ -854,8 +906,8 @@ export default function UsersPage() {
                           <Checkbox
                             checked={newUserPermissions[permission]}
                             disabled={newUserRole === "admin"}
-                            onCheckedChange={() =>
-                              handleNewUserPermissionToggle(permission)
+                            onCheckedChange={(checked) =>
+                              handleNewUserPermissionToggle(permission, checked)
                             }
                           />
                           <span>{permissionLabels[permission]}</span>
@@ -973,6 +1025,36 @@ export default function UsersPage() {
                       : "اختر صلاحيات تعديل وحذف الفواتير وقيود الوارد والمنصرف."}
                   </p>
                 </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={accessDialog.role === "admin"}
+                    onClick={() =>
+                      setAccessDialog((prev) => ({
+                        ...prev,
+                        permissions: setAllPermissions(true),
+                      }))
+                    }
+                  >
+                    تحديد الكل
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={accessDialog.role === "admin"}
+                    onClick={() =>
+                      setAccessDialog((prev) => ({
+                        ...prev,
+                        permissions: setAllPermissions(false),
+                      }))
+                    }
+                  >
+                    إلغاء الكل
+                  </Button>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {permissionKeys.map((permission) => (
                     <label
@@ -982,8 +1064,8 @@ export default function UsersPage() {
                       <Checkbox
                         checked={accessDialog.permissions[permission]}
                         disabled={accessDialog.role === "admin"}
-                        onCheckedChange={() =>
-                          handleAccessPermissionToggle(permission)
+                        onCheckedChange={(checked) =>
+                          handleAccessPermissionToggle(permission, checked)
                         }
                       />
                       <span>{permissionLabels[permission]}</span>
