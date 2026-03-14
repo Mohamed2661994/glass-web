@@ -59,11 +59,11 @@ export default function CashOutPageWrapper() {
 function CashOutPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, authReady } = useAuth();
   const editId = searchParams.get("edit");
   const isEdit = !!editId;
-  const canEditCashOut = hasPermission(user, "cash_out_edit");
-  const canDeleteCashOut = hasPermission(user, "cash_out_delete");
+  const canEditCashOut = authReady && hasPermission(user, "cash_out_edit");
+  const canDeleteCashOut = authReady && hasPermission(user, "cash_out_delete");
 
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
@@ -199,7 +199,7 @@ function CashOutPage() {
 
   /* load edit data */
   useEffect(() => {
-    if (!user) return;
+    if (!user || !authReady) return;
 
     if (isEdit && user && !canEditCashOut) {
       toast.error("ليس لديك صلاحية تعديل المنصرف");
@@ -228,7 +228,7 @@ function CashOutPage() {
         toast.error("فشل تحميل بيانات المنصرف");
       }
     })();
-  }, [canEditCashOut, editId, isEdit, router, user]);
+  }, [authReady, canEditCashOut, editId, isEdit, router, user]);
 
   const handleSave = async () => {
     if (entryType === "supplier_payment") {

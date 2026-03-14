@@ -39,8 +39,8 @@ const sourceLabel = (s: string) => {
 export default function EditCashInPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { user } = useAuth();
-  const canEditCashIn = hasPermission(user, "cash_in_edit");
+  const { user, authReady } = useAuth();
+  const canEditCashIn = authReady && hasPermission(user, "cash_in_edit");
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -83,16 +83,16 @@ export default function EditCashInPage() {
   };
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !authReady) return;
 
     if (user && !canEditCashIn) {
       toast.error("ليس لديك صلاحية تعديل الوارد");
       router.replace("/cash/in/list");
     }
-  }, [canEditCashIn, router, user]);
+  }, [authReady, canEditCashIn, router, user]);
 
   useEffect(() => {
-    if (!user || !canEditCashIn) return;
+    if (!user || !authReady || !canEditCashIn) return;
 
     (async () => {
       try {
@@ -128,7 +128,7 @@ export default function EditCashInPage() {
         setLoading(false);
       }
     })();
-  }, [canEditCashIn, id, router, user]);
+  }, [authReady, canEditCashIn, id, router, user]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {

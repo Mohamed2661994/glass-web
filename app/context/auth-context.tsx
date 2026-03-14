@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { io, type Socket } from "socket.io-client";
 import api, { API_URL } from "@/services/api";
@@ -18,6 +18,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
+  authReady: boolean;
   setUser: (user: User | null) => void;
   logout: () => void;
 }
@@ -25,25 +26,68 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUserState] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
     const token = localStorage.getItem("token");
     const storedUser = localStorage.getItem("user");
 
+    setSessionToken(token);
+
     if (!token) {
       localStorage.removeItem("user");
-      setUser(null);
+      setUserState(null);
+      setAuthReady(true);
       return;
     }
 
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        setUserState(JSON.parse(storedUser));
       } catch {
         localStorage.removeItem("user");
       }
+    }
+
+    setAuthReady(false);
+  }, []);
+
+  const setUser = useCallback((nextUser: User | null) => {
+    setUserState(nextUser);
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    setSessionToken(localStorage.getItem("token"));
+
+    if (nextUser) {
+      localStorage.setItem("user", JSON.stringify(nextUser));
+    } else {
+      localStorage.removeItem("user");
+    }
+  }, []);
+
+  const clearSession = useCallback(() => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+    }
+
+    setSessionToken(null);
+    setUserState(null);
+  }, []);
+
+  useEffect(() => {
+    if (!sessionToken || typeof window === "undefined") {
+      return;
     }
 
     let isCancelled = false;
@@ -58,23 +102,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        setUser(freshUser);
+        setUserState(freshUser);
         localStorage.setItem("user", JSON.stringify(freshUser));
       } catch {
         if (isCancelled) {
           return;
         }
 
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        setUser(null);
+        clearSession();
 
         if (!window.location.pathname.includes("/login")) {
           router.push("/login");
         }
+      } finally {
+        if (!isCancelled) {
+          setAuthReady(true);
+        }
       }
     };
 
+    setAuthReady(false);
     refreshCurrentUser();
 
     socket = io(API_URL, {
@@ -105,7 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener("focus", handleWindowFocus);
       socket?.disconnect();
     };
-  }, []);
+  }, [clearSession, router, sessionToken]);
 
   const logout = async () => {
     // تسجيل الخروج في السيرفر (بدون انتظار لو فشل)
@@ -114,14 +161,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // لو فشل التسجيل مش نوقف الخروج
     }
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setUser(null);
+    clearSession();
+    setAuthReady(true);
     router.push("/login");
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, logout }}>
+    <AuthContext.Provider value={{ user, authReady, setUser, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -50,7 +50,7 @@ interface CashOutItem {
 
 export default function CashOutListPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, authReady } = useAuth();
   const [data, setData] = useState<CashOutItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -61,8 +61,8 @@ export default function CashOutListPage() {
   }, []);
   const [fromDate, setFromDate] = useState(todayStr);
   const [toDate, setToDate] = useState(todayStr);
-  const canEditCashOut = hasPermission(user, "cash_out_edit");
-  const canDeleteCashOut = hasPermission(user, "cash_out_delete");
+  const canEditCashOut = authReady && hasPermission(user, "cash_out_edit");
+  const canDeleteCashOut = authReady && hasPermission(user, "cash_out_delete");
 
   const [deleteItem, setDeleteItem] = useState<CashOutItem | null>(null);
 
@@ -339,9 +339,7 @@ export default function CashOutListPage() {
                           : undefined
                       }
                       onDelete={
-                        canDeleteCashOut
-                          ? () => setDeleteItem(item)
-                          : undefined
+                        canDeleteCashOut ? () => setDeleteItem(item) : undefined
                       }
                     />
                   ))}

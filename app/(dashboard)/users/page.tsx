@@ -124,9 +124,9 @@ function SectionCard({
 
 /* ========== Component ========== */
 export default function UsersPage() {
-  const { user, setUser } = useAuth();
-  const isAdmin = isAdminUser(user);
-  const canManageAllBranches = user?.id === 7;
+  const { user, setUser, authReady } = useAuth();
+  const isAdmin = authReady && isAdminUser(user);
+  const canManageAllBranches = authReady && user?.id === 7;
 
   /* ---- Edit username state ---- */
   const [editingName, setEditingName] = useState(false);

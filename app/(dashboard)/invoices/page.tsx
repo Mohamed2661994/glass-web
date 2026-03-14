@@ -116,9 +116,9 @@ export default function InvoicesPage() {
     Record<number, InvoiceResolvedFinancials>
   >({});
   const router = useRouter();
-  const { user } = useAuth();
-  const canEditInvoice = hasPermission(user, "invoice_edit");
-  const canDeleteInvoice = hasPermission(user, "invoice_delete");
+  const { user, authReady } = useAuth();
+  const canEditInvoice = authReady && hasPermission(user, "invoice_edit");
+  const canDeleteInvoice = authReady && hasPermission(user, "invoice_delete");
 
   // branch_id 1 = retail, branch_id 2 = wholesale
   const invoiceType =

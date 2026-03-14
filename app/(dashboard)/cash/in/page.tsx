@@ -58,9 +58,9 @@ export default function CashInPageWrapper() {
 }
 
 function CashInPage() {
-  const { user } = useAuth();
+  const { user, authReady } = useAuth();
   const isWholesaleUser = user?.branch_id === 2;
-  const canDeleteCashIn = hasPermission(user, "cash_in_delete");
+  const canDeleteCashIn = authReady && hasPermission(user, "cash_in_delete");
 
   const [sourceName, setSourceName] = useState("");
   const [amount, setAmount] = useState("");

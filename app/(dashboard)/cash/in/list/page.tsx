@@ -62,7 +62,7 @@ interface CashInItem {
 
 export default function CashInListPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, authReady } = useAuth();
   const [data, setData] = useState<CashInItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchName, setSearchName] = useState("");
@@ -75,8 +75,8 @@ export default function CashInListPage() {
   }, []);
   const [fromDate, setFromDate] = useState(todayStr);
   const [toDate, setToDate] = useState(todayStr);
-  const canEditCashIn = hasPermission(user, "cash_in_edit");
-  const canDeleteCashIn = hasPermission(user, "cash_in_delete");
+  const canEditCashIn = authReady && hasPermission(user, "cash_in_edit");
+  const canDeleteCashIn = authReady && hasPermission(user, "cash_in_delete");
 
   const fetchData = useCallback(async () => {
     try {
