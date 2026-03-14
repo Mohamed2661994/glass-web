@@ -41,8 +41,13 @@ type SalesProfitRow = {
 
 type InvoiceTypeFilter = "all" | "retail" | "wholesale";
 
-const formatMoney = (value: number) =>
-  Math.round(Number(value || 0)).toLocaleString("en-US");
+const formatNumber = (value: number) =>
+  new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(Number(value || 0));
+
+const formatMoney = (value: number) => formatNumber(value);
 
 const getProfitPercentage = (salesTotal: number, netProfit: number) => {
   const total = Number(salesTotal || 0);
@@ -50,7 +55,7 @@ const getProfitPercentage = (salesTotal: number, netProfit: number) => {
   return (Number(netProfit || 0) / total) * 100;
 };
 
-const formatPercent = (value: number) => `${Number(value || 0).toFixed(2)}%`;
+const formatPercent = (value: number) => `${formatNumber(value)}%`;
 
 const formatDate = (value?: string) => {
   if (!value) return "-";
