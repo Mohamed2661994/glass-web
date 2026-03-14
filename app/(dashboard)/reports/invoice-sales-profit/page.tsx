@@ -135,7 +135,7 @@ export default function InvoiceSalesProfitPage() {
     { header: "العميل", key: "customer_name", width: 24 },
     { header: "نوع الفاتورة", key: "invoice_type_label", width: 14 },
     {
-      header: "إجمالي بعد الخصم",
+      header: "إجمالي البيع",
       key: "items_total_after_discount",
       width: 18,
     },
@@ -274,7 +274,7 @@ export default function InvoiceSalesProfitPage() {
             <Card>
               <CardContent className="p-4 text-center">
                 <div className="text-sm text-muted-foreground">
-                  إجمالي بعد الخصم
+                  إجمالي البيع
                 </div>
                 <div className="text-xl font-bold mt-1">
                   {formatMoney(totals.sales)}
@@ -306,9 +306,7 @@ export default function InvoiceSalesProfitPage() {
                     <TableHead className="text-center">التاريخ</TableHead>
                     <TableHead className="text-right">العميل</TableHead>
                     <TableHead className="text-center">النوع</TableHead>
-                    <TableHead className="text-center">
-                      إجمالي بعد الخصم
-                    </TableHead>
+                    <TableHead className="text-center">إجمالي البيع</TableHead>
                     <TableHead className="text-center">صافي الربح</TableHead>
                     <TableHead className="text-center">نسبة الربح %</TableHead>
                   </TableRow>
