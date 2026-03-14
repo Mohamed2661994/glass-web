@@ -51,6 +51,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useAuth } from "@/app/context/auth-context";
+import { hasPermission } from "@/lib/permissions";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -75,10 +76,11 @@ import {
    ========================================================= */
 
 export default function EditRetailInvoicePage() {
-  const { user } = useAuth();
+  const { user, authReady } = useAuth();
   const { id } = useParams();
   const router = useRouter();
   const [loadingInvoice, setLoadingInvoice] = useState(true);
+  const canEditInvoice = authReady && hasPermission(user, "invoice_edit");
 
   /* =========================================================
      1️⃣ Invoice Header States
@@ -180,6 +182,17 @@ export default function EditRetailInvoicePage() {
      ========================================================= */
 
   useEffect(() => {
+    if (!user || !authReady) return;
+
+    if (!canEditInvoice) {
+      toast.error("ليس لديك صلاحية تعديل الفاتورة");
+      router.replace(`/invoices/${id}`);
+    }
+  }, [authReady, canEditInvoice, id, router, user]);
+
+  useEffect(() => {
+    if (!user || !authReady || !canEditInvoice) return;
+
     const fetchInvoice = async () => {
       try {
         setLoadingInvoice(true);
@@ -230,7 +243,7 @@ export default function EditRetailInvoicePage() {
     };
 
     if (id) fetchInvoice();
-  }, [id]);
+  }, [authReady, canEditInvoice, id, user]);
 
   /* =========================================================
      6️⃣ Fetch Products From Backend

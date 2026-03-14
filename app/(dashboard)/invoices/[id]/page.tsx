@@ -17,6 +17,8 @@ import {
 } from "@/lib/export-utils";
 import { useRealtime } from "@/hooks/use-realtime";
 import { onUpdate } from "@/lib/broadcast";
+import { useAuth } from "@/app/context/auth-context";
+import { hasPermission } from "@/lib/permissions";
 
 interface InvoiceItem {
   product_id: number;
@@ -33,11 +35,13 @@ interface InvoiceItem {
 export default function InvoiceDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
+  const { user, authReady } = useAuth();
   const [invoice, setInvoice] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [sharingWa, setSharingWa] = useState(false);
+  const canEditInvoice = authReady && hasPermission(user, "invoice_edit");
 
   const fetchInvoice = useCallback(async () => {
     try {
@@ -345,16 +349,18 @@ export default function InvoiceDetailsPage() {
       )}
 
       <div className="flex gap-3 flex-wrap">
-        <Button
-          variant="outline"
-          onClick={() =>
-            router.push(
-              `/invoices/${invoice.id}/edit/${invoice.invoice_type === "retail" ? "retail" : "wholesale"}`,
-            )
-          }
-        >
-          تعديل الفاتورة
-        </Button>
+        {canEditInvoice && (
+          <Button
+            variant="outline"
+            onClick={() =>
+              router.push(
+                `/invoices/${invoice.id}/edit/${invoice.invoice_type === "retail" ? "retail" : "wholesale"}`,
+              )
+            }
+          >
+            تعديل الفاتورة
+          </Button>
+        )}
         <Button variant="outline" onClick={() => setPreviewOpen(true)}>
           معاينة
         </Button>
