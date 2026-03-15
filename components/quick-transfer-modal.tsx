@@ -49,6 +49,8 @@ interface TransferItem {
   available_quantity: number;
 }
 
+type PackageStockMap = Record<number, number>;
+
 interface QuickTransferModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -83,6 +85,11 @@ export function QuickTransferModal({
   const [transferNumber, setTransferNumber] = useState<number | null>(null);
   const [packagePickerProduct, setPackagePickerProduct] =
     useState<WholesaleProduct | null>(null);
+  const [packageStockByProduct, setPackageStockByProduct] = useState<
+    Record<number, PackageStockMap>
+  >({});
+  const [loadingPackageStockForProductId, setLoadingPackageStockForProductId] =
+    useState<number | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   /* --- Load products when modal opens --- */
@@ -94,6 +101,8 @@ export function QuickTransferModal({
     setSearch("");
     setTransferNumber(null);
     setPackagePickerProduct(null);
+    setPackageStockByProduct({});
+    setLoadingPackageStockForProductId(null);
     setPreviewItems([]);
     setPayload(null);
 
@@ -151,11 +160,59 @@ export function QuickTransferModal({
       multiWordMatch(search, String(p.id), p.name, p.manufacturer),
   );
 
+  const loadPackageStocks = useCallback(
+    async (productId: number) => {
+      if (packageStockByProduct[productId]) {
+        return packageStockByProduct[productId];
+      }
+
+      setLoadingPackageStockForProductId(productId);
+      try {
+        const res = await api.get("/stock/quantity-all", {
+          params: {
+            product_id: productId,
+            branch_id: FROM_BRANCH_ID,
+          },
+        });
+
+        const stockMap: PackageStockMap = {};
+        for (const [variantId, quantity] of Object.entries(res.data || {})) {
+          stockMap[Number(variantId)] = Number(quantity) || 0;
+        }
+
+        setPackageStockByProduct((prev) => ({
+          ...prev,
+          [productId]: stockMap,
+        }));
+
+        return stockMap;
+      } catch {
+        toast.error("فشل تحميل أرصدة العبوات");
+        return {} as PackageStockMap;
+      } finally {
+        setLoadingPackageStockForProductId((current) =>
+          current === productId ? null : current,
+        );
+      }
+    },
+    [packageStockByProduct],
+  );
+
+  const getPackageAvailableQuantity = useCallback(
+    (productId: number, variantId: number, fallbackQuantity: number = 0) => {
+      const stockMap = packageStockByProduct[productId];
+      if (!stockMap) return variantId === 0 ? fallbackQuantity : 0;
+      return Number(stockMap[variantId] ?? 0);
+    },
+    [packageStockByProduct],
+  );
+
   /* --- Add product --- */
   const addProduct = (product: WholesaleProduct) => {
     const variants = variantsMap[product.id];
     if (variants && variants.length > 0) {
       setPackagePickerProduct(product);
+      void loadPackageStocks(product.id);
       return;
     }
     finalizeAdd(
@@ -164,6 +221,7 @@ export function QuickTransferModal({
       product.wholesale_price,
       0,
       product.retail_package,
+      product.available_quantity,
     );
   };
 
@@ -173,6 +231,7 @@ export function QuickTransferModal({
     price: number,
     variantId: number = 0,
     retailPkg?: string,
+    availableQty: number = Number(product.available_quantity) || 0,
   ) => {
     const uid = `${product.id}_${variantId}`;
     if (items.find((i) => i.uid === uid)) {
@@ -191,7 +250,7 @@ export function QuickTransferModal({
         wholesale_package: pkg,
         retail_package: retailPkg || product.retail_package,
         wholesale_price: price,
-        available_quantity: product.available_quantity,
+        available_quantity: availableQty,
       },
     ]);
     setPackagePickerProduct(null);
@@ -593,16 +652,37 @@ export function QuickTransferModal({
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-2 py-2">
-              {packagePickerProduct && (
+              {loadingPackageStockForProductId === packagePickerProduct?.id && (
+                <div className="text-sm text-muted-foreground text-center py-2">
+                  جاري تحميل أرصدة العبوات...
+                </div>
+              )}
+              {packagePickerProduct && (() => {
+                const availableQty = getPackageAvailableQuantity(
+                  packagePickerProduct.id,
+                  0,
+                  packagePickerProduct.available_quantity,
+                );
+                const disabled = availableQty <= 0;
+
+                return (
                 <button
-                  className="w-full p-3 rounded-lg border hover:bg-muted transition text-right"
+                  type="button"
+                  disabled={disabled}
+                  className={`w-full p-3 rounded-lg border transition text-right ${
+                    disabled
+                      ? "opacity-50 cursor-not-allowed bg-muted/40"
+                      : "hover:bg-muted"
+                  }`}
                   onClick={() =>
+                    !disabled &&
                     finalizeAdd(
                       packagePickerProduct,
                       packagePickerProduct.wholesale_package,
                       packagePickerProduct.wholesale_price,
                       0,
                       packagePickerProduct.retail_package,
+                      availableQty,
                     )
                   }
                 >
@@ -610,23 +690,46 @@ export function QuickTransferModal({
                     {packagePickerProduct.wholesale_package}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    رصيد: {packagePickerProduct.available_quantity}
+                    السعر: {packagePickerProduct.wholesale_price} ج
+                  </div>
+                  <div
+                    className={`text-sm mt-1 ${
+                      availableQty > 0 ? "text-green-600" : "text-red-500"
+                    }`}
+                  >
+                    رصيد: {availableQty}
                   </div>
                 </button>
-              )}
+                );
+              })()}
 
               {packagePickerProduct &&
-                variantsMap[packagePickerProduct.id]?.map((v: any) => (
+                variantsMap[packagePickerProduct.id]?.map((v: any) => {
+                  const availableQty = getPackageAvailableQuantity(
+                    packagePickerProduct.id,
+                    Number(v.id),
+                  );
+                  const disabled = availableQty <= 0;
+
+                  return (
                   <button
                     key={v.id}
-                    className="w-full p-3 rounded-lg border hover:bg-muted transition text-right"
+                    type="button"
+                    disabled={disabled}
+                    className={`w-full p-3 rounded-lg border transition text-right ${
+                      disabled
+                        ? "opacity-50 cursor-not-allowed bg-muted/40"
+                        : "hover:bg-muted"
+                    }`}
                     onClick={() =>
+                      !disabled &&
                       finalizeAdd(
                         packagePickerProduct,
                         v.wholesale_package || "-",
                         Number(v.wholesale_price),
                         v.id,
                         v.retail_package,
+                        availableQty,
                       )
                     }
                   >
@@ -634,10 +737,19 @@ export function QuickTransferModal({
                       {v.wholesale_package || "-"}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {v.label && <span>({v.label})</span>}
+                      السعر: {v.wholesale_price} ج
+                      {v.label && <span className="mr-2">({v.label})</span>}
+                    </div>
+                    <div
+                      className={`text-sm mt-1 ${
+                        availableQty > 0 ? "text-green-600" : "text-red-500"
+                      }`}
+                    >
+                      رصيد: {availableQty}
                     </div>
                   </button>
-                ))}
+                  );
+                })}
             </div>
           </DialogContent>
         </Dialog>
