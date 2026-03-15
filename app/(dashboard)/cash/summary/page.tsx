@@ -13,6 +13,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Printer,
   CalendarDays,
   TrendingUp,
@@ -31,12 +37,16 @@ import {
   Settings2,
   Bold,
   Plus,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import api from "@/services/api";
 import { useAuth } from "@/app/context/auth-context";
 import { noSpaces, normalizeArabic } from "@/lib/utils";
 
 const DISCOUNT_DIFF_MARKER = "{{discount_diff}}";
+const HIDE_MARKET_CUSTOMERS_STORAGE_KEY =
+  "cash-summary-hide-market-customers";
 
 /* ================= TYPES ================= */
 
@@ -116,7 +126,8 @@ export default function CashSummaryPage() {
   const [loading, setLoading] = useState(true);
   const [includeOpeningBalance, setIncludeOpeningBalance] = useState(true);
   const [hideMarketCustomerEntries, setHideMarketCustomerEntries] =
-    useState(false);
+    useState(true);
+  const [marketToggleReady, setMarketToggleReady] = useState(false);
   const [actualCash, setActualCash] = useState<string>("");
   const [fontSize, setFontSize] = useState<"small" | "medium" | "large">(
     "medium",
@@ -199,6 +210,33 @@ export default function CashSummaryPage() {
       setIncludeOpeningBalance(false);
     }
   }, [isWholesaleUser]);
+
+  useEffect(() => {
+    try {
+      const savedValue = window.localStorage.getItem(
+        HIDE_MARKET_CUSTOMERS_STORAGE_KEY,
+      );
+      if (savedValue === "0") {
+        setHideMarketCustomerEntries(false);
+      } else {
+        setHideMarketCustomerEntries(true);
+      }
+    } catch {
+      setHideMarketCustomerEntries(true);
+    } finally {
+      setMarketToggleReady(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!marketToggleReady) return;
+    try {
+      window.localStorage.setItem(
+        HIDE_MARKET_CUSTOMERS_STORAGE_KEY,
+        hideMarketCustomerEntries ? "1" : "0",
+      );
+    } catch {}
+  }, [hideMarketCustomerEntries, marketToggleReady]);
 
   const isMarketCustomerEntry = useCallback(
     (item: CashInItem) =>
@@ -766,16 +804,38 @@ export default function CashSummaryPage() {
               <div className="flex items-center gap-2">
                 <ArrowDownCircle className="h-4 w-4 text-green-500" />
                 <h2 className="font-bold text-sm">الوارد</h2>
-                <Button
-                  variant={hideMarketCustomerEntries ? "secondary" : "outline"}
-                  size="sm"
-                  className="h-7 px-2 text-[11px]"
-                  onClick={() => setHideMarketCustomerEntries((prev) => !prev)}
-                >
-                  {hideMarketCustomerEntries
-                    ? "إظهار عميل السوق"
-                    : "إخفاء عميل السوق"}
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={
+                          hideMarketCustomerEntries ? "secondary" : "outline"
+                        }
+                        size="icon"
+                        className="h-7 w-7 shrink-0"
+                        aria-label={
+                          hideMarketCustomerEntries
+                            ? "إظهار عملاء السوق في اليومية"
+                            : "إخفاء عملاء السوق من اليومية"
+                        }
+                        onClick={() =>
+                          setHideMarketCustomerEntries((prev) => !prev)
+                        }
+                      >
+                        {hideMarketCustomerEntries ? (
+                          <EyeOff className="h-3.5 w-3.5" />
+                        ) : (
+                          <Eye className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      {hideMarketCustomerEntries
+                        ? "عملاء السوق مخفيون حاليًا. اضغط لإظهارهم في اليومية."
+                        : "عملاء السوق ظاهرون حاليًا. اضغط لإخفائهم من اليومية."}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               <div className="flex items-center gap-2">
                 <Button
