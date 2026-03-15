@@ -34,9 +34,9 @@ import {
 } from "lucide-react";
 import api from "@/services/api";
 import { useAuth } from "@/app/context/auth-context";
+import { noSpaces, normalizeArabic } from "@/lib/utils";
 
 const DISCOUNT_DIFF_MARKER = "{{discount_diff}}";
-const MARKET_CUSTOMER_NAME = "عميل السوق";
 
 /* ================= TYPES ================= */
 
@@ -57,6 +57,11 @@ type CashOutItem = {
   name: string;
   entry_type: "expense" | "purchase" | "supplier_payment";
   notes?: string | null;
+};
+
+type MarketCustomerItem = {
+  name: string;
+  is_market_customer?: boolean;
 };
 
 /* ================= HELPERS ================= */
@@ -93,11 +98,8 @@ const effectivePaid = (i: CashInItem) => {
   return i.source_type === "invoice" ? Number(i.paid_amount) : Number(i.amount);
 };
 
-const normalizeCustomerName = (value?: string | null) =>
-  String(value || "").replace(/\s+/g, " ").trim();
-
-const isMarketCustomerEntry = (item: CashInItem) =>
-  normalizeCustomerName(item.customer_name) === MARKET_CUSTOMER_NAME;
+const getCustomerLookupKey = (value?: string | null) =>
+  normalizeArabic(noSpaces(String(value || "")).toLowerCase());
 
 /* ================= COMPONENT ================= */
 
@@ -108,6 +110,9 @@ export default function CashSummaryPage() {
 
   const [cashIn, setCashIn] = useState<CashInItem[]>([]);
   const [cashOut, setCashOut] = useState<CashOutItem[]>([]);
+  const [marketCustomerKeys, setMarketCustomerKeys] = useState<Set<string>>(
+    new Set(),
+  );
   const [loading, setLoading] = useState(true);
   const [includeOpeningBalance, setIncludeOpeningBalance] = useState(true);
   const [hideMarketCustomerEntries, setHideMarketCustomerEntries] =
@@ -147,11 +152,12 @@ export default function CashSummaryPage() {
     if (!user?.branch_id) return;
     (async () => {
       try {
-        const [inRes, outRes] = await Promise.all([
+        const [inRes, outRes, customersRes] = await Promise.all([
           api.get("/cash-in", { params: { branch_id: user.branch_id } }),
           api.get("/cash/out", {
             params: { branch_id: user.branch_id, limit: 100000 },
           }),
+          api.get("/customers", { params: { market_only: "1" } }),
         ]);
 
         const mappedCashIn = (inRes.data.data || []).map(
@@ -165,8 +171,21 @@ export default function CashSummaryPage() {
             !String(item.notes || "").includes(DISCOUNT_DIFF_MARKER),
         );
 
+        const marketCustomers: MarketCustomerItem[] = Array.isArray(
+          customersRes.data,
+        )
+          ? customersRes.data
+          : [];
+
         setCashIn(visibleCashIn);
         setCashOut(outRes.data.data || []);
+        setMarketCustomerKeys(
+          new Set(
+            marketCustomers
+              .filter((item) => Boolean(item.is_market_customer))
+              .map((item) => getCustomerLookupKey(item.name)),
+          ),
+        );
       } catch {
         console.error("SUMMARY FETCH ERROR");
       } finally {
@@ -180,6 +199,12 @@ export default function CashSummaryPage() {
       setIncludeOpeningBalance(false);
     }
   }, [isWholesaleUser]);
+
+  const isMarketCustomerEntry = useCallback(
+    (item: CashInItem) =>
+      marketCustomerKeys.has(getCustomerLookupKey(item.customer_name)),
+    [marketCustomerKeys],
+  );
 
   /* ================= FILTER ================= */
 
@@ -745,9 +770,7 @@ export default function CashSummaryPage() {
                   variant={hideMarketCustomerEntries ? "secondary" : "outline"}
                   size="sm"
                   className="h-7 px-2 text-[11px]"
-                  onClick={() =>
-                    setHideMarketCustomerEntries((prev) => !prev)
-                  }
+                  onClick={() => setHideMarketCustomerEntries((prev) => !prev)}
                 >
                   {hideMarketCustomerEntries
                     ? "إظهار عميل السوق"
