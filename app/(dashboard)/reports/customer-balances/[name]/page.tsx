@@ -48,12 +48,35 @@ const parseAmountInput = (value: string) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const formatDateInputValue = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const getCurrentWeekRange = () => {
+  const today = new Date();
+  const start = new Date(today);
+  const daysSinceSaturday = (today.getDay() + 1) % 7;
+  start.setDate(today.getDate() - daysSinceSaturday);
+
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+
+  return {
+    from: formatDateInputValue(start),
+    to: formatDateInputValue(end),
+  };
+};
+
 /* ========== Component ========== */
 export default function CustomerDebtDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth();
   const customerName = decodeURIComponent(params.name as string);
+  const defaultWeekRange = useMemo(() => getCurrentWeekRange(), []);
 
   const [data, setData] = useState<Invoice[]>([]);
   const [cashInDateById, setCashInDateById] = useState<Record<string, string>>(
@@ -63,8 +86,8 @@ export default function CustomerDebtDetailsPage() {
     Record<string, string>
   >({});
   const [loading, setLoading] = useState(true);
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [fromDate, setFromDate] = useState(defaultWeekRange.from);
+  const [toDate, setToDate] = useState(defaultWeekRange.to);
   const [manualOpeningBalance, setManualOpeningBalance] = useState("");
 
   /* ========== Invoice Preview Modal ========== */
