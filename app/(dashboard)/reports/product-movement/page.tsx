@@ -298,10 +298,7 @@ function ProductMovementPageContent() {
       ].includes(mt);
       const qty = Number(item.quantity);
       const pkgLabel = normalizePackageName(item.package_name);
-      const pkgKey =
-        item.variant_id !== undefined && item.variant_id !== null
-          ? `variant:${Number(item.variant_id)}`
-          : `label:${pkgLabel}`;
+      const pkgKey = pkgLabel;
 
       if (!byPackage.has(pkgKey)) {
         byPackage.set(pkgKey, { label: pkgLabel, inQty: 0, outQty: 0 });
