@@ -27,6 +27,7 @@ export default function PrintSelectedCustomersPage() {
   const [data, setData] = useState<CustomerBalanceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const reportDate = formatTodayHeader();
+  const printableRows = data.length >= 10 ? data : [...data, ...Array.from({ length: 10 - data.length }, () => null)];
 
   useEffect(() => {
     const stored = localStorage.getItem("printSelectedCustomers");
@@ -72,37 +73,55 @@ export default function PrintSelectedCustomersPage() {
         color: "#000",
         minHeight: "100vh",
         colorScheme: "light",
-        fontFamily: "Arial, sans-serif",
+        fontFamily: "Tahoma, Arial, sans-serif",
         padding: "0",
       }}
     >
-      <div style={{ maxWidth: 900, margin: "0 auto" }}>
+      <style>{`
+        @page {
+          size: A4 portrait;
+          margin: 8mm 10mm;
+        }
+
+        html, body {
+          background: #fff;
+        }
+
+        * {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+          box-sizing: border-box;
+        }
+
+        @media print {
+          body {
+            margin: 0;
+          }
+        }
+      `}</style>
+
+      <div style={sheetStyle}>
         {/* Header */}
-        <div
-          style={{
-            background: "#3b5998",
-            color: "#fff",
-            padding: "10px 12px",
-            textAlign: "center",
-          }}
-        >
-          <h1 style={{ fontSize: 18, fontWeight: "bold", margin: 0 }}>
+        <div style={headerStyle}>
+          <h1 style={titleStyle}>
             حسابات السوق
           </h1>
-          <div style={{ fontSize: 14, marginTop: 6 }}>{reportDate}</div>
+          <div style={dateStyle}>{reportDate}</div>
         </div>
 
         {/* Table */}
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            fontSize: 13,
-            tableLayout: "fixed",
-          }}
-        >
+        <table style={tableStyle}>
+          <colgroup>
+            <col style={{ width: "9.5%" }} />
+            <col style={{ width: "9.5%" }} />
+            <col style={{ width: "11.5%" }} />
+            <col style={{ width: "14%" }} />
+            <col style={{ width: "18%" }} />
+            <col style={{ width: "18.5%" }} />
+            <col style={{ width: "19%" }} />
+          </colgroup>
           <thead>
-            <tr style={{ background: "#dce1e8" }}>
+            <tr style={theadRowStyle}>
               <th style={thBlank}>&nbsp;</th>
               <th style={thBlankExpanded}>&nbsp;</th>
               <th style={thCustomer}>اسم العميل</th>
@@ -113,14 +132,14 @@ export default function PrintSelectedCustomersPage() {
             </tr>
           </thead>
           <tbody>
-            {data.map((item, idx) => {
-              const balanceDue = Number(item.balance_due || 0);
+            {printableRows.map((item, idx) => {
+              const balanceDue = Number(item?.balance_due || 0);
 
               return (
                 <tr key={idx}>
                   <td style={tdStyle}>&nbsp;</td>
                   <td style={tdStyle}>&nbsp;</td>
-                  <td style={tdCustomer}>{item.customer_name}</td>
+                  <td style={tdCustomer}>{item?.customer_name || ""}</td>
                   <td style={tdMoney}>
                     {balanceDue > 0 ? formatMoney(balanceDue) : ""}
                   </td>
@@ -139,56 +158,99 @@ export default function PrintSelectedCustomersPage() {
 
 /* ========== Shared cell styles ========== */
 const thBase: React.CSSProperties = {
-  border: "1px solid #aaa",
-  padding: "4px 6px",
+  border: "1px solid #7f8a98",
+  padding: "8px 6px",
   textAlign: "center",
   fontWeight: "bold",
   whiteSpace: "nowrap",
+  fontSize: 15,
+  lineHeight: 1.1,
+  background: "#e6ebf2",
+  height: 32,
+};
+
+const sheetStyle: React.CSSProperties = {
+  width: "190mm",
+  margin: "7mm auto 0",
+};
+
+const headerStyle: React.CSSProperties = {
+  background: "#4766a6",
+  color: "#fff",
+  padding: "14px 12px 12px",
+  textAlign: "center",
+  border: "1px solid #4766a6",
+  borderBottom: "none",
+};
+
+const titleStyle: React.CSSProperties = {
+  fontSize: 27,
+  fontWeight: 700,
+  margin: 0,
+  lineHeight: 1.2,
+};
+
+const dateStyle: React.CSSProperties = {
+  fontSize: 16,
+  fontWeight: 700,
+  marginTop: 6,
+  lineHeight: 1.2,
+};
+
+const tableStyle: React.CSSProperties = {
+  width: "100%",
+  borderCollapse: "collapse",
+  tableLayout: "fixed",
+  border: "1px solid #7f8a98",
+};
+
+const theadRowStyle: React.CSSProperties = {
+  background: "#e6ebf2",
 };
 
 const thBlank: React.CSSProperties = {
   ...thBase,
-  width: "8%",
 };
 
 const thBlankExpanded: React.CSSProperties = {
   ...thBase,
-  width: "18%",
 };
 
 const thCustomer: React.CSSProperties = {
   ...thBase,
-  width: "16%",
 };
 
 const thDebt: React.CSSProperties = {
   ...thBase,
-  width: "12%",
 };
 
 const thCompact: React.CSSProperties = {
   ...thBase,
-  width: "10%",
 };
 
 const thRemaining: React.CSSProperties = {
   ...thBase,
-  width: "12%",
 };
 
 const tdStyle: React.CSSProperties = {
-  border: "1px solid #ccc",
-  padding: "4px 6px",
+  border: "1px solid #b0b7c0",
+  padding: "7px 6px",
   textAlign: "center",
+  fontSize: 15,
+  lineHeight: 1.1,
+  height: 30,
+  verticalAlign: "middle",
 };
 
 const tdCustomer: React.CSSProperties = {
   ...tdStyle,
   fontWeight: "bold",
   whiteSpace: "nowrap",
+  fontSize: 16,
 };
 
 const tdMoney: React.CSSProperties = {
   ...tdStyle,
   whiteSpace: "nowrap",
+  fontSize: 16,
 };
