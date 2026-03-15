@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/services/api";
 import { useAuth } from "@/app/context/auth-context";
@@ -89,6 +89,15 @@ export default function CustomerDebtDetailsPage() {
   const [fromDate, setFromDate] = useState(defaultWeekRange.from);
   const [toDate, setToDate] = useState(defaultWeekRange.to);
   const [manualOpeningBalance, setManualOpeningBalance] = useState("");
+  const skipOpeningBalanceSaveRef = useRef(false);
+
+  const openingBalanceStorageKey = useMemo(() => {
+    const branchKey = String(user?.branch_id || "all");
+    const customerKey = encodeURIComponent(customerName);
+    const fromKey = fromDate || "none";
+    const toKey = toDate || "none";
+    return `customer-opening-balance:${branchKey}:${customerKey}:${fromKey}:${toKey}`;
+  }, [customerName, fromDate, toDate, user?.branch_id]);
 
   /* ========== Invoice Preview Modal ========== */
   const [previewInvoice, setPreviewInvoice] = useState<any>(null);
@@ -163,6 +172,31 @@ export default function CustomerDebtDetailsPage() {
   useEffect(() => {
     fetchDetails();
   }, [fetchDetails]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    skipOpeningBalanceSaveRef.current = true;
+    const savedOpeningBalance = localStorage.getItem(openingBalanceStorageKey);
+    setManualOpeningBalance(savedOpeningBalance || "");
+  }, [openingBalanceStorageKey]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    if (skipOpeningBalanceSaveRef.current) {
+      skipOpeningBalanceSaveRef.current = false;
+      return;
+    }
+
+    const normalizedValue = manualOpeningBalance.trim();
+    if (!normalizedValue) {
+      localStorage.removeItem(openingBalanceStorageKey);
+      return;
+    }
+
+    localStorage.setItem(openingBalanceStorageKey, normalizedValue);
+  }, [manualOpeningBalance, openingBalanceStorageKey]);
 
   useRealtime(["data:invoices", "data:cash", "data:cash-in"], fetchDetails);
 
