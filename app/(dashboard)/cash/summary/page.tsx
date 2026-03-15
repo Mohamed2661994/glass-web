@@ -36,6 +36,7 @@ import api from "@/services/api";
 import { useAuth } from "@/app/context/auth-context";
 
 const DISCOUNT_DIFF_MARKER = "{{discount_diff}}";
+const MARKET_CUSTOMER_NAME = "عميل السوق";
 
 /* ================= TYPES ================= */
 
@@ -92,6 +93,12 @@ const effectivePaid = (i: CashInItem) => {
   return i.source_type === "invoice" ? Number(i.paid_amount) : Number(i.amount);
 };
 
+const normalizeCustomerName = (value?: string | null) =>
+  String(value || "").replace(/\s+/g, " ").trim();
+
+const isMarketCustomerEntry = (item: CashInItem) =>
+  normalizeCustomerName(item.customer_name) === MARKET_CUSTOMER_NAME;
+
 /* ================= COMPONENT ================= */
 
 export default function CashSummaryPage() {
@@ -103,6 +110,8 @@ export default function CashSummaryPage() {
   const [cashOut, setCashOut] = useState<CashOutItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [includeOpeningBalance, setIncludeOpeningBalance] = useState(true);
+  const [hideMarketCustomerEntries, setHideMarketCustomerEntries] =
+    useState(false);
   const [actualCash, setActualCash] = useState<string>("");
   const [fontSize, setFontSize] = useState<"small" | "medium" | "large">(
     "medium",
@@ -184,9 +193,14 @@ export default function CashSummaryPage() {
   };
 
   const filteredCashIn = useMemo(
-    () => cashIn.filter((i) => inRange(i.transaction_date)),
+    () =>
+      cashIn.filter(
+        (i) =>
+          inRange(i.transaction_date) &&
+          (!hideMarketCustomerEntries || !isMarketCustomerEntry(i)),
+      ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [cashIn, fromDate, toDate],
+    [cashIn, fromDate, toDate, hideMarketCustomerEntries],
   );
 
   const filteredCashOut = useMemo(
@@ -200,7 +214,9 @@ export default function CashSummaryPage() {
   const fromDateTime = toDateOnly(new Date(fromDate + "T00:00:00"));
 
   const prevCashIn = cashIn.filter(
-    (i) => toDateOnly(new Date(i.transaction_date)) < fromDateTime,
+    (i) =>
+      toDateOnly(new Date(i.transaction_date)) < fromDateTime &&
+      (!hideMarketCustomerEntries || !isMarketCustomerEntry(i)),
   );
   const prevCashOut = cashOut.filter(
     (o) => toDateOnly(new Date(o.transaction_date)) < fromDateTime,
@@ -725,6 +741,18 @@ export default function CashSummaryPage() {
               <div className="flex items-center gap-2">
                 <ArrowDownCircle className="h-4 w-4 text-green-500" />
                 <h2 className="font-bold text-sm">الوارد</h2>
+                <Button
+                  variant={hideMarketCustomerEntries ? "secondary" : "outline"}
+                  size="sm"
+                  className="h-7 px-2 text-[11px]"
+                  onClick={() =>
+                    setHideMarketCustomerEntries((prev) => !prev)
+                  }
+                >
+                  {hideMarketCustomerEntries
+                    ? "إظهار عميل السوق"
+                    : "إخفاء عميل السوق"}
+                </Button>
               </div>
               <div className="flex items-center gap-2">
                 <Button
