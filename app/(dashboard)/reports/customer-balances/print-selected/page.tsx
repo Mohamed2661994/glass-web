@@ -66,6 +66,7 @@ export default function PrintSelectedCustomersPage() {
 
   return (
     <div
+      className="print-page-root"
       dir="rtl"
       style={{
         background: "#fff",
@@ -93,8 +94,16 @@ export default function PrintSelectedCustomersPage() {
         }
 
         @media print {
+          html, body {
+            height: auto;
+          }
+
           body {
             margin: 0;
+          }
+
+          .print-page-root {
+            min-height: auto !important;
           }
         }
       `}</style>
