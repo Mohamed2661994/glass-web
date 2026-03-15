@@ -45,8 +45,7 @@ import { useAuth } from "@/app/context/auth-context";
 import { noSpaces, normalizeArabic } from "@/lib/utils";
 
 const DISCOUNT_DIFF_MARKER = "{{discount_diff}}";
-const HIDE_MARKET_CUSTOMERS_STORAGE_KEY =
-  "cash-summary-hide-market-customers";
+const HIDE_MARKET_CUSTOMERS_STORAGE_KEY = "cash-summary-hide-market-customers";
 
 /* ================= TYPES ================= */
 
@@ -838,15 +837,24 @@ export default function CashSummaryPage() {
                 </TooltipProvider>
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="h-7 gap-1.5 text-[11px]"
-                  onClick={openCashInModal}
-                >
-                  <Plus className="h-3 w-3" />
-                  وارد الخزنة
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="default"
+                        size="icon"
+                        className="h-7 w-7"
+                        aria-label="إضافة وارد خزنة"
+                        onClick={openCashInModal}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      إضافة وارد خزنة
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 <Link href="/cash/in/list">
                   <Button
                     variant="outline"
@@ -946,15 +954,24 @@ export default function CashSummaryPage() {
                 <h2 className="font-bold text-sm">المنصرف</h2>
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="h-7 gap-1.5 text-[11px]"
-                  onClick={openCashOutModal}
-                >
-                  <Plus className="h-3 w-3" />
-                  صرف نقدي
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="default"
+                        size="icon"
+                        className="h-7 w-7"
+                        aria-label="إضافة صرف نقدي"
+                        onClick={openCashOutModal}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      إضافة صرف نقدي
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 <Link href="/cash/out/list">
                   <Button
                     variant="outline"
