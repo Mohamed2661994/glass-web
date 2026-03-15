@@ -27,7 +27,6 @@ export default function PrintSelectedCustomersPage() {
   const [data, setData] = useState<CustomerBalanceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const reportDate = formatTodayHeader();
-  const printableRows = data.length >= 10 ? data : [...data, ...Array.from({ length: 10 - data.length }, () => null)];
 
   useEffect(() => {
     const stored = localStorage.getItem("printSelectedCustomers");
@@ -79,7 +78,7 @@ export default function PrintSelectedCustomersPage() {
     >
       <style>{`
         @page {
-          size: A4 portrait;
+          size: A4 landscape;
           margin: 8mm 10mm;
         }
 
@@ -112,13 +111,13 @@ export default function PrintSelectedCustomersPage() {
         {/* Table */}
         <table style={tableStyle}>
           <colgroup>
-            <col style={{ width: "9.5%" }} />
-            <col style={{ width: "9.5%" }} />
-            <col style={{ width: "11.5%" }} />
+            <col style={{ width: "11%" }} />
+            <col style={{ width: "11%" }} />
+            <col style={{ width: "21%" }} />
             <col style={{ width: "14%" }} />
-            <col style={{ width: "18%" }} />
-            <col style={{ width: "18.5%" }} />
-            <col style={{ width: "19%" }} />
+            <col style={{ width: "12%" }} />
+            <col style={{ width: "14%" }} />
+            <col style={{ width: "17%" }} />
           </colgroup>
           <thead>
             <tr style={theadRowStyle}>
@@ -132,14 +131,14 @@ export default function PrintSelectedCustomersPage() {
             </tr>
           </thead>
           <tbody>
-            {printableRows.map((item, idx) => {
-              const balanceDue = Number(item?.balance_due || 0);
+            {data.map((item, idx) => {
+              const balanceDue = Number(item.balance_due || 0);
 
               return (
                 <tr key={idx}>
                   <td style={tdStyle}>&nbsp;</td>
                   <td style={tdStyle}>&nbsp;</td>
-                  <td style={tdCustomer}>{item?.customer_name || ""}</td>
+                  <td style={tdCustomer}>{item.customer_name || ""}</td>
                   <td style={tdMoney}>
                     {balanceDue > 0 ? formatMoney(balanceDue) : ""}
                   </td>
@@ -170,7 +169,7 @@ const thBase: React.CSSProperties = {
 };
 
 const sheetStyle: React.CSSProperties = {
-  width: "190mm",
+  width: "277mm",
   margin: "7mm auto 0",
 };
 
@@ -245,7 +244,8 @@ const tdStyle: React.CSSProperties = {
 const tdCustomer: React.CSSProperties = {
   ...tdStyle,
   fontWeight: "bold",
-  whiteSpace: "nowrap",
+  whiteSpace: "normal",
+  overflowWrap: "anywhere",
   fontSize: 16,
 };
 
