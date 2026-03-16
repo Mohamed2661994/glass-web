@@ -126,8 +126,6 @@ export default function CustomerDebtDetailsPage() {
         api.get("/reports/customer-debt-details", {
           params: {
             customer_name: customerName,
-            from: fromDate || undefined,
-            to: toDate || undefined,
             warehouse_id: user?.branch_id || undefined,
           },
         }),
@@ -158,7 +156,7 @@ export default function CustomerDebtDetailsPage() {
 
       const allInvoices: any[] = Array.isArray(invoicesRes.data)
         ? invoicesRes.data
-        : invoicesRes.data?.data ?? [];
+        : (invoicesRes.data?.data ?? []);
 
       const missingInvoices: Invoice[] = allInvoices
         .filter(
@@ -217,7 +215,7 @@ export default function CustomerDebtDetailsPage() {
     } finally {
       setLoading(false);
     }
-  }, [customerName, fromDate, toDate, user?.branch_id]);
+  }, [customerName, user?.branch_id]);
 
   useEffect(() => {
     fetchDetails();
@@ -306,16 +304,25 @@ export default function CustomerDebtDetailsPage() {
   );
 
   /* ========== Running Balance (الحساب السابق) ========== */
-  // نحسب الرصيد الافتتاحي من أول فاتورة (الحساب السابق المُضمَّن فيها)
+  // حساب الرصيد الافتتاحي من كل الحركات قبل فترة الفلتر
   const openingBalance = useMemo(() => {
-    const firstInvoice = visibleData.find((r) => r.record_type === "invoice");
-    if (!firstInvoice) return 0;
-    // الحساب السابق = المتبقي - (الإجمالي - المدفوع)
-    const embedded =
-      Number(firstInvoice.remaining_amount) -
-      (Number(firstInvoice.total) - Number(firstInvoice.paid_amount));
-    return embedded > 0 ? embedded : 0;
-  }, [visibleData]);
+    if (!fromDate) {
+      // بدون فلتر تاريخ → مفيش رصيد افتتاحي
+      return 0;
+    }
+    // نحسب الرصيد المتراكم من كل الحركات قبل تاريخ البداية
+    let balance = 0;
+    for (const row of data) {
+      const dateStr = (getRowDate(row) || "").substring(0, 10);
+      if (!dateStr || dateStr >= fromDate) continue;
+      if (row.record_type === "invoice") {
+        balance += Number(row.total) - Number(row.paid_amount);
+      } else {
+        balance -= Number(row.paid_amount);
+      }
+    }
+    return balance;
+  }, [data, fromDate, getRowDate]);
 
   const runningBalances = useMemo(() => {
     const balances: number[] = [];
