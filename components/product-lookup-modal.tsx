@@ -173,6 +173,8 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
         fetchMovementBalances({
           productName: product.name,
           branchId: targetBranchId,
+          retailPackage: product.retail_package,
+          wholesalePackage: product.wholesale_package,
         })
           .then((result) => {
             setMovementBalancesByKey((prev) => ({ ...prev, [key]: result }));
@@ -340,9 +342,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
               const currentBalance =
                 movementBalancesByKey[getBalanceKey(product.id, branchId)];
               const otherBalance =
-                movementBalancesByKey[
-                  getBalanceKey(product.id, otherBranchId)
-                ];
+                movementBalancesByKey[getBalanceKey(product.id, otherBranchId)];
 
               const currentBranchEntries = currentBalance?.entries ?? [];
               const currentBranchDisplayQuantity =

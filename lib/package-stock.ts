@@ -634,24 +634,22 @@ export async function fetchPackageStockMapFromMovements({
   variants?: PackageVariant[];
   packageField?: "wholesale_package" | "retail_package";
 }): Promise<PackageStockMap> {
-  const response = await api.get("/reports/product-movement", {
-    params: { product_name: productName },
-  });
-
-  const rows: MovementRow[] = Array.isArray(response.data) ? response.data : [];
   const totalsByPackage = new Map<string, number>();
 
+  const rows = await fetchUnifiedMovementRows({
+    productName,
+    warehouseScope: branchId === 1 ? "showroom" : branchId === 2 ? "warehouse" : "all",
+    displayMode:
+      branchId === 1 || packageField === "retail_package" ? "retail" : "movement",
+    retailPackage: packageField === "retail_package" ? basePackage : null,
+    wholesalePackage: packageField === "wholesale_package" ? basePackage : null,
+  });
+
   for (const row of rows) {
-    if (!matchesBranchWarehouse(String(row.warehouse_name || ""), branchId)) {
-      continue;
-    }
-
-    const qty = Number(row.quantity || 0);
-    if (!Number.isFinite(qty) || qty === 0) continue;
-
-    const movementType = row.movement_type || row.invoice_movement_type || "";
-    const delta = IN_MOVEMENT_TYPES.has(movementType) ? qty : -qty;
-    const pkg = normalizePackageName(row.package_name || basePackage || "-");
+    const delta = row.is_in ? row.quantity : -row.quantity;
+    const pkg = normalizePackageName(
+      row.display_package_name || row.raw_package_name || basePackage || "-",
+    );
     totalsByPackage.set(pkg, (totalsByPackage.get(pkg) || 0) + delta);
   }
 
@@ -686,28 +684,29 @@ export type MovementBalanceEntry = { package: string; quantity: number };
 export async function fetchMovementBalances({
   productName,
   branchId,
+  retailPackage,
+  wholesalePackage,
 }: {
   productName: string;
   branchId: number;
+  retailPackage?: string | null;
+  wholesalePackage?: string | null;
 }): Promise<{ entries: MovementBalanceEntry[]; total: number }> {
-  const response = await api.get("/reports/product-movement", {
-    params: { product_name: productName },
-  });
-
-  const rows: MovementRow[] = Array.isArray(response.data) ? response.data : [];
   const totalsByPackage = new Map<string, number>();
 
+  const rows = await fetchUnifiedMovementRows({
+    productName,
+    warehouseScope: branchId === 1 ? "showroom" : branchId === 2 ? "warehouse" : "all",
+    displayMode: branchId === 1 ? "retail" : "movement",
+    retailPackage,
+    wholesalePackage,
+  });
+
   for (const row of rows) {
-    if (!matchesBranchWarehouse(String(row.warehouse_name || ""), branchId)) {
-      continue;
-    }
-
-    const qty = Number(row.quantity || 0);
-    if (!Number.isFinite(qty) || qty === 0) continue;
-
-    const movementType = row.movement_type || row.invoice_movement_type || "";
-    const delta = IN_MOVEMENT_TYPES.has(movementType) ? qty : -qty;
-    const pkg = normalizePackageName(row.package_name || "-");
+    const delta = row.is_in ? row.quantity : -row.quantity;
+    const pkg = normalizePackageName(
+      row.display_package_name || row.raw_package_name || "-",
+    );
     totalsByPackage.set(pkg, (totalsByPackage.get(pkg) || 0) + delta);
   }
 
