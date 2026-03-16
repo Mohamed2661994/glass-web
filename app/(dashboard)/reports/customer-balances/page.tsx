@@ -73,9 +73,8 @@ export default function CustomerBalancesPage() {
         customersParams.market_only = "1";
       }
 
-      // جلب تقرير المديونية + الفواتير الفعلية لإعادة حساب الأرقام بشكل صحيح
-      const invoiceType = user?.branch_id === 1 ? "retail" : "wholesale";
-      const [balancesRes, customersRes, invoicesRes] = await Promise.all([
+      // جلب تقرير المديونية مع فلترة server-side حسب الفرع
+      const [balancesRes, customersRes] = await Promise.all([
         api.get("/reports/customer-balances", {
           params: {
             customer_name: customerSearch || undefined,
@@ -85,13 +84,6 @@ export default function CustomerBalancesPage() {
           },
         }),
         api.get("/customers", { params: customersParams }),
-        api.get("/invoices", {
-          params: {
-            customer_name: customerSearch || undefined,
-            invoice_type: invoiceType,
-            limit: 100000,
-          },
-        }),
       ]);
 
       let balances: CustomerBalanceItem[] = Array.isArray(balancesRes.data)
@@ -101,40 +93,6 @@ export default function CustomerBalancesPage() {
       const customers: CustomerItem[] = Array.isArray(customersRes.data)
         ? customersRes.data
         : [];
-
-      // بناء إجماليات من الفواتير الفعلية لتصحيح أرقام العملاء المتغير اسمهم
-      const allInvoices: any[] = Array.isArray(invoicesRes.data)
-        ? invoicesRes.data
-        : (invoicesRes.data?.data ?? []);
-
-      const invoiceTotals = new Map<
-        string,
-        { total_sales: number; balance_due: number; last_date: string | null }
-      >();
-      for (const inv of allInvoices) {
-        if (!inv.customer_name || inv.movement_type !== "sale") continue;
-        const invDate = (inv.invoice_date || inv.created_at || "").substring(
-          0,
-          10,
-        );
-        // تطبيق فلتر التاريخ لو موجود
-        if (fromDate && invDate && invDate < fromDate) continue;
-        if (toDate && invDate && invDate > toDate) continue;
-
-        const name = inv.customer_name;
-        const entry = invoiceTotals.get(name) || {
-          total_sales: 0,
-          balance_due: 0,
-          last_date: null,
-        };
-        entry.total_sales += Number(inv.total || 0);
-        entry.balance_due += Number(inv.remaining_amount || 0);
-        if (invDate && (!entry.last_date || invDate > entry.last_date)) {
-          entry.last_date = invDate;
-        }
-        invoiceTotals.set(name, entry);
-      }
-
       const marketLookup = new Map(
         customers.map((customer) => [
           getCustomerLookupKey(customer.name),
@@ -142,30 +100,98 @@ export default function CustomerBalancesPage() {
         ]),
       );
 
-      // دمج البيانات: لو عندنا بيانات فواتير للعميل، نستخدمها بدل أرقام الـ API
-      balances = balances.map((item) => {
-        const invData = invoiceTotals.get(item.customer_name);
-        if (invData) {
-          return {
-            ...item,
-            total_sales: invData.total_sales,
-            total_paid: invData.total_sales - invData.balance_due,
-            balance_due: invData.balance_due,
-            last_invoice_date: invData.last_date || item.last_invoice_date,
-            is_market_customer:
-              marketLookup.get(getCustomerLookupKey(item.customer_name)) ??
-              false,
-          };
-        }
-        return {
-          ...item,
-          total_sales: Number(item.total_sales || 0),
-          total_paid: Number(item.total_paid || 0),
-          balance_due: Number(item.balance_due || 0),
-          is_market_customer:
-            marketLookup.get(getCustomerLookupKey(item.customer_name)) ?? false,
-        };
-      });
+      balances = balances.map((item) => ({
+        ...item,
+        total_sales: Number(item.total_sales || 0),
+        total_paid: Number(item.total_paid || 0),
+        balance_due: Number(item.balance_due || 0),
+        is_market_customer:
+          marketLookup.get(getCustomerLookupKey(item.customer_name)) ?? false,
+      }));
+
+      // تصحيح أرقام كل عميل من بيانات كشف الحساب الفعلية (نفس أسلوب صفحة التفاصيل)
+      const invoiceType = user?.branch_id === 1 ? "retail" : "wholesale";
+      const corrected = await Promise.all(
+        balances.map(async (item) => {
+          try {
+            const [detailsRes, invoicesRes] = await Promise.all([
+              api.get("/reports/customer-debt-details", {
+                params: {
+                  customer_name: item.customer_name,
+                  warehouse_id: user?.branch_id || undefined,
+                },
+              }),
+              api.get("/invoices", {
+                params: {
+                  customer_name: item.customer_name,
+                  invoice_type: invoiceType,
+                  limit: 10000,
+                },
+              }),
+            ]);
+
+            const debtRows: any[] = detailsRes.data || [];
+            const allInvoices: any[] = Array.isArray(invoicesRes.data)
+              ? invoicesRes.data
+              : (invoicesRes.data?.data ?? []);
+
+            // دمج الفواتير الناقصة (مثل حالة تغيير اسم العميل)
+            const existingIds = new Set(
+              debtRows
+                .filter((r: any) => r.record_type === "invoice")
+                .map((r: any) => r.invoice_id),
+            );
+            const missing = allInvoices
+              .filter(
+                (inv: any) =>
+                  inv.id &&
+                  !existingIds.has(inv.id) &&
+                  inv.movement_type === "sale",
+              )
+              .map((inv: any) => ({
+                record_type: "invoice" as const,
+                invoice_id: inv.id,
+                invoice_date: inv.invoice_date || inv.created_at || "",
+                total: Number(inv.total || 0),
+                paid_amount: Number(inv.paid_amount || 0),
+              }));
+
+            const allRows = [...debtRows, ...missing];
+
+            let totalSales = 0;
+            let debt = 0;
+            let lastDate: string | null = null;
+
+            for (const row of allRows) {
+              if (row.record_type === "invoice") {
+                const t = Number(row.total || 0);
+                const p = Number(row.paid_amount || 0);
+                totalSales += t;
+                debt += t - p;
+                const d = (
+                  row.invoice_date ||
+                  row.created_at ||
+                  ""
+                ).substring(0, 10);
+                if (d && (!lastDate || d > lastDate)) lastDate = d;
+              } else {
+                debt -= Number(row.paid_amount || 0);
+              }
+            }
+
+            return {
+              ...item,
+              total_sales: totalSales,
+              total_paid: totalSales - debt,
+              balance_due: debt,
+              last_invoice_date: lastDate || item.last_invoice_date,
+            };
+          } catch {
+            return item;
+          }
+        }),
+      );
+      balances = corrected;
 
       if (showAllCustomers) {
         const byName = new Map<string, CustomerBalanceItem>();
