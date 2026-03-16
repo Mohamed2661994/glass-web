@@ -22,9 +22,31 @@ type LocalTransferSelection = {
   product_name?: string;
   manufacturer?: string;
   wholesale_package?: string | null;
+  retail_package?: string | null;
   quantity?: number | null;
   final_price?: number | null;
+  available_quantity?: number | null;
 };
+
+/**
+ * Estimate retail quantity from wholesale package conversion.
+ * e.g. "كرتونة 4 دستة" → 4*12=48 pieces, retail "6 علبة" → 6 pieces → 48/6=8
+ */
+function estimateRetailQuantity(
+  wholesalePackage: string | null | undefined,
+  retailPackage: string | null | undefined,
+  quantity: number,
+): number {
+  const wMatch = String(wholesalePackage || "").match(/(\d+)\s*دست/);
+  const rMatch = String(retailPackage || "").match(/(\d+)/);
+  if (!wMatch || !rMatch) return 0;
+  const wholesalePieces = Number(wMatch[1]) * 12;
+  const retailPieces = Number(rMatch[1]);
+  if (wholesalePieces > 0 && retailPieces > 0) {
+    return quantity * Math.round(wholesalePieces / retailPieces);
+  }
+  return 0;
+}
 
 type MergedPreviewRow = PreviewApiRow & {
   product_id: number;
@@ -101,19 +123,26 @@ export function mergeTransferPreviewRows(
     // INSUFFICIENT_STOCK but the client has verified stock from movements.
     const localQty = Number(selection.quantity || 0);
     const serverFromQty = Number(matchedRow?.from_quantity || 0);
-    const localAvailable = Number(
-      (selection as any).available_quantity ?? 0,
-    );
+    const localAvailable = Number(selection.available_quantity ?? 0);
     const serverRejectedStock =
       matchedRow?.status === "rejected" &&
       String(matchedRow?.reason || "").includes("INSUFFICIENT_STOCK");
 
-    const effectiveFromQty =
-      serverRejectedStock && localAvailable > 0 ? localAvailable : serverFromQty;
+    const overrideWithLocal =
+      serverRejectedStock && localAvailable > 0 && localAvailable >= localQty;
 
-    const status =
-      !serverRejectedStock &&
-      (matchedRow?.status === "ok" || matchedRow?.status === "rejected")
+    const effectiveFromQty = overrideWithLocal ? localQty : serverFromQty;
+    const effectiveToQty = overrideWithLocal
+      ? estimateRetailQuantity(
+          selection.wholesale_package,
+          selection.retail_package,
+          localQty,
+        )
+      : Number(matchedRow?.to_quantity || 0);
+
+    const status = overrideWithLocal
+      ? "ok"
+      : matchedRow?.status === "ok" || matchedRow?.status === "rejected"
         ? matchedRow.status
         : effectiveFromQty > 0 && effectiveFromQty >= localQty
           ? "ok"
@@ -129,7 +158,7 @@ export function mergeTransferPreviewRows(
         selection.wholesale_package || matchedRow?.package_name || "",
       quantity: localQty,
       from_quantity: effectiveFromQty || serverFromQty,
-      to_quantity: Number(matchedRow?.to_quantity || 0),
+      to_quantity: effectiveToQty || Number(matchedRow?.to_quantity || 0),
       final_price: Number(
         selection.final_price ?? matchedRow?.final_price ?? 0,
       ),
