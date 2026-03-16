@@ -455,10 +455,10 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                   )}
 
                   <div className="text-xs mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
-                    {currentBranchEntries.length > 1 ? (
+                    {branchId === 2 && currentBranchEntries.length > 1 ? (
                       <div className="flex flex-wrap gap-x-3 gap-y-1">
                         <span className="text-muted-foreground">
-                          رصيد {branchId === 1 ? "القطاعي" : "الجملة"}:
+                          رصيد الجملة:
                         </span>
                         {currentBranchEntries.map((entry) => (
                           <span
