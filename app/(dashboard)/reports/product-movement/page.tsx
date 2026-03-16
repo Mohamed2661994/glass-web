@@ -126,17 +126,32 @@ function ProductMovementPageContent() {
   const fetchProducts = useCallback(async () => {
     try {
       setProductsLoading(true);
-      const res = await api.get("/reports/products");
-      let list: Product[] = Array.isArray(res.data) ? res.data : [];
+      const [res, adminRes] = await Promise.all([
+        api.get("/reports/products"),
+        api.get("/admin/products", {
+          params: { active: "all" },
+        }),
+      ]);
+      const reportProducts: Product[] = Array.isArray(res.data) ? res.data : [];
+      const adminItems: any[] = Array.isArray(adminRes.data)
+        ? adminRes.data
+        : [];
+      const adminById = new Map<number, any>(
+        adminItems.map((item) => [Number(item.id), item]),
+      );
+
+      let list: Product[] = reportProducts.map((product) => {
+        const adminProduct = adminById.get(Number(product.id));
+        return {
+          ...product,
+          retail_package:
+            product.retail_package || adminProduct?.retail_package || null,
+          wholesale_package:
+            product.wholesale_package || adminProduct?.wholesale_package || null,
+        };
+      });
 
       if (isWarehouseUser) {
-        const adminRes = await api.get("/admin/products", {
-          params: { active: "all" },
-        });
-        const adminItems: any[] = Array.isArray(adminRes.data)
-          ? adminRes.data
-          : [];
-
         const allowedIds = new Set<number>();
         for (const p of adminItems) {
           const isActive =
@@ -281,7 +296,9 @@ function ProductMovementPageContent() {
   };
 
   const retailPackageLabel = useMemo(() => {
-    const rawRetailPackage = String(selectedProduct?.retail_package || "").trim();
+    const rawRetailPackage = String(
+      selectedProduct?.retail_package || "",
+    ).trim();
     if (!rawRetailPackage || rawRetailPackage === "بدون عبوة") {
       return "";
     }
