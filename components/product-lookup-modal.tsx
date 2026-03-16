@@ -338,6 +338,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
           packageStockLoadingRef.current[key] = true;
           fetchPackageStockMapFromMovements({
+            productId: product.id,
             productName: product.name,
             branchId: targetBranchId,
             basePackage,

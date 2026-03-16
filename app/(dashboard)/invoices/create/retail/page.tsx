@@ -461,6 +461,7 @@ export default function CreateRetailInvoicePage() {
     if (!packagePickerProduct) return;
     setPackagePickerStock(null);
     fetchPackageStockMapFromMovements({
+      productId: packagePickerProduct.id,
       productName: packagePickerProduct.name,
       branchId: 1,
       basePackage: packagePickerProduct.retail_package,

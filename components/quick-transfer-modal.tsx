@@ -174,6 +174,7 @@ export function QuickTransferModal({
       setLoadingPackageStockForProductId(productId);
       try {
         const stockMap = await fetchPackageStockMapFromMovements({
+          productId: productId,
           productName: product.name,
           branchId: FROM_BRANCH_ID,
           basePackage: product.wholesale_package,
@@ -224,6 +225,9 @@ export function QuickTransferModal({
     (productId: number, variantId: number, fallbackQuantity: number = 0) => {
       const stockMap = packageStockByProduct[productId];
       if (!stockMap) return variantId === 0 ? fallbackQuantity : 0;
+      if (!Object.prototype.hasOwnProperty.call(stockMap, variantId)) {
+        return variantId === 0 ? fallbackQuantity : 0;
+      }
       return Number(stockMap[variantId] ?? 0);
     },
     [packageStockByProduct],
@@ -322,6 +326,9 @@ export function QuickTransferModal({
         variant_id: i.variant_id,
         quantity: i.quantity,
         final_price: 0,
+        package_name: i.wholesale_package,
+        wholesale_package: i.wholesale_package,
+        retail_package: i.retail_package,
       })),
     };
 

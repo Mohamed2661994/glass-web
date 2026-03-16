@@ -65,18 +65,54 @@ function matchesBranchWarehouse(warehouseName: string, branchId: number) {
 }
 
 export async function fetchPackageStockMapFromMovements({
+  productId,
   productName,
   branchId,
   basePackage,
   variants,
   packageField = "wholesale_package",
 }: {
+  productId: number;
   productName: string;
   branchId: number;
   basePackage?: string | null;
   variants?: PackageVariant[];
   packageField?: "wholesale_package" | "retail_package";
 }): Promise<PackageStockMap> {
+  const stockMap: PackageStockMap = {};
+
+  try {
+    const quantityResponse = await api.get("/stock/quantity-all", {
+      params: {
+        product_id: productId,
+        branch_id: branchId,
+      },
+    });
+
+    for (const [variantId, quantity] of Object.entries(
+      quantityResponse.data || {},
+    )) {
+      stockMap[Number(variantId)] = Number(quantity) || 0;
+    }
+  } catch {
+    /* fallback to movement report below */
+  }
+
+  const requiredVariantIds = new Set<number>([
+    0,
+    ...(variants || []).map((variant) =>
+      Number(variant.id ?? variant.variant_id ?? 0),
+    ),
+  ]);
+
+  const missingVariantIds = Array.from(requiredVariantIds).filter(
+    (variantId) => !Object.prototype.hasOwnProperty.call(stockMap, variantId),
+  );
+
+  if (missingVariantIds.length === 0) {
+    return stockMap;
+  }
+
   const response = await api.get("/reports/product-movement", {
     params: { product_name: productName },
   });
@@ -98,8 +134,8 @@ export async function fetchPackageStockMapFromMovements({
     totalsByPackage.set(pkg, (totalsByPackage.get(pkg) || 0) + delta);
   }
 
-  const stockMap: PackageStockMap = {};
-  stockMap[0] = Number(
+  const movementStockMap: PackageStockMap = {};
+  movementStockMap[0] = Number(
     totalsByPackage.get(normalizePackageName(basePackage || "-")) || 0,
   );
 
@@ -110,11 +146,17 @@ export async function fetchPackageStockMapFromMovements({
         ? variant.retail_package
         : variant.wholesale_package || variant.package_name;
 
-    stockMap[variantId] = Number(
+    movementStockMap[variantId] = Number(
       totalsByPackage.get(
         normalizePackageName(packageName || basePackage || "-"),
       ) || 0,
     );
+  }
+
+  for (const variantId of missingVariantIds) {
+    if (Object.prototype.hasOwnProperty.call(movementStockMap, variantId)) {
+      stockMap[variantId] = Number(movementStockMap[variantId] || 0);
+    }
   }
 
   return stockMap;

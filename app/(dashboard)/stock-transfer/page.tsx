@@ -235,6 +235,7 @@ export default function StockTransferPage() {
       setLoadingPackageStockForProductId(productId);
       try {
         const stockMap = await fetchPackageStockMapFromMovements({
+          productId: productId,
           productName: product.name,
           branchId: FROM_BRANCH_ID,
           basePackage: product.wholesale_package,
@@ -285,6 +286,9 @@ export default function StockTransferPage() {
     (productId: number, variantId: number, fallbackQuantity: number = 0) => {
       const stockMap = packageStockByProduct[productId];
       if (!stockMap) return variantId === 0 ? fallbackQuantity : 0;
+      if (!Object.prototype.hasOwnProperty.call(stockMap, variantId)) {
+        return variantId === 0 ? fallbackQuantity : 0;
+      }
       return Number(stockMap[variantId] ?? 0);
     },
     [packageStockByProduct],
@@ -404,6 +408,9 @@ export default function StockTransferPage() {
           variant_id: i.variant_id,
           quantity: i.quantity,
           final_price: base - discount,
+          package_name: i.wholesale_package,
+          wholesale_package: i.wholesale_package,
+          retail_package: i.retail_package,
         };
       }),
     };

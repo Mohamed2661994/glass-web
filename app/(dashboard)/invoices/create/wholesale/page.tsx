@@ -335,6 +335,7 @@ export default function CreateWholesaleInvoicePage() {
     if (!packagePickerProduct) return;
     setPackagePickerStock(null);
     fetchPackageStockMapFromMovements({
+      productId: packagePickerProduct.id,
       productName: packagePickerProduct.name,
       branchId: 2,
       basePackage: packagePickerProduct.wholesale_package,
