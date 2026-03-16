@@ -416,3 +416,56 @@ export async function fetchPackageStockMapFromMovements({
 
   return stockMap;
 }
+
+export type MovementBalanceEntry = { package: string; quantity: number };
+
+/**
+ * Returns per-package balances computed directly from the movement report.
+ * No variant-ID mapping — uses the raw package_name from each movement row,
+ * exactly matching the logic in تقرير حركة الأصناف.
+ */
+export async function fetchMovementBalances({
+  productName,
+  branchId,
+}: {
+  productName: string;
+  branchId: number;
+}): Promise<{ entries: MovementBalanceEntry[]; total: number }> {
+  const response = await api.get("/reports/product-movement", {
+    params: { product_name: productName },
+  });
+
+  const rows: MovementRow[] = Array.isArray(response.data) ? response.data : [];
+  const totalsByPackage = new Map<string, number>();
+
+  for (const row of rows) {
+    if (!matchesBranchWarehouse(String(row.warehouse_name || ""), branchId)) {
+      continue;
+    }
+
+    const qty = Number(row.quantity || 0);
+    if (!Number.isFinite(qty) || qty === 0) continue;
+
+    const movementType = row.movement_type || row.invoice_movement_type || "";
+    const delta = IN_MOVEMENT_TYPES.has(movementType) ? qty : -qty;
+    const pkg = normalizePackageName(row.package_name || "-");
+    totalsByPackage.set(pkg, (totalsByPackage.get(pkg) || 0) + delta);
+  }
+
+  const total = Array.from(totalsByPackage.values()).reduce(
+    (sum, q) => sum + q,
+    0,
+  );
+
+  const entries = Array.from(totalsByPackage.entries())
+    .map(([pkg, qty]) => ({ package: pkg, quantity: qty }))
+    .filter(
+      (e) =>
+        e.package !== "-" &&
+        e.package !== "بدون عبوة" &&
+        !Number.isNaN(e.quantity),
+    )
+    .sort((a, b) => a.package.localeCompare(b.package, "ar"));
+
+  return { entries, total };
+}

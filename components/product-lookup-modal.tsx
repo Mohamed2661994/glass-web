@@ -14,10 +14,8 @@ import { Button } from "@/components/ui/button";
 import { useCachedProducts } from "@/hooks/use-cached-products";
 import { highlightText } from "@/lib/highlight-text";
 import {
-  fetchPackageStockMapFromMovements,
-  normalizePackageName,
-  sumPackageStockMap,
-  type PackageStockMap,
+  fetchMovementBalances,
+  type MovementBalanceEntry,
 } from "@/lib/package-stock";
 import { multiWordMatch, multiWordScore } from "@/lib/utils";
 
@@ -73,21 +71,10 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     return map;
   }, [otherBranchProducts]);
 
-  // Map of product id -> variant_stock for the other branch
-  const otherBranchVariantsMap = useMemo(() => {
-    const map: Record<number, any[]> = {};
-    otherBranchProducts.forEach((p) => {
-      if (p.variant_stock && p.variant_stock.length > 0) {
-        map[p.id] = p.variant_stock;
-      }
-    });
-    return map;
-  }, [otherBranchProducts]);
-
-  const [packageStockMapByKey, setPackageStockMapByKey] = useState<
-    Record<string, PackageStockMap>
+  const [movementBalancesByKey, setMovementBalancesByKey] = useState<
+    Record<string, { entries: MovementBalanceEntry[]; total: number }>
   >({});
-  const packageStockLoadingRef = useRef<Record<string, boolean>>({});
+  const balanceLoadingRef = useRef<Record<string, boolean>>({});
 
   const [refreshing, setRefreshing] = useState(false);
 
@@ -96,8 +83,8 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     if (!open) return;
     setSearch("");
     setFocusedIndex(-1);
-    setPackageStockMapByKey({});
-    packageStockLoadingRef.current = {};
+    setMovementBalancesByKey({});
+    balanceLoadingRef.current = {};
     // Silent refresh — checks cache validity (invalidation key) and refetches if needed
     refresh();
     refreshOther();
@@ -162,118 +149,9 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     });
   }, [products, search]);
 
-  const buildPackageBalances = useCallback(
-    ({
-      basePackage,
-      totalQuantity,
-      variantRows,
-      quantityMap,
-      labelField = "package_name",
-    }: {
-      basePackage?: string | null;
-      totalQuantity?: number | null;
-      variantRows?: any[];
-      quantityMap?: Record<number, number>;
-      labelField?: "package_name" | "retail_package";
-    }) => {
-      const grouped = new Map<string, number>();
-      const variantLabels = new Map<number, string>();
-      const rows = Array.isArray(variantRows) ? variantRows : [];
-      const normalizedBase = normalizePackageName(basePackage);
-      const hasQuantityMap = quantityMap !== undefined;
-
-      let rowsTotal = 0;
-      rows.forEach((row: any) => {
-        const variantId = Number(row?.variant_id ?? 0);
-        const rawLabel =
-          labelField === "retail_package"
-            ? row?.retail_package
-            : row?.package_name;
-        const normalizedLabel = normalizePackageName(
-          rawLabel || basePackage || "-",
-        );
-
-        variantLabels.set(variantId, normalizedLabel);
-
-        if (!hasQuantityMap) {
-          const qty = Number(row?.quantity || 0);
-          rowsTotal += qty;
-          grouped.set(
-            normalizedLabel,
-            (grouped.get(normalizedLabel) || 0) + qty,
-          );
-        }
-      });
-
-      if (hasQuantityMap) {
-        let mappedTotal = 0;
-
-        Object.entries(quantityMap || {}).forEach(([variantId, qtyValue]) => {
-          const qty = Number(qtyValue) || 0;
-          const normalizedLabel =
-            variantLabels.get(Number(variantId)) || normalizedBase;
-
-          grouped.set(
-            normalizedLabel,
-            (grouped.get(normalizedLabel) || 0) + qty,
-          );
-          mappedTotal += qty;
-        });
-
-        const hasExplicitBase =
-          Object.prototype.hasOwnProperty.call(quantityMap || {}, "0") ||
-          variantLabels.has(0);
-
-        if (!hasExplicitBase) {
-          const remainder = Number(totalQuantity || 0) - mappedTotal;
-          if (Math.abs(remainder) > 0.0001) {
-            grouped.set(
-              normalizedBase,
-              (grouped.get(normalizedBase) || 0) + remainder,
-            );
-          }
-        }
-      } else if (rows.length > 0 && !variantLabels.has(0)) {
-        const remainder = Number(totalQuantity || 0) - rowsTotal;
-        if (Math.abs(remainder) > 0.0001) {
-          grouped.set(
-            normalizedBase,
-            (grouped.get(normalizedBase) || 0) + remainder,
-          );
-        }
-      }
-
-      const entries = Array.from(grouped.entries())
-        .map(([pkg, qty]) => ({ package: pkg, quantity: Number(qty) || 0 }))
-        .filter(
-          (entry) =>
-            entry.package &&
-            entry.package !== "-" &&
-            entry.package !== "بدون عبوة" &&
-            !Number.isNaN(entry.quantity),
-        )
-        .sort((a, b) => a.package.localeCompare(b.package, "ar"));
-
-      if (entries.length === 0 && normalizedBase && normalizedBase !== "-") {
-        return [
-          {
-            package: normalizedBase,
-            quantity: Number(totalQuantity || 0) || 0,
-          },
-        ];
-      }
-
-      return entries;
-    },
-    [],
-  );
-
-  const getPackageStockKey = useCallback(
-    (
-      productId: number,
-      targetBranchId: number,
-      packageField: "wholesale_package" | "retail_package",
-    ) => `${productId}:${targetBranchId}:${packageField}`,
+  const getBalanceKey = useCallback(
+    (productId: number, targetBranchId: number) =>
+      `${productId}:${targetBranchId}`,
     [],
   );
 
@@ -282,106 +160,41 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
     const candidates = filteredProducts.slice(0, 30);
     candidates.forEach((product) => {
-      const currentVariants = Array.isArray(product.variant_stock)
-        ? product.variant_stock
-        : [];
-      const otherVariants =
-        otherBranchVariantsMap[product.id] || currentVariants;
-
-      const requests: Array<{
-        targetBranchId: number;
-        basePackage?: string | null;
-        variants?: any[];
-        packageField: "wholesale_package" | "retail_package";
-      }> = [];
-
-      if (branchId === 2 && product.wholesale_package) {
-        requests.push({
-          targetBranchId: branchId,
-          basePackage: product.wholesale_package,
-          variants: currentVariants,
-          packageField: "wholesale_package",
-        });
-      }
-
-      if (branchId === 1 && product.retail_package) {
-        requests.push({
-          targetBranchId: branchId,
-          basePackage: product.retail_package,
-          variants: currentVariants,
-          packageField: "retail_package",
-        });
-      }
-
-      if (branchId === 1 && product.wholesale_package) {
-        requests.push({
-          targetBranchId: otherBranchId,
-          basePackage: product.wholesale_package,
-          variants: otherVariants,
-          packageField: "wholesale_package",
-        });
-      }
-
-      if (branchId === 2 && product.retail_package) {
-        requests.push({
-          targetBranchId: otherBranchId,
-          basePackage: product.retail_package,
-          variants: otherVariants,
-          packageField: "retail_package",
-        });
-      }
-
-      requests.forEach(
-        ({ targetBranchId, basePackage, variants, packageField }) => {
-          const key = getPackageStockKey(
-            product.id,
-            targetBranchId,
-            packageField,
-          );
-
-          if (Object.prototype.hasOwnProperty.call(packageStockMapByKey, key)) {
-            return;
-          }
-
-          if (packageStockLoadingRef.current[key]) {
-            return;
-          }
-
-          packageStockLoadingRef.current[key] = true;
-          fetchPackageStockMapFromMovements({
-            productId: product.id,
-            productName: product.name,
-            branchId: targetBranchId,
-            basePackage,
-            variants,
-            packageField,
+      const branches = [branchId, otherBranchId];
+      branches.forEach((targetBranchId) => {
+        const key = getBalanceKey(product.id, targetBranchId);
+        if (
+          Object.prototype.hasOwnProperty.call(movementBalancesByKey, key) ||
+          balanceLoadingRef.current[key]
+        ) {
+          return;
+        }
+        balanceLoadingRef.current[key] = true;
+        fetchMovementBalances({
+          productName: product.name,
+          branchId: targetBranchId,
+        })
+          .then((result) => {
+            setMovementBalancesByKey((prev) => ({ ...prev, [key]: result }));
           })
-            .then((stockMap) => {
-              setPackageStockMapByKey((prev) => ({
-                ...prev,
-                [key]: stockMap,
-              }));
-            })
-            .catch(() => {
-              setPackageStockMapByKey((prev) => ({
-                ...prev,
-                [key]: {},
-              }));
-            })
-            .finally(() => {
-              packageStockLoadingRef.current[key] = false;
-            });
-        },
-      );
+          .catch(() => {
+            setMovementBalancesByKey((prev) => ({
+              ...prev,
+              [key]: { entries: [], total: 0 },
+            }));
+          })
+          .finally(() => {
+            balanceLoadingRef.current[key] = false;
+          });
+      });
     });
   }, [
     branchId,
     open,
     filteredProducts,
-    getPackageStockKey,
+    getBalanceKey,
     otherBranchId,
-    otherBranchVariantsMap,
-    packageStockMapByKey,
+    movementBalancesByKey,
   ]);
 
   /* =========================================================
@@ -524,124 +337,25 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
             </div>
           ) : (
             filteredProducts.map((product, index) => {
-              const currentVariants = Array.isArray(product.variant_stock)
-                ? product.variant_stock
-                : [];
-              const otherVariants = otherBranchVariantsMap[product.id];
-              const currentWholesaleQuantityMap =
-                branchId === 2
-                  ? packageStockMapByKey[
-                      getPackageStockKey(
-                        product.id,
-                        branchId,
-                        "wholesale_package",
-                      )
-                    ]
-                  : undefined;
-              const currentRetailQuantityMap =
-                branchId === 1
-                  ? packageStockMapByKey[
-                      getPackageStockKey(product.id, branchId, "retail_package")
-                    ]
-                  : undefined;
-              const otherWholesaleQuantityMap =
-                branchId === 1
-                  ? packageStockMapByKey[
-                      getPackageStockKey(
-                        product.id,
-                        otherBranchId,
-                        "wholesale_package",
-                      )
-                    ]
-                  : undefined;
-              const otherRetailQuantityMap =
-                branchId === 2
-                  ? packageStockMapByKey[
-                      getPackageStockKey(
-                        product.id,
-                        otherBranchId,
-                        "retail_package",
-                      )
-                    ]
-                  : undefined;
+              const currentBalance =
+                movementBalancesByKey[getBalanceKey(product.id, branchId)];
+              const otherBalance =
+                movementBalancesByKey[
+                  getBalanceKey(product.id, otherBranchId)
+                ];
 
-              const currentWholesaleEntries =
-                currentWholesaleQuantityMap !== undefined
-                  ? buildPackageBalances({
-                      basePackage: product.wholesale_package,
-                      totalQuantity: product.available_quantity,
-                      variantRows: currentVariants,
-                      quantityMap: currentWholesaleQuantityMap,
-                      labelField: "package_name",
-                    })
-                  : [];
-
-              const currentRetailEntries =
-                currentRetailQuantityMap !== undefined
-                  ? buildPackageBalances({
-                      basePackage: product.retail_package,
-                      totalQuantity: product.available_quantity,
-                      variantRows: currentVariants,
-                      quantityMap: currentRetailQuantityMap,
-                      labelField: "retail_package",
-                    })
-                  : [];
-
-              const otherWholesaleEntries =
-                otherWholesaleQuantityMap !== undefined
-                  ? buildPackageBalances({
-                      basePackage: product.wholesale_package,
-                      totalQuantity: otherBranchQtyMap[product.id],
-                      variantRows:
-                        otherVariants && otherVariants.length > 0
-                          ? otherVariants
-                          : currentVariants,
-                      quantityMap: otherWholesaleQuantityMap,
-                      labelField: "package_name",
-                    })
-                  : [];
-
-              const otherRetailEntries =
-                otherRetailQuantityMap !== undefined
-                  ? buildPackageBalances({
-                      basePackage: product.retail_package,
-                      totalQuantity: otherBranchQtyMap[product.id],
-                      variantRows:
-                        otherVariants && otherVariants.length > 0
-                          ? otherVariants
-                          : currentVariants,
-                      quantityMap: otherRetailQuantityMap,
-                      labelField: "retail_package",
-                    })
-                  : [];
-              const otherRetailDisplayQuantity =
-                otherRetailQuantityMap !== undefined
-                  ? sumPackageStockMap(otherRetailQuantityMap)
-                  : otherRetailEntries.length > 0
-                    ? otherRetailEntries.reduce(
-                        (total, entry) => total + entry.quantity,
-                        0,
-                      )
-                    : otherBranchQtyMap[product.id];
-              const currentBranchEntries =
-                branchId === 1 ? currentRetailEntries : currentWholesaleEntries;
+              const currentBranchEntries = currentBalance?.entries ?? [];
               const currentBranchDisplayQuantity =
-                branchId === 1
-                  ? currentRetailQuantityMap !== undefined
-                    ? sumPackageStockMap(currentRetailQuantityMap)
-                    : Number(product.available_quantity) || 0
-                  : currentWholesaleQuantityMap !== undefined
-                    ? sumPackageStockMap(currentWholesaleQuantityMap)
-                    : Number(product.available_quantity) || 0;
-              const otherWholesaleDisplayQuantity =
-                otherWholesaleQuantityMap !== undefined
-                  ? sumPackageStockMap(otherWholesaleQuantityMap)
-                  : otherWholesaleEntries.length > 0
-                    ? otherWholesaleEntries.reduce(
-                        (total, entry) => total + entry.quantity,
-                        0,
-                      )
-                    : otherBranchQtyMap[product.id];
+                currentBalance !== undefined
+                  ? currentBalance.total
+                  : Number(product.available_quantity) || 0;
+
+              const otherEntries = otherBalance?.entries ?? [];
+              const otherDisplayQuantity =
+                otherBalance !== undefined
+                  ? otherBalance.total
+                  : Number(otherBranchQtyMap[product.id]) || 0;
+
               const outOfStock = currentBranchDisplayQuantity <= 0;
 
               return (
@@ -775,12 +489,12 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                     )}
 
                     {branchId === 1 ? (
-                      otherWholesaleEntries.length > 1 ? (
+                      otherEntries.length > 1 ? (
                         <div className="flex flex-wrap gap-x-3 gap-y-1">
                           <span className="text-muted-foreground">
                             رصيد الجملة:
                           </span>
-                          {otherWholesaleEntries.map((entry) => (
+                          {otherEntries.map((entry) => (
                             <span
                               key={entry.package}
                               className={
@@ -796,23 +510,23 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                       ) : (
                         <span
                           className={
-                            otherWholesaleDisplayQuantity > 0
+                            otherDisplayQuantity > 0
                               ? "text-orange-600 dark:text-orange-400 font-semibold"
                               : "text-red-500 font-semibold"
                           }
                         >
-                          رصيد الجملة: {otherWholesaleDisplayQuantity || 0}
+                          رصيد الجملة: {otherDisplayQuantity || 0}
                         </span>
                       )
                     ) : (
                       <span
                         className={
-                          Number(otherRetailDisplayQuantity ?? 0) > 0
+                          otherDisplayQuantity > 0
                             ? "text-blue-600 dark:text-blue-400 font-semibold"
                             : "text-red-500 font-semibold"
                         }
                       >
-                        رصيد القطاعي: {otherRetailDisplayQuantity ?? "-"}
+                        رصيد القطاعي: {otherDisplayQuantity || 0}
                       </span>
                     )}
                   </div>
