@@ -523,7 +523,6 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
             </div>
           ) : (
             filteredProducts.map((product, index) => {
-              const outOfStock = Number(product.available_quantity) <= 0;
               const currentVariants = Array.isArray(product.variant_stock)
                 ? product.variant_stock
                 : [];
