@@ -347,14 +347,20 @@ export default function CustomerDebtDetailsPage() {
     return map;
   }, [visibleData]);
 
-  // صافي المديونية = مجموع الباقي الفعلي على كل فاتورة
-  const netDebt = useMemo(
-    () =>
-      visibleData
-        .filter((i) => i.record_type === "invoice")
-        .reduce((s, i) => s + Number(i.remaining_amount || 0), 0),
-    [visibleData],
-  );
+  // صافي المديونية = الباقي من آخر فاتورة - سندات الدفع بعدها
+  const netDebt = useMemo(() => {
+    let lastRemaining = 0;
+    let paymentsAfterLast = 0;
+    for (const row of visibleData) {
+      if (row.record_type === "invoice") {
+        lastRemaining = Number(row.remaining_amount || 0);
+        paymentsAfterLast = 0;
+      } else {
+        paymentsAfterLast += Number(row.paid_amount || 0);
+      }
+    }
+    return lastRemaining - paymentsAfterLast;
+  }, [visibleData]);
   const manualOpeningBalanceValue = parseAmountInput(manualOpeningBalance);
 
   return (
