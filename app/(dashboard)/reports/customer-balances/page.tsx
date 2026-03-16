@@ -156,43 +156,39 @@ export default function CustomerBalancesPage() {
                 paid_amount: Number(inv.paid_amount || 0),
               }));
 
-            // ترتيب بالتاريخ
-            const allRows = [...debtRows, ...missing].sort((a, b) =>
-              (a.invoice_date || "").localeCompare(b.invoice_date || ""),
-            );
+            const allRows = [...debtRows, ...missing];
 
             let totalSales = 0;
             let totalPaid = 0;
             let lastDate: string | null = null;
 
-            // المديونية = remaining آخر فاتورة - سندات الدفع بعدها
+            // المديونية = remaining_amount لآخر فاتورة بالتاريخ
+            // (remaining_amount تراكمي — شامل كل الفواتير والمدفوعات السابقة)
             let lastInvoiceRemaining = 0;
-            let paymentsAfterLast = 0;
+            let lastInvoiceDate = "";
 
             for (const row of allRows) {
               if (row.record_type === "invoice") {
                 totalSales += Number(row.total || 0);
                 totalPaid += Number(row.paid_amount || 0);
-                lastInvoiceRemaining = Number(row.remaining_amount || 0);
-                paymentsAfterLast = 0; // reset payments counter
                 const d = (
                   row.invoice_date ||
                   row.created_at ||
                   ""
                 ).substring(0, 10);
                 if (d && (!lastDate || d > lastDate)) lastDate = d;
-              } else {
-                paymentsAfterLast += Number(row.paid_amount || 0);
+                if (d && d >= lastInvoiceDate) {
+                  lastInvoiceDate = d;
+                  lastInvoiceRemaining = Number(row.remaining_amount || 0);
+                }
               }
             }
-
-            const debt = lastInvoiceRemaining - paymentsAfterLast;
 
             return {
               ...item,
               total_sales: totalSales,
               total_paid: totalPaid,
-              balance_due: debt,
+              balance_due: lastInvoiceRemaining,
               last_invoice_date: lastDate || item.last_invoice_date,
             };
           } catch {
