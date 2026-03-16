@@ -331,20 +331,19 @@ export default function CustomerDebtDetailsPage() {
     return balance;
   }, [data, fromDate, getRowDate]);
 
-  const runningBalances = useMemo(() => {
-    const balances: number[] = [];
-    let balance = openingBalance;
+  // الحساب السابق لكل فاتورة = الباقي (remaining_amount) من الفاتورة اللي قبلها
+  const prevInvoiceRemaining = useMemo(() => {
+    const map: number[] = new Array(visibleData.length).fill(0);
+    let lastRemaining = 0;
     for (let i = 0; i < visibleData.length; i++) {
-      balances.push(balance);
       const row = visibleData[i];
       if (row.record_type === "invoice") {
-        balance += Number(row.total) - Number(row.paid_amount);
-      } else {
-        balance -= Number(row.paid_amount);
+        map[i] = lastRemaining;
+        lastRemaining = Number(row.remaining_amount || 0);
       }
     }
-    return balances;
-  }, [visibleData, openingBalance]);
+    return map;
+  }, [visibleData]);
 
   // صافي المديونية = مجموع الباقي الفعلي على كل فاتورة
   const netDebt = useMemo(
@@ -508,9 +507,11 @@ export default function CustomerDebtDetailsPage() {
                             {formatDateOnly(getRowDate(inv))}
                           </TableCell>
                           <TableCell className="text-center font-medium">
-                            {runningBalances[idx] === 0
-                              ? "—"
-                              : runningBalances[idx].toLocaleString()}
+                            {inv.record_type === "invoice"
+                              ? (prevInvoiceRemaining[idx] === 0
+                                ? "—"
+                                : prevInvoiceRemaining[idx].toLocaleString())
+                              : "—"}
                           </TableCell>
                           <TableCell className="text-center">
                             {inv.record_type === "invoice"
@@ -606,9 +607,11 @@ export default function CustomerDebtDetailsPage() {
                       <div>
                         <p className="text-muted-foreground">الحساب السابق</p>
                         <p className="font-medium">
-                          {runningBalances[idx] === 0
-                            ? "—"
-                            : runningBalances[idx].toLocaleString()}
+                          {inv.record_type === "invoice"
+                            ? (prevInvoiceRemaining[idx] === 0
+                              ? "—"
+                              : prevInvoiceRemaining[idx].toLocaleString())
+                            : "—"}
                         </p>
                       </div>
                       <div>
