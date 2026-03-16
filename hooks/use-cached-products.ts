@@ -158,6 +158,9 @@ export function useCachedProducts({
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resolvingAvailableQtyRef = useRef<Record<number, boolean>>({});
+  const fetchProductsRef = useRef<
+    (forceRefresh?: boolean, silent?: boolean) => Promise<any[]>
+  >(async () => []);
   const variantsRequestRef = useRef<Record<string, Promise<Record<number, any[]>>>>(
     {},
   );
@@ -619,11 +622,18 @@ export function useCachedProducts({
     ],
   );
 
+  useEffect(() => {
+    fetchProductsRef.current = fetchProducts;
+  }, [fetchProducts]);
+
   // Force refresh (bypasses cache)
-  const refresh = useCallback(() => fetchProducts(true), [fetchProducts]);
+  const refresh = useCallback(
+    () => fetchProductsRef.current(true),
+    [],
+  );
   const refreshSilently = useCallback(
-    () => fetchProducts(true, true),
-    [fetchProducts],
+    () => fetchProductsRef.current(true, true),
+    [],
   );
 
   const scheduleSilentRefresh = useCallback(() => {
@@ -633,28 +643,28 @@ export function useCachedProducts({
 
     refreshTimeoutRef.current = setTimeout(() => {
       refreshTimeoutRef.current = null;
-      void fetchProducts(true, true);
+      void fetchProductsRef.current(true, true);
     }, 150);
-  }, [fetchProducts]);
+  }, []);
 
   // Auto-fetch on mount
   useEffect(() => {
     if (autoFetch) {
-      fetchProducts();
+      void fetchProductsRef.current();
     }
-  }, [autoFetch, fetchProducts]);
+  }, [autoFetch, paramsString, resolvedCacheKey]);
 
   // Auto-refresh every cacheDuration
   useEffect(() => {
     intervalRef.current = setInterval(() => {
-      fetchProducts(true);
+      void fetchProductsRef.current(true);
     }, cacheDuration);
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
     };
-  }, [cacheDuration, fetchProducts]);
+  }, [cacheDuration, paramsString, resolvedCacheKey]);
 
   // Auto-refresh when invoices/transfers are created or updated
   useEffect(() => {
