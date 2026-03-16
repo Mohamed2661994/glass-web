@@ -325,9 +325,12 @@ export default function InventorySummaryPage() {
             const warehouseName = (row.warehouse_name || "—").trim() || "—";
             const variantId = Number(row.variant_id || 0);
             const rawPkg = (row.package_name || "").trim();
-            const packageName = rawPkg
-              ? normalizePackageName(rawPkg)
-              : packageLabelMap[`${item.product_id}:${variantId}`] || "—";
+            // في القطاعي: كل الحركات في سطر واحد بدون تفريق بالعبوة
+            const packageName = isShowroomUser
+              ? "—"
+              : rawPkg
+                ? normalizePackageName(rawPkg)
+                : packageLabelMap[`${item.product_id}:${variantId}`] || "—";
             const key = `${warehouseName}__${packageName}`;
             const existing = grouped.get(key) || {
               warehouse_name: warehouseName,
