@@ -338,6 +338,7 @@ export default function CashSummaryPage() {
       from: fromDate,
       to: toDate,
       includeOpeningBalance: includeOpeningBalance ? "1" : "0",
+      hideMarketCustomers: hideMarketCustomerEntries ? "1" : "0",
       fontSize: fontSize,
       fontWeight: fontWeight,
       tableOrder: tableOrder.join(","),

@@ -1,8 +1,12 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import api from "@/services/api";
+import { noSpaces, normalizeArabic } from "@/lib/utils";
+
+const getCustomerLookupKey = (value?: string | null) =>
+  normalizeArabic(noSpaces(String(value || "")).toLowerCase());
 
 const DISCOUNT_DIFF_MARKER = "{{discount_diff}}";
 const WESTERN_NUMBER_LOCALE = "en-US";
@@ -116,6 +120,7 @@ function CashSummaryPrintInner() {
   const fontWeight = searchParams.get("fontWeight") || "normal";
   const tableOrderParam =
     searchParams.get("tableOrder") || "revenue,expenses,purchases,supplier";
+  const hideMarketCustomers = searchParams.get("hideMarketCustomers") === "1";
   const tableOrder = tableOrderParam.split(",");
   const isLandscape = orientation === "landscape";
   const isBold = fontWeight === "bold";
@@ -127,7 +132,14 @@ function CashSummaryPrintInner() {
 
   const [cashIn, setCashIn] = useState<CashInItem[]>([]);
   const [cashOut, setCashOut] = useState<CashOutItem[]>([]);
+  const [marketCustomerKeys, setMarketCustomerKeys] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+
+  const isMarketCustomerEntry = useCallback(
+    (item: CashInItem) =>
+      marketCustomerKeys.has(getCustomerLookupKey(item.customer_name)),
+    [marketCustomerKeys],
+  );
 
   /* ================= FETCH ================= */
 
@@ -136,18 +148,28 @@ function CashSummaryPrintInner() {
     const branchId = stored ? JSON.parse(stored).branch_id : 1;
     (async () => {
       try {
-        const [inRes, outRes] = await Promise.all([
+        const [inRes, outRes, customersRes] = await Promise.all([
           api.get("/cash-in", { params: { branch_id: branchId } }),
           api.get("/cash/out", {
             params: { branch_id: branchId, limit: 100000 },
           }),
+          api.get("/customers", { params: { market_only: "1" } }),
         ]);
         const visibleCashIn = (inRes.data.data || []).filter((item: any) => {
           const rawNotes = item.notes ?? item.description ?? "";
           return !String(rawNotes || "").includes(DISCOUNT_DIFF_MARKER);
         });
+        const marketCustomers: { name: string; is_market_customer?: boolean }[] =
+          Array.isArray(customersRes.data) ? customersRes.data : [];
         setCashIn(visibleCashIn);
         setCashOut(outRes.data.data || []);
+        setMarketCustomerKeys(
+          new Set(
+            marketCustomers
+              .filter((c) => Boolean(c.is_market_customer))
+              .map((c) => getCustomerLookupKey(c.name)),
+          ),
+        );
       } catch {
         console.error("CASH SUMMARY LOAD ERROR");
       } finally {
@@ -174,7 +196,11 @@ function CashSummaryPrintInner() {
     return true;
   };
 
-  const filteredIn = cashIn.filter((i) => inRange(i.transaction_date));
+  const filteredIn = cashIn.filter(
+    (i) =>
+      inRange(i.transaction_date) &&
+      (!hideMarketCustomers || !isMarketCustomerEntry(i)),
+  );
   const filteredOut = cashOut.filter((o) => inRange(o.transaction_date));
   const expenses = filteredOut.filter((o) => o.entry_type === "expense");
   const purchases = filteredOut.filter((o) => o.entry_type === "purchase");
@@ -186,7 +212,9 @@ function CashSummaryPrintInner() {
 
   const prevCashIn = fromDateTime
     ? cashIn.filter(
-        (i) => toDateOnly(new Date(i.transaction_date)) < fromDateTime,
+        (i) =>
+          toDateOnly(new Date(i.transaction_date)) < fromDateTime &&
+          (!hideMarketCustomers || !isMarketCustomerEntry(i)),
       )
     : [];
   const prevCashOut = fromDateTime
