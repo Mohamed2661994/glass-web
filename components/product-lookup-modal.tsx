@@ -16,6 +16,7 @@ import { highlightText } from "@/lib/highlight-text";
 import {
   fetchPackageStockMapFromMovements,
   normalizePackageName,
+  sumPackageStockMap,
   type PackageStockMap,
 } from "@/lib/package-stock";
 import { multiWordMatch, multiWordScore } from "@/lib/utils";
@@ -302,6 +303,15 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
         });
       }
 
+      if (branchId === 1 && product.retail_package) {
+        requests.push({
+          targetBranchId: branchId,
+          basePackage: product.retail_package,
+          variants: currentVariants,
+          packageField: "retail_package",
+        });
+      }
+
       if (branchId === 1 && product.wholesale_package) {
         requests.push({
           targetBranchId: otherBranchId,
@@ -528,6 +538,16 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                       )
                     ]
                   : undefined;
+              const currentRetailQuantityMap =
+                branchId === 1
+                  ? packageStockMapByKey[
+                      getPackageStockKey(
+                        product.id,
+                        branchId,
+                        "retail_package",
+                      )
+                    ]
+                  : undefined;
               const otherWholesaleQuantityMap =
                 branchId === 1
                   ? packageStockMapByKey[
@@ -560,6 +580,17 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                     })
                   : [];
 
+              const currentRetailEntries =
+                currentRetailQuantityMap !== undefined
+                  ? buildPackageBalances({
+                      basePackage: product.retail_package,
+                      totalQuantity: product.available_quantity,
+                      variantRows: currentVariants,
+                      quantityMap: currentRetailQuantityMap,
+                      labelField: "retail_package",
+                    })
+                  : [];
+
               const otherWholesaleEntries =
                 otherWholesaleQuantityMap !== undefined
                   ? buildPackageBalances({
@@ -588,12 +619,34 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                     })
                   : [];
               const otherRetailDisplayQuantity =
-                otherRetailEntries.length > 0
-                  ? otherRetailEntries.reduce(
-                      (total, entry) => total + entry.quantity,
-                      0,
-                    )
-                  : otherBranchQtyMap[product.id];
+                otherRetailQuantityMap !== undefined
+                  ? sumPackageStockMap(otherRetailQuantityMap)
+                  : otherRetailEntries.length > 0
+                    ? otherRetailEntries.reduce(
+                        (total, entry) => total + entry.quantity,
+                        0,
+                      )
+                    : otherBranchQtyMap[product.id];
+              const currentBranchEntries =
+                branchId === 1 ? currentRetailEntries : currentWholesaleEntries;
+              const currentBranchDisplayQuantity =
+                branchId === 1
+                  ? currentRetailQuantityMap !== undefined
+                    ? sumPackageStockMap(currentRetailQuantityMap)
+                    : Number(product.available_quantity) || 0
+                  : currentWholesaleQuantityMap !== undefined
+                    ? sumPackageStockMap(currentWholesaleQuantityMap)
+                    : Number(product.available_quantity) || 0;
+              const otherWholesaleDisplayQuantity =
+                otherWholesaleQuantityMap !== undefined
+                  ? sumPackageStockMap(otherWholesaleQuantityMap)
+                  : otherWholesaleEntries.length > 0
+                    ? otherWholesaleEntries.reduce(
+                        (total, entry) => total + entry.quantity,
+                        0,
+                      )
+                    : otherBranchQtyMap[product.id];
+              const outOfStock = currentBranchDisplayQuantity <= 0;
 
               return (
                 <div
@@ -685,10 +738,12 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                   )}
 
                   <div className="text-xs mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
-                    {branchId === 2 && currentWholesaleEntries.length > 1 ? (
+                    {currentBranchEntries.length > 1 ? (
                       <div className="flex flex-wrap gap-x-3 gap-y-1">
-                        <span className="text-muted-foreground">رصيد الجملة:</span>
-                        {currentWholesaleEntries.map((entry) => (
+                        <span className="text-muted-foreground">
+                          رصيد {branchId === 1 ? "القطاعي" : "الجملة"}:
+                        </span>
+                        {currentBranchEntries.map((entry) => (
                           <span
                             key={entry.package}
                             className={
@@ -704,14 +759,14 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                     ) : (
                       <span
                         className={
-                          Number(product.available_quantity) > 0
+                          currentBranchDisplayQuantity > 0
                             ? branchId === 1
                               ? "text-blue-600 dark:text-blue-400 font-semibold"
                               : "text-orange-600 dark:text-orange-400 font-semibold"
                             : "text-red-500 font-semibold"
                         }
                       >
-                        رصيد {branchId === 1 ? "القطاعي" : "الجملة"}: {product.available_quantity}
+                        رصيد {branchId === 1 ? "القطاعي" : "الجملة"}: {currentBranchDisplayQuantity}
                       </span>
                     )}
 
@@ -735,12 +790,12 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                       ) : (
                         <span
                           className={
-                            (otherWholesaleEntries[0]?.quantity ?? 0) > 0
+                            otherWholesaleDisplayQuantity > 0
                               ? "text-orange-600 dark:text-orange-400 font-semibold"
                               : "text-red-500 font-semibold"
                           }
                         >
-                          رصيد الجملة: {otherWholesaleEntries[0]?.quantity ?? (otherBranchQtyMap[product.id] ?? "-")}
+                          رصيد الجملة: {otherWholesaleDisplayQuantity || 0}
                         </span>
                       )
                     ) : (

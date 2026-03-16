@@ -28,6 +28,50 @@ export function getPackageVariantId(variant?: PackageVariant | null): number {
   return Number(variant?.variant_id ?? variant?.id ?? 0);
 }
 
+export function sumPackageStockMap(stockMap?: PackageStockMap | null): number {
+  return Object.values(stockMap || {}).reduce(
+    (sum, quantity) => sum + (Number(quantity) || 0),
+    0,
+  );
+}
+
+export async function fetchResolvedProductQuantity({
+  productId,
+  productName,
+  branchId,
+  fallbackQuantity,
+  basePackage,
+  variants,
+  packageField = "wholesale_package",
+}: {
+  productId: number;
+  productName: string;
+  branchId: number;
+  fallbackQuantity?: number | null;
+  basePackage?: string | null;
+  variants?: PackageVariant[];
+  packageField?: "wholesale_package" | "retail_package";
+}): Promise<number> {
+  try {
+    const stockMap = await fetchPackageStockMapFromMovements({
+      productId,
+      productName,
+      branchId,
+      basePackage,
+      variants,
+      packageField,
+    });
+
+    if (Object.keys(stockMap || {}).length === 0) {
+      return Number(fallbackQuantity) || 0;
+    }
+
+    return sumPackageStockMap(stockMap);
+  } catch {
+    return Number(fallbackQuantity) || 0;
+  }
+}
+
 function getVariantPackageLabel(
   variant: PackageVariant | null | undefined,
   packageField: "wholesale_package" | "retail_package",

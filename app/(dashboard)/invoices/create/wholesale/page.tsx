@@ -37,6 +37,7 @@ import { QuickTransferModal } from "@/components/quick-transfer-modal";
 import { useCachedProducts } from "@/hooks/use-cached-products";
 import { highlightText } from "@/lib/highlight-text";
 import {
+  fetchResolvedProductQuantity,
   fetchPackageStockMapFromMovements,
   getPackageVariantId,
 } from "@/lib/package-stock";
@@ -81,6 +82,11 @@ import { InvoicePreviewDialog } from "@/components/invoice-preview-dialog";
    ========================================================= */
 
 export default function CreateWholesaleInvoicePage() {
+  type ResolvedStockProduct = {
+    id?: number | string | null;
+    available_quantity?: number | string | null;
+  };
+
   const { user } = useAuth();
   const isRetailUser = user?.branch_id === 1;
 
@@ -332,6 +338,35 @@ export default function CreateWholesaleInvoicePage() {
     fetchVariants: true,
     cacheKey: `wholesale_${movementType}`,
   });
+
+  const [resolvedAvailableQtyById, setResolvedAvailableQtyById] = useState<
+    Record<number, number>
+  >({});
+  const resolvingAvailableQtyRef = useRef<Record<number, boolean>>({});
+
+  const productById = useMemo(() => {
+    const map: Record<number, ResolvedStockProduct> = {};
+    products.forEach((product) => {
+      map[Number(product.id)] = product as ResolvedStockProduct;
+    });
+    return map;
+  }, [products]);
+
+  const getResolvedAvailableQuantity = useCallback(
+    (productOrId: number | ResolvedStockProduct | null | undefined) => {
+      const productId =
+        typeof productOrId === "number"
+          ? productOrId
+          : Number(productOrId?.id || 0);
+      const fallbackQuantity =
+        typeof productOrId === "object" && productOrId
+          ? Number(productOrId.available_quantity) || 0
+          : Number(productById[productId]?.available_quantity) || 0;
+
+      return Number(resolvedAvailableQtyById[productId] ?? fallbackQuantity);
+    },
+    [productById, resolvedAvailableQtyById],
+  );
 
   // Fetch stock when package picker opens
   useEffect(() => {
@@ -767,14 +802,12 @@ export default function CreateWholesaleInvoicePage() {
     if (movementType === "sale") {
       const overStock = items.filter((item) => {
         if (item.is_return) return false;
-        const prod = products.find((p: any) => p.id === item.product_id);
-        return prod && Number(item.quantity) > Number(prod.available_quantity);
+        return Number(item.quantity) > getResolvedAvailableQuantity(item.product_id);
       });
       if (overStock.length > 0) {
         overStock.forEach((item) => {
-          const prod = products.find((p: any) => p.id === item.product_id);
           toast.error(
-            `الصنف "${item.product_name}" الكمية (${item.quantity}) أكبر من الرصيد المتاح (${prod?.available_quantity ?? 0})`,
+            `الصنف "${item.product_name}" الكمية (${item.quantity}) أكبر من الرصيد المتاح (${getResolvedAvailableQuantity(item.product_id)})`,
           );
         });
         return;
@@ -867,9 +900,11 @@ export default function CreateWholesaleInvoicePage() {
      ========================================================= */
   useEffect(() => {
     if (showProductModal) {
+      setResolvedAvailableQtyById({});
+      resolvingAvailableQtyRef.current = {};
       refreshProductsSilently();
     }
-  }, [showProductModal]);
+  }, [showProductModal, refreshProductsSilently]);
 
   /* =========================================================
      Spacebar shortcut to open product dialog
@@ -942,8 +977,8 @@ export default function CreateWholesaleInvoicePage() {
     });
 
     return filtered.sort((a, b) => {
-      const aInStock = Number(a.available_quantity) > 0 ? 1 : 0;
-      const bInStock = Number(b.available_quantity) > 0 ? 1 : 0;
+      const aInStock = getResolvedAvailableQuantity(a) > 0 ? 1 : 0;
+      const bInStock = getResolvedAvailableQuantity(b) > 0 ? 1 : 0;
       if (aInStock !== bInStock) return bInStock - aInStock;
 
       if (search.trim()) {
@@ -967,13 +1002,60 @@ export default function CreateWholesaleInvoicePage() {
       }
       return String(a.name || "").localeCompare(String(b.name || ""), "ar");
     });
-  }, [products, search]);
+  }, [getResolvedAvailableQuantity, products, search]);
 
   const MODAL_DISPLAY_LIMIT = 50;
   const displayedProducts = useMemo(
     () => filteredProducts.slice(0, MODAL_DISPLAY_LIMIT),
     [filteredProducts],
   );
+
+  useEffect(() => {
+    if (!showProductModal) return;
+
+    displayedProducts.forEach((product) => {
+      if (
+        Object.prototype.hasOwnProperty.call(resolvedAvailableQtyById, product.id)
+      ) {
+        return;
+      }
+
+      if (resolvingAvailableQtyRef.current[product.id]) {
+        return;
+      }
+
+      resolvingAvailableQtyRef.current[product.id] = true;
+      fetchResolvedProductQuantity({
+        productId: product.id,
+        productName: product.name,
+        branchId: 2,
+        fallbackQuantity: product.available_quantity,
+        basePackage: product.wholesale_package,
+        variants: variantsMap[product.id] || [],
+        packageField: "wholesale_package",
+      })
+        .then((quantity) => {
+          setResolvedAvailableQtyById((prev) => ({
+            ...prev,
+            [product.id]: quantity,
+          }));
+        })
+        .catch(() => {
+          setResolvedAvailableQtyById((prev) => ({
+            ...prev,
+            [product.id]: Number(product.available_quantity) || 0,
+          }));
+        })
+        .finally(() => {
+          resolvingAvailableQtyRef.current[product.id] = false;
+        });
+    });
+  }, [
+    displayedProducts,
+    resolvedAvailableQtyById,
+    showProductModal,
+    variantsMap,
+  ]);
 
   /* =========================================================
      Handle search keydown (Enter & arrows)
@@ -2449,9 +2531,11 @@ export default function CreateWholesaleInvoicePage() {
               ) : (
                 <>
                   {displayedProducts.map((product, index) => {
+                    const resolvedAvailableQuantity =
+                      getResolvedAvailableQuantity(product);
                     const outOfStock =
                       movementType === "sale" &&
-                      Number(product.available_quantity) <= 0;
+                      resolvedAvailableQuantity <= 0;
                     return (
                       <div
                         key={product.id}
@@ -2489,7 +2573,7 @@ export default function CreateWholesaleInvoicePage() {
                             العبوة: {product.wholesale_package || "-"}
                           </span>
                           <span>السعر: {product.price}</span>
-                          <span>الرصيد: {product.available_quantity}</span>
+                          <span>الرصيد: {resolvedAvailableQuantity}</span>
                         </div>
                       </div>
                     );
