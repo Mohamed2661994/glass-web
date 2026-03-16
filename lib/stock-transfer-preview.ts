@@ -97,10 +97,25 @@ export function mergeTransferPreviewRows(
       }
     }
 
+    // Use locally-known available quantity when the server returns
+    // INSUFFICIENT_STOCK but the client has verified stock from movements.
+    const localQty = Number(selection.quantity || 0);
+    const serverFromQty = Number(matchedRow?.from_quantity || 0);
+    const localAvailable = Number(
+      (selection as any).available_quantity ?? 0,
+    );
+    const serverRejectedStock =
+      matchedRow?.status === "rejected" &&
+      String(matchedRow?.reason || "").includes("INSUFFICIENT_STOCK");
+
+    const effectiveFromQty =
+      serverRejectedStock && localAvailable > 0 ? localAvailable : serverFromQty;
+
     const status =
-      matchedRow?.status === "ok" || matchedRow?.status === "rejected"
+      !serverRejectedStock &&
+      (matchedRow?.status === "ok" || matchedRow?.status === "rejected")
         ? matchedRow.status
-        : Number(matchedRow?.from_quantity || 0) > 0
+        : effectiveFromQty > 0 && effectiveFromQty >= localQty
           ? "ok"
           : "rejected";
 
@@ -112,16 +127,20 @@ export function mergeTransferPreviewRows(
       manufacturer: selection.manufacturer || matchedRow?.manufacturer || "",
       package_name:
         selection.wholesale_package || matchedRow?.package_name || "",
-      quantity: Number(selection.quantity || 0),
-      from_quantity: Number(matchedRow?.from_quantity || 0),
+      quantity: localQty,
+      from_quantity: effectiveFromQty || serverFromQty,
       to_quantity: Number(matchedRow?.to_quantity || 0),
       final_price: Number(
         selection.final_price ?? matchedRow?.final_price ?? 0,
       ),
       status,
       reason:
-        matchedRow?.reason ||
-        (matchedRow ? undefined : "تعذر مطابقة العبوة المختارة في المعاينة"),
+        status === "ok"
+          ? undefined
+          : matchedRow?.reason ||
+            (matchedRow
+              ? undefined
+              : "تعذر مطابقة العبوة المختارة في المعاينة"),
     };
   });
 }
