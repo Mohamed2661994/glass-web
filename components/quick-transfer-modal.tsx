@@ -1,11 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "@/services/api";
 import { broadcastUpdate } from "@/lib/broadcast";
 import {
+  buildPackagePickerOptions,
   fetchPackageStockMapFromMovements,
-  getPackageVariantId,
+  mergePackageVariants,
+  normalizePackageName,
+  type PackageVariant,
 } from "@/lib/package-stock";
 import { mergeTransferPreviewRows } from "@/lib/stock-transfer-preview";
 import { highlightText } from "@/lib/highlight-text";
@@ -39,6 +42,7 @@ interface WholesaleProduct {
   retail_package: string;
   available_quantity: number;
   wholesale_price: number;
+  variant_stock?: PackageVariant[];
 }
 
 interface TransferItem {
@@ -173,6 +177,10 @@ export function QuickTransferModal({
 
       const product = products.find((item) => item.id === productId);
       if (!product) return {} as PackageStockMap;
+      const productVariants = mergePackageVariants(
+        Array.isArray(product.variant_stock) ? product.variant_stock : [],
+        variantsMap[productId] || [],
+      );
 
       setLoadingPackageStockForProductId(productId);
       try {
@@ -181,7 +189,7 @@ export function QuickTransferModal({
           productName: product.name,
           branchId: FROM_BRANCH_ID,
           basePackage: product.wholesale_package,
-          variants: variantsMap[productId] || [],
+          variants: productVariants,
           packageField: "wholesale_package",
         });
 
@@ -224,6 +232,18 @@ export function QuickTransferModal({
     [packageStockByProduct, products, variantsMap],
   );
 
+  const getProductPackageVariants = useCallback(
+    (product: WholesaleProduct | null) => {
+      if (!product) return [] as PackageVariant[];
+
+      return mergePackageVariants(
+        Array.isArray(product.variant_stock) ? product.variant_stock : [],
+        variantsMap[product.id] || [],
+      );
+    },
+    [variantsMap],
+  );
+
   const getPackageAvailableQuantity = useCallback(
     (productId: number, variantId: number, fallbackQuantity: number = 0) => {
       const stockMap = packageStockByProduct[productId];
@@ -236,9 +256,34 @@ export function QuickTransferModal({
     [packageStockByProduct],
   );
 
+  const packagePickerVariantOptions = useMemo(() => {
+    if (!packagePickerProduct) return [];
+
+    const basePackageName = normalizePackageName(
+      packagePickerProduct.wholesale_package,
+    );
+
+    return buildPackagePickerOptions({
+      basePackage: packagePickerProduct.wholesale_package,
+      totalQuantity: packagePickerProduct.available_quantity,
+      variants: getProductPackageVariants(packagePickerProduct),
+      quantityMap: packageStockByProduct[packagePickerProduct.id],
+      packageField: "wholesale_package",
+      fallbackPrice: packagePickerProduct.wholesale_price,
+    }).filter(
+      (option) =>
+        option.variantId !== 0 &&
+        normalizePackageName(option.packageName) !== basePackageName,
+    );
+  }, [
+    getProductPackageVariants,
+    packagePickerProduct,
+    packageStockByProduct,
+  ]);
+
   /* --- Add product --- */
   const addProduct = (product: WholesaleProduct) => {
-    const variants = variantsMap[product.id];
+    const variants = getProductPackageVariants(product);
     if (variants && variants.length > 0) {
       setPackagePickerProduct(product);
       void loadPackageStocks(product.id);
@@ -726,17 +771,12 @@ export function QuickTransferModal({
                 })()}
 
               {packagePickerProduct &&
-                variantsMap[packagePickerProduct.id]?.map((v: any) => {
-                  const variantId = getPackageVariantId(v);
-                  const availableQty = getPackageAvailableQuantity(
-                    packagePickerProduct.id,
-                    variantId,
-                  );
-                  const disabled = availableQty <= 0;
+                packagePickerVariantOptions.map((option) => {
+                  const disabled = option.quantity <= 0;
 
                   return (
                     <button
-                      key={v.id}
+                      key={option.key}
                       type="button"
                       disabled={disabled}
                       className={`w-full p-3 rounded-lg border transition text-right ${
@@ -744,31 +784,31 @@ export function QuickTransferModal({
                           ? "opacity-50 cursor-not-allowed bg-muted/40"
                           : "hover:bg-muted"
                       }`}
-                      onClick={() =>
-                        !disabled &&
+                      onClick={() => {
+                        if (disabled) return;
                         finalizeAdd(
                           packagePickerProduct,
-                          v.wholesale_package || "-",
-                          Number(v.wholesale_price),
-                          variantId,
-                          v.retail_package,
-                          availableQty,
-                        )
-                      }
+                          option.packageName,
+                          Number(option.price) || packagePickerProduct.wholesale_price,
+                          option.variantId,
+                          option.retailPackage || packagePickerProduct.retail_package,
+                          option.quantity,
+                        );
+                      }}
                     >
-                      <div className="font-medium">
-                        {v.wholesale_package || "-"}
-                      </div>
+                      <div className="font-medium">{option.packageName}</div>
                       <div className="text-sm text-muted-foreground">
-                        السعر: {v.wholesale_price} ج
-                        {v.label && <span className="mr-2">({v.label})</span>}
+                        السعر: {Number(option.price) || packagePickerProduct.wholesale_price} ج
+                        {option.variant?.label && (
+                          <span className="mr-2">({option.variant.label})</span>
+                        )}
                       </div>
                       <div
                         className={`text-sm mt-1 ${
-                          availableQty > 0 ? "text-green-600" : "text-red-500"
+                          option.quantity > 0 ? "text-green-600" : "text-red-500"
                         }`}
                       >
-                        رصيد: {availableQty}
+                        الرصيد: {option.quantity}
                       </div>
                     </button>
                   );
