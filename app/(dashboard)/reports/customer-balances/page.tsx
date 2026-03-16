@@ -160,29 +160,27 @@ export default function CustomerBalancesPage() {
 
             let totalSales = 0;
             let debt = 0;
+            let totalPaid = 0;
             let lastDate: string | null = null;
 
             for (const row of allRows) {
               if (row.record_type === "invoice") {
-                const t = Number(row.total || 0);
-                const p = Number(row.paid_amount || 0);
-                totalSales += t;
-                debt += t - p;
+                totalSales += Number(row.total || 0);
+                debt += Number(row.remaining_amount || 0);
+                totalPaid += Number(row.paid_amount || 0);
                 const d = (
                   row.invoice_date ||
                   row.created_at ||
                   ""
                 ).substring(0, 10);
                 if (d && (!lastDate || d > lastDate)) lastDate = d;
-              } else {
-                debt -= Number(row.paid_amount || 0);
               }
             }
 
             return {
               ...item,
               total_sales: totalSales,
-              total_paid: totalSales - debt,
+              total_paid: totalPaid,
               balance_due: debt,
               last_invoice_date: lastDate || item.last_invoice_date,
             };
