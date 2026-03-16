@@ -586,6 +586,13 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                       labelField: "retail_package",
                     })
                   : [];
+              const otherRetailDisplayQuantity =
+                otherRetailEntries.length > 0
+                  ? otherRetailEntries.reduce(
+                      (total, entry) => total + entry.quantity,
+                      0,
+                    )
+                  : otherBranchQtyMap[product.id];
 
               return (
                 <div
@@ -735,31 +742,15 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                           رصيد الجملة: {otherWholesaleEntries[0]?.quantity ?? (otherBranchQtyMap[product.id] ?? "-")}
                         </span>
                       )
-                    ) : otherRetailEntries.length > 1 ? (
-                      <div className="flex flex-wrap gap-x-3 gap-y-1">
-                        <span className="text-muted-foreground">رصيد القطاعي:</span>
-                        {otherRetailEntries.map((entry) => (
-                          <span
-                            key={entry.package}
-                            className={
-                              entry.quantity > 0
-                                ? "text-blue-600 dark:text-blue-400 font-semibold"
-                                : "text-red-500 font-semibold"
-                            }
-                          >
-                            {entry.package}: {entry.quantity}
-                          </span>
-                        ))}
-                      </div>
                     ) : (
                       <span
                         className={
-                          (otherRetailEntries[0]?.quantity ?? 0) > 0
+                          Number(otherRetailDisplayQuantity ?? 0) > 0
                             ? "text-blue-600 dark:text-blue-400 font-semibold"
                             : "text-red-500 font-semibold"
                         }
                       >
-                        رصيد القطاعي: {otherRetailEntries[0]?.quantity ?? (otherBranchQtyMap[product.id] ?? "-")}
+                        رصيد القطاعي: {otherRetailDisplayQuantity ?? "-"}
                       </span>
                     )}
                   </div>
