@@ -49,10 +49,25 @@ type InventoryItem = {
 };
 
 type MovementItem = {
+  variant_id?: number | null;
   warehouse_name?: string | null;
   movement_type?: string | null;
   invoice_movement_type?: string | null;
   quantity?: number | null;
+  package_name?: string | null;
+};
+
+type ReportProduct = {
+  id: number;
+  wholesale_package?: string | null;
+  retail_package?: string | null;
+};
+
+type ProductVariant = {
+  id?: number | null;
+  product_id: number;
+  wholesale_package?: string | null;
+  retail_package?: string | null;
   package_name?: string | null;
 };
 
@@ -75,6 +90,9 @@ export default function InventorySummaryPage() {
   const [data, setData] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
+  const [packageLabelMap, setPackageLabelMap] = useState<Record<string, string>>(
+    {},
+  );
   const [accurateRowsByProductId, setAccurateRowsByProductId] = useState<
     Record<number, InventoryItem[]>
   >({});
@@ -197,6 +215,71 @@ export default function InventorySummaryPage() {
   }, [data, selectedWarehouse, searchText, isShowroomUser, isWarehouseUser]);
 
   useEffect(() => {
+    const productIds = Array.from(
+      new Set(filteredData.map((item) => Number(item.product_id)).filter(Boolean)),
+    );
+
+    if (productIds.length === 0) {
+      setPackageLabelMap({});
+      return;
+    }
+
+    let cancelled = false;
+
+    Promise.all([
+      api.get("/reports/products"),
+      api.get("/products/variants", {
+        params: { product_ids: productIds.join(",") },
+      }),
+    ])
+      .then(([productsRes, variantsRes]) => {
+        if (cancelled) return;
+
+        const reportProducts: ReportProduct[] = Array.isArray(productsRes.data)
+          ? productsRes.data
+          : [];
+        const variants: ProductVariant[] = Array.isArray(variantsRes.data)
+          ? variantsRes.data
+          : [];
+
+        const nextMap: Record<string, string> = {};
+        const productIdSet = new Set(productIds);
+
+        for (const product of reportProducts) {
+          const productId = Number(product.id);
+          if (!productIdSet.has(productId)) continue;
+
+          nextMap[`${productId}:0`] = normalizePackageName(
+            product.wholesale_package || product.retail_package || "—",
+          );
+        }
+
+        for (const variant of variants) {
+          const productId = Number(variant.product_id);
+          const variantId = Number(variant.id || 0);
+          if (!productIdSet.has(productId) || !variantId) continue;
+
+          nextMap[`${productId}:${variantId}`] = normalizePackageName(
+            variant.wholesale_package ||
+              variant.package_name ||
+              variant.retail_package ||
+              "—",
+          );
+        }
+
+        setPackageLabelMap(nextMap);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setPackageLabelMap({});
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [filteredData]);
+
+  useEffect(() => {
     const shouldRecalculate =
       filteredData.length > 0 &&
       (searchText.trim().length > 0 || filteredData.length <= 30);
@@ -238,7 +321,10 @@ export default function InventorySummaryPage() {
             if (!Number.isFinite(qty) || qty === 0) continue;
 
             const warehouseName = (row.warehouse_name || "—").trim() || "—";
-            const packageName = normalizePackageName(row.package_name || "—");
+            const variantId = Number(row.variant_id || 0);
+            const packageName =
+              packageLabelMap[`${item.product_id}:${variantId}`] ||
+              normalizePackageName(row.package_name || "—");
             const key = `${warehouseName}__${packageName}`;
             const existing = grouped.get(key) || {
               warehouse_name: warehouseName,
@@ -294,7 +380,12 @@ export default function InventorySummaryPage() {
     return () => {
       cancelled = true;
     };
-  }, [filteredData, filterMovementRowsByWarehouse, searchText]);
+  }, [
+    filteredData,
+    filterMovementRowsByWarehouse,
+    packageLabelMap,
+    searchText,
+  ]);
 
   const displayedData = useMemo(() => {
     const shouldUseAccurate =
