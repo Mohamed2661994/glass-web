@@ -10,6 +10,10 @@ type PackageVariant = {
   package_name?: string | null;
 };
 
+export function getPackageVariantId(variant?: PackageVariant | null): number {
+  return Number(variant?.variant_id ?? variant?.id ?? 0);
+}
+
 type MovementRow = {
   warehouse_name?: string | null;
   movement_type?: string | null;
@@ -100,9 +104,7 @@ export async function fetchPackageStockMapFromMovements({
 
   const requiredVariantIds = new Set<number>([
     0,
-    ...(variants || []).map((variant) =>
-      Number(variant.id ?? variant.variant_id ?? 0),
-    ),
+    ...(variants || []).map((variant) => getPackageVariantId(variant)),
   ]);
 
   const missingVariantIds = Array.from(requiredVariantIds).filter(
@@ -140,7 +142,7 @@ export async function fetchPackageStockMapFromMovements({
   );
 
   for (const variant of variants || []) {
-    const variantId = Number(variant.id ?? variant.variant_id ?? 0);
+    const variantId = getPackageVariantId(variant);
     const packageName =
       packageField === "retail_package"
         ? variant.retail_package

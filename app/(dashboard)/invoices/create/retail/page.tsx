@@ -36,7 +36,10 @@ import {
 import { useCachedProducts } from "@/hooks/use-cached-products";
 import { CustomerLookupModal } from "@/components/customer-lookup-modal";
 import { QuickTransferModal } from "@/components/quick-transfer-modal";
-import { fetchPackageStockMapFromMovements } from "@/lib/package-stock";
+import {
+  fetchPackageStockMapFromMovements,
+  getPackageVariantId,
+} from "@/lib/package-stock";
 import { highlightText } from "@/lib/highlight-text";
 import { multiWordMatch, multiWordScore } from "@/lib/utils";
 import { getTodayDate } from "@/lib/constants";
@@ -2925,42 +2928,46 @@ export default function CreateRetailInvoicePage() {
 
               {/* العبوات الفرعية (variants) */}
               {packagePickerProduct &&
-                variantsMap[packagePickerProduct.id]?.map((v: any) => (
-                  <Button
-                    key={v.id}
-                    variant="outline"
-                    className="w-full text-base py-6"
-                    onClick={() => {
-                      finalizeAddItem(
-                        {
-                          ...packagePickerProduct,
-                          price:
-                            movementType === "sale"
-                              ? Number(v.retail_price)
-                              : Number(v.retail_purchase_price),
-                          variant_id: v.id,
-                        },
-                        v.retail_package || "-",
-                        packagePickerSource,
-                      );
-                      setPackagePickerProduct(null);
-                    }}
-                  >
-                    {v.retail_package || "-"}
-                    <span className="text-xs text-muted-foreground mr-2">
-                      —{" "}
-                      {movementType === "sale"
-                        ? v.retail_price
-                        : v.retail_purchase_price}{" "}
-                      ج{v.label && ` (${v.label})`}
-                    </span>
-                    {packagePickerStock !== null && (
-                      <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-semibold mr-2">
-                        الرصيد: {packagePickerStock[v.id] ?? 0}
+                variantsMap[packagePickerProduct.id]?.map((v: any) => {
+                  const variantId = getPackageVariantId(v);
+
+                  return (
+                    <Button
+                      key={v.id}
+                      variant="outline"
+                      className="w-full text-base py-6"
+                      onClick={() => {
+                        finalizeAddItem(
+                          {
+                            ...packagePickerProduct,
+                            price:
+                              movementType === "sale"
+                                ? Number(v.retail_price)
+                                : Number(v.retail_purchase_price),
+                            variant_id: variantId,
+                          },
+                          v.retail_package || "-",
+                          packagePickerSource,
+                        );
+                        setPackagePickerProduct(null);
+                      }}
+                    >
+                      {v.retail_package || "-"}
+                      <span className="text-xs text-muted-foreground mr-2">
+                        —{" "}
+                        {movementType === "sale"
+                          ? v.retail_price
+                          : v.retail_purchase_price}{" "}
+                        ج{v.label && ` (${v.label})`}
                       </span>
-                    )}
-                  </Button>
-                ))}
+                      {packagePickerStock !== null && (
+                        <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-semibold mr-2">
+                          الرصيد: {packagePickerStock[variantId] ?? 0}
+                        </span>
+                      )}
+                    </Button>
+                  );
+                })}
             </div>
           </DialogContent>
         </Dialog>

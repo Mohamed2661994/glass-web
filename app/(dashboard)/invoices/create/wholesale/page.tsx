@@ -36,7 +36,10 @@ import { CustomerLookupModal } from "@/components/customer-lookup-modal";
 import { QuickTransferModal } from "@/components/quick-transfer-modal";
 import { useCachedProducts } from "@/hooks/use-cached-products";
 import { highlightText } from "@/lib/highlight-text";
-import { fetchPackageStockMapFromMovements } from "@/lib/package-stock";
+import {
+  fetchPackageStockMapFromMovements,
+  getPackageVariantId,
+} from "@/lib/package-stock";
 import { multiWordMatch, multiWordScore } from "@/lib/utils";
 import { getTodayDate } from "@/lib/constants";
 import { Card } from "@/components/ui/card";
@@ -2548,37 +2551,41 @@ export default function CreateWholesaleInvoicePage() {
 
               {/* العبوات الفرعية */}
               {packagePickerProduct &&
-                variantsMap[packagePickerProduct.id]?.map((v: any) => (
-                  <button
-                    key={v.id}
-                    className="w-full p-3 rounded-lg border hover:bg-muted transition text-right"
-                    onClick={() => {
-                      finalizeAddItem(
-                        { ...packagePickerProduct, variant_id: v.id },
-                        v.wholesale_package || "-",
-                        movementType === "sale"
-                          ? Number(v.wholesale_price)
-                          : Number(v.purchase_price),
-                      );
-                    }}
-                  >
-                    <div className="font-medium">
-                      {v.wholesale_package || "-"}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      السعر:{" "}
-                      {movementType === "sale"
-                        ? v.wholesale_price
-                        : v.purchase_price}{" "}
-                      ج{v.label && <span className="mr-2">({v.label})</span>}
-                      {packagePickerStock !== null && (
-                        <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-semibold mr-2">
-                          الرصيد: {packagePickerStock[v.id] ?? 0}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                ))}
+                variantsMap[packagePickerProduct.id]?.map((v: any) => {
+                  const variantId = getPackageVariantId(v);
+
+                  return (
+                    <button
+                      key={v.id}
+                      className="w-full p-3 rounded-lg border hover:bg-muted transition text-right"
+                      onClick={() => {
+                        finalizeAddItem(
+                          { ...packagePickerProduct, variant_id: variantId },
+                          v.wholesale_package || "-",
+                          movementType === "sale"
+                            ? Number(v.wholesale_price)
+                            : Number(v.purchase_price),
+                        );
+                      }}
+                    >
+                      <div className="font-medium">
+                        {v.wholesale_package || "-"}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        السعر:{" "}
+                        {movementType === "sale"
+                          ? v.wholesale_price
+                          : v.purchase_price}{" "}
+                        ج{v.label && <span className="mr-2">({v.label})</span>}
+                        {packagePickerStock !== null && (
+                          <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-semibold mr-2">
+                            الرصيد: {packagePickerStock[variantId] ?? 0}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
             </div>
           </DialogContent>
         </Dialog>

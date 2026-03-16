@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import api from "@/services/api";
 import { highlightText } from "@/lib/highlight-text";
-import { fetchPackageStockMapFromMovements } from "@/lib/package-stock";
+import {
+  fetchPackageStockMapFromMovements,
+  getPackageVariantId,
+} from "@/lib/package-stock";
 import { multiWordMatch } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -746,9 +749,10 @@ export default function StockTransferPage() {
             {/* العبوات الفرعية */}
             {packagePickerProduct &&
               variantsMap[packagePickerProduct.id]?.map((v: any) => {
+                const variantId = getPackageVariantId(v);
                 const availableQty = getPackageAvailableQuantity(
                   packagePickerProduct.id,
-                  Number(v.id),
+                  variantId,
                 );
                 const disabled = availableQty <= 0;
 
@@ -768,7 +772,7 @@ export default function StockTransferPage() {
                         packagePickerProduct,
                         v.wholesale_package || "-",
                         Number(v.wholesale_price),
-                        v.id,
+                        variantId,
                         v.retail_package,
                         availableQty,
                       );
