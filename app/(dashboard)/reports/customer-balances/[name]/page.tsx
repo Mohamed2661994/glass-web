@@ -331,15 +331,17 @@ export default function CustomerDebtDetailsPage() {
     return balance;
   }, [data, fromDate, getRowDate]);
 
-  // الحساب السابق لكل فاتورة = الباقي (remaining_amount) من الفاتورة اللي قبلها
+  // الحساب السابق = الباقي من الفاتورة السابقة - سندات الدفع بينهم
   const prevInvoiceRemaining = useMemo(() => {
     const map: number[] = new Array(visibleData.length).fill(0);
-    let lastRemaining = 0;
+    let runningBalance = 0;
     for (let i = 0; i < visibleData.length; i++) {
       const row = visibleData[i];
       if (row.record_type === "invoice") {
-        map[i] = lastRemaining;
-        lastRemaining = Number(row.remaining_amount || 0);
+        map[i] = runningBalance;
+        runningBalance = Number(row.remaining_amount || 0);
+      } else {
+        runningBalance -= Number(row.paid_amount || 0);
       }
     }
     return map;
