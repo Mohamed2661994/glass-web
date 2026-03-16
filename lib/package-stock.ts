@@ -4,6 +4,7 @@ export type PackageStockMap = Record<number, number>;
 
 type PackageVariant = {
   id?: number | null;
+  variant_id?: number | null;
   wholesale_package?: string | null;
   retail_package?: string | null;
   package_name?: string | null;
@@ -103,7 +104,7 @@ export async function fetchPackageStockMapFromMovements({
   );
 
   for (const variant of variants || []) {
-    const variantId = Number(variant.id || 0);
+    const variantId = Number(variant.id ?? variant.variant_id ?? 0);
     const packageName =
       packageField === "retail_package"
         ? variant.retail_package

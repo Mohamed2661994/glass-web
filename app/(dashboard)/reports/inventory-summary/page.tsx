@@ -22,6 +22,7 @@ import { Loader2, Printer, Search } from "lucide-react";
 import { ExportButtons, type ExportColumn } from "@/components/export-buttons";
 import { useRealtime } from "@/hooks/use-realtime";
 import { Skeleton } from "@/components/ui/skeleton";
+import { normalizePackageName } from "@/lib/package-stock";
 
 const INVENTORY_SUMMARY_PRINT_STORAGE_KEY = "inventorySummaryPrintData";
 
@@ -47,6 +48,22 @@ type InventoryItem = {
   package_name?: string | null;
 };
 
+type MovementItem = {
+  warehouse_name?: string | null;
+  movement_type?: string | null;
+  invoice_movement_type?: string | null;
+  quantity?: number | null;
+  package_name?: string | null;
+};
+
+const IN_MOVEMENT_TYPES = new Set([
+  "purchase",
+  "transfer_in",
+  "replace_in",
+  "return_sale",
+  "in",
+]);
+
 type WarehouseFilter = "الكل" | "المخزن الرئيسي" | "مخزن المعرض";
 
 /* ========== Component ========== */
@@ -58,6 +75,9 @@ export default function InventorySummaryPage() {
   const [data, setData] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
+  const [accurateRowsByProductId, setAccurateRowsByProductId] = useState<
+    Record<number, InventoryItem[]>
+  >({});
   const tableRef = useRef<HTMLDivElement>(null);
   const [selectedWarehouse, setSelectedWarehouse] = useState<WarehouseFilter>(
     isShowroomUser
@@ -108,6 +128,36 @@ export default function InventorySummaryPage() {
 
   useRealtime(["data:products", "data:stock", "data:invoices"], fetchReport);
 
+  const filterMovementRowsByWarehouse = useCallback(
+    (rows: MovementItem[]) => {
+      let result = rows;
+
+      if (isShowroomUser) {
+        result = result.filter((item) =>
+          (item.warehouse_name || "").trim().includes("المعرض"),
+        );
+      } else if (isWarehouseUser) {
+        result = result.filter((item) => {
+          const warehouseName = (item.warehouse_name || "").trim();
+          return (
+            warehouseName.includes("الرئيسي") ||
+            warehouseName.includes("المخزن الرئيسي")
+          );
+        });
+      }
+
+      if (!isShowroomUser && !isWarehouseUser && selectedWarehouse !== "الكل") {
+        result = result.filter(
+          (item) =>
+            (item.warehouse_name || "").trim() === selectedWarehouse.trim(),
+        );
+      }
+
+      return result;
+    },
+    [isShowroomUser, isWarehouseUser, selectedWarehouse],
+  );
+
   /* ========== Filter ========== */
   const filteredData = useMemo(() => {
     let result = data;
@@ -146,6 +196,138 @@ export default function InventorySummaryPage() {
     return result;
   }, [data, selectedWarehouse, searchText, isShowroomUser, isWarehouseUser]);
 
+  useEffect(() => {
+    const shouldRecalculate =
+      filteredData.length > 0 &&
+      (searchText.trim().length > 0 || filteredData.length <= 30);
+
+    if (!shouldRecalculate) {
+      setAccurateRowsByProductId({});
+      return;
+    }
+
+    const uniqueProducts = Array.from(
+      new Map(filteredData.map((item) => [item.product_id, item])).values(),
+    );
+
+    let cancelled = false;
+
+    Promise.all(
+      uniqueProducts.map(async (item) => {
+        try {
+          const res = await api.get("/reports/product-movement", {
+            params: { product_name: item.product_name },
+          });
+
+          const movementRows = filterMovementRowsByWarehouse(
+            Array.isArray(res.data) ? res.data : [],
+          );
+
+          const grouped = new Map<
+            string,
+            {
+              warehouse_name: string;
+              package_name: string;
+              total_in: number;
+              total_out: number;
+            }
+          >();
+
+          for (const row of movementRows) {
+            const qty = Number(row.quantity || 0);
+            if (!Number.isFinite(qty) || qty === 0) continue;
+
+            const warehouseName = (row.warehouse_name || "—").trim() || "—";
+            const packageName = normalizePackageName(row.package_name || "—");
+            const key = `${warehouseName}__${packageName}`;
+            const existing = grouped.get(key) || {
+              warehouse_name: warehouseName,
+              package_name: packageName,
+              total_in: 0,
+              total_out: 0,
+            };
+
+            const movementType =
+              row.movement_type || row.invoice_movement_type || "";
+
+            if (IN_MOVEMENT_TYPES.has(movementType)) {
+              existing.total_in += qty;
+            } else {
+              existing.total_out += qty;
+            }
+
+            grouped.set(key, existing);
+          }
+
+          const accurateRows = Array.from(grouped.values())
+            .map((groupedRow) => ({
+              product_id: item.product_id,
+              product_name: item.product_name,
+              manufacturer_name: item.manufacturer_name,
+              barcode: item.barcode,
+              warehouse_name: groupedRow.warehouse_name,
+              total_in: groupedRow.total_in,
+              total_out: groupedRow.total_out,
+              current_stock: groupedRow.total_in - groupedRow.total_out,
+              package_name: groupedRow.package_name,
+            }))
+            .sort((a, b) => {
+              if (a.warehouse_name !== b.warehouse_name) {
+                return a.warehouse_name.localeCompare(b.warehouse_name, "ar");
+              }
+              return (a.package_name || "").localeCompare(
+                b.package_name || "",
+                "ar",
+              );
+            });
+
+          return [item.product_id, accurateRows] as const;
+        } catch {
+          return [item.product_id, []] as const;
+        }
+      }),
+    ).then((entries) => {
+      if (cancelled) return;
+      setAccurateRowsByProductId(Object.fromEntries(entries));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [filteredData, filterMovementRowsByWarehouse, searchText]);
+
+  const displayedData = useMemo(() => {
+    const shouldUseAccurate =
+      filteredData.length > 0 &&
+      (searchText.trim().length > 0 || filteredData.length <= 30);
+
+    if (!shouldUseAccurate) {
+      return filteredData;
+    }
+
+    const result: InventoryItem[] = [];
+    const handledProductIds = new Set<number>();
+
+    for (const item of filteredData) {
+      if (handledProductIds.has(item.product_id)) continue;
+      handledProductIds.add(item.product_id);
+
+      const accurateRows = accurateRowsByProductId[item.product_id];
+      if (accurateRows && accurateRows.length > 0) {
+        result.push(...accurateRows);
+        continue;
+      }
+
+      result.push(
+        ...filteredData.filter(
+          (row) => row.product_id === item.product_id,
+        ),
+      );
+    }
+
+    return result;
+  }, [accurateRowsByProductId, filteredData, searchText]);
+
   /* ========== Export columns ========== */
   const exportColumns: ExportColumn[] = [
     { header: "الصنف", key: "product_name_full", width: 30 },
@@ -156,7 +338,7 @@ export default function InventorySummaryPage() {
     { header: "الرصيد", key: "balance", width: 10 },
   ];
 
-  const exportData = filteredData.map((item) => ({
+  const exportData = displayedData.map((item) => ({
     ...item,
     product_name_full:
       item.product_name +
@@ -168,7 +350,7 @@ export default function InventorySummaryPage() {
   }));
 
   const handlePrint = useCallback(() => {
-    const printRows = filteredData.map((item) => {
+    const printRows = displayedData.map((item) => {
       const totalIn = Number(item.total_in || 0);
       const totalOut = Number(item.total_out || 0);
 
@@ -193,7 +375,7 @@ export default function InventorySummaryPage() {
     );
 
     window.open("/reports/inventory-summary/print", "_blank");
-  }, [filteredData, searchText, selectedWarehouse]);
+  }, [displayedData, searchText, selectedWarehouse]);
 
   /* ========== Warehouse buttons (only if not locked) ========== */
   const warehouseOptions: WarehouseFilter[] =
@@ -234,7 +416,7 @@ export default function InventorySummaryPage() {
         )}
 
         {/* Export buttons */}
-        {!loading && filteredData.length > 0 && (
+        {!loading && displayedData.length > 0 && (
           <div className="flex justify-center gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={handlePrint}>
               <Printer className="h-4 w-4" />
@@ -308,7 +490,7 @@ export default function InventorySummaryPage() {
         )}
 
         {/* Table */}
-        {!loading && filteredData.length > 0 && (
+        {!loading && displayedData.length > 0 && (
           <Card>
             <CardContent className="p-0">
               <div className="hidden md:block overflow-x-auto" ref={tableRef}>
@@ -324,7 +506,7 @@ export default function InventorySummaryPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredData.map((item, idx) => {
+                    {displayedData.map((item, idx) => {
                       const totalIn = Number(item.total_in || 0);
                       const totalOut = Number(item.total_out || 0);
                       const balance = totalIn - totalOut;
@@ -377,7 +559,7 @@ export default function InventorySummaryPage() {
               </div>
 
               <div className="md:hidden p-3 space-y-2" dir="rtl">
-                {filteredData.map((item, idx) => {
+                {displayedData.map((item, idx) => {
                   const totalIn = Number(item.total_in || 0);
                   const totalOut = Number(item.total_out || 0);
                   const balance = totalIn - totalOut;
@@ -447,16 +629,16 @@ export default function InventorySummaryPage() {
         )}
 
         {/* Empty */}
-        {!loading && filteredData.length === 0 && (
+        {!loading && displayedData.length === 0 && (
           <div className="text-center py-16 text-muted-foreground">
             لا توجد بيانات
           </div>
         )}
 
         {/* Count badge */}
-        {!loading && filteredData.length > 0 && (
+        {!loading && displayedData.length > 0 && (
           <div className="text-center">
-            <Badge variant="secondary">{filteredData.length} صنف</Badge>
+            <Badge variant="secondary">{displayedData.length} صنف</Badge>
           </div>
         )}
       </div>
