@@ -62,6 +62,8 @@ type Product = {
   name: string;
   manufacturer?: string | null;
   manufacturer_name?: string | null;
+  retail_package?: string | null;
+  wholesale_package?: string | null;
 };
 
 type WarehouseFilter = "الكل" | "المخزن الرئيسي" | "مخزن المعرض";
@@ -278,6 +280,27 @@ function ProductMovementPageContent() {
     return d ? new Date(d).toLocaleDateString("ar-EG") : "—";
   };
 
+  const retailPackageLabel = useMemo(
+    () => normalizePackageName(selectedProduct?.retail_package),
+    [normalizePackageName, selectedProduct?.retail_package],
+  );
+
+  const forceRetailPackageView =
+    Boolean(retailPackageLabel) &&
+    (isShowroomUser ||
+      (!isWarehouseUser && selectedWarehouse === "مخزن المعرض"));
+
+  const getDisplayedPackageLabel = useCallback(
+    (item?: MovementItem) => {
+      if (forceRetailPackageView) {
+        return retailPackageLabel;
+      }
+
+      return normalizePackageName(item?.package_name);
+    },
+    [forceRetailPackageView, retailPackageLabel, normalizePackageName],
+  );
+
   /* ========== Totals ========== */
   const { totalIn, totalOut, packageTotals } = useMemo(() => {
     let inQty = 0;
@@ -297,7 +320,7 @@ function ProductMovementPageContent() {
         "in",
       ].includes(mt);
       const qty = Number(item.quantity);
-      const pkgLabel = normalizePackageName(item.package_name);
+      const pkgLabel = getDisplayedPackageLabel(item) || "بدون عبوة";
       const pkgKey = pkgLabel;
 
       if (!byPackage.has(pkgKey)) {
@@ -328,7 +351,7 @@ function ProductMovementPageContent() {
       .sort((a, b) => a.package.localeCompare(b.package, "ar"));
 
     return { totalIn: inQty, totalOut: outQty, packageTotals };
-  }, [filteredData, normalizePackageName]);
+  }, [filteredData, getDisplayedPackageLabel]);
 
   /* ========== Export columns ========== */
   const exportColumns: ExportColumn[] = [
@@ -356,7 +379,7 @@ function ProductMovementPageContent() {
       date_formatted: getDate(item),
       type_label: isIn ? "وارد" : "صادر",
       invoice_id: item.invoice_id || "—",
-      pkg: item.package_name || "—",
+      pkg: getDisplayedPackageLabel(item) || "—",
       party_name: item.party_name || "—",
       note: item.note || "",
     };
@@ -614,7 +637,7 @@ function ProductMovementPageContent() {
                               {item.quantity}
                             </TableCell>
                             <TableCell className="text-center text-xs">
-                              {item.package_name || "—"}
+                              {getDisplayedPackageLabel(item) || "—"}
                             </TableCell>
                             <TableCell className="text-center text-xs font-medium">
                               {item.party_name || "—"}
@@ -672,9 +695,9 @@ function ProductMovementPageContent() {
                         >
                           {item.quantity}
                         </p>
-                        {item.package_name && (
+                        {getDisplayedPackageLabel(item) && (
                           <p className="text-xs text-muted-foreground">
-                            {item.package_name}
+                            {getDisplayedPackageLabel(item)}
                           </p>
                         )}
                       </div>
