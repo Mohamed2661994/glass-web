@@ -13,8 +13,12 @@ import { Search, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCachedProducts } from "@/hooks/use-cached-products";
 import { highlightText } from "@/lib/highlight-text";
+import {
+  fetchPackageStockMapFromMovements,
+  normalizePackageName,
+  type PackageStockMap,
+} from "@/lib/package-stock";
 import { multiWordMatch, multiWordScore } from "@/lib/utils";
-import api from "@/services/api";
 
 interface Props {
   open: boolean;
@@ -79,10 +83,10 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     return map;
   }, [otherBranchProducts]);
 
-  const [otherBranchVariantQtyMap, setOtherBranchVariantQtyMap] = useState<
-    Record<number, Record<number, number>>
+  const [packageStockMapByKey, setPackageStockMapByKey] = useState<
+    Record<string, PackageStockMap>
   >({});
-  const otherBranchQtyLoadingRef = useRef<Record<number, boolean>>({});
+  const packageStockLoadingRef = useRef<Record<string, boolean>>({});
 
   const [refreshing, setRefreshing] = useState(false);
 
@@ -91,6 +95,8 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     if (!open) return;
     setSearch("");
     setFocusedIndex(-1);
+    setPackageStockMapByKey({});
+    packageStockLoadingRef.current = {};
     // Silent refresh — checks cache validity (invalidation key) and refetches if needed
     refresh();
     refreshOther();
@@ -155,28 +161,6 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     });
   }, [products, search]);
 
-  const normalizePackageName = useCallback((name?: string | null) => {
-    const toWesternDigits = (value: string) =>
-      value.replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)));
-
-    const cleaned = toWesternDigits(String(name || "بدون عبوة"))
-      .replace(/\s+/g, " ")
-      .trim();
-
-    const withoutTrailingPiece = cleaned.replace(/\s+(قطعة|قطع|قطعه)$/i, "");
-    const tokens = withoutTrailingPiece.split(" ").filter(Boolean);
-
-    if (
-      tokens.length === 2 &&
-      /^\d+$/.test(tokens[0]) &&
-      !/^\d+$/.test(tokens[1])
-    ) {
-      return `${tokens[1]} ${tokens[0]}`;
-    }
-
-    return withoutTrailingPiece;
-  }, []);
-
   const buildPackageBalances = useCallback(
     ({
       basePackage,
@@ -195,6 +179,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
       const variantLabels = new Map<number, string>();
       const rows = Array.isArray(variantRows) ? variantRows : [];
       const normalizedBase = normalizePackageName(basePackage);
+      const hasQuantityMap = quantityMap !== undefined;
 
       let rowsTotal = 0;
       rows.forEach((row: any) => {
@@ -209,7 +194,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
         variantLabels.set(variantId, normalizedLabel);
 
-        if (!quantityMap) {
+        if (!hasQuantityMap) {
           const qty = Number(row?.quantity || 0);
           rowsTotal += qty;
           grouped.set(
@@ -219,10 +204,10 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
         }
       });
 
-      if (quantityMap && Object.keys(quantityMap).length > 0) {
+      if (hasQuantityMap) {
         let mappedTotal = 0;
 
-        Object.entries(quantityMap).forEach(([variantId, qtyValue]) => {
+        Object.entries(quantityMap || {}).forEach(([variantId, qtyValue]) => {
           const qty = Number(qtyValue) || 0;
           const normalizedLabel =
             variantLabels.get(Number(variantId)) || normalizedBase;
@@ -235,7 +220,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
         });
 
         const hasExplicitBase =
-          Object.prototype.hasOwnProperty.call(quantityMap, "0") ||
+          Object.prototype.hasOwnProperty.call(quantityMap || {}, "0") ||
           variantLabels.has(0);
 
         if (!hasExplicitBase) {
@@ -279,7 +264,16 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
       return entries;
     },
-    [normalizePackageName],
+    [],
+  );
+
+  const getPackageStockKey = useCallback(
+    (
+      productId: number,
+      targetBranchId: number,
+      packageField: "wholesale_package" | "retail_package",
+    ) => `${productId}:${targetBranchId}:${packageField}`,
+    [],
   );
 
   useEffect(() => {
@@ -287,41 +281,95 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
     const candidates = filteredProducts.slice(0, 30);
     candidates.forEach((product) => {
-      const hasOtherVariants =
-        (otherBranchVariantsMap[product.id] || []).length > 0;
-      const hasCurrentVariants = (product.variant_stock || []).length > 0;
+      const currentVariants = Array.isArray(product.variant_stock)
+        ? product.variant_stock
+        : [];
+      const otherVariants = otherBranchVariantsMap[product.id] || currentVariants;
 
-      if (!hasOtherVariants && !hasCurrentVariants) return;
-      if (otherBranchVariantQtyMap[product.id]) return;
-      if (otherBranchQtyLoadingRef.current[product.id]) return;
+      const requests: Array<{
+        targetBranchId: number;
+        basePackage?: string | null;
+        variants?: any[];
+        packageField: "wholesale_package" | "retail_package";
+      }> = [];
 
-      otherBranchQtyLoadingRef.current[product.id] = true;
-      api
-        .get("/stock/quantity-all", {
-          params: { product_id: product.id, branch_id: otherBranchId },
-        })
-        .then((res) => {
-          setOtherBranchVariantQtyMap((prev) => ({
-            ...prev,
-            [product.id]: res.data || {},
-          }));
-        })
-        .catch(() => {
-          setOtherBranchVariantQtyMap((prev) => ({
-            ...prev,
-            [product.id]: {},
-          }));
-        })
-        .finally(() => {
-          otherBranchQtyLoadingRef.current[product.id] = false;
+      if (branchId === 2 && product.wholesale_package) {
+        requests.push({
+          targetBranchId: branchId,
+          basePackage: product.wholesale_package,
+          variants: currentVariants,
+          packageField: "wholesale_package",
         });
+      }
+
+      if (branchId === 1 && product.wholesale_package) {
+        requests.push({
+          targetBranchId: otherBranchId,
+          basePackage: product.wholesale_package,
+          variants: otherVariants,
+          packageField: "wholesale_package",
+        });
+      }
+
+      if (branchId === 2 && product.retail_package) {
+        requests.push({
+          targetBranchId: otherBranchId,
+          basePackage: product.retail_package,
+          variants: otherVariants,
+          packageField: "retail_package",
+        });
+      }
+
+      requests.forEach(
+        ({ targetBranchId, basePackage, variants, packageField }) => {
+          const key = getPackageStockKey(
+            product.id,
+            targetBranchId,
+            packageField,
+          );
+
+          if (Object.prototype.hasOwnProperty.call(packageStockMapByKey, key)) {
+            return;
+          }
+
+          if (packageStockLoadingRef.current[key]) {
+            return;
+          }
+
+          packageStockLoadingRef.current[key] = true;
+          fetchPackageStockMapFromMovements({
+            productName: product.name,
+            branchId: targetBranchId,
+            basePackage,
+            variants,
+            packageField,
+          })
+            .then((stockMap) => {
+              setPackageStockMapByKey((prev) => ({
+                ...prev,
+                [key]: stockMap,
+              }));
+            })
+            .catch(() => {
+              setPackageStockMapByKey((prev) => ({
+                ...prev,
+                [key]: {},
+              }));
+            })
+            .finally(() => {
+              packageStockLoadingRef.current[key] = false;
+            });
+        },
+      );
     });
   }, [
+    branchId,
     open,
     filteredProducts,
+    getPackageStockKey,
     otherBranchId,
     otherBranchVariantsMap,
-    otherBranchVariantQtyMap,
+    packageStockMapByKey,
   ]);
 
   /* =========================================================
@@ -465,37 +513,79 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
           ) : (
             filteredProducts.map((product, index) => {
               const outOfStock = Number(product.available_quantity) <= 0;
-              const currentWholesaleEntries = buildPackageBalances({
-                basePackage: product.wholesale_package,
-                totalQuantity: product.available_quantity,
-                variantRows: product.variant_stock,
-                labelField: "package_name",
-              });
-
+              const currentVariants = Array.isArray(product.variant_stock)
+                ? product.variant_stock
+                : [];
               const otherVariants = otherBranchVariantsMap[product.id];
-              const otherBranchVariantQty = otherBranchVariantQtyMap[product.id];
+              const currentWholesaleQuantityMap =
+                branchId === 2
+                  ? packageStockMapByKey[
+                      getPackageStockKey(
+                        product.id,
+                        branchId,
+                        "wholesale_package",
+                      )
+                    ]
+                  : undefined;
+              const otherWholesaleQuantityMap =
+                branchId === 1
+                  ? packageStockMapByKey[
+                      getPackageStockKey(
+                        product.id,
+                        otherBranchId,
+                        "wholesale_package",
+                      )
+                    ]
+                  : undefined;
+              const otherRetailQuantityMap =
+                branchId === 2
+                  ? packageStockMapByKey[
+                      getPackageStockKey(
+                        product.id,
+                        otherBranchId,
+                        "retail_package",
+                      )
+                    ]
+                  : undefined;
 
-              const otherWholesaleEntries = buildPackageBalances({
-                basePackage: product.wholesale_package,
-                totalQuantity: otherBranchQtyMap[product.id],
-                variantRows:
-                  otherVariants && otherVariants.length > 0
-                    ? otherVariants
-                    : product.variant_stock,
-                quantityMap: otherBranchVariantQty,
-                labelField: "package_name",
-              });
+              const currentWholesaleEntries =
+                currentWholesaleQuantityMap !== undefined
+                  ? buildPackageBalances({
+                      basePackage: product.wholesale_package,
+                      totalQuantity: product.available_quantity,
+                      variantRows: currentVariants,
+                      quantityMap: currentWholesaleQuantityMap,
+                      labelField: "package_name",
+                    })
+                  : [];
 
-              const otherRetailEntries = buildPackageBalances({
-                basePackage: product.retail_package,
-                totalQuantity: otherBranchQtyMap[product.id],
-                variantRows:
-                  otherVariants && otherVariants.length > 0
-                    ? otherVariants
-                    : product.variant_stock,
-                quantityMap: otherBranchVariantQty,
-                labelField: "retail_package",
-              });
+              const otherWholesaleEntries =
+                otherWholesaleQuantityMap !== undefined
+                  ? buildPackageBalances({
+                      basePackage: product.wholesale_package,
+                      totalQuantity: otherBranchQtyMap[product.id],
+                      variantRows:
+                        otherVariants && otherVariants.length > 0
+                          ? otherVariants
+                          : currentVariants,
+                      quantityMap: otherWholesaleQuantityMap,
+                      labelField: "package_name",
+                    })
+                  : [];
+
+              const otherRetailEntries =
+                otherRetailQuantityMap !== undefined
+                  ? buildPackageBalances({
+                      basePackage: product.retail_package,
+                      totalQuantity: otherBranchQtyMap[product.id],
+                      variantRows:
+                        otherVariants && otherVariants.length > 0
+                          ? otherVariants
+                          : currentVariants,
+                      quantityMap: otherRetailQuantityMap,
+                      labelField: "retail_package",
+                    })
+                  : [];
 
               return (
                 <div

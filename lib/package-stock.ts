@@ -6,6 +6,7 @@ type PackageVariant = {
   id?: number | null;
   wholesale_package?: string | null;
   retail_package?: string | null;
+  package_name?: string | null;
 };
 
 type MovementRow = {
@@ -106,7 +107,7 @@ export async function fetchPackageStockMapFromMovements({
     const packageName =
       packageField === "retail_package"
         ? variant.retail_package
-        : variant.wholesale_package;
+        : variant.wholesale_package || variant.package_name;
 
     stockMap[variantId] = Number(
       totalsByPackage.get(
