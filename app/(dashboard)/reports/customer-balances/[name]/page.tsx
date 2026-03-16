@@ -177,16 +177,14 @@ export default function CustomerDebtDetailsPage() {
           remaining_amount: Number(inv.remaining_amount || 0),
         }));
 
-      if (missingInvoices.length > 0) {
-        const merged = [...debtRows, ...missingInvoices].sort((a, b) => {
-          const dateA = a.invoice_date || "";
-          const dateB = b.invoice_date || "";
-          return dateA.localeCompare(dateB);
-        });
-        setData(merged);
-      } else {
-        setData(debtRows);
-      }
+      const allData = [...debtRows, ...missingInvoices];
+      // ترتيب دائم بالتاريخ
+      allData.sort((a, b) => {
+        const dateA = a.invoice_date || "";
+        const dateB = b.invoice_date || "";
+        return dateA.localeCompare(dateB);
+      });
+      setData(allData);
       const cashInRows = cashInRes.data?.data || cashInRes.data || [];
       const byId: Record<string, string> = {};
       const byNumber: Record<string, string> = {};
@@ -271,14 +269,23 @@ export default function CustomerDebtDetailsPage() {
   };
 
   const visibleData = useMemo(() => {
-    if (!fromDate && !toDate) return data;
-    return data.filter((row) => {
-      const dateStr = (getRowDate(row) || "").substring(0, 10);
-      if (!dateStr) return false;
-      if (fromDate && dateStr < fromDate) return false;
-      if (toDate && dateStr > toDate) return false;
-      return true;
+    let rows = [...data];
+    // ترتيب بالتاريخ الفعلي (بما في ذلك تواريخ سندات الدفع من cash-in)
+    rows.sort((a, b) => {
+      const dateA = (getRowDate(a) || "").substring(0, 10);
+      const dateB = (getRowDate(b) || "").substring(0, 10);
+      return dateA.localeCompare(dateB);
     });
+    if (fromDate || toDate) {
+      rows = rows.filter((row) => {
+        const dateStr = (getRowDate(row) || "").substring(0, 10);
+        if (!dateStr) return false;
+        if (fromDate && dateStr < fromDate) return false;
+        if (toDate && dateStr > toDate) return false;
+        return true;
+      });
+    }
+    return rows;
   }, [data, fromDate, toDate, getRowDate]);
 
   /* ========== Totals ========== */
@@ -335,6 +342,22 @@ export default function CustomerDebtDetailsPage() {
       } else {
         balance -= Number(row.paid_amount);
       }
+    }
+    return balances;
+  }, [visibleData, openingBalance]);
+
+  // الرصيد بعد كل عملية (الباقي)
+  const closingBalances = useMemo(() => {
+    const balances: number[] = [];
+    let balance = openingBalance;
+    for (let i = 0; i < visibleData.length; i++) {
+      const row = visibleData[i];
+      if (row.record_type === "invoice") {
+        balance += Number(row.total) - Number(row.paid_amount);
+      } else {
+        balance -= Number(row.paid_amount);
+      }
+      balances.push(balance);
     }
     return balances;
   }, [visibleData, openingBalance]);
@@ -518,9 +541,7 @@ export default function CustomerDebtDetailsPage() {
                             {Number(inv.paid_amount).toLocaleString()}
                           </TableCell>
                           <TableCell className="text-center">
-                            {inv.record_type === "invoice"
-                              ? Number(inv.remaining_amount).toLocaleString()
-                              : "—"}
+                            {closingBalances[idx].toLocaleString()}
                           </TableCell>
                           <TableCell className="text-center">
                             {inv.record_type === "invoice" && (
@@ -627,10 +648,8 @@ export default function CustomerDebtDetailsPage() {
                       </div>
                       <div>
                         <p className="text-muted-foreground">الباقي</p>
-                        <p className="font-medium text-red-600">
-                          {inv.record_type === "invoice"
-                            ? Number(inv.remaining_amount).toLocaleString()
-                            : "—"}
+                        <p className={`font-medium ${closingBalances[idx] > 0 ? "text-red-600" : closingBalances[idx] < 0 ? "text-green-600" : ""}`}>
+                          {closingBalances[idx].toLocaleString()}
                         </p>
                       </div>
                     </div>
