@@ -252,7 +252,9 @@ export default function InventorySummaryPage() {
           if (!productIdSet.has(productId)) continue;
 
           nextMap[`${productId}:0`] = normalizePackageName(
-            product.wholesale_package || product.retail_package || "—",
+            isShowroomUser
+              ? product.retail_package || product.wholesale_package || "—"
+              : product.wholesale_package || product.retail_package || "—",
           );
         }
 
@@ -279,7 +281,7 @@ export default function InventorySummaryPage() {
     return () => {
       cancelled = true;
     };
-  }, [filteredData]);
+  }, [filteredData, isShowroomUser]);
 
   useEffect(() => {
     const shouldRecalculate =
@@ -325,9 +327,9 @@ export default function InventorySummaryPage() {
             const warehouseName = (row.warehouse_name || "—").trim() || "—";
             const variantId = Number(row.variant_id || 0);
             const rawPkg = (row.package_name || "").trim();
-            // في القطاعي: كل الحركات في سطر واحد بدون تفريق بالعبوة
+            // في القطاعي: كل الحركات في سطر واحد لكن مع عرض عبوة القطاعي نفسها
             const packageName = isShowroomUser
-              ? "—"
+              ? packageLabelMap[`${item.product_id}:0`] || "—"
               : rawPkg
                 ? normalizePackageName(rawPkg)
                 : packageLabelMap[`${item.product_id}:${variantId}`] || "—";

@@ -280,10 +280,14 @@ function ProductMovementPageContent() {
     return d ? new Date(d).toLocaleDateString("ar-EG") : "—";
   };
 
-  const retailPackageLabel = useMemo(
-    () => normalizePackageName(selectedProduct?.retail_package),
-    [normalizePackageName, selectedProduct?.retail_package],
-  );
+  const retailPackageLabel = useMemo(() => {
+    const rawRetailPackage = String(selectedProduct?.retail_package || "").trim();
+    if (!rawRetailPackage || rawRetailPackage === "بدون عبوة") {
+      return "";
+    }
+
+    return normalizePackageName(rawRetailPackage);
+  }, [normalizePackageName, selectedProduct?.retail_package]);
 
   const forceRetailPackageView =
     Boolean(retailPackageLabel) &&
@@ -296,7 +300,10 @@ function ProductMovementPageContent() {
         return retailPackageLabel;
       }
 
-      return normalizePackageName(item?.package_name);
+      const rawPackageName = String(item?.package_name || "").trim();
+      if (!rawPackageName) return "";
+
+      return normalizePackageName(rawPackageName);
     },
     [forceRetailPackageView, retailPackageLabel, normalizePackageName],
   );
