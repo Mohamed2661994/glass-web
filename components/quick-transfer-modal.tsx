@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import api from "@/services/api";
 import { broadcastUpdate } from "@/lib/broadcast";
 import { fetchPackageStockMapFromMovements } from "@/lib/package-stock";
+import { mergeTransferPreviewRows } from "@/lib/stock-transfer-preview";
 import { highlightText } from "@/lib/highlight-text";
 import { multiWordMatch } from "@/lib/utils";
 import {
@@ -332,21 +333,10 @@ export function QuickTransferModal({
         requestPayload,
       );
 
-      const merged = (res.data || []).map((row: any) => {
-        const localItem = items.find(
-          (i) =>
-            i.product_id === row.product_id &&
-            (i.variant_id || 0) === (row.variant_id || 0),
-        );
-        return {
-          ...row,
-          quantity: localItem?.quantity ?? 0,
-          from_quantity: row.from_quantity ?? 0,
-          to_quantity: row.to_quantity ?? 0,
-          final_price: 0,
-          manufacturer: row.manufacturer ?? localItem?.manufacturer ?? "",
-        };
-      });
+      const merged = mergeTransferPreviewRows(
+        Array.isArray(res.data) ? res.data : [],
+        items,
+      );
 
       setPreviewItems(merged);
       setPayload(requestPayload);

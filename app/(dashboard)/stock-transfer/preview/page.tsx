@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/services/api";
 import { broadcastUpdate } from "@/lib/broadcast";
+import { mergeTransferPreviewRows } from "@/lib/stock-transfer-preview";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,6 +53,7 @@ export default function StockTransferPreviewPage() {
     }
 
     const parsedPayload = JSON.parse(raw);
+    const parsedStoredItems = rawItems ? JSON.parse(rawItems) : [];
     setPayload(parsedPayload);
     setTotalAmount(parsedPayload.total_amount ?? 0);
 
@@ -62,21 +64,25 @@ export default function StockTransferPreviewPage() {
           parsedPayload,
         );
 
-        const merged = res.data.map((row: any) => {
-          const localItem = parsedPayload.items.find(
-            (i: any) =>
-              i.product_id === row.product_id &&
-              (i.variant_id || 0) === (row.variant_id || 0),
-          );
-          return {
-            ...row,
-            quantity: localItem?.quantity ?? 0,
-            from_quantity: row.from_quantity ?? 0,
-            to_quantity: row.to_quantity ?? 0,
-            final_price: localItem?.final_price ?? 0,
-            manufacturer: row.manufacturer ?? "",
-          };
-        });
+        const selectedItems = Array.isArray(parsedStoredItems)
+          ? parsedStoredItems.map((item: any) => {
+              const payloadItem = (parsedPayload.items || []).find(
+                (payloadRow: any) =>
+                  payloadRow.product_id === item.product_id &&
+                  (payloadRow.variant_id || 0) === (item.variant_id || 0),
+              );
+
+              return {
+                ...item,
+                final_price: Number(payloadItem?.final_price ?? 0),
+              };
+            })
+          : [];
+
+        const merged = mergeTransferPreviewRows(
+          Array.isArray(res.data) ? res.data : [],
+          selectedItems,
+        );
 
         setItems(merged);
       } catch {
