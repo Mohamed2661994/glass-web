@@ -140,6 +140,7 @@ export default function CustomerDebtDetailsPage() {
         api.get("/invoices", {
           params: {
             customer_name: customerName,
+            invoice_type: user?.branch_id === 1 ? "retail" : "wholesale",
             limit: 10000,
           },
         }),
