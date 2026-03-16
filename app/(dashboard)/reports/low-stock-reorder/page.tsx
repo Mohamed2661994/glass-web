@@ -22,6 +22,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  prefetchResolvedProductQuantities,
+} from "@/lib/package-stock";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Loader2, Search, ShoppingCart, Plus, Trash2 } from "lucide-react";
@@ -95,23 +98,78 @@ export default function LowStockReorderPage() {
         : [];
       setData(lowItems);
 
+      const relevantProductIds = Array.from(
+        new Set(lowItems.map((item) => Number(item.product_id)).filter(Boolean)),
+      );
+
       const retailProducts: any[] = Array.isArray(retailProductsRes.data)
         ? retailProductsRes.data
         : [];
-      const retailMap: Record<number, number> = {};
-      for (const item of retailProducts) {
-        retailMap[Number(item.id)] = Number(item.available_quantity) || 0;
-      }
-      setRetailStock(retailMap);
 
-      // Build wholesale stock map from aggregated /products endpoint (same as lookup modal)
       const wsItems: any[] = Array.isArray(wholesaleProductsRes.data)
         ? wholesaleProductsRes.data
         : [];
-      const wsMap: Record<number, number> = {};
-      for (const item of wsItems) {
-        wsMap[Number(item.id)] = Number(item.available_quantity) || 0;
+
+      const productIdsParam = relevantProductIds.join(",");
+      const variantsRes = productIdsParam
+        ? await api
+            .get("/products/variants", {
+              params: { product_ids: productIdsParam },
+            })
+            .catch(() => ({ data: [] }))
+        : { data: [] };
+
+      const variantsByProduct: Record<number, any[]> = {};
+      for (const variant of Array.isArray(variantsRes.data)
+        ? variantsRes.data
+        : []) {
+        const productId = Number(variant.product_id);
+        if (!productId) continue;
+        if (!variantsByProduct[productId]) {
+          variantsByProduct[productId] = [];
+        }
+        variantsByProduct[productId].push(variant);
       }
+
+      const retailById = new Map<number, any>(
+        retailProducts.map((item) => [Number(item.id), item]),
+      );
+      const wholesaleById = new Map<number, any>(
+        wsItems.map((item) => [Number(item.id), item]),
+      );
+
+      const retailCandidates = relevantProductIds
+        .map((productId) => retailById.get(productId))
+        .filter(Boolean);
+      const wholesaleCandidates = relevantProductIds
+        .map((productId) => wholesaleById.get(productId))
+        .filter(Boolean);
+
+      const [retailEntries, wholesaleEntries] = await Promise.all([
+        prefetchResolvedProductQuantities({
+          products: retailCandidates,
+          branchId: 1,
+          variantsMap: variantsByProduct,
+          packageField: "retail_package",
+          maxConcurrency: 6,
+        }),
+        prefetchResolvedProductQuantities({
+          products: wholesaleCandidates,
+          branchId: 2,
+          variantsMap: variantsByProduct,
+          packageField: "wholesale_package",
+          maxConcurrency: 6,
+        }),
+      ]);
+
+      const retailMap = Object.fromEntries(
+        retailEntries.map(({ productId, quantity }) => [productId, quantity]),
+      );
+      const wsMap = Object.fromEntries(
+        wholesaleEntries.map(({ productId, quantity }) => [productId, quantity]),
+      );
+
+      setRetailStock(retailMap);
       setWholesaleStock(wsMap);
     } catch {
       setData([]);

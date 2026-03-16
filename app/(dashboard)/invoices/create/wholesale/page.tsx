@@ -37,7 +37,6 @@ import { QuickTransferModal } from "@/components/quick-transfer-modal";
 import { useCachedProducts } from "@/hooks/use-cached-products";
 import { highlightText } from "@/lib/highlight-text";
 import {
-  fetchResolvedProductQuantity,
   fetchPackageStockMapFromMovements,
   getPackageVariantId,
 } from "@/lib/package-stock";
@@ -82,11 +81,6 @@ import { InvoicePreviewDialog } from "@/components/invoice-preview-dialog";
    ========================================================= */
 
 export default function CreateWholesaleInvoicePage() {
-  type ResolvedStockProduct = {
-    id?: number | string | null;
-    available_quantity?: number | string | null;
-  };
-
   const { user } = useAuth();
   const isRetailUser = user?.branch_id === 1;
 
@@ -328,6 +322,8 @@ export default function CreateWholesaleInvoicePage() {
     loading: loadingProducts,
     refresh: refreshProducts,
     refreshSilently: refreshProductsSilently,
+    getResolvedAvailableQuantity,
+    ensureResolvedAvailableQuantities,
   } = useCachedProducts({
     endpoint: "/products",
     params: {
@@ -338,35 +334,6 @@ export default function CreateWholesaleInvoicePage() {
     fetchVariants: true,
     cacheKey: `wholesale_${movementType}`,
   });
-
-  const [resolvedAvailableQtyById, setResolvedAvailableQtyById] = useState<
-    Record<number, number>
-  >({});
-  const resolvingAvailableQtyRef = useRef<Record<number, boolean>>({});
-
-  const productById = useMemo(() => {
-    const map: Record<number, ResolvedStockProduct> = {};
-    products.forEach((product) => {
-      map[Number(product.id)] = product as ResolvedStockProduct;
-    });
-    return map;
-  }, [products]);
-
-  const getResolvedAvailableQuantity = useCallback(
-    (productOrId: number | ResolvedStockProduct | null | undefined) => {
-      const productId =
-        typeof productOrId === "number"
-          ? productOrId
-          : Number(productOrId?.id || 0);
-      const fallbackQuantity =
-        typeof productOrId === "object" && productOrId
-          ? Number(productOrId.available_quantity) || 0
-          : Number(productById[productId]?.available_quantity) || 0;
-
-      return Number(resolvedAvailableQtyById[productId] ?? fallbackQuantity);
-    },
-    [productById, resolvedAvailableQtyById],
-  );
 
   // Fetch stock when package picker opens
   useEffect(() => {
@@ -902,8 +869,6 @@ export default function CreateWholesaleInvoicePage() {
      ========================================================= */
   useEffect(() => {
     if (showProductModal) {
-      setResolvedAvailableQtyById({});
-      resolvingAvailableQtyRef.current = {};
       refreshProductsSilently();
     }
   }, [showProductModal, refreshProductsSilently]);
@@ -1015,52 +980,8 @@ export default function CreateWholesaleInvoicePage() {
   useEffect(() => {
     if (!showProductModal) return;
 
-    displayedProducts.forEach((product) => {
-      if (
-        Object.prototype.hasOwnProperty.call(
-          resolvedAvailableQtyById,
-          product.id,
-        )
-      ) {
-        return;
-      }
-
-      if (resolvingAvailableQtyRef.current[product.id]) {
-        return;
-      }
-
-      resolvingAvailableQtyRef.current[product.id] = true;
-      fetchResolvedProductQuantity({
-        productId: product.id,
-        productName: product.name,
-        branchId: 2,
-        fallbackQuantity: product.available_quantity,
-        basePackage: product.wholesale_package,
-        variants: variantsMap[product.id] || [],
-        packageField: "wholesale_package",
-      })
-        .then((quantity) => {
-          setResolvedAvailableQtyById((prev) => ({
-            ...prev,
-            [product.id]: quantity,
-          }));
-        })
-        .catch(() => {
-          setResolvedAvailableQtyById((prev) => ({
-            ...prev,
-            [product.id]: Number(product.available_quantity) || 0,
-          }));
-        })
-        .finally(() => {
-          resolvingAvailableQtyRef.current[product.id] = false;
-        });
-    });
-  }, [
-    displayedProducts,
-    resolvedAvailableQtyById,
-    showProductModal,
-    variantsMap,
-  ]);
+    ensureResolvedAvailableQuantities(displayedProducts);
+  }, [displayedProducts, ensureResolvedAvailableQuantities, showProductModal]);
 
   /* =========================================================
      Handle search keydown (Enter & arrows)
@@ -1563,12 +1484,9 @@ export default function CreateWholesaleInvoicePage() {
                             }
                           />
                           {(() => {
-                            const prod = products.find(
-                              (pr: any) => pr.id === item.product_id,
-                            );
-                            const avail = prod
-                              ? Number(prod.available_quantity)
-                              : null;
+                              const avail = getResolvedAvailableQuantity(
+                                item.product_id,
+                              );
                             return avail !== null &&
                               Number(item.quantity) > avail ? (
                               <div className="text-[11px] text-red-500 mt-1">
@@ -1870,12 +1788,9 @@ export default function CreateWholesaleInvoicePage() {
                           }
                         />
                         {(() => {
-                          const prod = products.find(
-                            (pr: any) => pr.id === item.product_id,
+                          const avail = getResolvedAvailableQuantity(
+                            item.product_id,
                           );
-                          const avail = prod
-                            ? Number(prod.available_quantity)
-                            : null;
                           return avail !== null &&
                             Number(item.quantity) > avail ? (
                             <div className="text-[11px] text-red-500">

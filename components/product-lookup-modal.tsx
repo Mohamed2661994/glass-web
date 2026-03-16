@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useCachedProducts } from "@/hooks/use-cached-products";
 import { highlightText } from "@/lib/highlight-text";
 import {
-  fetchMovementBalances,
+  prefetchMovementBalances,
   type MovementBalanceEntry,
 } from "@/lib/package-stock";
 import { multiWordMatch, multiWordScore } from "@/lib/utils";
@@ -38,7 +38,13 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
   /* =========================================================
      Fetch products (Cached — localStorage + auto-refresh)
      ========================================================= */
-  const { products, loading, refresh } = useCachedProducts({
+  const {
+    products,
+    loading,
+    refresh,
+    getResolvedAvailableQuantity,
+    ensureResolvedAvailableQuantities,
+  } = useCachedProducts({
     endpoint: "/products",
     params: {
       branch_id: branchId,
@@ -52,6 +58,8 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     products: otherBranchProducts,
     loading: otherLoading,
     refresh: refreshOther,
+    getResolvedAvailableQuantity: getOtherBranchResolvedAvailableQuantity,
+    ensureResolvedAvailableQuantities: ensureOtherBranchResolvedAvailableQuantities,
   } = useCachedProducts({
     endpoint: "/products",
     params: {
@@ -66,10 +74,10 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
   const otherBranchQtyMap = useMemo(() => {
     const map: Record<number, number> = {};
     otherBranchProducts.forEach((p) => {
-      map[p.id] = Number(p.available_quantity) || 0;
+      map[p.id] = getOtherBranchResolvedAvailableQuantity(p);
     });
     return map;
-  }, [otherBranchProducts]);
+  }, [getOtherBranchResolvedAvailableQuantity, otherBranchProducts]);
 
   const [movementBalancesByKey, setMovementBalancesByKey] = useState<
     Record<string, { entries: MovementBalanceEntry[]; total: number }>
@@ -98,6 +106,31 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
       setRefreshing(false);
     }
   };
+
+  const getBalanceKey = useCallback(
+    (productId: number, targetBranchId: number) =>
+      `${productId}:${targetBranchId}`,
+    [],
+  );
+
+  const getDisplayQuantity = useCallback(
+    (product: any, targetBranchId: number) => {
+      const balance = movementBalancesByKey[
+        getBalanceKey(product.id, targetBranchId)
+      ];
+
+      if (balance !== undefined) {
+        return Number(balance.total) || 0;
+      }
+
+      if (targetBranchId === branchId) {
+        return getResolvedAvailableQuantity(product);
+      }
+
+      return Number(otherBranchQtyMap[product.id]) || 0;
+    },
+    [branchId, getBalanceKey, movementBalancesByKey, otherBranchQtyMap],
+  );
 
   /* =========================================================
      Filtered products
@@ -142,25 +175,34 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
         );
         if (scoreA !== scoreB) return scoreB - scoreA;
       }
-      const aInStock = Number(a.available_quantity) > 0 ? 1 : 0;
-      const bInStock = Number(b.available_quantity) > 0 ? 1 : 0;
+      const aInStock = getDisplayQuantity(a, branchId) > 0 ? 1 : 0;
+      const bInStock = getDisplayQuantity(b, branchId) > 0 ? 1 : 0;
       if (aInStock !== bInStock) return bInStock - aInStock;
       return String(a.name || "").localeCompare(String(b.name || ""), "ar");
     });
-  }, [products, search]);
-
-  const getBalanceKey = useCallback(
-    (productId: number, targetBranchId: number) =>
-      `${productId}:${targetBranchId}`,
-    [],
-  );
+  }, [branchId, getDisplayQuantity, products, search]);
 
   useEffect(() => {
     if (!open) return;
 
     const candidates = filteredProducts.slice(0, 30);
+    ensureResolvedAvailableQuantities(candidates);
+    ensureOtherBranchResolvedAvailableQuantities(candidates.map((product) => product.id));
+  }, [
+    ensureOtherBranchResolvedAvailableQuantities,
+    ensureResolvedAvailableQuantities,
+    filteredProducts,
+    open,
+  ]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const candidates = filteredProducts.slice(0, 30);
+    const branches = [branchId, otherBranchId];
+    const pendingKeys: string[] = [];
+
     candidates.forEach((product) => {
-      const branches = [branchId, otherBranchId];
       branches.forEach((targetBranchId) => {
         const key = getBalanceKey(product.id, targetBranchId);
         if (
@@ -169,27 +211,67 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
         ) {
           return;
         }
+
         balanceLoadingRef.current[key] = true;
-        fetchMovementBalances({
-          productName: product.name,
-          branchId: targetBranchId,
-          retailPackage: product.retail_package,
-          wholesalePackage: product.wholesale_package,
-        })
-          .then((result) => {
-            setMovementBalancesByKey((prev) => ({ ...prev, [key]: result }));
-          })
-          .catch(() => {
-            setMovementBalancesByKey((prev) => ({
-              ...prev,
-              [key]: { entries: [], total: 0 },
-            }));
-          })
-          .finally(() => {
-            balanceLoadingRef.current[key] = false;
-          });
+        pendingKeys.push(key);
       });
     });
+
+    if (pendingKeys.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void prefetchMovementBalances({
+      products: candidates,
+      branchIds: branches,
+      maxConcurrency: 6,
+      shouldSkip: (productId, targetBranchId) => {
+        const key = getBalanceKey(productId, targetBranchId);
+        return !pendingKeys.includes(key);
+      },
+    })
+      .then((results) => {
+        if (cancelled || results.length === 0) {
+          return;
+        }
+
+        setMovementBalancesByKey((prev) => {
+          const next = { ...prev };
+          results.forEach(({ productId, branchId: targetBranchId, result }) => {
+            next[getBalanceKey(productId, targetBranchId)] = result;
+          });
+          return next;
+        });
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+
+        setMovementBalancesByKey((prev) => {
+          const next = { ...prev };
+          pendingKeys.forEach((key) => {
+            if (!Object.prototype.hasOwnProperty.call(next, key)) {
+              next[key] = { entries: [], total: 0 };
+            }
+          });
+          return next;
+        });
+      })
+      .finally(() => {
+        pendingKeys.forEach((key) => {
+          balanceLoadingRef.current[key] = false;
+        });
+      });
+
+    return () => {
+      cancelled = true;
+      pendingKeys.forEach((key) => {
+        balanceLoadingRef.current[key] = false;
+      });
+    };
   }, [
     branchId,
     open,
@@ -207,14 +289,14 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     (startIndex: number, direction: 1 | -1): number => {
       let idx = startIndex + direction;
       while (idx >= 0 && idx < filteredProducts.length) {
-        if (Number(filteredProducts[idx].available_quantity) > 0) {
+        if (getDisplayQuantity(filteredProducts[idx], branchId) > 0) {
           return idx;
         }
         idx += direction;
       }
       return -1;
     },
-    [filteredProducts],
+    [branchId, filteredProducts, getDisplayQuantity],
   );
 
   const handleSearchKeyDown = useCallback(
@@ -223,7 +305,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
         e.preventDefault();
         // Find first in-stock product
         const firstAvailable = filteredProducts.findIndex(
-          (p) => Number(p.available_quantity) > 0,
+          (p) => getDisplayQuantity(p, branchId) > 0,
         );
         if (firstAvailable !== -1) {
           setFocusedIndex(firstAvailable);
@@ -236,7 +318,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
         }
       }
     },
-    [filteredProducts],
+    [branchId, filteredProducts, getDisplayQuantity],
   );
 
   const handleListKeyDown = useCallback(
@@ -345,16 +427,16 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                 movementBalancesByKey[getBalanceKey(product.id, otherBranchId)];
 
               const currentBranchEntries = currentBalance?.entries ?? [];
-              const currentBranchDisplayQuantity =
-                currentBalance !== undefined
-                  ? currentBalance.total
-                  : Number(product.available_quantity) || 0;
+              const currentBranchDisplayQuantity = getDisplayQuantity(
+                product,
+                branchId,
+              );
 
               const otherEntries = otherBalance?.entries ?? [];
-              const otherDisplayQuantity =
-                otherBalance !== undefined
-                  ? otherBalance.total
-                  : Number(otherBranchQtyMap[product.id]) || 0;
+              const otherDisplayQuantity = getDisplayQuantity(
+                product,
+                otherBranchId,
+              );
 
               const outOfStock = currentBranchDisplayQuantity <= 0;
 

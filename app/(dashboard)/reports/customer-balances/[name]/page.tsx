@@ -516,9 +516,9 @@ export default function CustomerDebtDetailsPage() {
                           </TableCell>
                           <TableCell className="text-center font-medium">
                             {inv.record_type === "invoice"
-                              ? (prevInvoiceRemaining[idx] === 0
+                              ? prevInvoiceRemaining[idx] === 0
                                 ? "—"
-                                : prevInvoiceRemaining[idx].toLocaleString())
+                                : prevInvoiceRemaining[idx].toLocaleString()
                               : "—"}
                           </TableCell>
                           <TableCell className="text-center">
@@ -616,9 +616,9 @@ export default function CustomerDebtDetailsPage() {
                         <p className="text-muted-foreground">الحساب السابق</p>
                         <p className="font-medium">
                           {inv.record_type === "invoice"
-                            ? (prevInvoiceRemaining[idx] === 0
+                            ? prevInvoiceRemaining[idx] === 0
                               ? "—"
-                              : prevInvoiceRemaining[idx].toLocaleString())
+                              : prevInvoiceRemaining[idx].toLocaleString()
                             : "—"}
                         </p>
                       </div>

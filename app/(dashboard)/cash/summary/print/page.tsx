@@ -132,7 +132,9 @@ function CashSummaryPrintInner() {
 
   const [cashIn, setCashIn] = useState<CashInItem[]>([]);
   const [cashOut, setCashOut] = useState<CashOutItem[]>([]);
-  const [marketCustomerKeys, setMarketCustomerKeys] = useState<Set<string>>(new Set());
+  const [marketCustomerKeys, setMarketCustomerKeys] = useState<Set<string>>(
+    new Set(),
+  );
   const [loading, setLoading] = useState(true);
 
   const isMarketCustomerEntry = useCallback(
@@ -159,8 +161,10 @@ function CashSummaryPrintInner() {
           const rawNotes = item.notes ?? item.description ?? "";
           return !String(rawNotes || "").includes(DISCOUNT_DIFF_MARKER);
         });
-        const marketCustomers: { name: string; is_market_customer?: boolean }[] =
-          Array.isArray(customersRes.data) ? customersRes.data : [];
+        const marketCustomers: {
+          name: string;
+          is_market_customer?: boolean;
+        }[] = Array.isArray(customersRes.data) ? customersRes.data : [];
         setCashIn(visibleCashIn);
         setCashOut(outRes.data.data || []);
         setMarketCustomerKeys(

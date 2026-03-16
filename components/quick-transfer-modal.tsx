@@ -6,8 +6,10 @@ import { broadcastUpdate } from "@/lib/broadcast";
 import {
   buildPackagePickerOptions,
   fetchPackageStockMapFromMovements,
+  fetchResolvedProductQuantity,
   mergePackageVariants,
   normalizePackageName,
+  prefetchResolvedProductQuantities,
   type PackageVariant,
 } from "@/lib/package-stock";
 import { mergeTransferPreviewRows } from "@/lib/stock-transfer-preview";
@@ -99,7 +101,82 @@ export function QuickTransferModal({
   >({});
   const [loadingPackageStockForProductId, setLoadingPackageStockForProductId] =
     useState<number | null>(null);
+  const [resolvedAvailableQtyById, setResolvedAvailableQtyById] = useState<
+    Record<number, number>
+  >({});
+  const resolvingAvailableQtyRef = useRef<Record<number, boolean>>({});
   const searchRef = useRef<HTMLInputElement>(null);
+
+  const productById = useMemo(() => {
+    const map: Record<number, WholesaleProduct> = {};
+    products.forEach((product) => {
+      map[Number(product.id)] = product;
+    });
+    return map;
+  }, [products]);
+
+  const getResolvedAvailableQuantity = useCallback(
+    (productOrId: number | WholesaleProduct | null | undefined) => {
+      const productId =
+        typeof productOrId === "number"
+          ? productOrId
+          : Number(productOrId?.id || 0);
+      const fallbackQuantity =
+        typeof productOrId === "object" && productOrId
+          ? Number(productOrId.available_quantity) || 0
+          : Number(productById[productId]?.available_quantity) || 0;
+
+      return Number(resolvedAvailableQtyById[productId] ?? fallbackQuantity);
+    },
+    [productById, resolvedAvailableQtyById],
+  );
+
+  const resolveAvailableQuantity = useCallback(
+    async (product: WholesaleProduct) => {
+      if (
+        Object.prototype.hasOwnProperty.call(resolvedAvailableQtyById, product.id)
+      ) {
+        return Number(resolvedAvailableQtyById[product.id] ?? 0);
+      }
+
+      if (resolvingAvailableQtyRef.current[product.id]) {
+        return Number(product.available_quantity) || 0;
+      }
+
+      resolvingAvailableQtyRef.current[product.id] = true;
+      try {
+        const quantity = await fetchResolvedProductQuantity({
+          productId: product.id,
+          productName: product.name,
+          branchId: FROM_BRANCH_ID,
+          fallbackQuantity: product.available_quantity,
+          basePackage: product.wholesale_package,
+          variants: mergePackageVariants(
+            Array.isArray(product.variant_stock) ? product.variant_stock : [],
+            variantsMap[product.id] || [],
+          ),
+          packageField: "wholesale_package",
+        });
+
+        setResolvedAvailableQtyById((prev) => ({
+          ...prev,
+          [product.id]: quantity,
+        }));
+
+        return quantity;
+      } catch {
+        const fallbackQuantity = Number(product.available_quantity) || 0;
+        setResolvedAvailableQtyById((prev) => ({
+          ...prev,
+          [product.id]: fallbackQuantity,
+        }));
+        return fallbackQuantity;
+      } finally {
+        resolvingAvailableQtyRef.current[product.id] = false;
+      }
+    },
+    [FROM_BRANCH_ID, resolvedAvailableQtyById, variantsMap],
+  );
 
   /* --- Load products when modal opens --- */
   useEffect(() => {
@@ -112,6 +189,8 @@ export function QuickTransferModal({
     setPackagePickerProduct(null);
     setPackageStockByProduct({});
     setLoadingPackageStockForProductId(null);
+    setResolvedAvailableQtyById({});
+    resolvingAvailableQtyRef.current = {};
     setPreviewItems([]);
     setPayload(null);
 
@@ -165,9 +244,126 @@ export function QuickTransferModal({
   /* --- Filtered products --- */
   const filtered = products.filter(
     (p) =>
-      p.available_quantity > 0 &&
+      getResolvedAvailableQuantity(p) > 0 &&
       multiWordMatch(search, String(p.id), p.name, p.manufacturer),
   );
+
+  const displayedProducts = useMemo(() => filtered.slice(0, 50), [filtered]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const pendingProducts = displayedProducts.filter((product) => {
+      if (Object.prototype.hasOwnProperty.call(resolvedAvailableQtyById, product.id)) {
+        return false;
+      }
+
+      if (resolvingAvailableQtyRef.current[product.id]) {
+        return false;
+      }
+
+      resolvingAvailableQtyRef.current[product.id] = true;
+      return true;
+    });
+
+    if (pendingProducts.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void prefetchResolvedProductQuantities({
+      products: pendingProducts,
+      branchId: FROM_BRANCH_ID,
+      variantsMap,
+      packageField: "wholesale_package",
+      maxConcurrency: 4,
+    })
+      .then((results) => {
+        if (cancelled || results.length === 0) {
+          return;
+        }
+
+        setResolvedAvailableQtyById((prev) => ({
+          ...prev,
+          ...Object.fromEntries(
+            results.map(({ productId, quantity }) => [productId, quantity]),
+          ),
+        }));
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+
+        setResolvedAvailableQtyById((prev) => ({
+          ...prev,
+          ...Object.fromEntries(
+            pendingProducts.map((product) => [
+              product.id,
+              Number(product.available_quantity) || 0,
+            ]),
+          ),
+        }));
+      })
+      .finally(() => {
+        pendingProducts.forEach((product) => {
+          resolvingAvailableQtyRef.current[product.id] = false;
+        });
+      });
+
+    return () => {
+      cancelled = true;
+      pendingProducts.forEach((product) => {
+        resolvingAvailableQtyRef.current[product.id] = false;
+      });
+    };
+  }, [
+    FROM_BRANCH_ID,
+    displayedProducts,
+    open,
+    resolvedAvailableQtyById,
+    variantsMap,
+  ]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    items.forEach((item) => {
+      if (item.variant_id !== 0) return;
+      const product = productById[item.product_id];
+      if (!product) return;
+      void resolveAvailableQuantity(product);
+    });
+  }, [items, open, productById, resolveAvailableQuantity]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    setItems((prev) => {
+      let changed = false;
+
+      const next = prev.map((item) => {
+        if (item.variant_id !== 0) return item;
+
+        const resolvedQuantity = resolvedAvailableQtyById[item.product_id];
+        if (
+          resolvedQuantity === undefined ||
+          Number(item.available_quantity) === Number(resolvedQuantity)
+        ) {
+          return item;
+        }
+
+        changed = true;
+        return {
+          ...item,
+          available_quantity: resolvedQuantity,
+        };
+      });
+
+      return changed ? next : prev;
+    });
+  }, [open, resolvedAvailableQtyById]);
 
   const loadPackageStocks = useCallback(
     async (productId: number) => {
@@ -265,7 +461,7 @@ export function QuickTransferModal({
 
     return buildPackagePickerOptions({
       basePackage: packagePickerProduct.wholesale_package,
-      totalQuantity: packagePickerProduct.available_quantity,
+      totalQuantity: getResolvedAvailableQuantity(packagePickerProduct),
       variants: getProductPackageVariants(packagePickerProduct),
       quantityMap: packageStockByProduct[packagePickerProduct.id],
       packageField: "wholesale_package",
@@ -278,20 +474,22 @@ export function QuickTransferModal({
   }, [getProductPackageVariants, packagePickerProduct, packageStockByProduct]);
 
   /* --- Add product --- */
-  const addProduct = (product: WholesaleProduct) => {
+  const addProduct = async (product: WholesaleProduct) => {
     const variants = getProductPackageVariants(product);
     if (variants && variants.length > 0) {
       setPackagePickerProduct(product);
       void loadPackageStocks(product.id);
       return;
     }
+
+    const availableQty = await resolveAvailableQuantity(product);
     finalizeAdd(
       product,
       product.wholesale_package,
       product.wholesale_price,
       0,
       product.retail_package,
-      product.available_quantity,
+      availableQty,
     );
   };
 
@@ -301,13 +499,17 @@ export function QuickTransferModal({
     price: number,
     variantId: number = 0,
     retailPkg?: string,
-    availableQty: number = Number(product.available_quantity) || 0,
+    availableQty?: number,
   ) => {
     const uid = `${product.id}_${variantId}`;
     if (items.find((i) => i.uid === uid)) {
       toast.warning("الصنف مضاف بالفعل");
       return;
     }
+
+    const resolvedAvailableQty =
+      availableQty ?? getResolvedAvailableQuantity(product);
+
     setItems((prev) => [
       ...prev,
       {
@@ -320,7 +522,7 @@ export function QuickTransferModal({
         wholesale_package: pkg,
         retail_package: retailPkg || product.retail_package,
         wholesale_price: price,
-        available_quantity: availableQty,
+        available_quantity: resolvedAvailableQty,
       },
     ]);
     setPackagePickerProduct(null);
@@ -545,7 +747,7 @@ export function QuickTransferModal({
                   {search ? "لا توجد نتائج" : "لا توجد أصناف متاحة بالمخزن"}
                 </div>
               ) : (
-                filtered.map((p) => {
+                displayedProducts.map((p) => {
                   const isAdded = items.some(
                     (i) => i.product_id === p.id && i.variant_id === 0,
                   );
@@ -577,7 +779,7 @@ export function QuickTransferModal({
                       <div className="text-xs text-muted-foreground mt-0.5">
                         {p.wholesale_package} • رصيد:{" "}
                         <span className="font-medium">
-                          {p.available_quantity}
+                          {getResolvedAvailableQuantity(p)}
                         </span>
                       </div>
                     </button>
@@ -724,7 +926,7 @@ export function QuickTransferModal({
                   const availableQty = getPackageAvailableQuantity(
                     packagePickerProduct.id,
                     0,
-                    packagePickerProduct.available_quantity,
+                    getResolvedAvailableQuantity(packagePickerProduct),
                   );
                   const disabled = availableQty <= 0;
 

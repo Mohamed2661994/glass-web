@@ -6,8 +6,10 @@ import { highlightText } from "@/lib/highlight-text";
 import {
   buildPackagePickerOptions,
   fetchPackageStockMapFromMovements,
+  fetchResolvedProductQuantity,
   mergePackageVariants,
   normalizePackageName,
+  prefetchResolvedProductQuantities,
   type PackageVariant,
 } from "@/lib/package-stock";
 import { multiWordMatch } from "@/lib/utils";
@@ -80,9 +82,85 @@ export default function StockTransferPage() {
   const [mfgPercentMap, setMfgPercentMap] = useState<Record<string, number>>(
     {},
   );
+  const [pendingReorderIds, setPendingReorderIds] = useState<number[]>([]);
+  const [resolvedAvailableQtyById, setResolvedAvailableQtyById] = useState<
+    Record<number, number>
+  >({});
+  const resolvingAvailableQtyRef = useRef<Record<number, boolean>>({});
 
   const FROM_BRANCH_ID = 2;
   const TO_BRANCH_ID = 1;
+
+  const productById = useMemo(() => {
+    const map: Record<number, Product> = {};
+    products.forEach((product) => {
+      map[Number(product.id)] = product;
+    });
+    return map;
+  }, [products]);
+
+  const getResolvedAvailableQuantity = useCallback(
+    (productOrId: number | Product | null | undefined) => {
+      const productId =
+        typeof productOrId === "number"
+          ? productOrId
+          : Number(productOrId?.id || 0);
+      const fallbackQuantity =
+        typeof productOrId === "object" && productOrId
+          ? Number(productOrId.available_quantity) || 0
+          : Number(productById[productId]?.available_quantity) || 0;
+
+      return Number(resolvedAvailableQtyById[productId] ?? fallbackQuantity);
+    },
+    [productById, resolvedAvailableQtyById],
+  );
+
+  const resolveAvailableQuantity = useCallback(
+    async (product: Product) => {
+      if (
+        Object.prototype.hasOwnProperty.call(resolvedAvailableQtyById, product.id)
+      ) {
+        return Number(resolvedAvailableQtyById[product.id] ?? 0);
+      }
+
+      if (resolvingAvailableQtyRef.current[product.id]) {
+        return Number(product.available_quantity) || 0;
+      }
+
+      resolvingAvailableQtyRef.current[product.id] = true;
+      try {
+        const quantity = await fetchResolvedProductQuantity({
+          productId: product.id,
+          productName: product.name,
+          branchId: FROM_BRANCH_ID,
+          fallbackQuantity: product.available_quantity,
+          basePackage: product.wholesale_package,
+          variants: mergePackageVariants(
+            Array.isArray(product.variant_stock) ? product.variant_stock : [],
+            variantsMap[product.id] || [],
+          ),
+          packageField: "wholesale_package",
+        });
+
+        setResolvedAvailableQtyById((prev) => ({
+          ...prev,
+          [product.id]: quantity,
+        }));
+
+        return quantity;
+      } catch {
+        const fallbackQuantity = Number(product.available_quantity) || 0;
+        setResolvedAvailableQtyById((prev) => ({
+          ...prev,
+          [product.id]: fallbackQuantity,
+        }));
+        return fallbackQuantity;
+      } finally {
+        resolvingAvailableQtyRef.current[product.id] = false;
+      }
+    },
+    [FROM_BRANCH_ID, resolvedAvailableQtyById, variantsMap],
+  );
 
   /* ========== Load Products ========== */
   useEffect(() => {
@@ -97,6 +175,8 @@ export default function StockTransferPage() {
 
         const prods = Array.isArray(productsRes.data) ? productsRes.data : [];
         setProducts(prods);
+        setResolvedAvailableQtyById({});
+        resolvingAvailableQtyRef.current = {};
 
         // بناء خريطة نسب المصانع
         const pMap: Record<string, number> = {};
@@ -130,32 +210,7 @@ export default function StockTransferPage() {
             sessionStorage.removeItem("reorder_product_ids");
             const reorderIds: number[] = JSON.parse(reorderRaw);
             if (reorderIds.length > 0) {
-              const autoItems: TransferItem[] = [];
-              for (const pid of reorderIds) {
-                const product = prods.find((p: Product) => p.id === pid);
-                if (product && product.available_quantity > 0) {
-                  const uid = `${product.id}_0`;
-                  const pct = pMap[product.manufacturer] || 0;
-                  autoItems.push({
-                    uid,
-                    product_id: product.id,
-                    variant_id: 0,
-                    product_name: product.name,
-                    manufacturer: product.manufacturer,
-                    quantity: 1,
-                    percent: pct,
-                    price_addition: pct ? 0 : 5,
-                    wholesale_package: product.wholesale_package,
-                    retail_package: product.retail_package,
-                    wholesale_price: product.wholesale_price,
-                    available_quantity: product.available_quantity,
-                  });
-                }
-              }
-              if (autoItems.length > 0) {
-                setItems(autoItems);
-                toast.success(`تم إضافة ${autoItems.length} صنف تلقائياً`);
-              }
+              setPendingReorderIds(reorderIds);
             }
           }
         } catch {
@@ -172,10 +227,161 @@ export default function StockTransferPage() {
   /* ========== Filter ========== */
   const filtered = products.filter((p) => {
     return (
-      p.available_quantity > 0 &&
+      getResolvedAvailableQuantity(p) > 0 &&
       multiWordMatch(search, String(p.id), p.name, p.manufacturer)
     );
   });
+
+  const displayedProducts = useMemo(() => filtered.slice(0, 50), [filtered]);
+
+  useEffect(() => {
+    const pendingProducts = displayedProducts.filter((product) => {
+      if (Object.prototype.hasOwnProperty.call(resolvedAvailableQtyById, product.id)) {
+        return false;
+      }
+
+      if (resolvingAvailableQtyRef.current[product.id]) {
+        return false;
+      }
+
+      resolvingAvailableQtyRef.current[product.id] = true;
+      return true;
+    });
+
+    if (pendingProducts.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void prefetchResolvedProductQuantities({
+      products: pendingProducts,
+      branchId: FROM_BRANCH_ID,
+      variantsMap,
+      packageField: "wholesale_package",
+      maxConcurrency: 4,
+    })
+      .then((results) => {
+        if (cancelled || results.length === 0) {
+          return;
+        }
+
+        setResolvedAvailableQtyById((prev) => ({
+          ...prev,
+          ...Object.fromEntries(
+            results.map(({ productId, quantity }) => [productId, quantity]),
+          ),
+        }));
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+
+        setResolvedAvailableQtyById((prev) => ({
+          ...prev,
+          ...Object.fromEntries(
+            pendingProducts.map((product) => [
+              product.id,
+              Number(product.available_quantity) || 0,
+            ]),
+          ),
+        }));
+      })
+      .finally(() => {
+        pendingProducts.forEach((product) => {
+          resolvingAvailableQtyRef.current[product.id] = false;
+        });
+      });
+
+    return () => {
+      cancelled = true;
+      pendingProducts.forEach((product) => {
+        resolvingAvailableQtyRef.current[product.id] = false;
+      });
+    };
+  }, [FROM_BRANCH_ID, displayedProducts, resolvedAvailableQtyById, variantsMap]);
+
+  useEffect(() => {
+    items.forEach((item) => {
+      if (item.variant_id !== 0) return;
+      const product = productById[item.product_id];
+      if (!product) return;
+      void resolveAvailableQuantity(product);
+    });
+  }, [items, productById, resolveAvailableQuantity]);
+
+  useEffect(() => {
+    setItems((prev) => {
+      let changed = false;
+
+      const next = prev.map((item) => {
+        if (item.variant_id !== 0) return item;
+
+        const resolvedQuantity = resolvedAvailableQtyById[item.product_id];
+        if (
+          resolvedQuantity === undefined ||
+          Number(item.available_quantity) === Number(resolvedQuantity)
+        ) {
+          return item;
+        }
+
+        changed = true;
+        return {
+          ...item,
+          available_quantity: resolvedQuantity,
+        };
+      });
+
+      return changed ? next : prev;
+    });
+  }, [resolvedAvailableQtyById]);
+
+  useEffect(() => {
+    if (pendingReorderIds.length === 0) return;
+
+    const reorderIds = pendingReorderIds;
+    setPendingReorderIds([]);
+
+    let cancelled = false;
+
+    void (async () => {
+      const autoItems: TransferItem[] = [];
+
+      for (const productId of reorderIds) {
+        const product = productById[productId];
+        if (!product) continue;
+
+        const availableQty = await resolveAvailableQuantity(product);
+        if (availableQty <= 0) continue;
+
+        const pct = mfgPercentMap[product.manufacturer] || 0;
+        autoItems.push({
+          uid: `${product.id}_0`,
+          product_id: product.id,
+          variant_id: 0,
+          product_name: product.name,
+          manufacturer: product.manufacturer,
+          quantity: 1,
+          percent: pct,
+          price_addition: pct ? 0 : 5,
+          wholesale_package: product.wholesale_package,
+          retail_package: product.retail_package,
+          wholesale_price: product.wholesale_price,
+          available_quantity: availableQty,
+        });
+      }
+
+      if (cancelled || autoItems.length === 0) return;
+
+      setItems(autoItems);
+      toast.success(`تم إضافة ${autoItems.length} صنف تلقائياً`);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mfgPercentMap, pendingReorderIds, productById, resolveAvailableQuantity]);
 
   /* ========== Keyboard Navigation ========== */
   const handleSearchKeyDown = useCallback(
@@ -326,7 +532,7 @@ export default function StockTransferPage() {
 
     return buildPackagePickerOptions({
       basePackage: packagePickerProduct.wholesale_package,
-      totalQuantity: packagePickerProduct.available_quantity,
+      totalQuantity: getResolvedAvailableQuantity(packagePickerProduct),
       variants: getProductPackageVariants(packagePickerProduct),
       quantityMap: packageStockByProduct[packagePickerProduct.id],
       packageField: "wholesale_package",
@@ -338,7 +544,7 @@ export default function StockTransferPage() {
     );
   }, [getProductPackageVariants, packagePickerProduct, packageStockByProduct]);
 
-  const addProduct = (product: Product) => {
+  const addProduct = async (product: Product) => {
     // لو الصنف عنده أكواد فرعية → نعرض اختيار العبوة
     const variants = getProductPackageVariants(product);
     if (variants && variants.length > 0) {
@@ -348,13 +554,14 @@ export default function StockTransferPage() {
       return;
     }
 
+    const availableQty = await resolveAvailableQuantity(product);
     finalizeAddProduct(
       product,
       product.wholesale_package,
       product.wholesale_price,
       0,
       product.retail_package,
-      product.available_quantity,
+      availableQty,
     );
   };
 
@@ -364,13 +571,16 @@ export default function StockTransferPage() {
     price: number,
     variantId: number = 0,
     retailPkg?: string,
-    availableQty: number = Number(product.available_quantity) || 0,
+    availableQty?: number,
   ) => {
     const uid = `${product.id}_${variantId}`;
     if (items.find((i) => i.uid === uid)) {
       toast.warning("الصنف بهذه العبوة مضاف بالفعل");
       return;
     }
+
+    const resolvedAvailableQty =
+      availableQty ?? getResolvedAvailableQuantity(product);
 
     const pct = mfgPercentMap[product.manufacturer] || 0;
 
@@ -388,7 +598,7 @@ export default function StockTransferPage() {
         wholesale_package: pkg,
         retail_package: retailPkg || product.retail_package,
         wholesale_price: price,
-        available_quantity: availableQty,
+        available_quantity: resolvedAvailableQty,
       },
     ]);
     setShowModal(false);
@@ -711,7 +921,7 @@ export default function StockTransferPage() {
                     )}
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5">
-                    {p.wholesale_package} • رصيد: {p.available_quantity}
+                    {p.wholesale_package} • رصيد: {getResolvedAvailableQuantity(p)}
                   </div>
                 </div>
               ))
@@ -745,7 +955,7 @@ export default function StockTransferPage() {
                 const availableQty = getPackageAvailableQuantity(
                   packagePickerProduct.id,
                   0,
-                  packagePickerProduct.available_quantity,
+                  getResolvedAvailableQuantity(packagePickerProduct),
                 );
                 const disabled = availableQty <= 0;
 
