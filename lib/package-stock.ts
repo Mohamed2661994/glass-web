@@ -354,38 +354,6 @@ export async function fetchPackageStockMapFromMovements({
   variants?: PackageVariant[];
   packageField?: "wholesale_package" | "retail_package";
 }): Promise<PackageStockMap> {
-  const stockMap: PackageStockMap = {};
-
-  try {
-    const quantityResponse = await api.get("/stock/quantity-all", {
-      params: {
-        product_id: productId,
-        branch_id: branchId,
-      },
-    });
-
-    for (const [variantId, quantity] of Object.entries(
-      quantityResponse.data || {},
-    )) {
-      stockMap[Number(variantId)] = Number(quantity) || 0;
-    }
-  } catch {
-    /* fallback to movement report below */
-  }
-
-  const requiredVariantIds = new Set<number>([
-    0,
-    ...(variants || []).map((variant) => getPackageVariantId(variant)),
-  ]);
-
-  const missingVariantIds = Array.from(requiredVariantIds).filter(
-    (variantId) => !Object.prototype.hasOwnProperty.call(stockMap, variantId),
-  );
-
-  if (missingVariantIds.length === 0) {
-    return stockMap;
-  }
-
   const response = await api.get("/reports/product-movement", {
     params: { product_name: productName },
   });
@@ -407,23 +375,21 @@ export async function fetchPackageStockMapFromMovements({
     totalsByPackage.set(pkg, (totalsByPackage.get(pkg) || 0) + delta);
   }
 
-  const movementStockMap: PackageStockMap = {};
-  movementStockMap[0] = Number(
-    totalsByPackage.get(normalizePackageName(basePackage || "-")) || 0,
-  );
+  const stockMap: PackageStockMap = {};
+  const assignedPackages = new Set<string>();
+
+  const baseLabel = normalizePackageName(basePackage || "-");
+  stockMap[0] = Number(totalsByPackage.get(baseLabel) || 0);
+  assignedPackages.add(baseLabel);
 
   for (const variant of variants || []) {
     const variantId = getPackageVariantId(variant);
-    movementStockMap[variantId] = Number(
-      totalsByPackage.get(
-        getVariantPackageLabel(variant, packageField, basePackage),
-      ) || 0,
-    );
-  }
-
-  for (const variantId of missingVariantIds) {
-    if (Object.prototype.hasOwnProperty.call(movementStockMap, variantId)) {
-      stockMap[variantId] = Number(movementStockMap[variantId] || 0);
+    const label = getVariantPackageLabel(variant, packageField, basePackage);
+    if (assignedPackages.has(label)) {
+      stockMap[variantId] = 0;
+    } else {
+      stockMap[variantId] = Number(totalsByPackage.get(label) || 0);
+      assignedPackages.add(label);
     }
   }
 

@@ -322,9 +322,10 @@ export default function InventorySummaryPage() {
 
             const warehouseName = (row.warehouse_name || "—").trim() || "—";
             const variantId = Number(row.variant_id || 0);
-            const packageName =
-              packageLabelMap[`${item.product_id}:${variantId}`] ||
-              normalizePackageName(row.package_name || "—");
+            const rawPkg = (row.package_name || "").trim();
+            const packageName = rawPkg
+              ? normalizePackageName(rawPkg)
+              : (packageLabelMap[`${item.product_id}:${variantId}`] || "—");
             const key = `${warehouseName}__${packageName}`;
             const existing = grouped.get(key) || {
               warehouse_name: warehouseName,
