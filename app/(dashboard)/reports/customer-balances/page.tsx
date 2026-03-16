@@ -154,11 +154,12 @@ export default function CustomerBalancesPage() {
                 invoice_date: inv.invoice_date || inv.created_at || "",
                 total: Number(inv.total || 0),
                 paid_amount: Number(inv.paid_amount || 0),
+                remaining_amount: Number(inv.remaining_amount || 0),
               }));
 
-            // ترتيب بالتاريخ
+            // ترتيب بالـ invoice_id (أكبر = أحدث)
             const allRows = [...debtRows, ...missing].sort((a, b) =>
-              (a.invoice_date || "").localeCompare(b.invoice_date || ""),
+              Number(a.invoice_id || 0) - Number(b.invoice_id || 0),
             );
 
             let totalSales = 0;
