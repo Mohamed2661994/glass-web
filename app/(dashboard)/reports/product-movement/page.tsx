@@ -12,6 +12,13 @@ import { useSearchParams } from "next/navigation";
 import api from "@/services/api";
 import { highlightText } from "@/lib/highlight-text";
 import { multiWordMatch } from "@/lib/utils";
+import {
+  fetchUnifiedMovementRows,
+  summarizeUnifiedMovementRows,
+  type MovementDisplayPackageMode,
+  type MovementWarehouseScope,
+  type UnifiedMovementRow,
+} from "@/lib/package-stock";
 import { useAuth } from "@/app/context/auth-context";
 import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent } from "@/components/ui/card";
@@ -38,25 +45,6 @@ import { useRealtime } from "@/hooks/use-realtime";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /* ========== Types ========== */
-type MovementItem = {
-  created_at?: string | null;
-  movement_date?: string | null;
-  invoice_date?: string | null;
-  entry_date?: string | null;
-  product_name: string;
-  manufacturer_name?: string | null;
-  warehouse_name: string;
-  movement_type: string;
-  quantity: number;
-  note?: string | null;
-  party_name?: string | null;
-  invoice_type?: string | null;
-  invoice_movement_type?: string | null;
-  package_name?: string | null;
-  variant_id?: number | null;
-  invoice_id?: number | null;
-};
-
 type Product = {
   id: number;
   name: string;
@@ -77,7 +65,7 @@ function ProductMovementPageContent() {
   const isShowroomUser = user?.branch_id === 1;
   const isWarehouseUser = user?.branch_id === 2;
 
-  const [data, setData] = useState<MovementItem[]>([]);
+  const [data, setData] = useState<UnifiedMovementRow[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [products, setProducts] = useState<Product[]>([]);
@@ -99,28 +87,6 @@ function ProductMovementPageContent() {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
-
-  const normalizePackageName = useCallback((name?: string | null) => {
-    const toWesternDigits = (value: string) =>
-      value.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
-
-    const cleaned = toWesternDigits(String(name || "بدون عبوة"))
-      .replace(/\s+/g, " ")
-      .trim();
-
-    const withoutTrailingPiece = cleaned.replace(/\s+(قطعة|قطع|قطعه)$/i, "");
-    const tokens = withoutTrailingPiece.split(" ").filter(Boolean);
-
-    if (
-      tokens.length === 2 &&
-      /^\d+$/.test(tokens[0]) &&
-      !/^\d+$/.test(tokens[1])
-    ) {
-      return `${tokens[1]} ${tokens[0]}`;
-    }
-
-    return withoutTrailingPiece;
-  }, []);
 
   /* ========== Fetch Products ========== */
   const fetchProducts = useCallback(async () => {
@@ -147,7 +113,9 @@ function ProductMovementPageContent() {
           retail_package:
             product.retail_package || adminProduct?.retail_package || null,
           wholesale_package:
-            product.wholesale_package || adminProduct?.wholesale_package || null,
+            product.wholesale_package ||
+            adminProduct?.wholesale_package ||
+            null,
         };
       });
 
@@ -218,20 +186,47 @@ function ProductMovementPageContent() {
     if (!selectedProduct) return;
     try {
       setLoading(true);
-      const res = await api.get("/reports/product-movement", {
-        params: {
-          product_name: selectedProduct.name,
-          from: fromDate || undefined,
-          to: toDate || undefined,
-        },
+
+      const warehouseScope: MovementWarehouseScope = isShowroomUser
+        ? "showroom"
+        : isWarehouseUser
+          ? "warehouse"
+          : selectedWarehouse === "الكل"
+            ? "all"
+            : "named";
+
+      const displayMode: MovementDisplayPackageMode =
+        isShowroomUser ||
+        (!isWarehouseUser && selectedWarehouse === "مخزن المعرض")
+          ? "retail"
+          : "movement";
+
+      const rows = await fetchUnifiedMovementRows({
+        productName: selectedProduct.name,
+        from: fromDate,
+        to: toDate,
+        warehouseScope,
+        namedWarehouse:
+          warehouseScope === "named" ? selectedWarehouse : undefined,
+        displayMode,
+        retailPackage: selectedProduct.retail_package,
+        wholesalePackage: selectedProduct.wholesale_package,
       });
-      setData(Array.isArray(res.data) ? res.data : []);
+
+      setData(rows);
     } catch {
       setData([]);
     } finally {
       setLoading(false);
     }
-  }, [selectedProduct, fromDate, toDate]);
+  }, [
+    fromDate,
+    isShowroomUser,
+    isWarehouseUser,
+    selectedProduct,
+    selectedWarehouse,
+    toDate,
+  ]);
 
   useEffect(() => {
     if (selectedProduct) fetchMovement();
@@ -240,30 +235,7 @@ function ProductMovementPageContent() {
   useRealtime(["data:invoices", "data:stock"], fetchMovement);
 
   /* ========== Filter ========== */
-  const filteredData = useMemo(() => {
-    let result = data;
-
-    if (isShowroomUser) {
-      result = result.filter((i) =>
-        (i.warehouse_name || "").trim().includes("المعرض"),
-      );
-    } else if (isWarehouseUser) {
-      result = result.filter(
-        (i) =>
-          (i.warehouse_name || "").trim().includes("الرئيسي") ||
-          (i.warehouse_name || "").trim().includes("المخزن الرئيسي"),
-      );
-    }
-
-    if (!isShowroomUser && !isWarehouseUser && selectedWarehouse !== "الكل") {
-      result = result.filter(
-        (item) =>
-          (item.warehouse_name || "").trim() === selectedWarehouse.trim(),
-      );
-    }
-
-    return result;
-  }, [data, selectedWarehouse, isShowroomUser, isWarehouseUser]);
+  const filteredData = useMemo(() => data, [data]);
 
   /* ========== Product list filter ========== */
   const filteredProducts = useMemo(() => {
@@ -286,7 +258,7 @@ function ProductMovementPageContent() {
       : [];
 
   /* ========== Get date for row ========== */
-  const getDate = (item: MovementItem) => {
+  const getDate = (item: UnifiedMovementRow) => {
     const d =
       item.entry_date ||
       item.invoice_date ||
@@ -295,87 +267,11 @@ function ProductMovementPageContent() {
     return d ? new Date(d).toLocaleDateString("ar-EG") : "—";
   };
 
-  const retailPackageLabel = useMemo(() => {
-    const rawRetailPackage = String(
-      selectedProduct?.retail_package || "",
-    ).trim();
-    if (!rawRetailPackage || rawRetailPackage === "بدون عبوة") {
-      return "";
-    }
-
-    return normalizePackageName(rawRetailPackage);
-  }, [normalizePackageName, selectedProduct?.retail_package]);
-
-  const forceRetailPackageView =
-    Boolean(retailPackageLabel) &&
-    (isShowroomUser ||
-      (!isWarehouseUser && selectedWarehouse === "مخزن المعرض"));
-
-  const getDisplayedPackageLabel = useCallback(
-    (item?: MovementItem) => {
-      if (forceRetailPackageView) {
-        return retailPackageLabel;
-      }
-
-      const rawPackageName = String(item?.package_name || "").trim();
-      if (!rawPackageName) return "";
-
-      return normalizePackageName(rawPackageName);
-    },
-    [forceRetailPackageView, retailPackageLabel, normalizePackageName],
-  );
-
   /* ========== Totals ========== */
-  const { totalIn, totalOut, packageTotals } = useMemo(() => {
-    let inQty = 0;
-    let outQty = 0;
-    const byPackage = new Map<
-      string,
-      { label: string; inQty: number; outQty: number }
-    >();
-
-    for (const item of filteredData) {
-      const mt = item.movement_type || item.invoice_movement_type || "";
-      const isIn = [
-        "purchase",
-        "transfer_in",
-        "replace_in",
-        "return_sale",
-        "in",
-      ].includes(mt);
-      const qty = Number(item.quantity);
-      const pkgLabel = getDisplayedPackageLabel(item) || "بدون عبوة";
-      const pkgKey = pkgLabel;
-
-      if (!byPackage.has(pkgKey)) {
-        byPackage.set(pkgKey, { label: pkgLabel, inQty: 0, outQty: 0 });
-      }
-
-      const entry = byPackage.get(pkgKey)!;
-      if (pkgLabel.length > entry.label.length) {
-        entry.label = pkgLabel;
-      }
-
-      if (isIn) {
-        inQty += qty;
-        entry.inQty += qty;
-      } else {
-        outQty += qty;
-        entry.outQty += qty;
-      }
-    }
-
-    const packageTotals = Array.from(byPackage.values())
-      .map((totals) => ({
-        package: totals.label,
-        totalIn: totals.inQty,
-        totalOut: totals.outQty,
-        balance: totals.inQty - totals.outQty,
-      }))
-      .sort((a, b) => a.package.localeCompare(b.package, "ar"));
-
-    return { totalIn: inQty, totalOut: outQty, packageTotals };
-  }, [filteredData, getDisplayedPackageLabel]);
+  const { totalIn, totalOut, packageTotals } = useMemo(
+    () => summarizeUnifiedMovementRows(filteredData),
+    [filteredData],
+  );
 
   /* ========== Export columns ========== */
   const exportColumns: ExportColumn[] = [
@@ -390,20 +286,12 @@ function ProductMovementPageContent() {
   ];
 
   const exportData = filteredData.map((item) => {
-    const mt = item.movement_type || item.invoice_movement_type || "";
-    const isIn = [
-      "purchase",
-      "transfer_in",
-      "replace_in",
-      "return_sale",
-      "in",
-    ].includes(mt);
     return {
       ...item,
       date_formatted: getDate(item),
-      type_label: isIn ? "وارد" : "صادر",
+      type_label: item.is_in ? "وارد" : "صادر",
       invoice_id: item.invoice_id || "—",
-      pkg: getDisplayedPackageLabel(item) || "—",
+      pkg: item.display_package_name || "—",
       party_name: item.party_name || "—",
       note: item.note || "",
     };
@@ -618,18 +506,6 @@ function ProductMovementPageContent() {
                     </TableHeader>
                     <TableBody>
                       {filteredData.map((item, idx) => {
-                        const mt =
-                          item.movement_type ||
-                          item.invoice_movement_type ||
-                          "";
-                        const isIn = [
-                          "purchase",
-                          "transfer_in",
-                          "replace_in",
-                          "return_sale",
-                          "in",
-                        ].includes(mt);
-
                         return (
                           <TableRow key={idx}>
                             <TableCell className="text-center text-xs">
@@ -639,8 +515,12 @@ function ProductMovementPageContent() {
                               {item.warehouse_name}
                             </TableCell>
                             <TableCell className="text-center">
-                              <Badge variant={isIn ? "default" : "destructive"}>
-                                {isIn ? "وارد" : "صادر"}
+                              <Badge
+                                variant={
+                                  item.is_in ? "default" : "destructive"
+                                }
+                              >
+                                {item.is_in ? "وارد" : "صادر"}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-center text-xs">
@@ -656,12 +536,12 @@ function ProductMovementPageContent() {
                               )}
                             </TableCell>
                             <TableCell
-                              className={`text-center font-bold ${isIn ? "text-green-600" : "text-red-600"}`}
+                              className={`text-center font-bold ${item.is_in ? "text-green-600" : "text-red-600"}`}
                             >
                               {item.quantity}
                             </TableCell>
                             <TableCell className="text-center text-xs">
-                              {getDisplayedPackageLabel(item) || "—"}
+                              {item.display_package_name || "—"}
                             </TableCell>
                             <TableCell className="text-center text-xs font-medium">
                               {item.party_name || "—"}
@@ -681,26 +561,16 @@ function ProductMovementPageContent() {
             {/* Mobile Cards */}
             <div className="md:hidden space-y-2">
               {filteredData.map((item, idx) => {
-                const mt =
-                  item.movement_type || item.invoice_movement_type || "";
-                const isIn = [
-                  "purchase",
-                  "transfer_in",
-                  "replace_in",
-                  "return_sale",
-                  "in",
-                ].includes(mt);
-
                 return (
                   <Card key={idx} className="p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <Badge
-                            variant={isIn ? "default" : "destructive"}
+                            variant={item.is_in ? "default" : "destructive"}
                             className="text-xs"
                           >
-                            {isIn ? "وارد" : "صادر"}
+                            {item.is_in ? "وارد" : "صادر"}
                           </Badge>
                           <span className="text-xs text-muted-foreground">
                             {getDate(item)}
@@ -715,13 +585,13 @@ function ProductMovementPageContent() {
                       </div>
                       <div className="text-left">
                         <p
-                          className={`text-lg font-bold ${isIn ? "text-green-600" : "text-red-600"}`}
+                          className={`text-lg font-bold ${item.is_in ? "text-green-600" : "text-red-600"}`}
                         >
                           {item.quantity}
                         </p>
-                        {getDisplayedPackageLabel(item) && (
+                        {item.display_package_name && (
                           <p className="text-xs text-muted-foreground">
-                            {getDisplayedPackageLabel(item)}
+                            {item.display_package_name}
                           </p>
                         )}
                       </div>

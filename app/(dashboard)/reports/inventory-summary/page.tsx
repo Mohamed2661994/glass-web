@@ -22,7 +22,13 @@ import { Loader2, Printer, Search } from "lucide-react";
 import { ExportButtons, type ExportColumn } from "@/components/export-buttons";
 import { useRealtime } from "@/hooks/use-realtime";
 import { Skeleton } from "@/components/ui/skeleton";
-import { normalizePackageName } from "@/lib/package-stock";
+import {
+  fetchUnifiedMovementRows,
+  normalizePackageName,
+  summarizeInventoryMovementRows,
+  type MovementDisplayPackageMode,
+  type MovementWarehouseScope,
+} from "@/lib/package-stock";
 
 const INVENTORY_SUMMARY_PRINT_STORAGE_KEY = "inventorySummaryPrintData";
 
@@ -48,15 +54,6 @@ type InventoryItem = {
   package_name?: string | null;
 };
 
-type MovementItem = {
-  variant_id?: number | null;
-  warehouse_name?: string | null;
-  movement_type?: string | null;
-  invoice_movement_type?: string | null;
-  quantity?: number | null;
-  package_name?: string | null;
-};
-
 type ReportProduct = {
   id: number;
   wholesale_package?: string | null;
@@ -70,14 +67,6 @@ type ProductVariant = {
   retail_package?: string | null;
   package_name?: string | null;
 };
-
-const IN_MOVEMENT_TYPES = new Set([
-  "purchase",
-  "transfer_in",
-  "replace_in",
-  "return_sale",
-  "in",
-]);
 
 type WarehouseFilter = "الكل" | "المخزن الرئيسي" | "مخزن المعرض";
 
@@ -145,36 +134,6 @@ export default function InventorySummaryPage() {
   }, [fetchReport]);
 
   useRealtime(["data:products", "data:stock", "data:invoices"], fetchReport);
-
-  const filterMovementRowsByWarehouse = useCallback(
-    (rows: MovementItem[]) => {
-      let result = rows;
-
-      if (isShowroomUser) {
-        result = result.filter((item) =>
-          (item.warehouse_name || "").trim().includes("المعرض"),
-        );
-      } else if (isWarehouseUser) {
-        result = result.filter((item) => {
-          const warehouseName = (item.warehouse_name || "").trim();
-          return (
-            warehouseName.includes("الرئيسي") ||
-            warehouseName.includes("المخزن الرئيسي")
-          );
-        });
-      }
-
-      if (!isShowroomUser && !isWarehouseUser && selectedWarehouse !== "الكل") {
-        result = result.filter(
-          (item) =>
-            (item.warehouse_name || "").trim() === selectedWarehouse.trim(),
-        );
-      }
-
-      return result;
-    },
-    [isShowroomUser, isWarehouseUser, selectedWarehouse],
-  );
 
   /* ========== Filter ========== */
   const filteredData = useMemo(() => {
@@ -283,6 +242,20 @@ export default function InventorySummaryPage() {
     };
   }, [filteredData, isShowroomUser]);
 
+  const movementWarehouseScope: MovementWarehouseScope = isShowroomUser
+    ? "showroom"
+    : isWarehouseUser
+      ? "warehouse"
+      : selectedWarehouse === "الكل"
+        ? "all"
+        : "named";
+
+  const movementDisplayMode: MovementDisplayPackageMode =
+    isShowroomUser ||
+    (!isWarehouseUser && selectedWarehouse === "مخزن المعرض")
+      ? "retail"
+      : "movement";
+
   useEffect(() => {
     const shouldRecalculate =
       filteredData.length > 0 &&
@@ -302,58 +275,19 @@ export default function InventorySummaryPage() {
     Promise.all(
       uniqueProducts.map(async (item) => {
         try {
-          const res = await api.get("/reports/product-movement", {
-            params: { product_name: item.product_name },
+          const movementRows = await fetchUnifiedMovementRows({
+            productName: item.product_name,
+            warehouseScope: movementWarehouseScope,
+            namedWarehouse:
+              movementWarehouseScope === "named"
+                ? selectedWarehouse
+                : undefined,
+            displayMode: movementDisplayMode,
+            retailPackage: packageLabelMap[`${item.product_id}:0`] || null,
+            wholesalePackage: packageLabelMap[`${item.product_id}:0`] || null,
           });
 
-          const movementRows = filterMovementRowsByWarehouse(
-            Array.isArray(res.data) ? res.data : [],
-          );
-
-          const grouped = new Map<
-            string,
-            {
-              warehouse_name: string;
-              package_name: string;
-              total_in: number;
-              total_out: number;
-            }
-          >();
-
-          for (const row of movementRows) {
-            const qty = Number(row.quantity || 0);
-            if (!Number.isFinite(qty) || qty === 0) continue;
-
-            const warehouseName = (row.warehouse_name || "—").trim() || "—";
-            const variantId = Number(row.variant_id || 0);
-            const rawPkg = (row.package_name || "").trim();
-            // في القطاعي: كل الحركات في سطر واحد لكن مع عرض عبوة القطاعي نفسها
-            const packageName = isShowroomUser
-              ? packageLabelMap[`${item.product_id}:0`] || "—"
-              : rawPkg
-                ? normalizePackageName(rawPkg)
-                : packageLabelMap[`${item.product_id}:${variantId}`] || "—";
-            const key = `${warehouseName}__${packageName}`;
-            const existing = grouped.get(key) || {
-              warehouse_name: warehouseName,
-              package_name: packageName,
-              total_in: 0,
-              total_out: 0,
-            };
-
-            const movementType =
-              row.movement_type || row.invoice_movement_type || "";
-
-            if (IN_MOVEMENT_TYPES.has(movementType)) {
-              existing.total_in += qty;
-            } else {
-              existing.total_out += qty;
-            }
-
-            grouped.set(key, existing);
-          }
-
-          const accurateRows = Array.from(grouped.values())
+          const accurateRows = summarizeInventoryMovementRows(movementRows)
             .map((groupedRow) => ({
               product_id: item.product_id,
               product_name: item.product_name,
@@ -390,9 +324,11 @@ export default function InventorySummaryPage() {
     };
   }, [
     filteredData,
-    filterMovementRowsByWarehouse,
+    movementDisplayMode,
+    movementWarehouseScope,
     packageLabelMap,
     searchText,
+    selectedWarehouse,
   ]);
 
   const displayedData = useMemo(() => {

@@ -308,11 +308,53 @@ export function buildPackagePickerOptions({
 }
 
 type MovementRow = {
+  created_at?: string | null;
+  movement_date?: string | null;
+  invoice_date?: string | null;
+  entry_date?: string | null;
   warehouse_name?: string | null;
   movement_type?: string | null;
   invoice_movement_type?: string | null;
   quantity?: number | null;
   package_name?: string | null;
+  product_name?: string | null;
+  manufacturer_name?: string | null;
+  party_name?: string | null;
+  note?: string | null;
+  invoice_id?: number | null;
+  variant_id?: number | null;
+};
+
+export type MovementWarehouseScope =
+  | "all"
+  | "showroom"
+  | "warehouse"
+  | "named";
+
+export type MovementDisplayPackageMode = "movement" | "retail";
+
+export type UnifiedMovementRow = MovementRow & {
+  warehouse_name: string;
+  quantity: number;
+  movement_direction: "in" | "out";
+  is_in: boolean;
+  raw_package_name: string;
+  display_package_name: string;
+  date_value: string;
+};
+
+export type UnifiedMovementPackageTotals = {
+  package: string;
+  totalIn: number;
+  totalOut: number;
+  balance: number;
+};
+
+export type InventoryMovementSummaryRow = {
+  warehouse_name: string;
+  package_name: string;
+  total_in: number;
+  total_out: number;
 };
 
 const IN_MOVEMENT_TYPES = new Set([
@@ -358,6 +400,223 @@ function matchesBranchWarehouse(warehouseName: string, branchId: number) {
   }
 
   return true;
+}
+
+function matchesWarehouseScope(
+  warehouseName: string,
+  warehouseScope: MovementWarehouseScope,
+  namedWarehouse?: string,
+) {
+  const normalized = warehouseName.trim();
+
+  if (warehouseScope === "showroom") {
+    return normalized.includes("المعرض");
+  }
+
+  if (warehouseScope === "warehouse") {
+    return (
+      normalized.includes("الرئيسي") ||
+      normalized.includes("المخزن الرئيسي")
+    );
+  }
+
+  if (warehouseScope === "named") {
+    return normalized === String(namedWarehouse || "").trim();
+  }
+
+  return true;
+}
+
+function getMovementDateValue(row: MovementRow): string {
+  return String(
+    row.entry_date || row.invoice_date || row.movement_date || row.created_at || "",
+  ).trim();
+}
+
+function resolveDisplayPackageName({
+  rawPackageName,
+  retailPackage,
+  wholesalePackage,
+  displayMode,
+}: {
+  rawPackageName?: string | null;
+  retailPackage?: string | null;
+  wholesalePackage?: string | null;
+  displayMode: MovementDisplayPackageMode;
+}) {
+  const rawValue = String(rawPackageName || "").trim();
+  const retailValue = String(retailPackage || "").trim();
+  const wholesaleValue = String(wholesalePackage || "").trim();
+
+  if (displayMode === "retail") {
+    return normalizePackageName(retailValue || rawValue || wholesaleValue || "-");
+  }
+
+  return normalizePackageName(rawValue || wholesaleValue || retailValue || "-");
+}
+
+export function normalizeMovementRows({
+  rows,
+  warehouseScope = "all",
+  namedWarehouse,
+  displayMode = "movement",
+  retailPackage,
+  wholesalePackage,
+}: {
+  rows: MovementRow[];
+  warehouseScope?: MovementWarehouseScope;
+  namedWarehouse?: string;
+  displayMode?: MovementDisplayPackageMode;
+  retailPackage?: string | null;
+  wholesalePackage?: string | null;
+}): UnifiedMovementRow[] {
+  return rows
+    .filter((row) =>
+      matchesWarehouseScope(
+        String(row.warehouse_name || ""),
+        warehouseScope,
+        namedWarehouse,
+      ),
+    )
+    .map((row) => {
+      const quantity = Number(row.quantity || 0);
+      const movementType = row.movement_type || row.invoice_movement_type || "";
+      const isIn = IN_MOVEMENT_TYPES.has(movementType);
+      const movementDirection: UnifiedMovementRow["movement_direction"] = isIn
+        ? "in"
+        : "out";
+      const rawPackageName = normalizePackageName(row.package_name || "-");
+
+      return {
+        ...row,
+        warehouse_name: String(row.warehouse_name || "—").trim() || "—",
+        quantity,
+        movement_direction: movementDirection,
+        is_in: isIn,
+        raw_package_name: rawPackageName,
+        display_package_name: resolveDisplayPackageName({
+          rawPackageName: row.package_name,
+          retailPackage,
+          wholesalePackage,
+          displayMode,
+        }),
+        date_value: getMovementDateValue(row),
+      };
+    })
+    .filter((row) => Number.isFinite(row.quantity) && row.quantity !== 0);
+}
+
+export async function fetchUnifiedMovementRows({
+  productName,
+  from,
+  to,
+  warehouseScope = "all",
+  namedWarehouse,
+  displayMode = "movement",
+  retailPackage,
+  wholesalePackage,
+}: {
+  productName: string;
+  from?: string;
+  to?: string;
+  warehouseScope?: MovementWarehouseScope;
+  namedWarehouse?: string;
+  displayMode?: MovementDisplayPackageMode;
+  retailPackage?: string | null;
+  wholesalePackage?: string | null;
+}): Promise<UnifiedMovementRow[]> {
+  const response = await api.get("/reports/product-movement", {
+    params: {
+      product_name: productName,
+      from: from || undefined,
+      to: to || undefined,
+    },
+  });
+
+  const rows: MovementRow[] = Array.isArray(response.data) ? response.data : [];
+  return normalizeMovementRows({
+    rows,
+    warehouseScope,
+    namedWarehouse,
+    displayMode,
+    retailPackage,
+    wholesalePackage,
+  });
+}
+
+export function summarizeUnifiedMovementRows(rows: UnifiedMovementRow[]): {
+  totalIn: number;
+  totalOut: number;
+  packageTotals: UnifiedMovementPackageTotals[];
+} {
+  let totalIn = 0;
+  let totalOut = 0;
+  const grouped = new Map<string, { label: string; inQty: number; outQty: number }>();
+
+  for (const row of rows) {
+    const packageLabel = row.display_package_name || "بدون عبوة";
+    const entry = grouped.get(packageLabel) || {
+      label: packageLabel,
+      inQty: 0,
+      outQty: 0,
+    };
+
+    if (row.is_in) {
+      totalIn += row.quantity;
+      entry.inQty += row.quantity;
+    } else {
+      totalOut += row.quantity;
+      entry.outQty += row.quantity;
+    }
+
+    grouped.set(packageLabel, entry);
+  }
+
+  return {
+    totalIn,
+    totalOut,
+    packageTotals: Array.from(grouped.values())
+      .map((item) => ({
+        package: item.label,
+        totalIn: item.inQty,
+        totalOut: item.outQty,
+        balance: item.inQty - item.outQty,
+      }))
+      .sort((left, right) => left.package.localeCompare(right.package, "ar")),
+  };
+}
+
+export function summarizeInventoryMovementRows(
+  rows: UnifiedMovementRow[],
+): InventoryMovementSummaryRow[] {
+  const grouped = new Map<string, InventoryMovementSummaryRow>();
+
+  for (const row of rows) {
+    const packageName = row.display_package_name || "—";
+    const key = `${row.warehouse_name}__${packageName}`;
+    const entry = grouped.get(key) || {
+      warehouse_name: row.warehouse_name,
+      package_name: packageName,
+      total_in: 0,
+      total_out: 0,
+    };
+
+    if (row.is_in) {
+      entry.total_in += row.quantity;
+    } else {
+      entry.total_out += row.quantity;
+    }
+
+    grouped.set(key, entry);
+  }
+
+  return Array.from(grouped.values()).sort((left, right) => {
+    if (left.warehouse_name !== right.warehouse_name) {
+      return left.warehouse_name.localeCompare(right.warehouse_name, "ar");
+    }
+
+    return left.package_name.localeCompare(right.package_name, "ar");
+  });
 }
 
 export async function fetchPackageStockMapFromMovements({
