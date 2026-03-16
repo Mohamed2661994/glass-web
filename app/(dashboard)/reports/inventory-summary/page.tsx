@@ -90,9 +90,9 @@ export default function InventorySummaryPage() {
   const [data, setData] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
-  const [packageLabelMap, setPackageLabelMap] = useState<Record<string, string>>(
-    {},
-  );
+  const [packageLabelMap, setPackageLabelMap] = useState<
+    Record<string, string>
+  >({});
   const [accurateRowsByProductId, setAccurateRowsByProductId] = useState<
     Record<number, InventoryItem[]>
   >({});
@@ -216,7 +216,9 @@ export default function InventorySummaryPage() {
 
   useEffect(() => {
     const productIds = Array.from(
-      new Set(filteredData.map((item) => Number(item.product_id)).filter(Boolean)),
+      new Set(
+        filteredData.map((item) => Number(item.product_id)).filter(Boolean),
+      ),
     );
 
     if (productIds.length === 0) {
@@ -325,7 +327,7 @@ export default function InventorySummaryPage() {
             const rawPkg = (row.package_name || "").trim();
             const packageName = rawPkg
               ? normalizePackageName(rawPkg)
-              : (packageLabelMap[`${item.product_id}:${variantId}`] || "—");
+              : packageLabelMap[`${item.product_id}:${variantId}`] || "—";
             const key = `${warehouseName}__${packageName}`;
             const existing = grouped.get(key) || {
               warehouse_name: warehouseName,
@@ -411,9 +413,7 @@ export default function InventorySummaryPage() {
       }
 
       result.push(
-        ...filteredData.filter(
-          (row) => row.product_id === item.product_id,
-        ),
+        ...filteredData.filter((row) => row.product_id === item.product_id),
       );
     }
 

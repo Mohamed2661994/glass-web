@@ -336,11 +336,7 @@ export default function StockTransferPage() {
         option.variantId !== 0 &&
         normalizePackageName(option.packageName) !== basePackageName,
     );
-  }, [
-    getProductPackageVariants,
-    packagePickerProduct,
-    packageStockByProduct,
-  ]);
+  }, [getProductPackageVariants, packagePickerProduct, packageStockByProduct]);
 
   const addProduct = (product: Product) => {
     // لو الصنف عنده أكواد فرعية → نعرض اختيار العبوة
@@ -811,16 +807,21 @@ export default function StockTransferPage() {
                       finalizeAddProduct(
                         packagePickerProduct,
                         option.packageName,
-                        Number(option.price) || packagePickerProduct.wholesale_price,
+                        Number(option.price) ||
+                          packagePickerProduct.wholesale_price,
                         option.variantId,
-                        option.retailPackage || packagePickerProduct.retail_package,
+                        option.retailPackage ||
+                          packagePickerProduct.retail_package,
                         option.quantity,
                       );
                     }}
                   >
                     <div className="font-medium">{option.packageName}</div>
                     <div className="text-sm text-muted-foreground">
-                      السعر: {Number(option.price) || packagePickerProduct.wholesale_price} ج
+                      السعر:{" "}
+                      {Number(option.price) ||
+                        packagePickerProduct.wholesale_price}{" "}
+                      ج
                       {option.variant?.label && (
                         <span className="mr-2">({option.variant.label})</span>
                       )}

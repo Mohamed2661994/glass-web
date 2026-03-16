@@ -808,7 +808,10 @@ export default function EditRetailInvoicePage() {
 
     displayedProducts.forEach((product) => {
       if (
-        Object.prototype.hasOwnProperty.call(resolvedAvailableQtyById, product.id)
+        Object.prototype.hasOwnProperty.call(
+          resolvedAvailableQtyById,
+          product.id,
+        )
       ) {
         return;
       }
@@ -2130,8 +2133,7 @@ export default function EditRetailInvoicePage() {
                     const resolvedAvailableQuantity =
                       getResolvedAvailableQuantity(product);
                     const outOfStock =
-                      movementType === "sale" &&
-                      resolvedAvailableQuantity <= 0;
+                      movementType === "sale" && resolvedAvailableQuantity <= 0;
                     return (
                       <div
                         key={product.id}

@@ -110,7 +110,9 @@ function mergeVariantFields(
   return {
     ...current,
     ...Object.fromEntries(
-      Object.entries(incoming).filter(([, value]) => value != null && value !== ""),
+      Object.entries(incoming).filter(
+        ([, value]) => value != null && value !== "",
+      ),
     ),
   };
 }
@@ -186,8 +188,16 @@ export function buildPackagePickerOptions({
 
   for (const row of rows) {
     const variantId = getPackageVariantId(row);
-    const normalizedLabel = getVariantPackageLabel(row, packageField, basePackage);
-    const displayName = getVariantPackageDisplayLabel(row, packageField, basePackage);
+    const normalizedLabel = getVariantPackageLabel(
+      row,
+      packageField,
+      basePackage,
+    );
+    const displayName = getVariantPackageDisplayLabel(
+      row,
+      packageField,
+      basePackage,
+    );
     const group = ensureGroup(normalizedLabel, displayName);
 
     group.variants.push(row);
@@ -212,12 +222,12 @@ export function buildPackagePickerOptions({
         normalizedLabel === normalizedBase
           ? basePackage || normalizedBase
           : variantsById.get(variantId)
-              ? getVariantPackageDisplayLabel(
-                  variantsById.get(variantId),
-                  packageField,
-                  basePackage,
-                )
-              : normalizedLabel;
+            ? getVariantPackageDisplayLabel(
+                variantsById.get(variantId),
+                packageField,
+                basePackage,
+              )
+            : normalizedLabel;
       const group = ensureGroup(normalizedLabel, displayName);
 
       group.quantity += qty;
@@ -233,14 +243,20 @@ export function buildPackagePickerOptions({
   if (hasQuantityMap && !hasExplicitBase) {
     const remainder = Number(totalQuantity || 0) - mappedTotal;
     if (Math.abs(remainder) > 0.0001) {
-      const baseGroup = ensureGroup(normalizedBase, basePackage || normalizedBase);
+      const baseGroup = ensureGroup(
+        normalizedBase,
+        basePackage || normalizedBase,
+      );
       baseGroup.quantity += remainder;
       baseGroup.variantIds.add(0);
     }
   } else if (!hasQuantityMap && rows.length > 0 && !variantLabels.has(0)) {
     const remainder = Number(totalQuantity || 0) - rowsTotal;
     if (Math.abs(remainder) > 0.0001) {
-      const baseGroup = ensureGroup(normalizedBase, basePackage || normalizedBase);
+      const baseGroup = ensureGroup(
+        normalizedBase,
+        basePackage || normalizedBase,
+      );
       baseGroup.quantity += remainder;
       baseGroup.variantIds.add(0);
     }
@@ -258,7 +274,9 @@ export function buildPackagePickerOptions({
           const rightQty = Number(quantityMap?.[rightId] ?? 0);
           return rightQty - leftQty;
         })[0] ??
-        (normalizedLabel === normalizedBase ? 0 : getPackageVariantId(group.variants[0]));
+        (normalizedLabel === normalizedBase
+          ? 0
+          : getPackageVariantId(group.variants[0]));
 
       const variant =
         variantsById.get(variantId) ||
@@ -271,7 +289,9 @@ export function buildPackagePickerOptions({
         packageName: group.displayName,
         quantity: Number(group.quantity) || 0,
         retailPackage: variant?.retail_package,
-        price: Number(variant?.wholesale_price ?? variant?.price ?? fallbackPrice),
+        price: Number(
+          variant?.wholesale_price ?? variant?.price ?? fallbackPrice,
+        ),
         variant,
       };
     })
@@ -282,7 +302,9 @@ export function buildPackagePickerOptions({
         entry.packageName !== "بدون عبوة" &&
         !Number.isNaN(entry.quantity),
     )
-    .sort((left, right) => left.packageName.localeCompare(right.packageName, "ar"));
+    .sort((left, right) =>
+      left.packageName.localeCompare(right.packageName, "ar"),
+    );
 }
 
 type MovementRow = {
@@ -331,8 +353,7 @@ function matchesBranchWarehouse(warehouseName: string, branchId: number) {
 
   if (branchId === 2) {
     return (
-      normalized.includes("الرئيسي") ||
-      normalized.includes("المخزن الرئيسي")
+      normalized.includes("الرئيسي") || normalized.includes("المخزن الرئيسي")
     );
   }
 

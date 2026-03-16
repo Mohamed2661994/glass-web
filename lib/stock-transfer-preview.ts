@@ -86,7 +86,8 @@ export function mergeTransferPreviewRows(
         .map((row, index) => ({ row, index }))
         .filter(
           ({ row, index }) =>
-            !usedIndexes.has(index) && Number(row.product_id || 0) === productId,
+            !usedIndexes.has(index) &&
+            Number(row.product_id || 0) === productId,
         );
 
       if (sameProductUnmatchedIndexes.length === 1) {
@@ -109,11 +110,14 @@ export function mergeTransferPreviewRows(
       variant_id: variantId,
       product_name: selection.product_name || matchedRow?.product_name || "",
       manufacturer: selection.manufacturer || matchedRow?.manufacturer || "",
-      package_name: selection.wholesale_package || matchedRow?.package_name || "",
+      package_name:
+        selection.wholesale_package || matchedRow?.package_name || "",
       quantity: Number(selection.quantity || 0),
       from_quantity: Number(matchedRow?.from_quantity || 0),
       to_quantity: Number(matchedRow?.to_quantity || 0),
-      final_price: Number(selection.final_price ?? matchedRow?.final_price ?? 0),
+      final_price: Number(
+        selection.final_price ?? matchedRow?.final_price ?? 0,
+      ),
       status,
       reason:
         matchedRow?.reason ||

@@ -802,7 +802,9 @@ export default function CreateWholesaleInvoicePage() {
     if (movementType === "sale") {
       const overStock = items.filter((item) => {
         if (item.is_return) return false;
-        return Number(item.quantity) > getResolvedAvailableQuantity(item.product_id);
+        return (
+          Number(item.quantity) > getResolvedAvailableQuantity(item.product_id)
+        );
       });
       if (overStock.length > 0) {
         overStock.forEach((item) => {
@@ -1015,7 +1017,10 @@ export default function CreateWholesaleInvoicePage() {
 
     displayedProducts.forEach((product) => {
       if (
-        Object.prototype.hasOwnProperty.call(resolvedAvailableQtyById, product.id)
+        Object.prototype.hasOwnProperty.call(
+          resolvedAvailableQtyById,
+          product.id,
+        )
       ) {
         return;
       }
@@ -2534,8 +2539,7 @@ export default function CreateWholesaleInvoicePage() {
                     const resolvedAvailableQuantity =
                       getResolvedAvailableQuantity(product);
                     const outOfStock =
-                      movementType === "sale" &&
-                      resolvedAvailableQuantity <= 0;
+                      movementType === "sale" && resolvedAvailableQuantity <= 0;
                     return (
                       <div
                         key={product.id}

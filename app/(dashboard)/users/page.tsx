@@ -883,7 +883,9 @@ export default function UsersPage() {
                         variant="outline"
                         size="sm"
                         disabled={newUserRole === "admin"}
-                        onClick={() => setNewUserPermissions(setAllPermissions(true))}
+                        onClick={() =>
+                          setNewUserPermissions(setAllPermissions(true))
+                        }
                       >
                         تحديد الكل
                       </Button>
@@ -892,7 +894,9 @@ export default function UsersPage() {
                         variant="outline"
                         size="sm"
                         disabled={newUserRole === "admin"}
-                        onClick={() => setNewUserPermissions(setAllPermissions(false))}
+                        onClick={() =>
+                          setNewUserPermissions(setAllPermissions(false))
+                        }
                       >
                         إلغاء الكل
                       </Button>

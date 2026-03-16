@@ -111,9 +111,7 @@ export default function PrintSelectedCustomersPage() {
       <div style={sheetStyle}>
         {/* Header */}
         <div style={headerStyle}>
-          <h1 style={titleStyle}>
-            حسابات السوق
-          </h1>
+          <h1 style={titleStyle}>حسابات السوق</h1>
           <div style={dateStyle}>{reportDate}</div>
         </div>
 

@@ -285,7 +285,8 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
       const currentVariants = Array.isArray(product.variant_stock)
         ? product.variant_stock
         : [];
-      const otherVariants = otherBranchVariantsMap[product.id] || currentVariants;
+      const otherVariants =
+        otherBranchVariantsMap[product.id] || currentVariants;
 
       const requests: Array<{
         targetBranchId: number;
@@ -540,11 +541,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
               const currentRetailQuantityMap =
                 branchId === 1
                   ? packageStockMapByKey[
-                      getPackageStockKey(
-                        product.id,
-                        branchId,
-                        "retail_package",
-                      )
+                      getPackageStockKey(product.id, branchId, "retail_package")
                     ]
                   : undefined;
               const otherWholesaleQuantityMap =
@@ -679,13 +676,17 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
                   <div className="text-xs mt-1 flex flex-wrap gap-x-4 gap-y-1">
                     <span className="text-muted-foreground">
-                      المصنع: {highlightText(product.manufacturer || "-", search)}
+                      المصنع:{" "}
+                      {highlightText(product.manufacturer || "-", search)}
                     </span>
                     <span className="text-blue-600 dark:text-blue-400">
                       العبوة: {product.retail_package || "-"}
                     </span>
                     <span className="font-semibold text-blue-700 dark:text-blue-300">
-                      السعر: {invoiceType === "retail" ? product.price : product.retail_price}
+                      السعر:{" "}
+                      {invoiceType === "retail"
+                        ? product.price
+                        : product.retail_price}
                     </span>
                     {product.discount_amount > 0 && (
                       <span className="text-destructive">
@@ -696,7 +697,8 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
                   {product.wholesale_package && (
                     <div className="text-xs mt-1 flex flex-wrap gap-x-4 gap-y-1 text-orange-600 dark:text-orange-400">
-                      {product.variant_stock && product.variant_stock.length > 1 ? (
+                      {product.variant_stock &&
+                      product.variant_stock.length > 1 ? (
                         <>
                           {product.variant_stock.map(
                             (
@@ -710,7 +712,9 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                             ) => {
                               const variantPrice =
                                 vs.price ??
-                                (vs.variant_id === 0 ? product.wholesale_price : null);
+                                (vs.variant_id === 0
+                                  ? product.wholesale_price
+                                  : null);
                               return (
                                 <span key={vs.variant_id ?? idx}>
                                   {vs.package_name}:{" "}
@@ -765,14 +769,17 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                             : "text-red-500 font-semibold"
                         }
                       >
-                        رصيد {branchId === 1 ? "القطاعي" : "الجملة"}: {currentBranchDisplayQuantity}
+                        رصيد {branchId === 1 ? "القطاعي" : "الجملة"}:{" "}
+                        {currentBranchDisplayQuantity}
                       </span>
                     )}
 
                     {branchId === 1 ? (
                       otherWholesaleEntries.length > 1 ? (
                         <div className="flex flex-wrap gap-x-3 gap-y-1">
-                          <span className="text-muted-foreground">رصيد الجملة:</span>
+                          <span className="text-muted-foreground">
+                            رصيد الجملة:
+                          </span>
                           {otherWholesaleEntries.map((entry) => (
                             <span
                               key={entry.package}
