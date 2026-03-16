@@ -36,6 +36,7 @@ import { CustomerLookupModal } from "@/components/customer-lookup-modal";
 import { QuickTransferModal } from "@/components/quick-transfer-modal";
 import { useCachedProducts } from "@/hooks/use-cached-products";
 import { highlightText } from "@/lib/highlight-text";
+import { fetchPackageStockMapFromMovements } from "@/lib/package-stock";
 import { multiWordMatch, multiWordScore } from "@/lib/utils";
 import { getTodayDate } from "@/lib/constants";
 import { Card } from "@/components/ui/card";
@@ -195,18 +196,6 @@ export default function CreateWholesaleInvoicePage() {
     number
   > | null>(null);
 
-  // Fetch stock when package picker opens
-  useEffect(() => {
-    if (!packagePickerProduct) return;
-    setPackagePickerStock(null);
-    api
-      .get("/stock/quantity-all", {
-        params: { product_id: packagePickerProduct.id, branch_id: 2 },
-      })
-      .then((res) => setPackagePickerStock(res.data || {}))
-      .catch(() => setPackagePickerStock({}));
-  }, [packagePickerProduct]);
-
   /* =========================================================
      4️⃣ Invoice Payment States
      ========================================================= */
@@ -340,6 +329,28 @@ export default function CreateWholesaleInvoicePage() {
     fetchVariants: true,
     cacheKey: `wholesale_${movementType}`,
   });
+
+  // Fetch stock when package picker opens
+  useEffect(() => {
+    if (!packagePickerProduct) return;
+    setPackagePickerStock(null);
+    fetchPackageStockMapFromMovements({
+      productName: packagePickerProduct.name,
+      branchId: 2,
+      basePackage: packagePickerProduct.wholesale_package,
+      variants: variantsMap[packagePickerProduct.id] || [],
+      packageField: "wholesale_package",
+    })
+      .then((stockMap) => setPackagePickerStock(stockMap))
+      .catch(() => {
+        api
+          .get("/stock/quantity-all", {
+            params: { product_id: packagePickerProduct.id, branch_id: 2 },
+          })
+          .then((res) => setPackagePickerStock(res.data || {}))
+          .catch(() => setPackagePickerStock({}));
+      });
+  }, [packagePickerProduct, variantsMap]);
 
   // Cleanup customer search timer on unmount
   useEffect(() => {

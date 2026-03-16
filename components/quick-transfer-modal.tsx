@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import api from "@/services/api";
 import { broadcastUpdate } from "@/lib/broadcast";
+import { fetchPackageStockMapFromMovements } from "@/lib/package-stock";
 import { highlightText } from "@/lib/highlight-text";
 import { multiWordMatch } from "@/lib/utils";
 import {
@@ -166,19 +167,18 @@ export function QuickTransferModal({
         return packageStockByProduct[productId];
       }
 
+      const product = products.find((item) => item.id === productId);
+      if (!product) return {} as PackageStockMap;
+
       setLoadingPackageStockForProductId(productId);
       try {
-        const res = await api.get("/stock/quantity-all", {
-          params: {
-            product_id: productId,
-            branch_id: FROM_BRANCH_ID,
-          },
+        const stockMap = await fetchPackageStockMapFromMovements({
+          productName: product.name,
+          branchId: FROM_BRANCH_ID,
+          basePackage: product.wholesale_package,
+          variants: variantsMap[productId] || [],
+          packageField: "wholesale_package",
         });
-
-        const stockMap: PackageStockMap = {};
-        for (const [variantId, quantity] of Object.entries(res.data || {})) {
-          stockMap[Number(variantId)] = Number(quantity) || 0;
-        }
 
         setPackageStockByProduct((prev) => ({
           ...prev,
@@ -187,15 +187,36 @@ export function QuickTransferModal({
 
         return stockMap;
       } catch {
-        toast.error("فشل تحميل أرصدة العبوات");
-        return {} as PackageStockMap;
+        try {
+          const res = await api.get("/stock/quantity-all", {
+            params: {
+              product_id: productId,
+              branch_id: FROM_BRANCH_ID,
+            },
+          });
+
+          const stockMap: PackageStockMap = {};
+          for (const [variantId, quantity] of Object.entries(res.data || {})) {
+            stockMap[Number(variantId)] = Number(quantity) || 0;
+          }
+
+          setPackageStockByProduct((prev) => ({
+            ...prev,
+            [productId]: stockMap,
+          }));
+
+          return stockMap;
+        } catch {
+          toast.error("فشل تحميل أرصدة العبوات");
+          return {} as PackageStockMap;
+        }
       } finally {
         setLoadingPackageStockForProductId((current) =>
           current === productId ? null : current,
         );
       }
     },
-    [packageStockByProduct],
+    [packageStockByProduct, products, variantsMap],
   );
 
   const getPackageAvailableQuantity = useCallback(
@@ -657,51 +678,52 @@ export function QuickTransferModal({
                   جاري تحميل أرصدة العبوات...
                 </div>
               )}
-              {packagePickerProduct && (() => {
-                const availableQty = getPackageAvailableQuantity(
-                  packagePickerProduct.id,
-                  0,
-                  packagePickerProduct.available_quantity,
-                );
-                const disabled = availableQty <= 0;
+              {packagePickerProduct &&
+                (() => {
+                  const availableQty = getPackageAvailableQuantity(
+                    packagePickerProduct.id,
+                    0,
+                    packagePickerProduct.available_quantity,
+                  );
+                  const disabled = availableQty <= 0;
 
-                return (
-                <button
-                  type="button"
-                  disabled={disabled}
-                  className={`w-full p-3 rounded-lg border transition text-right ${
-                    disabled
-                      ? "opacity-50 cursor-not-allowed bg-muted/40"
-                      : "hover:bg-muted"
-                  }`}
-                  onClick={() =>
-                    !disabled &&
-                    finalizeAdd(
-                      packagePickerProduct,
-                      packagePickerProduct.wholesale_package,
-                      packagePickerProduct.wholesale_price,
-                      0,
-                      packagePickerProduct.retail_package,
-                      availableQty,
-                    )
-                  }
-                >
-                  <div className="font-medium">
-                    {packagePickerProduct.wholesale_package}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    السعر: {packagePickerProduct.wholesale_price} ج
-                  </div>
-                  <div
-                    className={`text-sm mt-1 ${
-                      availableQty > 0 ? "text-green-600" : "text-red-500"
-                    }`}
-                  >
-                    رصيد: {availableQty}
-                  </div>
-                </button>
-                );
-              })()}
+                  return (
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      className={`w-full p-3 rounded-lg border transition text-right ${
+                        disabled
+                          ? "opacity-50 cursor-not-allowed bg-muted/40"
+                          : "hover:bg-muted"
+                      }`}
+                      onClick={() =>
+                        !disabled &&
+                        finalizeAdd(
+                          packagePickerProduct,
+                          packagePickerProduct.wholesale_package,
+                          packagePickerProduct.wholesale_price,
+                          0,
+                          packagePickerProduct.retail_package,
+                          availableQty,
+                        )
+                      }
+                    >
+                      <div className="font-medium">
+                        {packagePickerProduct.wholesale_package}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        السعر: {packagePickerProduct.wholesale_price} ج
+                      </div>
+                      <div
+                        className={`text-sm mt-1 ${
+                          availableQty > 0 ? "text-green-600" : "text-red-500"
+                        }`}
+                      >
+                        رصيد: {availableQty}
+                      </div>
+                    </button>
+                  );
+                })()}
 
               {packagePickerProduct &&
                 variantsMap[packagePickerProduct.id]?.map((v: any) => {
@@ -712,42 +734,42 @@ export function QuickTransferModal({
                   const disabled = availableQty <= 0;
 
                   return (
-                  <button
-                    key={v.id}
-                    type="button"
-                    disabled={disabled}
-                    className={`w-full p-3 rounded-lg border transition text-right ${
-                      disabled
-                        ? "opacity-50 cursor-not-allowed bg-muted/40"
-                        : "hover:bg-muted"
-                    }`}
-                    onClick={() =>
-                      !disabled &&
-                      finalizeAdd(
-                        packagePickerProduct,
-                        v.wholesale_package || "-",
-                        Number(v.wholesale_price),
-                        v.id,
-                        v.retail_package,
-                        availableQty,
-                      )
-                    }
-                  >
-                    <div className="font-medium">
-                      {v.wholesale_package || "-"}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      السعر: {v.wholesale_price} ج
-                      {v.label && <span className="mr-2">({v.label})</span>}
-                    </div>
-                    <div
-                      className={`text-sm mt-1 ${
-                        availableQty > 0 ? "text-green-600" : "text-red-500"
+                    <button
+                      key={v.id}
+                      type="button"
+                      disabled={disabled}
+                      className={`w-full p-3 rounded-lg border transition text-right ${
+                        disabled
+                          ? "opacity-50 cursor-not-allowed bg-muted/40"
+                          : "hover:bg-muted"
                       }`}
+                      onClick={() =>
+                        !disabled &&
+                        finalizeAdd(
+                          packagePickerProduct,
+                          v.wholesale_package || "-",
+                          Number(v.wholesale_price),
+                          v.id,
+                          v.retail_package,
+                          availableQty,
+                        )
+                      }
                     >
-                      رصيد: {availableQty}
-                    </div>
-                  </button>
+                      <div className="font-medium">
+                        {v.wholesale_package || "-"}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        السعر: {v.wholesale_price} ج
+                        {v.label && <span className="mr-2">({v.label})</span>}
+                      </div>
+                      <div
+                        className={`text-sm mt-1 ${
+                          availableQty > 0 ? "text-green-600" : "text-red-500"
+                        }`}
+                      >
+                        رصيد: {availableQty}
+                      </div>
+                    </button>
                   );
                 })}
             </div>

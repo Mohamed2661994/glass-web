@@ -36,6 +36,7 @@ import {
 import { useCachedProducts } from "@/hooks/use-cached-products";
 import { CustomerLookupModal } from "@/components/customer-lookup-modal";
 import { QuickTransferModal } from "@/components/quick-transfer-modal";
+import { fetchPackageStockMapFromMovements } from "@/lib/package-stock";
 import { highlightText } from "@/lib/highlight-text";
 import { multiWordMatch, multiWordScore } from "@/lib/utils";
 import { getTodayDate } from "@/lib/constants";
@@ -454,17 +455,28 @@ export default function CreateRetailInvoicePage() {
     };
   }, []);
 
+
   // Fetch stock when package picker opens
   useEffect(() => {
     if (!packagePickerProduct) return;
     setPackagePickerStock(null);
-    api
-      .get("/stock/quantity-all", {
-        params: { product_id: packagePickerProduct.id, branch_id: 1 },
-      })
-      .then((res) => setPackagePickerStock(res.data || {}))
-      .catch(() => setPackagePickerStock({}));
-  }, [packagePickerProduct]);
+    fetchPackageStockMapFromMovements({
+      productName: packagePickerProduct.name,
+      branchId: 1,
+      basePackage: packagePickerProduct.retail_package,
+      variants: variantsMap[packagePickerProduct.id] || [],
+      packageField: "retail_package",
+    })
+      .then((stockMap) => setPackagePickerStock(stockMap))
+      .catch(() => {
+        api
+          .get("/stock/quantity-all", {
+            params: { product_id: packagePickerProduct.id, branch_id: 1 },
+          })
+          .then((res) => setPackagePickerStock(res.data || {}))
+          .catch(() => setPackagePickerStock({}));
+      });
+  }, [packagePickerProduct, variantsMap]);
 
   const getAutoPackageChoice = useCallback(
     (product: any) => {
