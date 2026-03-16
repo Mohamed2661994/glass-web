@@ -156,26 +156,37 @@ export default function CustomerBalancesPage() {
                 paid_amount: Number(inv.paid_amount || 0),
               }));
 
-            const allRows = [...debtRows, ...missing];
+            // ترتيب بالتاريخ
+            const allRows = [...debtRows, ...missing].sort((a, b) =>
+              (a.invoice_date || "").localeCompare(b.invoice_date || ""),
+            );
 
             let totalSales = 0;
-            let debt = 0;
             let totalPaid = 0;
             let lastDate: string | null = null;
+
+            // المديونية = remaining آخر فاتورة - سندات الدفع بعدها
+            let lastInvoiceRemaining = 0;
+            let paymentsAfterLast = 0;
 
             for (const row of allRows) {
               if (row.record_type === "invoice") {
                 totalSales += Number(row.total || 0);
-                debt += Number(row.remaining_amount || 0);
                 totalPaid += Number(row.paid_amount || 0);
+                lastInvoiceRemaining = Number(row.remaining_amount || 0);
+                paymentsAfterLast = 0; // reset payments counter
                 const d = (
                   row.invoice_date ||
                   row.created_at ||
                   ""
                 ).substring(0, 10);
                 if (d && (!lastDate || d > lastDate)) lastDate = d;
+              } else {
+                paymentsAfterLast += Number(row.paid_amount || 0);
               }
             }
+
+            const debt = lastInvoiceRemaining - paymentsAfterLast;
 
             return {
               ...item,
