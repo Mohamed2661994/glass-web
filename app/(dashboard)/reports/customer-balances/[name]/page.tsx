@@ -346,26 +346,14 @@ export default function CustomerDebtDetailsPage() {
     return balances;
   }, [visibleData, openingBalance]);
 
-  // الرصيد بعد كل عملية (الباقي)
-  const closingBalances = useMemo(() => {
-    const balances: number[] = [];
-    let balance = openingBalance;
-    for (let i = 0; i < visibleData.length; i++) {
-      const row = visibleData[i];
-      if (row.record_type === "invoice") {
-        balance += Number(row.total) - Number(row.paid_amount);
-      } else {
-        balance -= Number(row.paid_amount);
-      }
-      balances.push(balance);
-    }
-    return balances;
-  }, [visibleData, openingBalance]);
-
-  // صافي المديونية = الإجمالي - الخصم + الرصيد الافتتاحي - المدفوع
-  // للقطاعي: لا نحسب الخصم
-  const discountToSubtract = user?.branch_id === 1 ? 0 : totalDiscount;
-  const netDebt = totalAll - discountToSubtract + openingBalance - totalPaid;
+  // صافي المديونية = مجموع الباقي الفعلي على كل فاتورة
+  const netDebt = useMemo(
+    () =>
+      visibleData
+        .filter((i) => i.record_type === "invoice")
+        .reduce((s, i) => s + Number(i.remaining_amount || 0), 0),
+    [visibleData],
+  );
   const manualOpeningBalanceValue = parseAmountInput(manualOpeningBalance);
 
   return (
@@ -541,7 +529,9 @@ export default function CustomerDebtDetailsPage() {
                             {Number(inv.paid_amount).toLocaleString()}
                           </TableCell>
                           <TableCell className="text-center">
-                            {closingBalances[idx].toLocaleString()}
+                            {inv.record_type === "invoice"
+                              ? Number(inv.remaining_amount).toLocaleString()
+                              : "—"}
                           </TableCell>
                           <TableCell className="text-center">
                             {inv.record_type === "invoice" && (
@@ -648,8 +638,10 @@ export default function CustomerDebtDetailsPage() {
                       </div>
                       <div>
                         <p className="text-muted-foreground">الباقي</p>
-                        <p className={`font-medium ${closingBalances[idx] > 0 ? "text-red-600" : closingBalances[idx] < 0 ? "text-green-600" : ""}`}>
-                          {closingBalances[idx].toLocaleString()}
+                        <p className="font-medium text-red-600">
+                          {inv.record_type === "invoice"
+                            ? Number(inv.remaining_amount).toLocaleString()
+                            : "—"}
                         </p>
                       </div>
                     </div>
