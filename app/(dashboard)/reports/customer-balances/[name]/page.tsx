@@ -122,7 +122,7 @@ export default function CustomerDebtDetailsPage() {
   const fetchDetails = useCallback(async () => {
     try {
       setLoading(true);
-      const [detailsRes, cashInRes] = await Promise.all([
+      const [detailsRes, cashInRes, invoicesRes] = await Promise.all([
         api.get("/reports/customer-debt-details", {
           params: {
             customer_name: customerName,
@@ -137,8 +137,57 @@ export default function CustomerDebtDetailsPage() {
             limit: 100000,
           },
         }),
+        api.get("/invoices", {
+          params: {
+            customer_name: customerName,
+            limit: 10000,
+          },
+        }),
       ]);
-      setData(detailsRes.data || []);
+
+      const debtRows: Invoice[] = detailsRes.data || [];
+
+      // Merge invoices that may be missing from the debt report
+      // (e.g. after a customer rename that didn't propagate to all tables)
+      const existingInvoiceIds = new Set(
+        debtRows
+          .filter((r) => r.record_type === "invoice")
+          .map((r) => r.invoice_id),
+      );
+
+      const allInvoices: any[] = Array.isArray(invoicesRes.data)
+        ? invoicesRes.data
+        : invoicesRes.data?.data ?? [];
+
+      const missingInvoices: Invoice[] = allInvoices
+        .filter(
+          (inv: any) =>
+            inv.id &&
+            !existingInvoiceIds.has(inv.id) &&
+            inv.movement_type === "sale" &&
+            Number(inv.remaining_amount || 0) !== 0,
+        )
+        .map((inv: any) => ({
+          record_type: "invoice" as const,
+          invoice_id: inv.id,
+          invoice_date: inv.invoice_date || inv.created_at || "",
+          subtotal: Number(inv.subtotal || inv.total || 0),
+          discount_total: Number(inv.discount_total || 0),
+          total: Number(inv.total || 0),
+          paid_amount: Number(inv.paid_amount || 0),
+          remaining_amount: Number(inv.remaining_amount || 0),
+        }));
+
+      if (missingInvoices.length > 0) {
+        const merged = [...debtRows, ...missingInvoices].sort((a, b) => {
+          const dateA = a.invoice_date || "";
+          const dateB = b.invoice_date || "";
+          return dateA.localeCompare(dateB);
+        });
+        setData(merged);
+      } else {
+        setData(debtRows);
+      }
       const cashInRows = cashInRes.data?.data || cashInRes.data || [];
       const byId: Record<string, string> = {};
       const byNumber: Record<string, string> = {};
