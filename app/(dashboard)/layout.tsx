@@ -14,6 +14,7 @@ import { ProductFormDialog } from "@/components/product-form-dialog";
 import { ProductLookupModal } from "@/components/product-lookup-modal";
 import { ChatDrawer } from "@/components/chat-drawer";
 import { PullToRefresh } from "@/components/pull-to-refresh";
+import { StockSnapshotPreload } from "@/components/stock-snapshot-preload";
 import { SocketProvider } from "@/app/context/socket-context";
 import { NavLoadingProvider } from "@/app/context/nav-loading-context";
 import api, { API_URL } from "@/services/api";
@@ -346,6 +347,8 @@ function DashboardLayoutContent({ children }: { children: ReactNode }) {
           />
 
           {/* F1 Product Lookup Modal */}
+          <StockSnapshotPreload />
+
           <ProductLookupModal
             open={lookupOpen}
             onOpenChange={setLookupOpen}

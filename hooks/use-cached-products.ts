@@ -12,6 +12,11 @@ import {
   mergePackageVariants,
   prefetchResolvedProductQuantities,
 } from "@/lib/package-stock";
+import {
+  fetchStockSnapshot,
+  getCachedStockSnapshot,
+  getStaleStockSnapshot,
+} from "@/lib/stock-snapshot";
 
 // =====================================================
 //  🏪  Product Cache — localStorage + auto-refresh
@@ -192,6 +197,8 @@ export function useCachedProducts({
   const requestParams = useMemo(() => params, [paramsString]);
   const quantityBranchId = Number(params.branch_id || 0);
   const shouldResolveAvailableQty =
+    endpoint === "/products" && quantityBranchId > 0;
+  const shouldUseSnapshotSource =
     endpoint === "/products" && quantityBranchId > 0;
   const shouldUseVariants = fetchVariants || shouldResolveAvailableQty;
   const shouldPrefetchAllVariants = fetchVariants;
@@ -550,7 +557,43 @@ export function useCachedProducts({
         resetResolvedAvailableQty();
       }
 
-      // 1. Try fresh cache first (unless force refresh)
+      // 1. Try unified snapshot cache first for stock-driven product screens.
+      if (shouldUseSnapshotSource && !forceRefresh) {
+        const cachedSnapshot = getCachedStockSnapshot(
+          resolvedCacheKey,
+          requestParams,
+          cacheDuration,
+        );
+        if (cachedSnapshot) {
+          setProducts(cachedSnapshot.products);
+          setVariantsMap(cachedSnapshot.variantsMap || {});
+          setResolvedAvailableQtyById(cachedSnapshot.resolvedQtyById || {});
+          setLastUpdated(new Date(cachedSnapshot.generatedAt || Date.now()));
+
+          setCache(
+            CACHE_KEY_PREFIX,
+            resolvedCacheKey,
+            cachedSnapshot.products,
+            paramsString,
+          );
+          setCache(
+            VARIANTS_CACHE_KEY_PREFIX,
+            resolvedCacheKey,
+            cachedSnapshot.variantsMap || {},
+            paramsString,
+          );
+          setCache(
+            RESOLVED_QTY_CACHE_KEY_PREFIX,
+            resolvedCacheKey,
+            cachedSnapshot.resolvedQtyById || {},
+            paramsString,
+          );
+
+          return cachedSnapshot.products;
+        }
+      }
+
+      // 2. Try fresh cache first (unless force refresh)
       if (!forceRefresh) {
         const cached = getFromCache<any[]>(
           CACHE_KEY_PREFIX,
@@ -593,10 +636,24 @@ export function useCachedProducts({
         }
       }
 
-      // 2. STALE-WHILE-REVALIDATE: show stale data immediately
+      // 3. STALE-WHILE-REVALIDATE: show stale data immediately
       //    instead of a loading spinner when cache is expired/invalidated
       let hasVisibleProducts = products.length > 0;
       if (!hasVisibleProducts) {
+        if (shouldUseSnapshotSource) {
+          const staleSnapshot = getStaleStockSnapshot(
+            resolvedCacheKey,
+            requestParams,
+          );
+          if (staleSnapshot?.products?.length) {
+            setProducts(staleSnapshot.products);
+            setVariantsMap(staleSnapshot.variantsMap || {});
+            setResolvedAvailableQtyById(staleSnapshot.resolvedQtyById || {});
+            setLastUpdated(new Date(staleSnapshot.generatedAt || Date.now()));
+            hasVisibleProducts = true;
+          }
+        }
+
         const staleData = getStaleFromCache<any[]>(
           CACHE_KEY_PREFIX,
           resolvedCacheKey,
@@ -636,13 +693,45 @@ export function useCachedProducts({
       const shouldShowBlockingLoader = !silent && !hasVisibleProducts;
       const shouldTrackRefresh = silent || hasVisibleProducts;
 
-      // 3. Fetch from API
+      // 4. Fetch from API / snapshot source
       try {
         if (shouldShowBlockingLoader) {
           setLoading(true);
         }
         if (shouldTrackRefresh) {
           setRefreshing(true);
+        }
+
+        if (shouldUseSnapshotSource) {
+          const snapshot = await fetchStockSnapshot({
+            endpoint: "/products",
+            params: requestParams,
+            cacheKey: resolvedCacheKey,
+            cacheDuration,
+            forceRefresh,
+          });
+
+          const prods = snapshot.products || [];
+          setProducts(prods);
+          setVariantsMap(snapshot.variantsMap || {});
+          setResolvedAvailableQtyById(snapshot.resolvedQtyById || {});
+          setLastUpdated(new Date(snapshot.generatedAt || Date.now()));
+
+          setCache(CACHE_KEY_PREFIX, resolvedCacheKey, prods, paramsString);
+          setCache(
+            VARIANTS_CACHE_KEY_PREFIX,
+            resolvedCacheKey,
+            snapshot.variantsMap || {},
+            paramsString,
+          );
+          setCache(
+            RESOLVED_QTY_CACHE_KEY_PREFIX,
+            resolvedCacheKey,
+            snapshot.resolvedQtyById || {},
+            paramsString,
+          );
+
+          return prods;
         }
 
         const res = await api.get(endpoint, {
@@ -706,6 +795,7 @@ export function useCachedProducts({
       resolvedCacheKey,
       shouldPrefetchAllVariants,
       shouldResolveAvailableQty,
+      shouldUseSnapshotSource,
       shouldUseVariants,
     ],
   );

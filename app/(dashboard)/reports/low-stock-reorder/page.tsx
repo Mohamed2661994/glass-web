@@ -22,7 +22,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { prefetchResolvedProductQuantities } from "@/lib/package-stock";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Loader2, Search, ShoppingCart, Plus, Trash2 } from "lucide-react";
@@ -30,6 +29,7 @@ import { multiWordMatch } from "@/lib/utils";
 import { useRealtime } from "@/hooks/use-realtime";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { fetchStockSnapshot } from "@/lib/stock-snapshot";
 
 /* ========== Types ========== */
 type LowStockItem = {
@@ -101,24 +101,28 @@ export default function LowStockReorderPage() {
       if (!hasCachedData) setLoading(true);
       setResolvingStock(false);
       if (!hasCachedData) setFirstResolvedLoadDone(false);
-      const [lowStockRes, retailProductsRes, wholesaleProductsRes] =
+      const [lowStockRes, retailSnapshot, wholesaleSnapshot] =
         await Promise.all([
           api.get("/reports/low-stock", {
             params: { limit_quantity: 5 },
           }),
-          api.get("/products", {
+          fetchStockSnapshot({
+            endpoint: "/products",
             params: {
               branch_id: 1,
               invoice_type: "retail",
               movement_type: "sale",
             },
+            cacheKey: "lookup_retail",
           }),
-          api.get("/products", {
+          fetchStockSnapshot({
+            endpoint: "/products",
             params: {
               branch_id: 2,
               invoice_type: "wholesale",
               movement_type: "sale",
             },
+            cacheKey: "lookup_wholesale",
           }),
         ]);
 
@@ -138,86 +142,29 @@ export default function LowStockReorderPage() {
         ),
       );
 
-      const retailProducts: any[] = Array.isArray(retailProductsRes.data)
-        ? retailProductsRes.data
-        : [];
-
-      const wsItems: any[] = Array.isArray(wholesaleProductsRes.data)
-        ? wholesaleProductsRes.data
-        : [];
-
-      const productIdsParam = relevantProductIds.join(",");
-      const variantsRes = productIdsParam
-        ? await api
-            .get("/products/variants", {
-              params: { product_ids: productIdsParam },
-            })
-            .catch(() => ({ data: [] }))
-        : { data: [] };
-
-      const variantsByProduct: Record<number, any[]> = {};
-      for (const variant of Array.isArray(variantsRes.data)
-        ? variantsRes.data
-        : []) {
-        const productId = Number(variant.product_id);
-        if (!productId) continue;
-        if (!variantsByProduct[productId]) {
-          variantsByProduct[productId] = [];
-        }
-        variantsByProduct[productId].push(variant);
-      }
-
       if (fetchIdRef.current !== fetchId) return;
 
       setLoading(false);
 
-      const retailById = new Map<number, any>(
-        retailProducts.map((item) => [Number(item.id), item]),
-      );
-      const wholesaleById = new Map<number, any>(
-        wsItems.map((item) => [Number(item.id), item]),
-      );
-
-      const retailCandidates = relevantProductIds
-        .map((productId) => retailById.get(productId))
-        .filter(Boolean);
-      const wholesaleCandidates = relevantProductIds
-        .map((productId) => wholesaleById.get(productId))
-        .filter(Boolean);
-
-      if (retailCandidates.length === 0 && wholesaleCandidates.length === 0) {
+      if (relevantProductIds.length === 0) {
         setFirstResolvedLoadDone(true);
         return;
       }
 
       setResolvingStock(true);
 
-      const [retailEntries, wholesaleEntries] = await Promise.all([
-        prefetchResolvedProductQuantities({
-          products: retailCandidates,
-          branchId: 1,
-          variantsMap: variantsByProduct,
-          packageField: "retail_package",
-          maxConcurrency: 6,
-        }),
-        prefetchResolvedProductQuantities({
-          products: wholesaleCandidates,
-          branchId: 2,
-          variantsMap: variantsByProduct,
-          packageField: "wholesale_package",
-          maxConcurrency: 6,
-        }),
-      ]);
-
       if (fetchIdRef.current !== fetchId) return;
 
       const retailMap = Object.fromEntries(
-        retailEntries.map(({ productId, quantity }) => [productId, quantity]),
+        relevantProductIds.map((productId) => [
+          productId,
+          Number(retailSnapshot?.resolvedQtyById?.[productId] || 0),
+        ]),
       );
       const wsMap = Object.fromEntries(
-        wholesaleEntries.map(({ productId, quantity }) => [
+        relevantProductIds.map((productId) => [
           productId,
-          quantity,
+          Number(wholesaleSnapshot?.resolvedQtyById?.[productId] || 0),
         ]),
       );
 

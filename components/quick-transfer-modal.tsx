@@ -33,6 +33,10 @@ import {
   CheckCircle2,
   AlertTriangle,
 } from "lucide-react";
+import {
+  fetchStockSnapshot,
+  getStaleStockSnapshot,
+} from "@/lib/stock-snapshot";
 
 /* ========== Types ========== */
 
@@ -200,6 +204,17 @@ export function QuickTransferModal({
     setPayload(null);
 
     const QUICK_TRANSFER_CACHE_KEY = "quick_transfer_cache_v1";
+    const SNAPSHOT_CACHE_KEY = "for_replace_wholesale";
+
+    const staleSnapshot = getStaleStockSnapshot(SNAPSHOT_CACHE_KEY, {
+      branch_id: FROM_BRANCH_ID,
+    });
+    if (staleSnapshot?.products?.length) {
+      setProducts(staleSnapshot.products as WholesaleProduct[]);
+      setVariantsMap(staleSnapshot.variantsMap || {});
+      setResolvedAvailableQtyById(staleSnapshot.resolvedQtyById || {});
+      setLoading(false);
+    }
 
     // Restore cached data immediately for instant display
     try {
@@ -220,22 +235,28 @@ export function QuickTransferModal({
         try {
           const raw = localStorage.getItem(QUICK_TRANSFER_CACHE_KEY);
           return raw && JSON.parse(raw).products?.length;
-        } catch { return false; }
+        } catch {
+          return false;
+        }
       })();
 
       if (!hasCachedProducts) setLoading(true);
       try {
-        const [productsRes, mfgRes] = await Promise.all([
-          api.get("/products/for-replace", {
+        const [snapshot, mfgRes] = await Promise.all([
+          fetchStockSnapshot({
+            endpoint: "/products/for-replace",
             params: { branch_id: FROM_BRANCH_ID },
+            cacheKey: SNAPSHOT_CACHE_KEY,
           }),
           api.get("/admin/manufacturers").catch(() => ({ data: [] })),
         ]);
 
-        const prods: WholesaleProduct[] = Array.isArray(productsRes.data)
-          ? productsRes.data
+        const prods: WholesaleProduct[] = Array.isArray(snapshot.products)
+          ? snapshot.products
           : [];
         setProducts(prods);
+        setVariantsMap(snapshot.variantsMap || {});
+        setResolvedAvailableQtyById(snapshot.resolvedQtyById || {});
 
         // Manufacturer percentages
         const pMap: Record<string, number> = {};
@@ -246,43 +267,16 @@ export function QuickTransferModal({
 
         setLoading(false);
 
-        // Variants
-        if (prods.length > 0) {
-          setVariantsLoading(true);
-          try {
-            const ids = prods.map((p) => p.id).join(",");
-            const vRes = await api.get("/products/variants", {
-              params: { product_ids: ids },
-            });
-            const map: Record<number, any[]> = {};
-            for (const v of vRes.data || []) {
-              if (!map[v.product_id]) map[v.product_id] = [];
-              map[v.product_id].push(v);
-            }
-            setVariantsMap(map);
-
-            try {
-              localStorage.setItem(
-                QUICK_TRANSFER_CACHE_KEY,
-                JSON.stringify({
-                  products: prods,
-                  mfgPercentMap: pMap,
-                  variantsMap: map,
-                }),
-              );
-            } catch {}
-          } catch {
-            /* silent */
-            try {
-              localStorage.setItem(
-                QUICK_TRANSFER_CACHE_KEY,
-                JSON.stringify({ products: prods, mfgPercentMap: pMap }),
-              );
-            } catch {}
-          } finally {
-            setVariantsLoading(false);
-          }
-        }
+        try {
+          localStorage.setItem(
+            QUICK_TRANSFER_CACHE_KEY,
+            JSON.stringify({
+              products: prods,
+              mfgPercentMap: pMap,
+              variantsMap: snapshot.variantsMap || {},
+            }),
+          );
+        } catch {}
       } catch {
         toast.error("فشل تحميل أصناف المخزن");
       } finally {

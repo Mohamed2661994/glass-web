@@ -27,6 +27,10 @@ import { toast } from "sonner";
 import { CalendarDays, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  fetchStockSnapshot,
+  getStaleStockSnapshot,
+} from "@/lib/stock-snapshot";
 
 interface Product {
   id: number;
@@ -167,9 +171,20 @@ export default function StockTransferPage() {
   );
 
   const TRANSFER_CACHE_KEY = "stock_transfer_cache_v1";
+  const SNAPSHOT_CACHE_KEY = "for_replace_wholesale";
 
   /* ========== Restore cached data immediately ========== */
   useEffect(() => {
+    const staleSnapshot = getStaleStockSnapshot(SNAPSHOT_CACHE_KEY, {
+      branch_id: FROM_BRANCH_ID,
+    });
+    if (staleSnapshot?.products?.length) {
+      setProducts(staleSnapshot.products as Product[]);
+      setVariantsMap(staleSnapshot.variantsMap || {});
+      setResolvedAvailableQtyById(staleSnapshot.resolvedQtyById || {});
+      setLoading(false);
+    }
+
     try {
       const raw = localStorage.getItem(TRANSFER_CACHE_KEY);
       if (raw) {
@@ -177,8 +192,7 @@ export default function StockTransferPage() {
         if (cached.products?.length) {
           setProducts(cached.products);
           setMfgPercentMap(cached.mfgPercentMap || {});
-          if (cached.variantsMap)
-            setVariantsMap(cached.variantsMap);
+          if (cached.variantsMap) setVariantsMap(cached.variantsMap);
           setLoading(false);
         }
       }
@@ -189,16 +203,19 @@ export default function StockTransferPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [productsRes, mfgRes] = await Promise.all([
-          api.get("/products/for-replace", {
+        const [snapshot, mfgRes] = await Promise.all([
+          fetchStockSnapshot({
+            endpoint: "/products/for-replace",
             params: { branch_id: FROM_BRANCH_ID },
+            cacheKey: SNAPSHOT_CACHE_KEY,
           }),
           api.get("/admin/manufacturers").catch(() => ({ data: [] })),
         ]);
 
-        const prods = Array.isArray(productsRes.data) ? productsRes.data : [];
+        const prods = Array.isArray(snapshot.products) ? snapshot.products : [];
         setProducts(prods);
-        setResolvedAvailableQtyById({});
+        setVariantsMap(snapshot.variantsMap || {});
+        setResolvedAvailableQtyById(snapshot.resolvedQtyById || {});
         resolvingAvailableQtyRef.current = {};
 
         // بناء خريطة نسب المصانع
@@ -223,45 +240,16 @@ export default function StockTransferPage() {
 
         setLoading(false);
 
-        // جلب الأكواد الفرعية
-        if (prods.length > 0) {
-          setVariantsLoading(true);
-          try {
-            const ids = prods.map((p: any) => p.id).join(",");
-            const vRes = await api.get("/products/variants", {
-              params: { product_ids: ids },
-            });
-            const map: Record<number, any[]> = {};
-            for (const v of vRes.data || []) {
-              if (!map[v.product_id]) map[v.product_id] = [];
-              map[v.product_id].push(v);
-            }
-            setVariantsMap(map);
-
-            // Save everything to cache for instant next load
-            try {
-              localStorage.setItem(
-                TRANSFER_CACHE_KEY,
-                JSON.stringify({
-                  products: prods,
-                  mfgPercentMap: pMap,
-                  variantsMap: map,
-                }),
-              );
-            } catch {}
-          } catch {
-            /* silent */
-            // Save without variants
-            try {
-              localStorage.setItem(
-                TRANSFER_CACHE_KEY,
-                JSON.stringify({ products: prods, mfgPercentMap: pMap }),
-              );
-            } catch {}
-          } finally {
-            setVariantsLoading(false);
-          }
-        }
+        try {
+          localStorage.setItem(
+            TRANSFER_CACHE_KEY,
+            JSON.stringify({
+              products: prods,
+              mfgPercentMap: pMap,
+              variantsMap: snapshot.variantsMap || {},
+            }),
+          );
+        } catch {}
       } catch {
         toast.error("فشل تحميل الأصناف");
       } finally {
