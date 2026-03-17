@@ -30,19 +30,12 @@ import { useRealtime } from "@/hooks/use-realtime";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchStockSnapshot } from "@/lib/stock-snapshot";
+import {
+  getTransferNeededProducts,
+  type LowStockReorderItem as LowStockItem,
+} from "@/lib/low-stock-reorder";
 
 /* ========== Types ========== */
-type LowStockItem = {
-  product_id: number;
-  product_name: string;
-  manufacturer_name?: string | null;
-  warehouse_name: string;
-  current_stock: number;
-  wholesale_package?: string | null;
-  retail_package?: string | null;
-  variant_id?: number;
-};
-
 type CartItem = {
   product_id: number;
   product_name: string;
@@ -205,42 +198,9 @@ export default function LowStockReorderPage() {
 
   /* ========== Filter — show only retail warehouse items with stock ≤ 5 ========== */
   const filteredData = useMemo(() => {
-    let result = data.filter((i) => {
-      const retailQty =
-        retailStock[i.product_id] ?? Number(i.current_stock) ?? 0;
-      const wsQty = wholesaleStock[i.product_id] ?? 0;
-
-      if (
-        i.warehouse_name !== "مخزن المعرض" ||
-        retailQty > 5 ||
-        retailQty < 0 ||
-        !i.wholesale_package
-      ) {
-        return false;
-      }
-
-      if (!(retailQty > 0 || wsQty > 0)) {
-        return false;
-      }
-
-      if (onlyWithWholesaleStock && wsQty <= 0) {
-        return false;
-      }
-
-      return true;
+    let result = getTransferNeededProducts(data, retailStock, wholesaleStock, {
+      onlyWithWholesaleStock,
     });
-
-    // Keep one row per product and show total retail stock to match product lookup.
-    const byProduct = new Map<number, LowStockItem>();
-    for (const item of result) {
-      if (byProduct.has(item.product_id)) continue;
-      byProduct.set(item.product_id, {
-        ...item,
-        current_stock:
-          retailStock[item.product_id] ?? Number(item.current_stock) ?? 0,
-      });
-    }
-    result = Array.from(byProduct.values());
 
     if (search.trim()) {
       result = result.filter((item) =>

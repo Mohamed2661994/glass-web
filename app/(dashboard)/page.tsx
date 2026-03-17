@@ -24,6 +24,8 @@ import { useUserPreferences } from "@/hooks/use-user-preferences";
 import api from "@/services/api";
 import { getTodayDate } from "@/lib/constants";
 import { ProductLookupModal } from "@/components/product-lookup-modal";
+import { fetchStockSnapshot } from "@/lib/stock-snapshot";
+import { getTransferNeededProducts, type LowStockReorderItem } from "@/lib/low-stock-reorder";
 import {
   FileText,
   Truck,
@@ -1098,56 +1100,54 @@ export default function DashboardPage() {
     setLoadingTransferCount(true);
     (async () => {
       try {
-        const [lowStockRes, wholesaleRes] = await Promise.all([
+        const [lowStockRes, retailSnapshot, wholesaleSnapshot] = await Promise.all([
           api.get("/reports/low-stock", {
             params: { limit_quantity: 5, _t: Date.now() },
           }),
-          api.get("/reports/low-stock", {
-            params: { limit_quantity: 999999, warehouse_id: 2, _t: Date.now() },
+          fetchStockSnapshot({
+            endpoint: "/products",
+            params: {
+              branch_id: 1,
+              invoice_type: "retail",
+              movement_type: "sale",
+            },
+            cacheKey: "lookup_retail",
+          }),
+          fetchStockSnapshot({
+            endpoint: "/products",
+            params: {
+              branch_id: 2,
+              invoice_type: "wholesale",
+              movement_type: "sale",
+            },
+            cacheKey: "lookup_wholesale",
           }),
         ]);
 
-        const lowItems: {
-          product_id: number;
-          warehouse_name: string;
-          current_stock: number;
-          wholesale_package?: string | null;
-        }[] = Array.isArray(lowStockRes.data) ? lowStockRes.data : [];
+        const lowItems: LowStockReorderItem[] = Array.isArray(lowStockRes.data)
+          ? lowStockRes.data
+          : [];
 
-        // Build wholesale stock map
-        const wsItems: {
-          product_id: number;
-          warehouse_name: string;
-          current_stock: number;
-        }[] = Array.isArray(wholesaleRes.data) ? wholesaleRes.data : [];
-        const wsMap: Record<number, number> = {};
-        for (const item of wsItems) {
-          if (item.warehouse_name === "المخزن الرئيسي") {
-            wsMap[item.product_id] = Math.max(
-              wsMap[item.product_id] || 0,
-              item.current_stock,
-            );
-          }
-        }
+        const relevantProductIds = Array.from(
+          new Set(lowItems.map((item) => Number(item.product_id)).filter(Boolean)),
+        );
 
-        // Apply same filters as low-stock-reorder page
-        const filtered = lowItems.filter((i) => {
-          const wsQty = wsMap[i.product_id] ?? 0;
-          if (
-            i.warehouse_name !== "مخزن المعرض" ||
-            i.current_stock > 5 ||
-            i.current_stock < 0 ||
-            !i.wholesale_package
-          ) {
-            return false;
-          }
-          if (!(i.current_stock > 0 || wsQty > 0)) {
-            return false;
-          }
-          return true;
-        });
+        const retailMap = Object.fromEntries(
+          relevantProductIds.map((productId) => [
+            productId,
+            Number(retailSnapshot?.resolvedQtyById?.[productId] || 0),
+          ]),
+        );
+        const wholesaleMap = Object.fromEntries(
+          relevantProductIds.map((productId) => [
+            productId,
+            Number(wholesaleSnapshot?.resolvedQtyById?.[productId] || 0),
+          ]),
+        );
 
-        setTransferNeededCount(filtered.length);
+        setTransferNeededCount(
+          getTransferNeededProducts(lowItems, retailMap, wholesaleMap).length,
+        );
       } catch {
         setTransferNeededCount(0);
       } finally {
