@@ -140,7 +140,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
         if ((Number(existing.price) || 0) <= 0 && (Number(price) || 0) > 0) {
           rows.set(normalized, {
             ...existing,
-            price,
+            price: price ?? existing.price ?? null,
           });
         }
       };
