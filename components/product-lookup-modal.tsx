@@ -16,10 +16,10 @@ import { useCachedProducts } from "@/hooks/use-cached-products";
 import { highlightText } from "@/lib/highlight-text";
 import {
   buildPackagePickerOptions,
-  fetchMovementBalances,
   getPackageVariantId,
   mergePackageVariants,
   normalizePackageName,
+  prefetchMovementBalances,
   type PackageVariant,
 } from "@/lib/package-stock";
 import { multiWordMatch, multiWordScore } from "@/lib/utils";
@@ -222,11 +222,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
       return Number(otherBranchQtyMap[product.id]) || 0;
     },
-    [
-      branchId,
-      getResolvedAvailableQuantity,
-      otherBranchQtyMap,
-    ],
+    [branchId, getResolvedAvailableQuantity, otherBranchQtyMap],
   );
 
   const getWholesaleBalanceRows = useCallback(
@@ -388,14 +384,17 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     if (!open) return;
 
     const candidates = filteredProducts.slice(0, 30);
+    const multiWholesaleCandidates = candidates.filter(
+      (product) => getWholesalePackageRows(product).length > 1,
+    );
     const targetBranchId = branchId === 2 ? 2 : otherBranchId === 2 ? 2 : 0;
-    if (targetBranchId !== 2) {
+    if (targetBranchId !== 2 || multiWholesaleCandidates.length === 0) {
       return;
     }
 
     const pendingKeys: Array<{ productId: number; key: string }> = [];
 
-    candidates.forEach((product) => {
+    multiWholesaleCandidates.forEach((product) => {
       const key = getBalanceKey(product.id, targetBranchId);
       if (
         Object.prototype.hasOwnProperty.call(packageStockByKey, key) ||
@@ -414,71 +413,77 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
     let cancelled = false;
 
-    void Promise.all(
-      pendingKeys.map(async ({ productId, key }) => {
-        const product = candidates.find((entry) => entry.id === productId);
-        if (!product) {
-          return {
-            key,
-            stockMap: null,
-            movementEntries: null,
-          };
-        }
+    void (async () => {
+      const pendingKeySet = new Set(pendingKeys.map(({ key }) => key));
 
-        if (targetBranchId === 2) {
-          try {
-            const result = await fetchMovementBalances({
-              productName: String(product.name || ""),
-              branchId: targetBranchId,
-              retailPackage: product.retail_package,
-              wholesalePackage: product.wholesale_package,
-            });
+      const movementResults = await prefetchMovementBalances({
+        products: multiWholesaleCandidates,
+        branchIds: [targetBranchId],
+        maxConcurrency: 6,
+        shouldSkip: (productId, branchIdValue) =>
+          branchIdValue !== targetBranchId ||
+          !pendingKeySet.has(getBalanceKey(productId, branchIdValue)),
+      }).catch(() => []);
 
-            if (Array.isArray(result.entries) && result.entries.length > 0) {
+      const movementEntriesByKey = new Map<
+        string,
+        Array<{ package: string; quantity: number }>
+      >();
+
+      movementResults.forEach(
+        ({ productId, branchId: branchIdValue, result }) => {
+          const key = getBalanceKey(productId, branchIdValue);
+          if (Array.isArray(result?.entries) && result.entries.length > 0) {
+            movementEntriesByKey.set(key, result.entries);
+          }
+        },
+      );
+
+      const fallbackResults = await Promise.all(
+        pendingKeys
+          .filter(({ key }) => !movementEntriesByKey.has(key))
+          .map(async ({ productId, key }) => {
+            try {
+              const response = await api.get("/stock/quantity-all", {
+                params: {
+                  product_id: productId,
+                  branch_id: targetBranchId,
+                },
+              });
+
+              return {
+                key,
+                stockMap: Object.fromEntries(
+                  Object.entries(response.data || {}).map(
+                    ([variantId, quantity]) => [
+                      Number(variantId),
+                      Number(quantity) || 0,
+                    ],
+                  ),
+                ) as Record<number, number>,
+              };
+            } catch {
               return {
                 key,
                 stockMap: null,
-                movementEntries: result.entries,
               };
             }
-          } catch {}
-        }
+          }),
+      );
 
-        try {
-          const response = await api.get("/stock/quantity-all", {
-            params: {
-              product_id: productId,
-              branch_id: targetBranchId,
-            },
-          });
-
-          return {
-            key,
-            stockMap: Object.fromEntries(
-              Object.entries(response.data || {}).map(([variantId, quantity]) => [
-                Number(variantId),
-                Number(quantity) || 0,
-              ]),
-            ) as Record<number, number>,
-            movementEntries: null,
-          };
-        } catch {
-          return {
-            key,
-            stockMap: null,
-            movementEntries: null,
-          };
-        }
-      }),
-    )
+      return {
+        fallbackResults,
+        movementEntriesByKey,
+      };
+    })()
       .then((results) => {
-        if (cancelled) {
+        if (cancelled || !results) {
           return;
         }
 
         setPackageStockByKey((prev) => {
           const next = { ...prev };
-          results.forEach(({ key, stockMap }) => {
+          results.fallbackResults.forEach(({ key, stockMap }) => {
             if (stockMap) {
               next[key] = stockMap;
             }
@@ -488,10 +493,8 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
         setWholesaleMovementEntriesByKey((prev) => {
           const next = { ...prev };
-          results.forEach(({ key, movementEntries }) => {
-            if (movementEntries) {
-              next[key] = movementEntries;
-            }
+          results.movementEntriesByKey.forEach((movementEntries, key) => {
+            next[key] = movementEntries;
           });
           return next;
         });
@@ -512,6 +515,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     branchId,
     filteredProducts,
     getBalanceKey,
+    getWholesalePackageRows,
     otherBranchId,
     open,
     packageStockByKey,
