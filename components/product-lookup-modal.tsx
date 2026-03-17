@@ -115,6 +115,14 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
         { key: string; label: string; price: number | string | null }
       >();
 
+      const getVariantWholesaleLabel = (variant: PackageVariant) =>
+        String(
+          variant.wholesale_package ||
+            variant.package_name ||
+            variant.retail_package ||
+            "",
+        ).trim();
+
       const addRow = (
         rawLabel: string | null | undefined,
         price: number | string | null | undefined,
@@ -154,7 +162,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
       mergedVariants.forEach((variant, index) => {
         addRow(
-          variant.wholesale_package || variant.package_name,
+          getVariantWholesaleLabel(variant),
           variant.wholesale_price ?? variant.price,
           String(getPackageVariantId(variant) || index + 1),
         );
