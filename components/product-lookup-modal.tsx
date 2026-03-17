@@ -670,21 +670,21 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                   )}
 
                   <div className="text-xs mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
-                    <span
-                      className={
-                        currentBranchDisplayQuantity > 0
-                          ? branchId === 1
-                            ? "text-blue-600 dark:text-blue-400 font-semibold"
-                            : "text-orange-600 dark:text-orange-400 font-semibold"
-                          : "text-red-500 font-semibold"
-                      }
-                    >
-                      {branchId === 2 && currentBranchWholesaleBalances.length > 1
-                        ? "إجمالي رصيد الجملة"
-                        : `رصيد ${branchId === 1 ? "القطاعي" : "الجملة"}`}
-                      :{" "}
-                      {currentBranchDisplayQuantity}
-                    </span>
+                    {(branchId !== 2 ||
+                      currentBranchWholesaleBalances.length <= 1) && (
+                      <span
+                        className={
+                          currentBranchDisplayQuantity > 0
+                            ? branchId === 1
+                              ? "text-blue-600 dark:text-blue-400 font-semibold"
+                              : "text-orange-600 dark:text-orange-400 font-semibold"
+                            : "text-red-500 font-semibold"
+                        }
+                      >
+                        {`رصيد ${branchId === 1 ? "القطاعي" : "الجملة"}`}: {" "}
+                        {currentBranchDisplayQuantity}
+                      </span>
+                    )}
 
                     {branchId === 2 && currentBranchWholesaleBalances.length > 1 &&
                       currentBranchWholesaleBalances.map((row) => (
@@ -702,18 +702,17 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
                     {branchId === 1 ? (
                       <>
-                        <span
-                          className={
-                            otherDisplayQuantity > 0
-                              ? "text-orange-600 dark:text-orange-400 font-semibold"
-                              : "text-red-500 font-semibold"
-                          }
-                        >
-                          {otherBranchWholesaleBalances.length > 1
-                            ? "إجمالي رصيد الجملة"
-                            : "رصيد الجملة"}
-                          : {otherDisplayQuantity || 0}
-                        </span>
+                        {otherBranchWholesaleBalances.length <= 1 && (
+                          <span
+                            className={
+                              otherDisplayQuantity > 0
+                                ? "text-orange-600 dark:text-orange-400 font-semibold"
+                                : "text-red-500 font-semibold"
+                            }
+                          >
+                            رصيد الجملة: {otherDisplayQuantity || 0}
+                          </span>
+                        )}
 
                         {otherBranchWholesaleBalances.length > 1 &&
                           otherBranchWholesaleBalances.map((row) => (
