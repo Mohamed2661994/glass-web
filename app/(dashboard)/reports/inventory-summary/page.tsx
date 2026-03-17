@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
 import api from "@/services/api";
 import { multiWordMatch } from "@/lib/utils";
@@ -70,6 +77,38 @@ type ProductVariant = {
 
 type WarehouseFilter = "الكل" | "المخزن الرئيسي" | "مخزن المعرض";
 
+const ACCURATE_RECALC_CONCURRENCY = 6;
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T) => Promise<R>,
+) {
+  if (items.length === 0) {
+    return [] as R[];
+  }
+
+  const safeConcurrency = Math.max(1, Math.min(concurrency, items.length));
+  const results: R[] = new Array(items.length);
+  let nextIndex = 0;
+
+  const workers = Array.from({ length: safeConcurrency }, async () => {
+    while (true) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+
+      if (currentIndex >= items.length) {
+        return;
+      }
+
+      results[currentIndex] = await mapper(items[currentIndex]);
+    }
+  });
+
+  await Promise.all(workers);
+  return results;
+}
+
 /* ========== Component ========== */
 export default function InventorySummaryPage() {
   const { user } = useAuth();
@@ -80,6 +119,7 @@ export default function InventorySummaryPage() {
   const [loading, setLoading] = useState(true);
   const [accurateLoading, setAccurateLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
+  const deferredSearchText = useDeferredValue(searchText);
   const [packageLabelMap, setPackageLabelMap] = useState<
     Record<string, string>
   >({});
@@ -87,6 +127,7 @@ export default function InventorySummaryPage() {
     Record<number, InventoryItem[]>
   >({});
   const tableRef = useRef<HTMLDivElement>(null);
+  const reportFetchTokenRef = useRef(0);
   const [selectedWarehouse, setSelectedWarehouse] = useState<WarehouseFilter>(
     isShowroomUser
       ? "مخزن المعرض"
@@ -97,35 +138,88 @@ export default function InventorySummaryPage() {
 
   /* ========== Fetch ========== */
   const fetchReport = useCallback(async () => {
+    const fetchToken = reportFetchTokenRef.current + 1;
+    reportFetchTokenRef.current = fetchToken;
+
     try {
       setLoading(true);
-      const [invRes, prodRes] = await Promise.all([
-        api.get("/reports/inventory-summary"),
-        api.get("/products", {
-          params: {
-            branch_id: isShowroomUser ? 1 : 2,
-            invoice_type: isShowroomUser ? "retail" : "wholesale",
-            movement_type: "sale",
-          },
-        }),
-      ]);
-      const products: any[] = Array.isArray(prodRes.data)
-        ? prodRes.data
-        : (prodRes.data?.data ?? []);
-      const barcodeMap: Record<number, string> = {};
-      products.forEach((p: any) => {
-        if (p.barcode) barcodeMap[p.id] = p.barcode;
-      });
-      const items: InventoryItem[] = (
-        Array.isArray(invRes.data) ? invRes.data : []
-      ).map((item: any) => ({
-        ...item,
-        barcode: item.barcode || barcodeMap[item.product_id] || null,
+      const invRes = await api.get("/reports/inventory-summary");
+
+      const rawItems = Array.isArray(invRes.data)
+        ? (invRes.data as Array<Record<string, unknown>>)
+        : [];
+
+      const items: InventoryItem[] = rawItems.map((item) => ({
+        product_id: Number(item.product_id || 0),
+        product_name: String(item.product_name || ""),
+        manufacturer_name: item.manufacturer_name
+          ? String(item.manufacturer_name)
+          : null,
+        barcode: item.barcode ? String(item.barcode) : null,
+        warehouse_name: item.warehouse_name ? String(item.warehouse_name) : null,
+        total_in: Number(item.total_in || 0),
+        total_out: Number(item.total_out || 0),
+        current_stock: Number(item.current_stock || 0),
+        package_name: item.package_name ? String(item.package_name) : null,
       }));
+
+      if (reportFetchTokenRef.current !== fetchToken) return;
       setData(items);
+
+      const missingBarcodeProductIds = Array.from(
+        new Set(
+          items
+            .filter((item) => !String(item.barcode || "").trim())
+            .map((item) => Number(item.product_id))
+            .filter((productId) => Number.isFinite(productId) && productId > 0),
+        ),
+      );
+
+      if (missingBarcodeProductIds.length > 0) {
+        void api
+          .get("/products", {
+            params: {
+              branch_id: isShowroomUser ? 1 : 2,
+              invoice_type: isShowroomUser ? "retail" : "wholesale",
+              movement_type: "sale",
+            },
+          })
+          .then((prodRes) => {
+            if (reportFetchTokenRef.current !== fetchToken) return;
+
+            const products = Array.isArray(prodRes.data)
+              ? (prodRes.data as Array<Record<string, unknown>>)
+              : Array.isArray((prodRes.data as { data?: unknown })?.data)
+                ? ((prodRes.data as { data: Array<Record<string, unknown>> })
+                    .data ?? [])
+                : [];
+
+            const barcodeMap: Record<number, string> = {};
+            products.forEach((product) => {
+              if (product?.barcode) {
+                barcodeMap[Number(product.id)] = String(product.barcode);
+              }
+            });
+
+            if (Object.keys(barcodeMap).length === 0) return;
+
+            setData((previous) =>
+              previous.map((item) => ({
+                ...item,
+                barcode:
+                  item.barcode || barcodeMap[Number(item.product_id)] || null,
+              })),
+            );
+          })
+          .catch(() => {
+            /* ignore barcode enrichment failures */
+          });
+      }
     } catch {
+      if (reportFetchTokenRef.current !== fetchToken) return;
       setData([]);
     } finally {
+      if (reportFetchTokenRef.current !== fetchToken) return;
       setLoading(false);
     }
   }, [isShowroomUser]);
@@ -160,10 +254,10 @@ export default function InventorySummaryPage() {
     }
 
     // بحث
-    if (searchText.trim()) {
+    if (deferredSearchText.trim()) {
       result = result.filter((item) =>
         multiWordMatch(
-          searchText,
+          deferredSearchText,
           item.product_name,
           item.manufacturer_name || "",
           item.barcode || "",
@@ -172,7 +266,13 @@ export default function InventorySummaryPage() {
     }
 
     return result;
-  }, [data, selectedWarehouse, searchText, isShowroomUser, isWarehouseUser]);
+  }, [
+    data,
+    selectedWarehouse,
+    deferredSearchText,
+    isShowroomUser,
+    isWarehouseUser,
+  ]);
 
   useEffect(() => {
     if (isShowroomUser) {
@@ -261,11 +361,53 @@ export default function InventorySummaryPage() {
       ? "retail"
       : "movement";
 
+  const showroomFallbackRows = useMemo(() => {
+    if (!isShowroomUser) {
+      return [] as InventoryItem[];
+    }
+
+    const grouped = new Map<number, InventoryItem>();
+
+    for (const item of filteredData) {
+      const productId = Number(item.product_id);
+      if (!Number.isFinite(productId) || productId <= 0) continue;
+
+      const totalIn = Number(item.total_in || 0);
+      const totalOut = Number(item.total_out || 0);
+      const existing = grouped.get(productId);
+
+      if (!existing) {
+        grouped.set(productId, {
+          ...item,
+          product_id: productId,
+          warehouse_name: "مخزن المعرض",
+          total_in: totalIn,
+          total_out: totalOut,
+          current_stock: totalIn - totalOut,
+          package_name: null,
+        });
+        continue;
+      }
+
+      const mergedIn = Number(existing.total_in || 0) + totalIn;
+      const mergedOut = Number(existing.total_out || 0) + totalOut;
+      grouped.set(productId, {
+        ...existing,
+        total_in: mergedIn,
+        total_out: mergedOut,
+        current_stock: mergedIn - mergedOut,
+        barcode: existing.barcode || item.barcode || null,
+      });
+    }
+
+    return Array.from(grouped.values());
+  }, [filteredData, isShowroomUser]);
+
   useEffect(() => {
     const shouldRecalculate = isShowroomUser
       ? filteredData.length > 0
       : filteredData.length > 0 &&
-        (searchText.trim().length > 0 || filteredData.length <= 30);
+        (deferredSearchText.trim().length > 0 || filteredData.length <= 30);
 
     if (!shouldRecalculate) {
       setAccurateRowsByProductId({});
@@ -280,8 +422,10 @@ export default function InventorySummaryPage() {
     let cancelled = false;
     setAccurateLoading(true);
 
-    Promise.all(
-      uniqueProducts.map(async (item) => {
+    mapWithConcurrency(
+      uniqueProducts,
+      ACCURATE_RECALC_CONCURRENCY,
+      async (item) => {
         try {
           const movementRows = await fetchUnifiedMovementRows({
             productName: item.product_name,
@@ -366,7 +510,7 @@ export default function InventorySummaryPage() {
 
           return [item.product_id, []] as const;
         }
-      }),
+      },
     )
       .then((entries) => {
         if (cancelled) return;
@@ -386,12 +530,15 @@ export default function InventorySummaryPage() {
     movementDisplayMode,
     movementWarehouseScope,
     packageLabelMap,
-    searchText,
+    deferredSearchText,
     selectedWarehouse,
   ]);
 
   const displayedData = useMemo(() => {
     if (isShowroomUser) {
+      const fallbackByProductId = new Map(
+        showroomFallbackRows.map((row) => [Number(row.product_id), row]),
+      );
       const result: InventoryItem[] = [];
       const handledProductIds = new Set<number>();
 
@@ -402,6 +549,12 @@ export default function InventorySummaryPage() {
         const accurateRows = accurateRowsByProductId[item.product_id];
         if (accurateRows && accurateRows.length > 0) {
           result.push(...accurateRows);
+          continue;
+        }
+
+        const fallbackRow = fallbackByProductId.get(Number(item.product_id));
+        if (fallbackRow) {
+          result.push(fallbackRow);
         }
       }
 
@@ -410,7 +563,7 @@ export default function InventorySummaryPage() {
 
     const shouldUseAccurate =
       filteredData.length > 0 &&
-      (searchText.trim().length > 0 || filteredData.length <= 30);
+      (deferredSearchText.trim().length > 0 || filteredData.length <= 30);
 
     if (!shouldUseAccurate) {
       return filteredData;
@@ -435,7 +588,13 @@ export default function InventorySummaryPage() {
     }
 
     return result;
-  }, [accurateRowsByProductId, filteredData, isShowroomUser, searchText]);
+  }, [
+    accurateRowsByProductId,
+    deferredSearchText,
+    filteredData,
+    isShowroomUser,
+    showroomFallbackRows,
+  ]);
 
   const showroomAccurateLoading =
     isShowroomUser && !loading && filteredData.length > 0 && accurateLoading;
@@ -528,7 +687,7 @@ export default function InventorySummaryPage() {
         )}
 
         {/* Export buttons */}
-        {!loading && !showroomAccurateLoading && displayedData.length > 0 && (
+        {!loading && displayedData.length > 0 && (
           <div className="flex justify-center gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={handlePrint}>
               <Printer className="h-4 w-4" />
@@ -545,8 +704,15 @@ export default function InventorySummaryPage() {
           </div>
         )}
 
+        {showroomAccurateLoading && (
+          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            جاري تحسين دقة الأرقام في الخلفية...
+          </div>
+        )}
+
         {/* Loading Skeleton */}
-        {(loading || showroomAccurateLoading) && (
+        {loading && (
           <Card>
             <CardContent className="p-0">
               <Table>
@@ -602,7 +768,7 @@ export default function InventorySummaryPage() {
         )}
 
         {/* Table */}
-        {!loading && !showroomAccurateLoading && displayedData.length > 0 && (
+        {!loading && displayedData.length > 0 && (
           <Card>
             <CardContent className="p-0">
               <div className="hidden md:block overflow-x-auto" ref={tableRef}>
@@ -741,14 +907,14 @@ export default function InventorySummaryPage() {
         )}
 
         {/* Empty */}
-        {!loading && !showroomAccurateLoading && displayedData.length === 0 && (
+        {!loading && displayedData.length === 0 && (
           <div className="text-center py-16 text-muted-foreground">
             لا توجد بيانات
           </div>
         )}
 
         {/* Count badge */}
-        {!loading && !showroomAccurateLoading && displayedData.length > 0 && (
+        {!loading && displayedData.length > 0 && (
           <div className="text-center">
             <Badge variant="secondary">{displayedData.length} صنف</Badge>
           </div>
