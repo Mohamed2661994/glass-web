@@ -704,10 +704,6 @@ export default function EditWholesaleInvoicePage() {
     });
 
     return filtered.sort((a, b) => {
-      const aInStock = getResolvedAvailableQuantity(a) > 0 ? 1 : 0;
-      const bInStock = getResolvedAvailableQuantity(b) > 0 ? 1 : 0;
-      if (aInStock !== bInStock) return bInStock - aInStock;
-
       if (search.trim()) {
         const scoreA = multiWordScore(
           search,
@@ -726,7 +722,20 @@ export default function EditWholesaleInvoicePage() {
           b.manufacturer,
         );
         if (scoreA !== scoreB) return scoreB - scoreA;
+
+        const nameCompare = String(a.name || "").localeCompare(
+          String(b.name || ""),
+          "ar",
+        );
+        if (nameCompare !== 0) return nameCompare;
+
+        return Number(a.id || 0) - Number(b.id || 0);
       }
+
+      const aInStock = getResolvedAvailableQuantity(a) > 0 ? 1 : 0;
+      const bInStock = getResolvedAvailableQuantity(b) > 0 ? 1 : 0;
+      if (aInStock !== bInStock) return bInStock - aInStock;
+
       return String(a.name || "").localeCompare(String(b.name || ""), "ar");
     });
   }, [getResolvedAvailableQuantity, products, search]);
@@ -859,7 +868,8 @@ export default function EditWholesaleInvoicePage() {
                   </span>
                 </div>
                 <p className="text-xs text-amber-800/80 dark:text-amber-200/80">
-                  بعد مراجعتها وحفظ التعديل ستختفي من قسم فواتير الجملة المعلقة عند منشئها.
+                  بعد مراجعتها وحفظ التعديل ستختفي من قسم فواتير الجملة المعلقة
+                  عند منشئها.
                 </p>
               </div>
               {invoiceMeta.updatedByName && (

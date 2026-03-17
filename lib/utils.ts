@@ -151,6 +151,7 @@ export function multiWordScore(
     .split(/\s+/)
     .filter(Boolean)
     .map((w) => searchNormalize(w));
+  const fullQuery = searchNormalize(effectiveQuery);
 
   if (words.length === 0) return 0;
 
@@ -159,6 +160,17 @@ export function multiWordScore(
   const combined = allFields.map((f) => searchNormalize(f || "")).join(" ");
 
   let score = 0;
+
+  // Strong phrase-level ranking so the closest full name wins first.
+  if (fullQuery) {
+    if (nameLower === fullQuery) {
+      score += 400; // exact full name match
+    } else if (nameLower.startsWith(fullQuery)) {
+      score += 240; // full query matches name prefix
+    } else if (nameLower.includes(fullQuery)) {
+      score += 120; // full query appears contiguously in name
+    }
+  }
 
   // Count how many query words match
   const matchedWords = words.filter((w) => combined.includes(w));
@@ -179,6 +191,17 @@ export function multiWordScore(
   const otherNormalized = otherFields.map((f) => searchNormalize(f || ""));
   for (const fieldVal of otherNormalized) {
     if (!fieldVal) continue;
+
+    if (fullQuery) {
+      if (fieldVal === fullQuery) {
+        score += 320; // exact match on id/barcode/other field
+      } else if (fieldVal.startsWith(fullQuery)) {
+        score += 90;
+      } else if (fieldVal.includes(fullQuery)) {
+        score += 45;
+      }
+    }
+
     for (const w of words) {
       if (fieldVal === w) {
         score += 80; // exact match on barcode/other field
