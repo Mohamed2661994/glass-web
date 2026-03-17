@@ -14,8 +14,12 @@ import { Button } from "@/components/ui/button";
 import { useCachedProducts } from "@/hooks/use-cached-products";
 import { highlightText } from "@/lib/highlight-text";
 import {
+  getPackageVariantId,
+  mergePackageVariants,
+  normalizePackageName,
   prefetchMovementBalances,
   type MovementBalanceEntry,
+  type PackageVariant,
 } from "@/lib/package-stock";
 import { multiWordMatch, multiWordScore } from "@/lib/utils";
 
@@ -38,12 +42,7 @@ type LookupProduct = {
   retail_price?: number | string | null;
   wholesale_price?: number | string | null;
   discount_amount?: number | string | null;
-  variant_stock?: Array<{
-    variant_id: number;
-    package_name: string;
-    quantity: number;
-    price: number | null;
-  }>;
+  variant_stock?: PackageVariant[];
 };
 
 export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
@@ -61,6 +60,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
      ========================================================= */
   const {
     products,
+    variantsMap,
     loading,
     refresh,
     refreshSilently,
@@ -107,6 +107,65 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     Record<string, { entries: MovementBalanceEntry[]; total: number }>
   >({});
   const balanceLoadingRef = useRef<Record<string, boolean>>({});
+
+  const getWholesalePackageRows = useCallback(
+    (product: LookupProduct) => {
+      const rows = new Map<
+        string,
+        { key: string; label: string; price: number | string | null }
+      >();
+
+      const addRow = (
+        rawLabel: string | null | undefined,
+        price: number | string | null | undefined,
+        keyHint: string,
+      ) => {
+        const label = String(rawLabel || "").trim();
+        if (!label || label === "-" || label === "كرتونة 0") {
+          return;
+        }
+
+        const normalized = normalizePackageName(label);
+        const existing = rows.get(normalized);
+
+        if (!existing) {
+          rows.set(normalized, {
+            key: `${normalized}:${keyHint}`,
+            label,
+            price: price ?? null,
+          });
+          return;
+        }
+
+        if ((Number(existing.price) || 0) <= 0 && (Number(price) || 0) > 0) {
+          rows.set(normalized, {
+            ...existing,
+            price,
+          });
+        }
+      };
+
+      addRow(product.wholesale_package, product.wholesale_price, "base");
+
+      const mergedVariants = mergePackageVariants(
+        Array.isArray(product.variant_stock) ? product.variant_stock : [],
+        variantsMap[product.id] || [],
+      );
+
+      mergedVariants.forEach((variant, index) => {
+        addRow(
+          variant.wholesale_package || variant.package_name,
+          variant.wholesale_price ?? variant.price,
+          String(getPackageVariantId(variant) || index + 1),
+        );
+      });
+
+      return Array.from(rows.values()).sort((left, right) =>
+        left.label.localeCompare(right.label, "ar"),
+      );
+    },
+    [variantsMap],
+  );
 
   // Refresh silently every time the modal opens so the UI stays instant.
   useEffect(() => {
@@ -165,9 +224,8 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     const filtered = products.filter((p) => {
       // For wholesale branch, only show products with wholesale package
       if (invoiceType === "wholesale") {
-        const wp = (p.wholesale_package || "").trim();
         const hasWholesale =
-          p.has_wholesale !== false && wp !== "" && wp !== "كرتونة 0";
+          p.has_wholesale !== false && getWholesalePackageRows(p).length > 0;
         if (!hasWholesale) return false;
       }
       return multiWordMatch(
@@ -216,7 +274,14 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
       return String(a.name || "").localeCompare(String(b.name || ""), "ar");
     });
-  }, [branchId, getDisplayQuantity, invoiceType, products, search]);
+  }, [
+    branchId,
+    getDisplayQuantity,
+    getWholesalePackageRows,
+    invoiceType,
+    products,
+    search,
+  ]);
 
   useEffect(() => {
     if (!open) return;
@@ -464,6 +529,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
             </div>
           ) : (
             filteredProducts.map((product, index) => {
+              const wholesalePackageRows = getWholesalePackageRows(product);
               const currentBranchDisplayQuantity = getDisplayQuantity(
                 product,
                 branchId,
@@ -527,44 +593,30 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                     )}
                   </div>
 
-                  {product.wholesale_package && (
+                  {wholesalePackageRows.length > 0 && (
                     <div className="text-xs mt-1 flex flex-wrap gap-x-4 gap-y-1 text-orange-600 dark:text-orange-400">
-                      {product.variant_stock &&
-                      product.variant_stock.length > 1 ? (
+                      {wholesalePackageRows.length > 1 ? (
                         <>
-                          {product.variant_stock.map(
-                            (
-                              vs: {
-                                variant_id: number;
-                                package_name: string;
-                                quantity: number;
-                                price: number | null;
-                              },
-                              idx: number,
-                            ) => {
+                          {wholesalePackageRows.map((pkg) => {
                               const variantPrice =
-                                vs.price ??
-                                (vs.variant_id === 0
-                                  ? product.wholesale_price
-                                  : null);
+                                pkg.price ?? product.wholesale_price;
                               return (
-                                <span key={vs.variant_id ?? idx}>
-                                  {vs.package_name}:{" "}
+                                <span key={pkg.key}>
+                                  {pkg.label}:{" "}
                                   <span className="font-semibold">
                                     {variantPrice ?? product.wholesale_price}
                                   </span>
                                 </span>
                               );
-                            },
-                          )}
+                            })}
                         </>
                       ) : (
                         <>
-                          <span>عبوة جملة: {product.wholesale_package}</span>
-                          {product.wholesale_price != null &&
-                            Number(product.wholesale_price) > 0 && (
+                          <span>عبوة جملة: {wholesalePackageRows[0].label}</span>
+                          {wholesalePackageRows[0].price != null &&
+                            Number(wholesalePackageRows[0].price) > 0 && (
                               <span className="font-semibold">
-                                سعر الجملة: {product.wholesale_price}
+                                سعر الجملة: {wholesalePackageRows[0].price}
                               </span>
                             )}
                         </>
@@ -582,7 +634,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                           : "text-red-500 font-semibold"
                       }
                     >
-                      رصيد {branchId === 1 ? "القطاعي" : "الجملة"}: {" "}
+                      رصيد {branchId === 1 ? "القطاعي" : "الجملة"}:{" "}
                       {currentBranchDisplayQuantity}
                     </span>
 
