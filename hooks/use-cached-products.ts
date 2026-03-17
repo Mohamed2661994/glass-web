@@ -126,6 +126,26 @@ function getFromCache<T>(
   }
 }
 
+/**
+ * Return cached data even if expired or globally invalidated.
+ * Only checks params match and cache version — ignores timestamps.
+ */
+function getStaleFromCache<T>(
+  prefix: string,
+  key: string,
+  params: string,
+): T | null {
+  try {
+    const raw = localStorage.getItem(getCacheKey(prefix, key));
+    if (!raw) return null;
+    const entry: CacheEntry<T> = JSON.parse(raw);
+    if (entry.params !== params || entry.version !== CACHE_VERSION) return null;
+    return entry.data;
+  } catch {
+    return null;
+  }
+}
+
 function setCache<T>(prefix: string, key: string, data: T, params: string) {
   try {
     const entry: CacheEntry<T> = {
@@ -520,10 +540,6 @@ export function useCachedProducts({
 
   const fetchProducts = useCallback(
     async (forceRefresh = false, silent = false) => {
-      const hasVisibleProducts = products.length > 0;
-      const shouldShowBlockingLoader = !silent && !hasVisibleProducts;
-      const shouldTrackRefresh = silent || hasVisibleProducts;
-
       // When force-refreshing, mark ALL product caches as stale
       // so other components with different cache keys will also refetch
       if (forceRefresh) {
@@ -534,7 +550,7 @@ export function useCachedProducts({
         resetResolvedAvailableQty();
       }
 
-      // 1. Try cache first (unless force refresh)
+      // 1. Try fresh cache first (unless force refresh)
       if (!forceRefresh) {
         const cached = getFromCache<any[]>(
           CACHE_KEY_PREFIX,
@@ -553,7 +569,6 @@ export function useCachedProducts({
             );
             setResolvedAvailableQtyById(cachedResolved || {});
           }
-          // Also try variants cache
           if (shouldUseVariants) {
             const cachedVariants = getFromCache<Record<number, any[]>>(
               VARIANTS_CACHE_KEY_PREFIX,
@@ -565,7 +580,6 @@ export function useCachedProducts({
               setVariantsMap(cachedVariants);
             }
           }
-          // Get timestamp from cache
           try {
             const raw = localStorage.getItem(
               getCacheKey(CACHE_KEY_PREFIX, resolvedCacheKey),
@@ -579,7 +593,50 @@ export function useCachedProducts({
         }
       }
 
-      // 2. Fetch from API
+      // 2. STALE-WHILE-REVALIDATE: show stale data immediately
+      //    instead of a loading spinner when cache is expired/invalidated
+      let hasVisibleProducts = products.length > 0;
+      if (!hasVisibleProducts) {
+        const staleData = getStaleFromCache<any[]>(
+          CACHE_KEY_PREFIX,
+          resolvedCacheKey,
+          paramsString,
+        );
+        if (staleData && staleData.length > 0) {
+          setProducts(staleData);
+          if (shouldUseVariants) {
+            const sv = getStaleFromCache<Record<number, any[]>>(
+              VARIANTS_CACHE_KEY_PREFIX,
+              resolvedCacheKey,
+              paramsString,
+            );
+            if (sv) setVariantsMap(sv);
+          }
+          if (shouldResolveAvailableQty) {
+            const sr = getStaleFromCache<Record<number, number>>(
+              RESOLVED_QTY_CACHE_KEY_PREFIX,
+              resolvedCacheKey,
+              paramsString,
+            );
+            if (sr) setResolvedAvailableQtyById(sr);
+          }
+          try {
+            const raw = localStorage.getItem(
+              getCacheKey(CACHE_KEY_PREFIX, resolvedCacheKey),
+            );
+            if (raw) {
+              const entry = JSON.parse(raw);
+              setLastUpdated(new Date(entry.timestamp));
+            }
+          } catch {}
+          hasVisibleProducts = true;
+        }
+      }
+
+      const shouldShowBlockingLoader = !silent && !hasVisibleProducts;
+      const shouldTrackRefresh = silent || hasVisibleProducts;
+
+      // 3. Fetch from API
       try {
         if (shouldShowBlockingLoader) {
           setLoading(true);

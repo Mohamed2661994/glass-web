@@ -166,6 +166,25 @@ export default function StockTransferPage() {
     [FROM_BRANCH_ID, resolvedAvailableQtyById, variantsMap],
   );
 
+  const TRANSFER_CACHE_KEY = "stock_transfer_cache_v1";
+
+  /* ========== Restore cached data immediately ========== */
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(TRANSFER_CACHE_KEY);
+      if (raw) {
+        const cached = JSON.parse(raw);
+        if (cached.products?.length) {
+          setProducts(cached.products);
+          setMfgPercentMap(cached.mfgPercentMap || {});
+          if (cached.variantsMap)
+            setVariantsMap(cached.variantsMap);
+          setLoading(false);
+        }
+      }
+    } catch {}
+  }, []);
+
   /* ========== Load Products ========== */
   useEffect(() => {
     (async () => {
@@ -218,8 +237,27 @@ export default function StockTransferPage() {
               map[v.product_id].push(v);
             }
             setVariantsMap(map);
+
+            // Save everything to cache for instant next load
+            try {
+              localStorage.setItem(
+                TRANSFER_CACHE_KEY,
+                JSON.stringify({
+                  products: prods,
+                  mfgPercentMap: pMap,
+                  variantsMap: map,
+                }),
+              );
+            } catch {}
           } catch {
             /* silent */
+            // Save without variants
+            try {
+              localStorage.setItem(
+                TRANSFER_CACHE_KEY,
+                JSON.stringify({ products: prods, mfgPercentMap: pMap }),
+              );
+            } catch {}
           } finally {
             setVariantsLoading(false);
           }

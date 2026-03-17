@@ -68,16 +68,39 @@ export default function LowStockReorderPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCartModal, setShowCartModal] = useState(false);
   const fetchIdRef = useRef(0);
+  const hasCachedDataRef = useRef(false);
+
+  const LOW_STOCK_CACHE_KEY = "low_stock_reorder_cache_v1";
+
+  /* ========== Restore cached results immediately ========== */
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LOW_STOCK_CACHE_KEY);
+      if (raw) {
+        const cached = JSON.parse(raw);
+        if (cached.data?.length) {
+          setData(cached.data);
+          setRetailStock(cached.retailStock || {});
+          setWholesaleStock(cached.wholesaleStock || {});
+          setLoading(false);
+          setFirstResolvedLoadDone(true);
+          hasCachedDataRef.current = true;
+        }
+      }
+    } catch {}
+  }, []);
 
   /* ========== Fetch ========== */
   const fetchData = useCallback(async () => {
     const fetchId = fetchIdRef.current + 1;
     fetchIdRef.current = fetchId;
 
+    const hasCachedData = hasCachedDataRef.current;
+
     try {
-      setLoading(true);
+      if (!hasCachedData) setLoading(true);
       setResolvingStock(false);
-      setFirstResolvedLoadDone(false);
+      if (!hasCachedData) setFirstResolvedLoadDone(false);
       const [lowStockRes, retailProductsRes, wholesaleProductsRes] =
         await Promise.all([
           api.get("/reports/low-stock", {
@@ -201,11 +224,24 @@ export default function LowStockReorderPage() {
       setRetailStock(retailMap);
       setWholesaleStock(wsMap);
       setFirstResolvedLoadDone(true);
+
+      try {
+        localStorage.setItem(
+          LOW_STOCK_CACHE_KEY,
+          JSON.stringify({
+            data: lowItems,
+            retailStock: retailMap,
+            wholesaleStock: wsMap,
+          }),
+        );
+      } catch {}
     } catch {
       if (fetchIdRef.current !== fetchId) return;
-      setData([]);
-      setRetailStock({});
-      setWholesaleStock({});
+      if (!hasCachedData) {
+        setData([]);
+        setRetailStock({});
+        setWholesaleStock({});
+      }
       setFirstResolvedLoadDone(true);
     } finally {
       if (fetchIdRef.current !== fetchId) return;

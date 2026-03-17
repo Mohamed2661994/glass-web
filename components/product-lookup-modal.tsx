@@ -42,6 +42,8 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     products,
     loading,
     refresh,
+    refreshSilently,
+    refreshing,
     getResolvedAvailableQuantity,
     ensureResolvedAvailableQuantities,
   } = useCachedProducts({
@@ -58,6 +60,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     products: otherBranchProducts,
     loading: otherLoading,
     refresh: refreshOther,
+    refreshSilently: refreshOtherSilently,
     getResolvedAvailableQuantity: getOtherBranchResolvedAvailableQuantity,
     ensureResolvedAvailableQuantities:
       ensureOtherBranchResolvedAvailableQuantities,
@@ -85,8 +88,6 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
   >({});
   const balanceLoadingRef = useRef<Record<string, boolean>>({});
 
-  const [refreshing, setRefreshing] = useState(false);
-
   // Force refresh every time the modal opens so data is always fresh
   useEffect(() => {
     if (!open) return;
@@ -94,18 +95,14 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     setFocusedIndex(-1);
     setMovementBalancesByKey({});
     balanceLoadingRef.current = {};
-    // Silent refresh — checks cache validity (invalidation key) and refetches if needed
-    refresh();
-    refreshOther();
+    // Data is already loaded via autoFetch + stale-while-revalidate.
+    // Silent refresh keeps data visible while checking for updates.
+    refreshSilently();
+    refreshOtherSilently();
   }, [open]);
 
   const handleRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await Promise.all([refresh(), refreshOther()]);
-    } finally {
-      setRefreshing(false);
-    }
+    await Promise.all([refresh(), refreshOther()]);
   };
 
   const getBalanceKey = useCallback(

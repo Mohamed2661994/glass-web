@@ -199,8 +199,31 @@ export function QuickTransferModal({
     setPreviewItems([]);
     setPayload(null);
 
+    const QUICK_TRANSFER_CACHE_KEY = "quick_transfer_cache_v1";
+
+    // Restore cached data immediately for instant display
+    try {
+      const raw = localStorage.getItem(QUICK_TRANSFER_CACHE_KEY);
+      if (raw) {
+        const cached = JSON.parse(raw);
+        if (cached.products?.length) {
+          setProducts(cached.products);
+          setMfgPercentMap(cached.mfgPercentMap || {});
+          if (cached.variantsMap) setVariantsMap(cached.variantsMap);
+          setLoading(false);
+        }
+      }
+    } catch {}
+
     (async () => {
-      setLoading(true);
+      const hasCachedProducts = !!(() => {
+        try {
+          const raw = localStorage.getItem(QUICK_TRANSFER_CACHE_KEY);
+          return raw && JSON.parse(raw).products?.length;
+        } catch { return false; }
+      })();
+
+      if (!hasCachedProducts) setLoading(true);
       try {
         const [productsRes, mfgRes] = await Promise.all([
           api.get("/products/for-replace", {
@@ -237,8 +260,25 @@ export function QuickTransferModal({
               map[v.product_id].push(v);
             }
             setVariantsMap(map);
+
+            try {
+              localStorage.setItem(
+                QUICK_TRANSFER_CACHE_KEY,
+                JSON.stringify({
+                  products: prods,
+                  mfgPercentMap: pMap,
+                  variantsMap: map,
+                }),
+              );
+            } catch {}
           } catch {
             /* silent */
+            try {
+              localStorage.setItem(
+                QUICK_TRANSFER_CACHE_KEY,
+                JSON.stringify({ products: prods, mfgPercentMap: pMap }),
+              );
+            } catch {}
           } finally {
             setVariantsLoading(false);
           }
