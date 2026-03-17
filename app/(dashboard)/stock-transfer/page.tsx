@@ -210,7 +210,6 @@ export default function StockTransferPage() {
         try {
           const reorderRaw = sessionStorage.getItem("reorder_product_ids");
           if (reorderRaw) {
-            sessionStorage.removeItem("reorder_product_ids");
             const reorderIds: number[] = JSON.parse(reorderRaw);
             if (reorderIds.length > 0) {
               setPendingReorderIds(reorderIds);
@@ -351,16 +350,20 @@ export default function StockTransferPage() {
   }, [resolvedAvailableQtyById]);
 
   useEffect(() => {
-    if (pendingReorderIds.length === 0) return;
+    if (pendingReorderIds.length === 0 || loading || products.length === 0) {
+      return;
+    }
 
     const reorderIds = pendingReorderIds;
-    setPendingReorderIds([]);
 
     const selectedProducts = reorderIds
       .map((productId) => productById[productId])
       .filter((product): product is Product => Boolean(product));
 
     if (selectedProducts.length === 0) {
+      toast.error("تعذر تحميل الأصناف المختارة للتحويل");
+      sessionStorage.removeItem("reorder_product_ids");
+      setPendingReorderIds([]);
       return;
     }
 
@@ -425,20 +428,37 @@ export default function StockTransferPage() {
         })
         .filter((item): item is TransferItem => Boolean(item));
 
-      if (cancelled || autoItems.length === 0) return;
+      if (cancelled) return;
+
+      if (autoItems.length === 0) {
+        sessionStorage.removeItem("reorder_product_ids");
+        setPendingReorderIds([]);
+        toast.error("الأصناف المختارة غير متاحة حاليًا للتحويل");
+        return;
+      }
 
       setItems((prev) => {
         const existingKeys = new Set(prev.map((item) => item.uid));
         const newItems = autoItems.filter((item) => !existingKeys.has(item.uid));
         return newItems.length > 0 ? [...prev, ...newItems] : prev;
       });
+      sessionStorage.removeItem("reorder_product_ids");
+      setPendingReorderIds([]);
       toast.success(`تم إضافة ${autoItems.length} صنف تلقائياً`);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [FROM_BRANCH_ID, mfgPercentMap, pendingReorderIds, productById, variantsMap]);
+  }, [
+    FROM_BRANCH_ID,
+    loading,
+    mfgPercentMap,
+    pendingReorderIds,
+    productById,
+    products.length,
+    variantsMap,
+  ]);
 
   /* ========== Keyboard Navigation ========== */
   const handleSearchKeyDown = useCallback(
