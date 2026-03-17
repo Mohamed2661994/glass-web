@@ -186,6 +186,53 @@ function ProductMovementPageContent() {
     }
   }, [productParam, products, selectedProduct]);
 
+  useEffect(() => {
+    if (!selectedProduct || products.length === 0) return;
+
+    const latestProduct = products.find(
+      (product) => Number(product.id) === Number(selectedProduct.id),
+    );
+
+    if (!latestProduct) return;
+
+    const nextRetailPackage =
+      latestProduct.retail_package || selectedProduct.retail_package || null;
+    const nextWholesalePackage =
+      latestProduct.wholesale_package ||
+      selectedProduct.wholesale_package ||
+      null;
+    const nextManufacturerName =
+      latestProduct.manufacturer_name ||
+      selectedProduct.manufacturer_name ||
+      null;
+    const nextManufacturer =
+      latestProduct.manufacturer || selectedProduct.manufacturer || null;
+
+    if (
+      nextRetailPackage === selectedProduct.retail_package &&
+      nextWholesalePackage === selectedProduct.wholesale_package &&
+      nextManufacturerName === selectedProduct.manufacturer_name &&
+      nextManufacturer === selectedProduct.manufacturer
+    ) {
+      return;
+    }
+
+    setSelectedProduct((current) => {
+      if (!current || Number(current.id) !== Number(latestProduct.id)) {
+        return current;
+      }
+
+      return {
+        ...current,
+        ...latestProduct,
+        retail_package: nextRetailPackage,
+        wholesale_package: nextWholesalePackage,
+        manufacturer_name: nextManufacturerName,
+        manufacturer: nextManufacturer,
+      };
+    });
+  }, [products, selectedProduct]);
+
   /* ========== Fetch Movement ========== */
   const fetchMovement = useCallback(async () => {
     if (!selectedProduct) return;
