@@ -19,6 +19,11 @@ import {
   type MovementWarehouseScope,
   type UnifiedMovementRow,
 } from "@/lib/package-stock";
+import {
+  fetchProductPackageMap,
+  getCachedProductPackageMap,
+  type ProductPackageMeta,
+} from "@/lib/product-package-cache";
 import { useAuth } from "@/app/context/auth-context";
 import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent } from "@/components/ui/card";
@@ -55,6 +60,62 @@ type Product = {
 };
 
 type WarehouseFilter = "الكل" | "المخزن الرئيسي" | "مخزن المعرض";
+
+function isTruthyFlag(value: unknown) {
+  return value === true || value === "true" || value === 1 || value === "1";
+}
+
+function buildProductList(
+  reportProducts: Product[],
+  adminById: Map<number, ProductPackageMeta>,
+  isWarehouseUser: boolean,
+) {
+  let list: Product[] = reportProducts.map((product) => {
+    const adminProduct = adminById.get(Number(product.id));
+
+    return {
+      ...product,
+      manufacturer: product.manufacturer || adminProduct?.manufacturer || null,
+      manufacturer_name:
+        product.manufacturer_name || adminProduct?.manufacturer_name || null,
+      retail_package:
+        product.retail_package || adminProduct?.retail_package || null,
+      wholesale_package:
+        product.wholesale_package || adminProduct?.wholesale_package || null,
+    };
+  });
+
+  if (!isWarehouseUser) {
+    return list;
+  }
+
+  const allowedIds = new Set<number>();
+
+  for (const product of adminById.values()) {
+    if (!isTruthyFlag(product?.is_active)) continue;
+
+    const wholesalePackage = String(product?.wholesale_package || "").trim();
+    const validByPackage =
+      wholesalePackage !== "" &&
+      wholesalePackage !== "0" &&
+      wholesalePackage !== "كرتونة 0" &&
+      wholesalePackage !== "-" &&
+      wholesalePackage !== "بدون عبوة";
+
+    const hasWholesalePrice = Number(product?.wholesale_price || 0) > 0;
+
+    if (
+      (isTruthyFlag(product?.has_wholesale) || validByPackage) &&
+      validByPackage &&
+      hasWholesalePrice
+    ) {
+      allowedIds.add(Number(product.id));
+    }
+  }
+
+  list = list.filter((product) => allowedIds.has(Number(product.id)));
+  return list;
+}
 
 /* ========== Component ========== */
 function ProductMovementPageContent() {
@@ -93,77 +154,25 @@ function ProductMovementPageContent() {
   const fetchProducts = useCallback(async () => {
     try {
       setProductsLoading(true);
-      const res = await api.get("/reports/products");
+      const cachedAdminById = getCachedProductPackageMap();
+      const reportPromise = api.get("/reports/products");
+      const adminPromise = fetchProductPackageMap({
+        force: cachedAdminById.size > 0,
+      });
+
+      const res = await reportPromise;
       const reportProducts: Product[] = Array.isArray(res.data) ? res.data : [];
-      setProducts(reportProducts);
-      setProductsLoading(false);
 
-      setProductsEnriching(true);
-
-      const adminRes = await api.get("/admin/products", {
-        params: { active: "all" },
-      });
-      const adminItems: any[] = Array.isArray(adminRes.data)
-        ? adminRes.data
-        : [];
-      const adminById = new Map<number, any>(
-        adminItems.map((item) => [Number(item.id), item]),
-      );
-
-      let list: Product[] = reportProducts.map((product) => {
-        const adminProduct = adminById.get(Number(product.id));
-        return {
-          ...product,
-          retail_package:
-            product.retail_package || adminProduct?.retail_package || null,
-          wholesale_package:
-            product.wholesale_package ||
-            adminProduct?.wholesale_package ||
-            null,
-        };
-      });
-
-      if (isWarehouseUser) {
-        const allowedIds = new Set<number>();
-        for (const p of adminItems) {
-          const isActive =
-            p?.is_active === true ||
-            p?.is_active === "true" ||
-            p?.is_active === 1 ||
-            p?.is_active === "1";
-
-          if (!isActive) continue;
-
-          const hasWholesaleFlag = p?.has_wholesale;
-          const wp = String(p?.wholesale_package || "").trim();
-          const validByPackage =
-            wp !== "" &&
-            wp !== "0" &&
-            wp !== "كرتونة 0" &&
-            wp !== "-" &&
-            wp !== "بدون عبوة";
-
-          const hasWholesaleByFlag =
-            hasWholesaleFlag === true ||
-            hasWholesaleFlag === "true" ||
-            hasWholesaleFlag === 1 ||
-            hasWholesaleFlag === "1";
-
-          const hasWholesalePrice = Number(p?.wholesale_price || 0) > 0;
-
-          if (
-            (hasWholesaleByFlag || validByPackage) &&
-            validByPackage &&
-            hasWholesalePrice
-          ) {
-            allowedIds.add(Number(p.id));
-          }
-        }
-
-        list = list.filter((p) => allowedIds.has(Number(p.id)));
+      if (cachedAdminById.size > 0) {
+        setProducts(
+          buildProductList(reportProducts, cachedAdminById, isWarehouseUser),
+        );
+        setProductsLoading(false);
+        setProductsEnriching(true);
       }
 
-      setProducts(list);
+      const adminById = await adminPromise;
+      setProducts(buildProductList(reportProducts, adminById, isWarehouseUser));
     } catch {
       /* ignore */
     } finally {

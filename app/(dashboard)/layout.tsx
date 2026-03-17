@@ -1,6 +1,12 @@
 "use client";
 
-import { ReactNode, Suspense, useCallback, useEffect, useState } from "react";
+import {
+  ReactNode,
+  Suspense,
+  useEffect,
+  useSyncExternalStore,
+  useState,
+} from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Sidebar } from "@/components/sidebar";
@@ -14,10 +20,19 @@ import { ProductFormDialog } from "@/components/product-form-dialog";
 import { ProductLookupModal } from "@/components/product-lookup-modal";
 import { ChatDrawer } from "@/components/chat-drawer";
 import { PullToRefresh } from "@/components/pull-to-refresh";
+import { ProductPackagePreload } from "@/components/product-package-preload";
 import { StockSnapshotPreload } from "@/components/stock-snapshot-preload";
 import { SocketProvider } from "@/app/context/socket-context";
 import { NavLoadingProvider } from "@/app/context/nav-loading-context";
-import api, { API_URL } from "@/services/api";
+import api from "@/services/api";
+
+function useIsClient() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
 
 function DashboardLayoutContent({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -25,12 +40,9 @@ function DashboardLayoutContent({ children }: { children: ReactNode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { resolvedTheme } = useTheme();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useIsClient();
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [lookupOpen, setLookupOpen] = useState(false);
-
-  useEffect(() => setMounted(true), []);
 
   // F4 → open add product dialog, F1 → open product lookup
   useEffect(() => {
@@ -188,7 +200,7 @@ function DashboardLayoutContent({ children }: { children: ReactNode }) {
     } else {
       styleEl?.remove();
     }
-  }, [user?.id, prefs.customColors, resolvedTheme]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.id, prefs.customColors, resolvedTheme]);
 
   // ✅ لو مفيش توكن → يروح لصفحة الدخول
   useEffect(() => {
@@ -281,7 +293,7 @@ function DashboardLayoutContent({ children }: { children: ReactNode }) {
         <div className="h-dvh flex bg-background overflow-hidden print:h-auto print:overflow-visible">
           {/* Sidebar */}
           <div className="print:hidden">
-            <Sidebar onExpandChange={setSidebarOpen} />
+            <Sidebar onExpandChange={() => {}} />
           </div>
 
           {/* Main */}
@@ -347,6 +359,7 @@ function DashboardLayoutContent({ children }: { children: ReactNode }) {
           />
 
           {/* F1 Product Lookup Modal */}
+          <ProductPackagePreload />
           <StockSnapshotPreload />
 
           <ProductLookupModal
