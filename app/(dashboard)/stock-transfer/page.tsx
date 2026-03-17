@@ -118,7 +118,10 @@ export default function StockTransferPage() {
   const resolveAvailableQuantity = useCallback(
     async (product: Product) => {
       if (
-        Object.prototype.hasOwnProperty.call(resolvedAvailableQtyById, product.id)
+        Object.prototype.hasOwnProperty.call(
+          resolvedAvailableQtyById,
+          product.id,
+        )
       ) {
         return Number(resolvedAvailableQtyById[product.id] ?? 0);
       }
@@ -236,7 +239,12 @@ export default function StockTransferPage() {
 
   useEffect(() => {
     const pendingProducts = displayedProducts.filter((product) => {
-      if (Object.prototype.hasOwnProperty.call(resolvedAvailableQtyById, product.id)) {
+      if (
+        Object.prototype.hasOwnProperty.call(
+          resolvedAvailableQtyById,
+          product.id,
+        )
+      ) {
         return false;
       }
 
@@ -300,7 +308,12 @@ export default function StockTransferPage() {
         resolvingAvailableQtyRef.current[product.id] = false;
       });
     };
-  }, [FROM_BRANCH_ID, displayedProducts, resolvedAvailableQtyById, variantsMap]);
+  }, [
+    FROM_BRANCH_ID,
+    displayedProducts,
+    resolvedAvailableQtyById,
+    variantsMap,
+  ]);
 
   useEffect(() => {
     items.forEach((item) => {
@@ -343,45 +356,89 @@ export default function StockTransferPage() {
     const reorderIds = pendingReorderIds;
     setPendingReorderIds([]);
 
+    const selectedProducts = reorderIds
+      .map((productId) => productById[productId])
+      .filter((product): product is Product => Boolean(product));
+
+    if (selectedProducts.length === 0) {
+      return;
+    }
+
     let cancelled = false;
 
     void (async () => {
-      const autoItems: TransferItem[] = [];
+      let quantitiesById: Record<number, number> = {};
 
-      for (const productId of reorderIds) {
-        const product = productById[productId];
-        if (!product) continue;
-
-        const availableQty = await resolveAvailableQuantity(product);
-        if (availableQty <= 0) continue;
-
-        const pct = mfgPercentMap[product.manufacturer] || 0;
-        autoItems.push({
-          uid: `${product.id}_0`,
-          product_id: product.id,
-          variant_id: 0,
-          product_name: product.name,
-          manufacturer: product.manufacturer,
-          quantity: 1,
-          percent: pct,
-          price_addition: pct ? 0 : 5,
-          wholesale_package: product.wholesale_package,
-          retail_package: product.retail_package,
-          wholesale_price: product.wholesale_price,
-          available_quantity: availableQty,
+      try {
+        const results = await prefetchResolvedProductQuantities({
+          products: selectedProducts,
+          branchId: FROM_BRANCH_ID,
+          variantsMap,
+          packageField: "wholesale_package",
+          maxConcurrency: 4,
         });
+
+        quantitiesById = Object.fromEntries(
+          results.map(({ productId, quantity }) => [productId, quantity]),
+        );
+      } catch {
+        quantitiesById = Object.fromEntries(
+          selectedProducts.map((product) => [
+            product.id,
+            Number(product.available_quantity) || 0,
+          ]),
+        );
       }
+
+      if (cancelled) return;
+
+      setResolvedAvailableQtyById((prev) => ({
+        ...prev,
+        ...quantitiesById,
+      }));
+
+      const autoItems: TransferItem[] = selectedProducts
+        .map((product) => {
+          const availableQty = Number(
+            quantitiesById[product.id] ?? product.available_quantity,
+          );
+
+          if (availableQty <= 0) {
+            return null;
+          }
+
+          const pct = mfgPercentMap[product.manufacturer] || 0;
+          return {
+            uid: `${product.id}_0`,
+            product_id: product.id,
+            variant_id: 0,
+            product_name: product.name,
+            manufacturer: product.manufacturer,
+            quantity: 1,
+            percent: pct,
+            price_addition: pct ? 0 : 5,
+            wholesale_package: product.wholesale_package,
+            retail_package: product.retail_package,
+            wholesale_price: product.wholesale_price,
+            available_quantity: availableQty,
+          };
+        })
+        .filter((item): item is TransferItem => Boolean(item));
 
       if (cancelled || autoItems.length === 0) return;
 
-      setItems(autoItems);
+      setItems((prev) => {
+        const existingKeys = new Set(prev.map((item) => item.uid));
+        const newItems = autoItems.filter((item) => !existingKeys.has(item.uid));
+        return newItems.length > 0 ? [...prev, ...newItems] : prev;
+      });
       toast.success(`تم إضافة ${autoItems.length} صنف تلقائياً`);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [mfgPercentMap, pendingReorderIds, productById, resolveAvailableQuantity]);
+  }, [FROM_BRANCH_ID, mfgPercentMap, pendingReorderIds, productById, variantsMap]);
 
   /* ========== Keyboard Navigation ========== */
   const handleSearchKeyDown = useCallback(
@@ -921,7 +978,8 @@ export default function StockTransferPage() {
                     )}
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5">
-                    {p.wholesale_package} • رصيد: {getResolvedAvailableQuantity(p)}
+                    {p.wholesale_package} • رصيد:{" "}
+                    {getResolvedAvailableQuantity(p)}
                   </div>
                 </div>
               ))
