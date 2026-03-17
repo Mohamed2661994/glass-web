@@ -13,6 +13,9 @@ export type UpdateEvent =
   | "transfer_created"
   | "transfer_updated"
   | "transfer_cancelled"
+  | "product_created"
+  | "product_updated"
+  | "product_deleted"
   | "cash_in_created"
   | "cash_out_created";
 
@@ -23,6 +26,9 @@ export const STOCK_AFFECTING_EVENTS: UpdateEvent[] = [
   "transfer_created",
   "transfer_updated",
   "transfer_cancelled",
+  "product_created",
+  "product_updated",
+  "product_deleted",
 ];
 
 export function isStockAffectingEvent(event: string | null | undefined) {

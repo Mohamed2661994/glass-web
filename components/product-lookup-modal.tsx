@@ -42,6 +42,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     products,
     loading,
     refresh,
+    refreshSilently,
     refreshing,
     getResolvedAvailableQuantity,
     ensureResolvedAvailableQuantities,
@@ -59,6 +60,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     products: otherBranchProducts,
     loading: otherLoading,
     refresh: refreshOther,
+    refreshSilently: refreshOtherSilently,
     getResolvedAvailableQuantity: getOtherBranchResolvedAvailableQuantity,
     ensureResolvedAvailableQuantities:
       ensureOtherBranchResolvedAvailableQuantities,
@@ -84,25 +86,18 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
   const [movementBalancesByKey, setMovementBalancesByKey] = useState<
     Record<string, { entries: MovementBalanceEntry[]; total: number }>
   >({});
-  const [isOpenRefreshing, setIsOpenRefreshing] = useState(false);
   const balanceLoadingRef = useRef<Record<string, boolean>>({});
 
-  // Force refresh every time the modal opens — show skeleton until fresh data is ready
+  // Refresh silently every time the modal opens so the UI stays instant.
   useEffect(() => {
     if (!open) return;
     setSearch("");
     setFocusedIndex(-1);
     setMovementBalancesByKey({});
     balanceLoadingRef.current = {};
-    setIsOpenRefreshing(true);
-    let cancelled = false;
-    void Promise.all([refresh(), refreshOther()]).finally(() => {
-      if (!cancelled) setIsOpenRefreshing(false);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [open, refresh, refreshOther]);
+    refreshSilently();
+    refreshOtherSilently();
+  }, [open, refreshOtherSilently, refreshSilently]);
 
   const handleRefresh = async () => {
     await Promise.all([refresh(), refreshOther()]);
@@ -408,7 +403,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
               />
             </Button>
           </div>
-          {!loading && !isOpenRefreshing && (
+          {!loading && (
             <div className="text-xs text-muted-foreground mt-2">
               عدد النتائج: {filteredProducts.length} صنف
             </div>
@@ -419,7 +414,12 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
           ref={listRef}
           className="flex-1 overflow-y-auto scrollbar-hide p-4 space-y-2"
         >
-          {(loading || isOpenRefreshing) ? (
+          {!loading && refreshing && filteredProducts.length > 0 && (
+            <div className="text-xs text-muted-foreground mb-2 text-center">
+              جاري تحديث الأصناف...
+            </div>
+          )}
+          {loading ? (
             <div className="space-y-3">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="p-3 rounded-lg border space-y-2">
