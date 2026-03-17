@@ -24,8 +24,11 @@ import { useUserPreferences } from "@/hooks/use-user-preferences";
 import api from "@/services/api";
 import { getTodayDate } from "@/lib/constants";
 import { ProductLookupModal } from "@/components/product-lookup-modal";
-import { fetchStockSnapshot } from "@/lib/stock-snapshot";
-import { getTransferNeededProducts, type LowStockReorderItem } from "@/lib/low-stock-reorder";
+import { loadStockSnapshot } from "@/lib/stock-snapshot";
+import {
+  getTransferNeededProducts,
+  type LowStockReorderItem,
+} from "@/lib/low-stock-reorder";
 import {
   FileText,
   Truck,
@@ -790,6 +793,7 @@ export default function DashboardPage() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   const isRetail = branchId === 1;
+  const LOW_STOCK_CACHE_KEY = "low_stock_reorder_cache_v1";
 
   // Real-time: refresh dashboard when any data changes
   useRealtime(
@@ -1097,39 +1101,71 @@ export default function DashboardPage() {
       setLoadingTransferCount(false);
       return;
     }
-    setLoadingTransferCount(true);
+
+    let restoredFromCache = false;
+
+    try {
+      const raw = localStorage.getItem(LOW_STOCK_CACHE_KEY);
+      if (raw) {
+        const cached = JSON.parse(raw) as {
+          data?: LowStockReorderItem[];
+          retailStock?: Record<number, number>;
+          wholesaleStock?: Record<number, number>;
+        };
+
+        if (Array.isArray(cached?.data)) {
+          setTransferNeededCount(
+            getTransferNeededProducts(
+              cached.data,
+              cached.retailStock || {},
+              cached.wholesaleStock || {},
+            ).length,
+          );
+          setLoadingTransferCount(false);
+          restoredFromCache = true;
+        }
+      }
+    } catch {}
+
+    if (!restoredFromCache) {
+      setLoadingTransferCount(true);
+    }
+
     (async () => {
       try {
-        const [lowStockRes, retailSnapshot, wholesaleSnapshot] = await Promise.all([
-          api.get("/reports/low-stock", {
-            params: { limit_quantity: 5, _t: Date.now() },
-          }),
-          fetchStockSnapshot({
-            endpoint: "/products",
-            params: {
-              branch_id: 1,
-              invoice_type: "retail",
-              movement_type: "sale",
-            },
-            cacheKey: "lookup_retail",
-          }),
-          fetchStockSnapshot({
-            endpoint: "/products",
-            params: {
-              branch_id: 2,
-              invoice_type: "wholesale",
-              movement_type: "sale",
-            },
-            cacheKey: "lookup_wholesale",
-          }),
-        ]);
+        const [lowStockRes, retailSnapshot, wholesaleSnapshot] =
+          await Promise.all([
+            api.get("/reports/low-stock", {
+              params: { limit_quantity: 5, _t: Date.now() },
+            }),
+            loadStockSnapshot({
+              endpoint: "/products",
+              params: {
+                branch_id: 1,
+                invoice_type: "retail",
+                movement_type: "sale",
+              },
+              cacheKey: "lookup_retail",
+            }),
+            loadStockSnapshot({
+              endpoint: "/products",
+              params: {
+                branch_id: 2,
+                invoice_type: "wholesale",
+                movement_type: "sale",
+              },
+              cacheKey: "lookup_wholesale",
+            }),
+          ]);
 
         const lowItems: LowStockReorderItem[] = Array.isArray(lowStockRes.data)
           ? lowStockRes.data
           : [];
 
         const relevantProductIds = Array.from(
-          new Set(lowItems.map((item) => Number(item.product_id)).filter(Boolean)),
+          new Set(
+            lowItems.map((item) => Number(item.product_id)).filter(Boolean),
+          ),
         );
 
         const retailMap = Object.fromEntries(
@@ -1144,6 +1180,17 @@ export default function DashboardPage() {
             Number(wholesaleSnapshot?.resolvedQtyById?.[productId] || 0),
           ]),
         );
+
+        try {
+          localStorage.setItem(
+            LOW_STOCK_CACHE_KEY,
+            JSON.stringify({
+              data: lowItems,
+              retailStock: retailMap,
+              wholesaleStock: wholesaleMap,
+            }),
+          );
+        } catch {}
 
         setTransferNeededCount(
           getTransferNeededProducts(lowItems, retailMap, wholesaleMap).length,
