@@ -120,6 +120,44 @@ export default function StockTransferPage() {
     [productById, resolvedAvailableQtyById],
   );
 
+  const buildReorderTransferItems = useCallback(
+    (
+      selectedProducts: Product[],
+      quantityOverrides?: Record<number, number>,
+    ): TransferItem[] => {
+      return selectedProducts
+        .map((product) => {
+          const availableQty = Number(
+            quantityOverrides?.[product.id] ??
+              resolvedAvailableQtyById[product.id] ??
+              product.available_quantity,
+          );
+
+          if (availableQty <= 0) {
+            return null;
+          }
+
+          const pct = mfgPercentMap[product.manufacturer] || 0;
+          return {
+            uid: `${product.id}_0`,
+            product_id: product.id,
+            variant_id: 0,
+            product_name: product.name,
+            manufacturer: product.manufacturer,
+            quantity: 1,
+            percent: pct,
+            price_addition: pct ? 0 : 5,
+            wholesale_package: product.wholesale_package,
+            retail_package: product.retail_package,
+            wholesale_price: product.wholesale_price,
+            available_quantity: availableQty,
+          };
+        })
+        .filter((item): item is TransferItem => Boolean(item));
+    },
+    [mfgPercentMap, resolvedAvailableQtyById],
+  );
+
   const resolveAvailableQuantity = useCallback(
     async (product: Product) => {
       if (
@@ -197,6 +235,16 @@ export default function StockTransferPage() {
         }
       }
     } catch {}
+
+    try {
+      const reorderRaw = sessionStorage.getItem("reorder_product_ids");
+      if (reorderRaw) {
+        const reorderIds: number[] = JSON.parse(reorderRaw);
+        if (reorderIds.length > 0) {
+          setPendingReorderIds(reorderIds);
+        }
+      }
+    } catch {}
   }, []);
 
   /* ========== Load Products ========== */
@@ -224,19 +272,6 @@ export default function StockTransferPage() {
           pMap[m.name] = Number(m.percentage) || 0;
         }
         setMfgPercentMap(pMap);
-
-        // Auto-add reorder products from low-stock-reorder page
-        try {
-          const reorderRaw = sessionStorage.getItem("reorder_product_ids");
-          if (reorderRaw) {
-            const reorderIds: number[] = JSON.parse(reorderRaw);
-            if (reorderIds.length > 0) {
-              setPendingReorderIds(reorderIds);
-            }
-          }
-        } catch {
-          /* silent */
-        }
 
         setLoading(false);
 
@@ -405,6 +440,18 @@ export default function StockTransferPage() {
     }
 
     let cancelled = false;
+    const reorderKeys = new Set(
+      selectedProducts.map((product) => `${product.id}_0`),
+    );
+
+    const optimisticItems = buildReorderTransferItems(selectedProducts);
+
+    if (optimisticItems.length > 0) {
+      setItems((prev) => {
+        const preserved = prev.filter((item) => !reorderKeys.has(item.uid));
+        return [...preserved, ...optimisticItems];
+      });
+    }
 
     void (async () => {
       let quantitiesById: Record<number, number> = {};
@@ -437,37 +484,15 @@ export default function StockTransferPage() {
         ...quantitiesById,
       }));
 
-      const autoItems: TransferItem[] = selectedProducts
-        .map((product) => {
-          const availableQty = Number(
-            quantitiesById[product.id] ?? product.available_quantity,
-          );
-
-          if (availableQty <= 0) {
-            return null;
-          }
-
-          const pct = mfgPercentMap[product.manufacturer] || 0;
-          return {
-            uid: `${product.id}_0`,
-            product_id: product.id,
-            variant_id: 0,
-            product_name: product.name,
-            manufacturer: product.manufacturer,
-            quantity: 1,
-            percent: pct,
-            price_addition: pct ? 0 : 5,
-            wholesale_package: product.wholesale_package,
-            retail_package: product.retail_package,
-            wholesale_price: product.wholesale_price,
-            available_quantity: availableQty,
-          };
-        })
-        .filter((item): item is TransferItem => Boolean(item));
+      const autoItems = buildReorderTransferItems(
+        selectedProducts,
+        quantitiesById,
+      );
 
       if (cancelled) return;
 
       if (autoItems.length === 0) {
+        setItems((prev) => prev.filter((item) => !reorderKeys.has(item.uid)));
         sessionStorage.removeItem("reorder_product_ids");
         setPendingReorderIds([]);
         toast.error("الأصناف المختارة غير متاحة حاليًا للتحويل");
@@ -475,11 +500,8 @@ export default function StockTransferPage() {
       }
 
       setItems((prev) => {
-        const existingKeys = new Set(prev.map((item) => item.uid));
-        const newItems = autoItems.filter(
-          (item) => !existingKeys.has(item.uid),
-        );
-        return newItems.length > 0 ? [...prev, ...newItems] : prev;
+        const preserved = prev.filter((item) => !reorderKeys.has(item.uid));
+        return [...preserved, ...autoItems];
       });
       sessionStorage.removeItem("reorder_product_ids");
       setPendingReorderIds([]);
@@ -498,6 +520,7 @@ export default function StockTransferPage() {
     products.length,
     variantsLoading,
     variantsMap,
+    buildReorderTransferItems,
   ]);
 
   /* ========== Keyboard Navigation ========== */
