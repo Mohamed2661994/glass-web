@@ -25,6 +25,27 @@ interface Props {
   branchId: number;
 }
 
+type LookupProduct = {
+  id: number;
+  name?: string;
+  description?: string;
+  barcode?: string;
+  manufacturer?: string;
+  retail_package?: string;
+  wholesale_package?: string;
+  has_wholesale?: boolean;
+  price?: number | string | null;
+  retail_price?: number | string | null;
+  wholesale_price?: number | string | null;
+  discount_amount?: number | string | null;
+  variant_stock?: Array<{
+    variant_id: number;
+    package_name: string;
+    quantity: number;
+    price: number | null;
+  }>;
+};
+
 export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
   const [search, setSearch] = useState("");
   const [focusedIndex, setFocusedIndex] = useState(-1);
@@ -58,7 +79,6 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
   const {
     products: otherBranchProducts,
-    loading: otherLoading,
     refresh: refreshOther,
     refreshSilently: refreshOtherSilently,
     getResolvedAvailableQuantity: getOtherBranchResolvedAvailableQuantity,
@@ -91,12 +111,17 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
   // Refresh silently every time the modal opens so the UI stays instant.
   useEffect(() => {
     if (!open) return;
-    setSearch("");
-    setFocusedIndex(-1);
-    setMovementBalancesByKey({});
+    const resetTimer = window.setTimeout(() => {
+      setSearch("");
+      setFocusedIndex(-1);
+      setMovementBalancesByKey({});
+    }, 0);
     balanceLoadingRef.current = {};
     refreshSilently();
     refreshOtherSilently();
+    return () => {
+      window.clearTimeout(resetTimer);
+    };
   }, [open, refreshOtherSilently, refreshSilently]);
 
   const handleRefresh = async () => {
@@ -110,7 +135,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
   );
 
   const getDisplayQuantity = useCallback(
-    (product: any, targetBranchId: number) => {
+    (product: LookupProduct, targetBranchId: number) => {
       const balance =
         movementBalancesByKey[getBalanceKey(product.id, targetBranchId)];
 
@@ -124,7 +149,13 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
       return Number(otherBranchQtyMap[product.id]) || 0;
     },
-    [branchId, getBalanceKey, movementBalancesByKey, otherBranchQtyMap],
+    [
+      branchId,
+      getBalanceKey,
+      getResolvedAvailableQuantity,
+      movementBalancesByKey,
+      otherBranchQtyMap,
+    ],
   );
 
   /* =========================================================
@@ -185,7 +216,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
       return String(a.name || "").localeCompare(String(b.name || ""), "ar");
     });
-  }, [branchId, getDisplayQuantity, products, search]);
+  }, [branchId, getDisplayQuantity, invoiceType, products, search]);
 
   useEffect(() => {
     if (!open) return;
@@ -433,18 +464,11 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
             </div>
           ) : (
             filteredProducts.map((product, index) => {
-              const currentBalance =
-                movementBalancesByKey[getBalanceKey(product.id, branchId)];
-              const otherBalance =
-                movementBalancesByKey[getBalanceKey(product.id, otherBranchId)];
-
-              const currentBranchEntries = currentBalance?.entries ?? [];
               const currentBranchDisplayQuantity = getDisplayQuantity(
                 product,
                 branchId,
               );
 
-              const otherEntries = otherBalance?.entries ?? [];
               const otherDisplayQuantity = getDisplayQuantity(
                 product,
                 otherBranchId,
@@ -549,69 +573,29 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                   )}
 
                   <div className="text-xs mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
-                    {branchId === 2 && currentBranchEntries.length > 1 ? (
-                      <div className="flex flex-wrap gap-x-3 gap-y-1">
-                        <span className="text-muted-foreground">
-                          رصيد الجملة:
-                        </span>
-                        {currentBranchEntries.map((entry) => (
-                          <span
-                            key={entry.package}
-                            className={
-                              entry.quantity > 0
-                                ? "text-orange-600 dark:text-orange-400 font-semibold"
-                                : "text-red-500 font-semibold"
-                            }
-                          >
-                            {entry.package}: {entry.quantity}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
+                    <span
+                      className={
+                        currentBranchDisplayQuantity > 0
+                          ? branchId === 1
+                            ? "text-blue-600 dark:text-blue-400 font-semibold"
+                            : "text-orange-600 dark:text-orange-400 font-semibold"
+                          : "text-red-500 font-semibold"
+                      }
+                    >
+                      رصيد {branchId === 1 ? "القطاعي" : "الجملة"}: {" "}
+                      {currentBranchDisplayQuantity}
+                    </span>
+
+                    {branchId === 1 ? (
                       <span
                         className={
-                          currentBranchDisplayQuantity > 0
-                            ? branchId === 1
-                              ? "text-blue-600 dark:text-blue-400 font-semibold"
-                              : "text-orange-600 dark:text-orange-400 font-semibold"
+                          otherDisplayQuantity > 0
+                            ? "text-orange-600 dark:text-orange-400 font-semibold"
                             : "text-red-500 font-semibold"
                         }
                       >
-                        رصيد {branchId === 1 ? "القطاعي" : "الجملة"}:{" "}
-                        {currentBranchDisplayQuantity}
+                        رصيد الجملة: {otherDisplayQuantity || 0}
                       </span>
-                    )}
-
-                    {branchId === 1 ? (
-                      otherEntries.length > 1 ? (
-                        <div className="flex flex-wrap gap-x-3 gap-y-1">
-                          <span className="text-muted-foreground">
-                            رصيد الجملة:
-                          </span>
-                          {otherEntries.map((entry) => (
-                            <span
-                              key={entry.package}
-                              className={
-                                entry.quantity > 0
-                                  ? "text-orange-600 dark:text-orange-400 font-semibold"
-                                  : "text-red-500 font-semibold"
-                              }
-                            >
-                              {entry.package}: {entry.quantity}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <span
-                          className={
-                            otherDisplayQuantity > 0
-                              ? "text-orange-600 dark:text-orange-400 font-semibold"
-                              : "text-red-500 font-semibold"
-                          }
-                        >
-                          رصيد الجملة: {otherDisplayQuantity || 0}
-                        </span>
-                      )
                     ) : (
                       <span
                         className={

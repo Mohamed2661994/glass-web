@@ -137,7 +137,9 @@ async function runLimitedTasks<T>(
   };
 
   await Promise.all(
-    Array.from({ length: Math.min(limit, taskFactories.length) }, () => worker()),
+    Array.from({ length: Math.min(limit, taskFactories.length) }, () =>
+      worker(),
+    ),
   );
 
   return results;
@@ -343,7 +345,9 @@ export async function prefetchResolvedProductQuantities({
       });
 
       if (!response.ok) {
-        throw new Error(`Bulk resolved quantities request failed: ${response.status}`);
+        throw new Error(
+          `Bulk resolved quantities request failed: ${response.status}`,
+        );
       }
 
       const payload = await response.json();
@@ -352,7 +356,10 @@ export async function prefetchResolvedProductQuantities({
       const resultMap = new Map<number, number>();
 
       results.forEach((entry) => {
-        resultMap.set(Number(entry?.productId || 0), Number(entry?.quantity) || 0);
+        resultMap.set(
+          Number(entry?.productId || 0),
+          Number(entry?.quantity) || 0,
+        );
       });
 
       dedupedProducts.forEach((product) => {
@@ -388,7 +395,9 @@ export async function prefetchResolvedProductQuantities({
         return {
           productId,
           quantity:
-            Number(resultMap.get(productId)) || Number(product?.available_quantity) || 0,
+            Number(resultMap.get(productId)) ||
+            Number(product?.available_quantity) ||
+            0,
         };
       });
     }
@@ -673,11 +682,7 @@ type MovementRow = {
   variant_id?: number | null;
 };
 
-export type MovementWarehouseScope =
-  | "all"
-  | "showroom"
-  | "warehouse"
-  | "named";
+export type MovementWarehouseScope = "all" | "showroom" | "warehouse" | "named";
 
 export type MovementDisplayPackageMode = "movement" | "retail";
 
@@ -709,8 +714,14 @@ const unifiedMovementRowsCache = new Map<
   string,
   TimedCacheEntry<UnifiedMovementRow[]>
 >();
-const unifiedMovementRowsInFlight = new Map<string, Promise<UnifiedMovementRow[]>>();
-const packageStockMapCache = new Map<string, TimedCacheEntry<PackageStockMap>>();
+const unifiedMovementRowsInFlight = new Map<
+  string,
+  Promise<UnifiedMovementRow[]>
+>();
+const packageStockMapCache = new Map<
+  string,
+  TimedCacheEntry<PackageStockMap>
+>();
 const packageStockMapInFlight = new Map<string, Promise<PackageStockMap>>();
 const resolvedQuantityCache = new Map<string, TimedCacheEntry<number>>();
 const resolvedQuantityInFlight = new Map<string, Promise<number>>();
@@ -773,8 +784,7 @@ function matchesWarehouseScope(
 
   if (warehouseScope === "warehouse") {
     return (
-      normalized.includes("الرئيسي") ||
-      normalized.includes("المخزن الرئيسي")
+      normalized.includes("الرئيسي") || normalized.includes("المخزن الرئيسي")
     );
   }
 
@@ -787,7 +797,11 @@ function matchesWarehouseScope(
 
 function getMovementDateValue(row: MovementRow): string {
   return String(
-    row.entry_date || row.invoice_date || row.movement_date || row.created_at || "",
+    row.entry_date ||
+      row.invoice_date ||
+      row.movement_date ||
+      row.created_at ||
+      "",
   ).trim();
 }
 
@@ -807,7 +821,9 @@ function resolveDisplayPackageName({
   const wholesaleValue = String(wholesalePackage || "").trim();
 
   if (displayMode === "retail") {
-    return normalizePackageName(retailValue || rawValue || wholesaleValue || "-");
+    return normalizePackageName(
+      retailValue || rawValue || wholesaleValue || "-",
+    );
   }
 
   return normalizePackageName(rawValue || wholesaleValue || retailValue || "-");
@@ -930,7 +946,10 @@ export function summarizeUnifiedMovementRows(rows: UnifiedMovementRow[]): {
 } {
   let totalIn = 0;
   let totalOut = 0;
-  const grouped = new Map<string, { label: string; inQty: number; outQty: number }>();
+  const grouped = new Map<
+    string,
+    { label: string; inQty: number; outQty: number }
+  >();
 
   for (const row of rows) {
     const packageLabel = row.display_package_name || "بدون عبوة";
@@ -1046,7 +1065,10 @@ export async function fetchPackageStockMapFromMovements({
       for (const row of rows) {
         const delta = row.is_in ? row.quantity : -row.quantity;
         const pkg = normalizePackageName(
-          row.display_package_name || row.raw_package_name || basePackage || "-",
+          row.display_package_name ||
+            row.raw_package_name ||
+            basePackage ||
+            "-",
         );
         totalsByPackage.set(pkg, (totalsByPackage.get(pkg) || 0) + delta);
       }
@@ -1060,7 +1082,11 @@ export async function fetchPackageStockMapFromMovements({
 
       for (const variant of variants || []) {
         const variantId = getPackageVariantId(variant);
-        const label = getVariantPackageLabel(variant, packageField, basePackage);
+        const label = getVariantPackageLabel(
+          variant,
+          packageField,
+          basePackage,
+        );
         if (assignedPackages.has(label)) {
           stockMap[variantId] = 0;
         } else {
@@ -1217,7 +1243,8 @@ export async function prefetchMovementBalances({
 > {
   const seen = new Set<string>();
   const normalizedProducts = products.filter(
-    (product) => Number(product?.id || 0) > 0 && String(product?.name || "").trim(),
+    (product) =>
+      Number(product?.id || 0) > 0 && String(product?.name || "").trim(),
   );
 
   for (const product of normalizedProducts) {
@@ -1231,13 +1258,16 @@ export async function prefetchMovementBalances({
       if (
         seen.has(key) ||
         shouldSkip?.(productId, branchId) ||
-        getTimedCacheValue(movementBalanceCache, JSON.stringify({
-          type: "movement-balance",
-          productName: String(product?.name || ""),
-          branchId,
-          retailPackage: product?.retail_package || "",
-          wholesalePackage: product?.wholesale_package || "",
-        })) !== null
+        getTimedCacheValue(
+          movementBalanceCache,
+          JSON.stringify({
+            type: "movement-balance",
+            productName: String(product?.name || ""),
+            branchId,
+            retailPackage: product?.retail_package || "",
+            wholesalePackage: product?.wholesale_package || "",
+          }),
+        ) !== null
       ) {
         continue;
       }
@@ -1247,7 +1277,9 @@ export async function prefetchMovementBalances({
   }
 
   const pendingProducts = normalizedProducts.filter((product) =>
-    branchIds.some((branchId) => seen.has(`${Number(product?.id || 0)}:${branchId}`)),
+    branchIds.some((branchId) =>
+      seen.has(`${Number(product?.id || 0)}:${branchId}`),
+    ),
   );
 
   if (pendingProducts.length === 0) {
@@ -1261,7 +1293,9 @@ export async function prefetchMovementBalances({
     });
 
     bulkResults.forEach(({ productId, branchId, result }) => {
-      const product = pendingProducts.find((entry) => Number(entry?.id || 0) === productId);
+      const product = pendingProducts.find(
+        (entry) => Number(entry?.id || 0) === productId,
+      );
       if (!product) {
         return;
       }

@@ -14,14 +14,21 @@ type MovementBalanceEntry = {
   quantity: number;
 };
 
+type BalanceMovementRows = Parameters<typeof normalizeMovementRows>[0]["rows"];
+
 const MAX_PRODUCTS = 50;
 const MAX_CONCURRENCY = 6;
 
-function normalizeProducts(products: BalanceRequestProduct[]): BalanceRequestProduct[] {
+function normalizeProducts(
+  products: BalanceRequestProduct[],
+): BalanceRequestProduct[] {
   return Array.from(
     new Map(
       (products || [])
-        .filter((product) => Number(product?.id || 0) > 0 && String(product?.name || "").trim())
+        .filter(
+          (product) =>
+            Number(product?.id || 0) > 0 && String(product?.name || "").trim(),
+        )
         .map((product) => [Number(product?.id || 0), product]),
     ).values(),
   ).slice(0, MAX_PRODUCTS);
@@ -31,7 +38,9 @@ function normalizeBranchIds(branchIds: unknown): number[] {
   return Array.from(
     new Set(
       Array.isArray(branchIds)
-        ? branchIds.map((branchId) => Number(branchId || 0)).filter((branchId) => branchId > 0)
+        ? branchIds
+            .map((branchId) => Number(branchId || 0))
+            .filter((branchId) => branchId > 0)
         : [],
     ),
   );
@@ -89,7 +98,7 @@ function buildBalanceFromRows({
   retailPackage,
   wholesalePackage,
 }: {
-  rows: any[];
+  rows: BalanceMovementRows;
   branchId: number;
   retailPackage?: string | null;
   wholesalePackage?: string | null;
@@ -98,17 +107,30 @@ function buildBalanceFromRows({
 
   const normalizedRows = normalizeMovementRows({
     rows,
-    warehouseScope: branchId === 1 ? "showroom" : branchId === 2 ? "warehouse" : "all",
+    warehouseScope:
+      branchId === 1 ? "showroom" : branchId === 2 ? "warehouse" : "all",
     displayMode: branchId === 1 ? "retail" : "movement",
     retailPackage,
     wholesalePackage,
   });
 
   normalizedRows.forEach((row) => {
-    const packageName = String(row.display_package_name || row.raw_package_name || "-").trim();
-    const delta = row.is_in ? Number(row.quantity || 0) : -Number(row.quantity || 0);
-    totalsByPackage.set(packageName, (totalsByPackage.get(packageName) || 0) + delta);
+    const packageName = String(
+      row.display_package_name || row.raw_package_name || "-",
+    ).trim();
+    const delta = row.is_in
+      ? Number(row.quantity || 0)
+      : -Number(row.quantity || 0);
+    totalsByPackage.set(
+      packageName,
+      (totalsByPackage.get(packageName) || 0) + delta,
+    );
   });
+
+  const total = Array.from(totalsByPackage.values()).reduce(
+    (sum, quantity) => sum + (Number(quantity) || 0),
+    0,
+  );
 
   const entries: MovementBalanceEntry[] = Array.from(totalsByPackage.entries())
     .map(([pkg, quantity]) => ({ package: pkg, quantity }))
@@ -122,14 +144,16 @@ function buildBalanceFromRows({
 
   return {
     entries,
-    total: entries.reduce((sum, entry) => sum + (Number(entry.quantity) || 0), 0),
+    total,
   };
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const products = normalizeProducts(Array.isArray(body?.products) ? body.products : []);
+    const products = normalizeProducts(
+      Array.isArray(body?.products) ? body.products : [],
+    );
     const branchIds = normalizeBranchIds(body?.branchIds);
 
     if (products.length === 0 || branchIds.length === 0) {
@@ -162,9 +186,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ results: results.flat() });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json(
-      { error: message, results: [] },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: message, results: [] }, { status: 500 });
   }
 }
