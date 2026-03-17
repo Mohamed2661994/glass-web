@@ -1323,28 +1323,41 @@ export default function DashboardPage() {
         });
         const all: Invoice[] = Array.isArray(data) ? data : (data.data ?? []);
         const wsInvoices = all.filter((i) => i.invoice_type === "wholesale");
-        // Show wholesale invoices created by this retail user that are not yet
-        // paid and have not been touched by another user yet.
-        const pending = wsInvoices
-          .filter(
-            (inv) => {
-              const createdByCurrentUser =
-                inv.created_by === user?.id ||
-                inv.created_by_name === user?.username;
+        const candidateInvoices = wsInvoices.filter((inv) => {
+          const createdByCurrentUser =
+            inv.created_by === user?.id ||
+            inv.created_by_name === user?.username;
 
-              const handledByAnotherUser =
-                (inv.updated_by && inv.updated_by !== inv.created_by) ||
-                (inv.updated_by_name &&
-                  inv.updated_by_name !== inv.created_by_name &&
-                  inv.updated_by_name !== user?.username);
+          return createdByCurrentUser && inv.payment_status !== "paid";
+        });
 
-              return (
-                createdByCurrentUser &&
-                inv.payment_status !== "paid" &&
-                !handledByAnotherUser
-              );
-            },
+        const invoiceDetails = await Promise.allSettled(
+          candidateInvoices.map(async (invoice) => {
+            try {
+              const detailRes = await api.get(`/invoices/${invoice.id}`);
+              const detailedInvoice = detailRes.data as Invoice;
+              return detailedInvoice || invoice;
+            } catch {
+              return invoice;
+            }
+          }),
+        );
+
+        const pending = invoiceDetails
+          .map((result, index) =>
+            result.status === "fulfilled"
+              ? result.value
+              : candidateInvoices[index],
           )
+          .filter((inv) => {
+            const handledByAnotherUser =
+              (inv.updated_by && inv.updated_by !== inv.created_by) ||
+              (inv.updated_by_name &&
+                inv.updated_by_name !== inv.created_by_name &&
+                inv.updated_by_name !== user?.username);
+
+            return !handledByAnotherUser;
+          })
           .sort((a, b) => b.id - a.id);
         setPendingWholesale(pending);
       } catch (err) {
