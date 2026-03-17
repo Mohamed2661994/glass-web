@@ -425,7 +425,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
           };
         }
 
-        if (branchId === 2) {
+        if (targetBranchId === 2) {
           try {
             const result = await fetchMovementBalances({
               productName: String(product.name || ""),
