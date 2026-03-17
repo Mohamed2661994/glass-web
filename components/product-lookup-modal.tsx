@@ -225,6 +225,37 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     ],
   );
 
+  const getWholesaleBalanceRows = useCallback(
+    (product: LookupProduct, targetBranchId: number) => {
+      const packageRows = getWholesalePackageRows(product);
+      if (packageRows.length === 0) {
+        return [] as Array<{ key: string; label: string; quantity: number }>;
+      }
+
+      const balance =
+        movementBalancesByKey[getBalanceKey(product.id, targetBranchId)];
+      const entries = Array.isArray(balance?.entries) ? balance.entries : [];
+      const quantityByPackage = new Map<string, number>();
+
+      entries.forEach((entry) => {
+        const normalized = normalizePackageName(entry.package);
+        quantityByPackage.set(normalized, Number(entry.quantity) || 0);
+      });
+
+      const rows = packageRows.map((pkg) => {
+        const normalized = normalizePackageName(pkg.label);
+        return {
+          key: `${targetBranchId}:${normalized}`,
+          label: pkg.label,
+          quantity: quantityByPackage.get(normalized) ?? 0,
+        };
+      });
+
+      return rows;
+    },
+    [getBalanceKey, getWholesalePackageRows, movementBalancesByKey],
+  );
+
   /* =========================================================
      Filtered products
      ========================================================= */
@@ -542,11 +573,17 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                 product,
                 branchId,
               );
+              const currentBranchWholesaleBalances =
+                branchId === 2 ? getWholesaleBalanceRows(product, branchId) : [];
 
               const otherDisplayQuantity = getDisplayQuantity(
                 product,
                 otherBranchId,
               );
+              const otherBranchWholesaleBalances =
+                otherBranchId === 2
+                  ? getWholesaleBalanceRows(product, otherBranchId)
+                  : [];
 
               const outOfStock = currentBranchDisplayQuantity <= 0;
 
@@ -642,20 +679,56 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                           : "text-red-500 font-semibold"
                       }
                     >
-                      رصيد {branchId === 1 ? "القطاعي" : "الجملة"}:{" "}
+                      {branchId === 2 && currentBranchWholesaleBalances.length > 1
+                        ? "إجمالي رصيد الجملة"
+                        : `رصيد ${branchId === 1 ? "القطاعي" : "الجملة"}`}
+                      :{" "}
                       {currentBranchDisplayQuantity}
                     </span>
 
+                    {branchId === 2 && currentBranchWholesaleBalances.length > 1 &&
+                      currentBranchWholesaleBalances.map((row) => (
+                        <span
+                          key={row.key}
+                          className={
+                            row.quantity > 0
+                              ? "text-orange-600 dark:text-orange-400 font-semibold"
+                              : "text-red-500 font-semibold"
+                          }
+                        >
+                          رصيد {row.label}: {row.quantity}
+                        </span>
+                      ))}
+
                     {branchId === 1 ? (
-                      <span
-                        className={
-                          otherDisplayQuantity > 0
-                            ? "text-orange-600 dark:text-orange-400 font-semibold"
-                            : "text-red-500 font-semibold"
-                        }
-                      >
-                        رصيد الجملة: {otherDisplayQuantity || 0}
-                      </span>
+                      <>
+                        <span
+                          className={
+                            otherDisplayQuantity > 0
+                              ? "text-orange-600 dark:text-orange-400 font-semibold"
+                              : "text-red-500 font-semibold"
+                          }
+                        >
+                          {otherBranchWholesaleBalances.length > 1
+                            ? "إجمالي رصيد الجملة"
+                            : "رصيد الجملة"}
+                          : {otherDisplayQuantity || 0}
+                        </span>
+
+                        {otherBranchWholesaleBalances.length > 1 &&
+                          otherBranchWholesaleBalances.map((row) => (
+                            <span
+                              key={row.key}
+                              className={
+                                row.quantity > 0
+                                  ? "text-orange-600 dark:text-orange-400 font-semibold"
+                                  : "text-red-500 font-semibold"
+                              }
+                            >
+                              رصيد {row.label}: {row.quantity}
+                            </span>
+                          ))}
+                      </>
                     ) : (
                       <span
                         className={
