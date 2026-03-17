@@ -70,6 +70,7 @@ function ProductMovementPageContent() {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
+  const [productsEnriching, setProductsEnriching] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showProductModal, setShowProductModal] = useState(false);
   const [productSearch, setProductSearch] = useState("");
@@ -92,13 +93,16 @@ function ProductMovementPageContent() {
   const fetchProducts = useCallback(async () => {
     try {
       setProductsLoading(true);
-      const [res, adminRes] = await Promise.all([
-        api.get("/reports/products"),
-        api.get("/admin/products", {
-          params: { active: "all" },
-        }),
-      ]);
+      const res = await api.get("/reports/products");
       const reportProducts: Product[] = Array.isArray(res.data) ? res.data : [];
+      setProducts(reportProducts);
+      setProductsLoading(false);
+
+      setProductsEnriching(true);
+
+      const adminRes = await api.get("/admin/products", {
+        params: { active: "all" },
+      });
       const adminItems: any[] = Array.isArray(adminRes.data)
         ? adminRes.data
         : [];
@@ -164,6 +168,7 @@ function ProductMovementPageContent() {
       /* ignore */
     } finally {
       setProductsLoading(false);
+      setProductsEnriching(false);
     }
   }, [isWarehouseUser]);
 
@@ -516,9 +521,7 @@ function ProductMovementPageContent() {
                             </TableCell>
                             <TableCell className="text-center">
                               <Badge
-                                variant={
-                                  item.is_in ? "default" : "destructive"
-                                }
+                                variant={item.is_in ? "default" : "destructive"}
                               >
                                 {item.is_in ? "وارد" : "صادر"}
                               </Badge>
@@ -717,6 +720,11 @@ function ProductMovementPageContent() {
                 className="pr-9"
               />
             </div>
+            {productsEnriching && !productsLoading && (
+              <p className="mt-2 text-center text-xs text-muted-foreground">
+                جاري استكمال بيانات الأصناف...
+              </p>
+            )}
           </div>
 
           {/* Product list */}

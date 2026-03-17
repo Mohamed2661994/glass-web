@@ -88,6 +88,7 @@ export function QuickTransferModal({
   );
   const [items, setItems] = useState<TransferItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [variantsLoading, setVariantsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewItems, setPreviewItems] = useState<any[]>([]);
@@ -134,7 +135,10 @@ export function QuickTransferModal({
   const resolveAvailableQuantity = useCallback(
     async (product: WholesaleProduct) => {
       if (
-        Object.prototype.hasOwnProperty.call(resolvedAvailableQtyById, product.id)
+        Object.prototype.hasOwnProperty.call(
+          resolvedAvailableQtyById,
+          product.id,
+        )
       ) {
         return Number(resolvedAvailableQtyById[product.id] ?? 0);
       }
@@ -190,6 +194,7 @@ export function QuickTransferModal({
     setPackageStockByProduct({});
     setLoadingPackageStockForProductId(null);
     setResolvedAvailableQtyById({});
+    setVariantsLoading(false);
     resolvingAvailableQtyRef.current = {};
     setPreviewItems([]);
     setPayload(null);
@@ -216,8 +221,11 @@ export function QuickTransferModal({
         }
         setMfgPercentMap(pMap);
 
+        setLoading(false);
+
         // Variants
         if (prods.length > 0) {
+          setVariantsLoading(true);
           try {
             const ids = prods.map((p) => p.id).join(",");
             const vRes = await api.get("/products/variants", {
@@ -231,6 +239,8 @@ export function QuickTransferModal({
             setVariantsMap(map);
           } catch {
             /* silent */
+          } finally {
+            setVariantsLoading(false);
           }
         }
       } catch {
@@ -254,7 +264,12 @@ export function QuickTransferModal({
     if (!open) return;
 
     const pendingProducts = displayedProducts.filter((product) => {
-      if (Object.prototype.hasOwnProperty.call(resolvedAvailableQtyById, product.id)) {
+      if (
+        Object.prototype.hasOwnProperty.call(
+          resolvedAvailableQtyById,
+          product.id,
+        )
+      ) {
         return false;
       }
 
@@ -742,6 +757,11 @@ export function QuickTransferModal({
 
             {/* Products list */}
             <div className="flex-1 overflow-y-auto p-2 space-y-1">
+              {variantsLoading && (
+                <div className="px-3 py-2 text-center text-xs text-muted-foreground">
+                  جاري تدقيق أرصدة الأصناف...
+                </div>
+              )}
               {filtered.length === 0 ? (
                 <div className="p-4 text-center text-sm text-muted-foreground">
                   {search ? "لا توجد نتائج" : "لا توجد أصناف متاحة بالمخزن"}

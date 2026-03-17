@@ -154,6 +154,7 @@ export function useCachedProducts({
     Record<number, number>
   >({});
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -161,9 +162,9 @@ export function useCachedProducts({
   const fetchProductsRef = useRef<
     (forceRefresh?: boolean, silent?: boolean) => Promise<any[]>
   >(async () => []);
-  const variantsRequestRef = useRef<Record<string, Promise<Record<number, any[]>>>>(
-    {},
-  );
+  const variantsRequestRef = useRef<
+    Record<string, Promise<Record<number, any[]>>>
+  >({});
 
   // Generate cache key from params if not provided
   const resolvedCacheKey = cacheKey || JSON.stringify({ endpoint, ...params });
@@ -225,7 +226,12 @@ export function useCachedProducts({
 
       setVariantsMap((prev) => {
         const next = { ...prev, ...updates };
-        setCache(VARIANTS_CACHE_KEY_PREFIX, resolvedCacheKey, next, paramsString);
+        setCache(
+          VARIANTS_CACHE_KEY_PREFIX,
+          resolvedCacheKey,
+          next,
+          paramsString,
+        );
         return next;
       });
     },
@@ -356,7 +362,12 @@ export function useCachedProducts({
         return fallbackQuantity;
       }
 
-      if (Object.prototype.hasOwnProperty.call(resolvedAvailableQtyById, productId)) {
+      if (
+        Object.prototype.hasOwnProperty.call(
+          resolvedAvailableQtyById,
+          productId,
+        )
+      ) {
         return Number(resolvedAvailableQtyById[productId] ?? fallbackQuantity);
       }
 
@@ -427,7 +438,10 @@ export function useCachedProducts({
         }
 
         if (
-          Object.prototype.hasOwnProperty.call(resolvedAvailableQtyById, productId) ||
+          Object.prototype.hasOwnProperty.call(
+            resolvedAvailableQtyById,
+            productId,
+          ) ||
           resolvingAvailableQtyRef.current[productId]
         ) {
           return false;
@@ -497,10 +511,19 @@ export function useCachedProducts({
       paramsString,
     );
     setResolvedAvailableQtyById(cachedResolved || {});
-  }, [cacheDuration, paramsString, resolvedCacheKey, shouldResolveAvailableQty]);
+  }, [
+    cacheDuration,
+    paramsString,
+    resolvedCacheKey,
+    shouldResolveAvailableQty,
+  ]);
 
   const fetchProducts = useCallback(
     async (forceRefresh = false, silent = false) => {
+      const hasVisibleProducts = products.length > 0;
+      const shouldShowBlockingLoader = !silent && !hasVisibleProducts;
+      const shouldTrackRefresh = silent || hasVisibleProducts;
+
       // When force-refreshing, mark ALL product caches as stale
       // so other components with different cache keys will also refetch
       if (forceRefresh) {
@@ -558,9 +581,13 @@ export function useCachedProducts({
 
       // 2. Fetch from API
       try {
-        if (!silent) {
+        if (shouldShowBlockingLoader) {
           setLoading(true);
         }
+        if (shouldTrackRefresh) {
+          setRefreshing(true);
+        }
+
         const res = await api.get(endpoint, {
           params:
             Object.keys(requestParams).length > 0 ? requestParams : undefined,
@@ -584,7 +611,7 @@ export function useCachedProducts({
 
         // 3. Fetch variants if needed
         if (shouldPrefetchAllVariants && prods.length > 0) {
-          await ensureVariantsMap(prods, forceRefresh);
+          void ensureVariantsMap(prods, forceRefresh);
         }
 
         return prods;
@@ -603,8 +630,11 @@ export function useCachedProducts({
         } catch {}
         return [];
       } finally {
-        if (!silent) {
+        if (shouldShowBlockingLoader) {
           setLoading(false);
+        }
+        if (shouldTrackRefresh) {
+          setRefreshing(false);
         }
       }
     },
@@ -613,6 +643,7 @@ export function useCachedProducts({
       endpoint,
       ensureVariantsMap,
       paramsString,
+      products.length,
       requestParams,
       resetResolvedAvailableQty,
       resolvedCacheKey,
@@ -627,10 +658,7 @@ export function useCachedProducts({
   }, [fetchProducts]);
 
   // Force refresh (bypasses cache)
-  const refresh = useCallback(
-    () => fetchProductsRef.current(true),
-    [],
-  );
+  const refresh = useCallback(() => fetchProductsRef.current(true), []);
   const refreshSilently = useCallback(
     () => fetchProductsRef.current(true, true),
     [],
@@ -694,6 +722,7 @@ export function useCachedProducts({
     variantsMap,
     setVariantsMap,
     loading,
+    refreshing,
     lastUpdated,
     resolvedAvailableQtyById,
     getResolvedAvailableQuantity,

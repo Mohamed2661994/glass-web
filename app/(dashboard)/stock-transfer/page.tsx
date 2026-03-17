@@ -62,6 +62,7 @@ export default function StockTransferPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [items, setItems] = useState<TransferItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [variantsLoading, setVariantsLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
@@ -188,8 +189,24 @@ export default function StockTransferPage() {
         }
         setMfgPercentMap(pMap);
 
+        // Auto-add reorder products from low-stock-reorder page
+        try {
+          const reorderRaw = sessionStorage.getItem("reorder_product_ids");
+          if (reorderRaw) {
+            const reorderIds: number[] = JSON.parse(reorderRaw);
+            if (reorderIds.length > 0) {
+              setPendingReorderIds(reorderIds);
+            }
+          }
+        } catch {
+          /* silent */
+        }
+
+        setLoading(false);
+
         // جلب الأكواد الفرعية
         if (prods.length > 0) {
+          setVariantsLoading(true);
           try {
             const ids = prods.map((p: any) => p.id).join(",");
             const vRes = await api.get("/products/variants", {
@@ -203,20 +220,9 @@ export default function StockTransferPage() {
             setVariantsMap(map);
           } catch {
             /* silent */
+          } finally {
+            setVariantsLoading(false);
           }
-        }
-
-        // Auto-add reorder products from low-stock-reorder page
-        try {
-          const reorderRaw = sessionStorage.getItem("reorder_product_ids");
-          if (reorderRaw) {
-            const reorderIds: number[] = JSON.parse(reorderRaw);
-            if (reorderIds.length > 0) {
-              setPendingReorderIds(reorderIds);
-            }
-          }
-        } catch {
-          /* silent */
         }
       } catch {
         toast.error("فشل تحميل الأصناف");
@@ -350,7 +356,12 @@ export default function StockTransferPage() {
   }, [resolvedAvailableQtyById]);
 
   useEffect(() => {
-    if (pendingReorderIds.length === 0 || loading || products.length === 0) {
+    if (
+      pendingReorderIds.length === 0 ||
+      loading ||
+      variantsLoading ||
+      products.length === 0
+    ) {
       return;
     }
 
@@ -439,7 +450,9 @@ export default function StockTransferPage() {
 
       setItems((prev) => {
         const existingKeys = new Set(prev.map((item) => item.uid));
-        const newItems = autoItems.filter((item) => !existingKeys.has(item.uid));
+        const newItems = autoItems.filter(
+          (item) => !existingKeys.has(item.uid),
+        );
         return newItems.length > 0 ? [...prev, ...newItems] : prev;
       });
       sessionStorage.removeItem("reorder_product_ids");
@@ -457,6 +470,7 @@ export default function StockTransferPage() {
     pendingReorderIds,
     productById,
     products.length,
+    variantsLoading,
     variantsMap,
   ]);
 
@@ -967,6 +981,11 @@ export default function StockTransferPage() {
           </div>
 
           <div ref={listRef} className="flex-1 overflow-y-auto p-2 space-y-1">
+            {variantsLoading && (
+              <div className="px-3 py-2 text-center text-xs text-muted-foreground">
+                جاري تدقيق أرصدة الأصناف...
+              </div>
+            )}
             {filtered.length === 0 ? (
               <div className="p-4 text-center text-sm text-muted-foreground">
                 لا توجد نتائج
