@@ -152,6 +152,11 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     });
 
     return filtered.sort((a, b) => {
+      // Always: in-stock items first
+      const aInStock = getDisplayQuantity(a, branchId) > 0 ? 1 : 0;
+      const bInStock = getDisplayQuantity(b, branchId) > 0 ? 1 : 0;
+      if (aInStock !== bInStock) return bInStock - aInStock;
+
       // Relevance sort when searching
       if (search.trim()) {
         const scoreA = multiWordScore(
@@ -181,9 +186,6 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
         return Number(a.id || 0) - Number(b.id || 0);
       }
 
-      const aInStock = getDisplayQuantity(a, branchId) > 0 ? 1 : 0;
-      const bInStock = getDisplayQuantity(b, branchId) > 0 ? 1 : 0;
-      if (aInStock !== bInStock) return bInStock - aInStock;
       return String(a.name || "").localeCompare(String(b.name || ""), "ar");
     });
   }, [branchId, getDisplayQuantity, products, search]);
