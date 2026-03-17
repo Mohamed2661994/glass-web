@@ -62,6 +62,7 @@ export default function LowStockReorderPage() {
   );
   const [loading, setLoading] = useState(true);
   const [resolvingStock, setResolvingStock] = useState(false);
+  const [firstResolvedLoadDone, setFirstResolvedLoadDone] = useState(false);
   const [search, setSearch] = useState("");
   const [onlyWithWholesaleStock, setOnlyWithWholesaleStock] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -76,6 +77,7 @@ export default function LowStockReorderPage() {
     try {
       setLoading(true);
       setResolvingStock(false);
+      setFirstResolvedLoadDone(false);
       const [lowStockRes, retailProductsRes, wholesaleProductsRes] =
         await Promise.all([
           api.get("/reports/low-stock", {
@@ -161,6 +163,7 @@ export default function LowStockReorderPage() {
         .filter(Boolean);
 
       if (retailCandidates.length === 0 && wholesaleCandidates.length === 0) {
+        setFirstResolvedLoadDone(true);
         return;
       }
 
@@ -197,11 +200,13 @@ export default function LowStockReorderPage() {
 
       setRetailStock(retailMap);
       setWholesaleStock(wsMap);
+      setFirstResolvedLoadDone(true);
     } catch {
       if (fetchIdRef.current !== fetchId) return;
       setData([]);
       setRetailStock({});
       setWholesaleStock({});
+      setFirstResolvedLoadDone(true);
     } finally {
       if (fetchIdRef.current !== fetchId) return;
       setLoading(false);
@@ -358,9 +363,13 @@ export default function LowStockReorderPage() {
       {!loading && (
         <Card className="mb-4">
           <CardContent className="p-3 flex items-center justify-between">
-            <Badge variant="secondary">
-              {filteredData.length} صنف رصيده 5 أو أقل
-            </Badge>
+            {firstResolvedLoadDone ? (
+              <Badge variant="secondary">
+                {filteredData.length} صنف رصيده 5 أو أقل
+              </Badge>
+            ) : (
+              <Badge variant="outline">جاري تجهيز النتائج...</Badge>
+            )}
             <div className="flex items-center gap-2">
               {resolvingStock && (
                 <Badge variant="outline">جاري تدقيق الأرصدة...</Badge>
@@ -422,7 +431,7 @@ export default function LowStockReorderPage() {
       )}
 
       {/* ===== Table - Desktop ===== */}
-      {!loading && filteredData.length > 0 && (
+      {!loading && firstResolvedLoadDone && filteredData.length > 0 && (
         <Card className="hidden md:block">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -498,7 +507,7 @@ export default function LowStockReorderPage() {
       )}
 
       {/* ===== Mobile Cards ===== */}
-      {!loading && filteredData.length > 0 && (
+      {!loading && firstResolvedLoadDone && filteredData.length > 0 && (
         <div className="md:hidden space-y-2">
           {filteredData.map((item) => {
             const wsQty = wholesaleStock[item.product_id] ?? 0;
@@ -552,7 +561,16 @@ export default function LowStockReorderPage() {
       )}
 
       {/* ===== Empty ===== */}
-      {!loading && filteredData.length === 0 && (
+      {!loading && !firstResolvedLoadDone && (
+        <Card>
+          <CardContent className="py-16 flex items-center justify-center gap-2 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            جاري تجهيز الأصناف...
+          </CardContent>
+        </Card>
+      )}
+
+      {!loading && firstResolvedLoadDone && filteredData.length === 0 && (
         <div className="text-center py-16 text-muted-foreground">
           لا توجد أصناف منخفضة حالياً
         </div>

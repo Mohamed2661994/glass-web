@@ -59,7 +59,8 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     loading: otherLoading,
     refresh: refreshOther,
     getResolvedAvailableQuantity: getOtherBranchResolvedAvailableQuantity,
-    ensureResolvedAvailableQuantities: ensureOtherBranchResolvedAvailableQuantities,
+    ensureResolvedAvailableQuantities:
+      ensureOtherBranchResolvedAvailableQuantities,
   } = useCachedProducts({
     endpoint: "/products",
     params: {
@@ -115,9 +116,8 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
   const getDisplayQuantity = useCallback(
     (product: any, targetBranchId: number) => {
-      const balance = movementBalancesByKey[
-        getBalanceKey(product.id, targetBranchId)
-      ];
+      const balance =
+        movementBalancesByKey[getBalanceKey(product.id, targetBranchId)];
 
       if (balance !== undefined) {
         return Number(balance.total) || 0;
@@ -174,7 +174,16 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
           b.manufacturer,
         );
         if (scoreA !== scoreB) return scoreB - scoreA;
+
+        const nameCompare = String(a.name || "").localeCompare(
+          String(b.name || ""),
+          "ar",
+        );
+        if (nameCompare !== 0) return nameCompare;
+
+        return Number(a.id || 0) - Number(b.id || 0);
       }
+
       const aInStock = getDisplayQuantity(a, branchId) > 0 ? 1 : 0;
       const bInStock = getDisplayQuantity(b, branchId) > 0 ? 1 : 0;
       if (aInStock !== bInStock) return bInStock - aInStock;
@@ -187,7 +196,9 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
     const candidates = filteredProducts.slice(0, 30);
     ensureResolvedAvailableQuantities(candidates);
-    ensureOtherBranchResolvedAvailableQuantities(candidates.map((product) => product.id));
+    ensureOtherBranchResolvedAvailableQuantities(
+      candidates.map((product) => product.id),
+    );
   }, [
     ensureOtherBranchResolvedAvailableQuantities,
     ensureResolvedAvailableQuantities,
@@ -406,6 +417,11 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
           ref={listRef}
           className="flex-1 overflow-y-auto scrollbar-hide p-4 space-y-2"
         >
+          {!loading && refreshing && filteredProducts.length > 0 && (
+            <div className="text-xs text-muted-foreground mb-2 text-center">
+              جاري تحديث الأرصدة...
+            </div>
+          )}
           {loading ? (
             <div className="space-y-3">
               {Array.from({ length: 6 }).map((_, i) => (

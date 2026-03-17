@@ -110,8 +110,8 @@ export function multiWordMatch(
   // Concatenate all fields into one searchable string
   const combined = fields.map((f) => searchNormalize(f || "")).join(" ");
 
-  // Try original query first
-  if (words.some((word) => combined.includes(word))) return true;
+  // Every word in the query must match somewhere across the searchable fields.
+  if (words.every((word) => combined.includes(word))) return true;
 
   // If query has Latin chars, also try English→Arabic keyboard conversion
   if (hasLatin(query)) {
@@ -120,7 +120,7 @@ export function multiWordMatch(
       .split(/\s+/)
       .filter(Boolean)
       .map((w) => searchNormalize(enToAr(w)));
-    return arWords.some((word) => combined.includes(word));
+    return arWords.every((word) => combined.includes(word));
   }
 
   return false;
