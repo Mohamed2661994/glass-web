@@ -237,6 +237,8 @@ interface Invoice {
   created_at: string;
   created_by?: number;
   created_by_name?: string;
+  updated_by?: number;
+  updated_by_name?: string;
 }
 
 interface Transfer {
@@ -1321,12 +1323,27 @@ export default function DashboardPage() {
         });
         const all: Invoice[] = Array.isArray(data) ? data : (data.data ?? []);
         const wsInvoices = all.filter((i) => i.invoice_type === "wholesale");
-        // Show wholesale invoices created by this retail user that are not yet paid
+        // Show wholesale invoices created by this retail user that are not yet
+        // paid and have not been touched by another user yet.
         const pending = wsInvoices
           .filter(
-            (inv) =>
-              inv.created_by_name === user?.username &&
-              inv.payment_status !== "paid",
+            (inv) => {
+              const createdByCurrentUser =
+                inv.created_by === user?.id ||
+                inv.created_by_name === user?.username;
+
+              const handledByAnotherUser =
+                (inv.updated_by && inv.updated_by !== inv.created_by) ||
+                (inv.updated_by_name &&
+                  inv.updated_by_name !== inv.created_by_name &&
+                  inv.updated_by_name !== user?.username);
+
+              return (
+                createdByCurrentUser &&
+                inv.payment_status !== "paid" &&
+                !handledByAnotherUser
+              );
+            },
           )
           .sort((a, b) => b.id - a.id);
         setPendingWholesale(pending);

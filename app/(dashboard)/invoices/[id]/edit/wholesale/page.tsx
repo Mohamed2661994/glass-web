@@ -83,6 +83,17 @@ export default function EditWholesaleInvoicePage() {
   const router = useRouter();
   const [loadingInvoice, setLoadingInvoice] = useState(true);
   const canEditInvoice = authReady && hasPermission(user, "invoice_edit");
+  const [invoiceMeta, setInvoiceMeta] = useState<{
+    createdBy: number | null;
+    createdByName: string;
+    updatedBy: number | null;
+    updatedByName: string;
+  }>({
+    createdBy: null,
+    createdByName: "",
+    updatedBy: null,
+    updatedByName: "",
+  });
 
   /* =========================================================
      1️⃣ Invoice Header States
@@ -224,6 +235,12 @@ export default function EditWholesaleInvoicePage() {
         setExtraDiscount(String(inv.extra_discount || 0));
         setPaidAmount(String(inv.paid_amount || 0));
         setApplyItemsDiscount(inv.apply_items_discount ?? true);
+        setInvoiceMeta({
+          createdBy: Number(inv.created_by || 0) || null,
+          createdByName: String(inv.created_by_name || ""),
+          updatedBy: Number(inv.updated_by || 0) || null,
+          updatedByName: String(inv.updated_by_name || ""),
+        });
 
         const loadedItems = (inv.items || []).map((item: any, idx: number) => ({
           uid: `${item.product_id}_${idx}_${Date.now()}`,
@@ -813,12 +830,46 @@ export default function EditWholesaleInvoicePage() {
     );
   }
 
+  const isInboundInvoiceForWarehouse =
+    Number(user?.branch_id) === 2 &&
+    !!invoiceMeta.createdByName &&
+    (invoiceMeta.createdBy !== Number(user?.id || 0) ||
+      invoiceMeta.createdByName !== user?.username);
+
   return (
     <div className="mx-auto px-4" style={{ maxWidth: 950, width: "100%" }}>
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-center">
           تعديل فاتورة جملة #{id}
         </h1>
+
+        {isInboundInvoiceForWarehouse && (
+          <Card className="border-amber-300 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-950/30">
+            <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    className="border-amber-400 text-amber-700 dark:border-amber-700 dark:text-amber-300"
+                  >
+                    فاتورة واردة
+                  </Badge>
+                  <span className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                    تم استلام هذه الفاتورة من {invoiceMeta.createdByName}
+                  </span>
+                </div>
+                <p className="text-xs text-amber-800/80 dark:text-amber-200/80">
+                  بعد مراجعتها وحفظ التعديل ستختفي من قسم فواتير الجملة المعلقة عند منشئها.
+                </p>
+              </div>
+              {invoiceMeta.updatedByName && (
+                <div className="text-xs text-amber-800/80 dark:text-amber-200/80">
+                  آخر تعديل: {invoiceMeta.updatedByName}
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
 
         <Card className="p-6 space-y-6">
           <div className="space-y-6">
