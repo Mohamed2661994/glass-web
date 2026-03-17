@@ -16,6 +16,7 @@ import { useCachedProducts } from "@/hooks/use-cached-products";
 import { highlightText } from "@/lib/highlight-text";
 import {
   buildPackagePickerOptions,
+  fetchMovementBalances,
   getPackageVariantId,
   mergePackageVariants,
   normalizePackageName,
@@ -106,6 +107,8 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
   const [packageStockByKey, setPackageStockByKey] = useState<
     Record<string, Record<number, number>>
   >({});
+  const [wholesaleMovementEntriesByKey, setWholesaleMovementEntriesByKey] =
+    useState<Record<string, Array<{ package: string; quantity: number }>>>({});
   const packageStockLoadingRef = useRef<Record<string, boolean>>({});
 
   const getWholesalePackageRows = useCallback(
@@ -182,6 +185,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
       setSearch("");
       setFocusedIndex(-1);
       setPackageStockByKey({});
+      setWholesaleMovementEntriesByKey({});
     }, 0);
     packageStockLoadingRef.current = {};
     refreshSilently();
@@ -237,6 +241,25 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
       }
 
       const stockKey = getBalanceKey(product.id, targetBranchId);
+      const movementEntries = wholesaleMovementEntriesByKey[stockKey];
+      if (Array.isArray(movementEntries) && movementEntries.length > 0) {
+        const quantityByPackage = new Map<string, number>();
+
+        movementEntries.forEach((entry) => {
+          const normalized = normalizePackageName(entry.package);
+          quantityByPackage.set(normalized, Number(entry.quantity) || 0);
+        });
+
+        return packageRows.map((pkg) => {
+          const normalized = normalizePackageName(pkg.label);
+          return {
+            key: `${targetBranchId}:${normalized}`,
+            label: pkg.label,
+            quantity: quantityByPackage.get(normalized) ?? 0,
+          };
+        });
+      }
+
       const quantityMap = packageStockByKey[stockKey];
       if (!quantityMap) {
         return [] as Array<{ key: string; label: string; quantity: number }>;
@@ -276,6 +299,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
       getProductPackageVariants,
       getWholesalePackageRows,
       packageStockByKey,
+      wholesaleMovementEntriesByKey,
     ],
   );
 
@@ -392,6 +416,34 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
     void Promise.all(
       pendingKeys.map(async ({ productId, key }) => {
+        const product = candidates.find((entry) => entry.id === productId);
+        if (!product) {
+          return {
+            key,
+            stockMap: null,
+            movementEntries: null,
+          };
+        }
+
+        if (branchId === 2) {
+          try {
+            const result = await fetchMovementBalances({
+              productName: String(product.name || ""),
+              branchId: targetBranchId,
+              retailPackage: product.retail_package,
+              wholesalePackage: product.wholesale_package,
+            });
+
+            if (Array.isArray(result.entries) && result.entries.length > 0) {
+              return {
+                key,
+                stockMap: null,
+                movementEntries: result.entries,
+              };
+            }
+          } catch {}
+        }
+
         try {
           const response = await api.get("/stock/quantity-all", {
             params: {
@@ -408,11 +460,13 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                 Number(quantity) || 0,
               ]),
             ) as Record<number, number>,
+            movementEntries: null,
           };
         } catch {
           return {
             key,
             stockMap: null,
+            movementEntries: null,
           };
         }
       }),
@@ -427,6 +481,16 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
           results.forEach(({ key, stockMap }) => {
             if (stockMap) {
               next[key] = stockMap;
+            }
+          });
+          return next;
+        });
+
+        setWholesaleMovementEntriesByKey((prev) => {
+          const next = { ...prev };
+          results.forEach(({ key, movementEntries }) => {
+            if (movementEntries) {
+              next[key] = movementEntries;
             }
           });
           return next;
