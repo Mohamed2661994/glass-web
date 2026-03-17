@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "@/services/api";
 import { useAuth } from "@/app/context/auth-context";
 import { useRouter } from "next/navigation";
@@ -22,9 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  prefetchResolvedProductQuantities,
-} from "@/lib/package-stock";
+import { prefetchResolvedProductQuantities } from "@/lib/package-stock";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Loader2, Search, ShoppingCart, Plus, Trash2 } from "lucide-react";
@@ -63,15 +61,21 @@ export default function LowStockReorderPage() {
     {},
   );
   const [loading, setLoading] = useState(true);
+  const [resolvingStock, setResolvingStock] = useState(false);
   const [search, setSearch] = useState("");
   const [onlyWithWholesaleStock, setOnlyWithWholesaleStock] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCartModal, setShowCartModal] = useState(false);
+  const fetchIdRef = useRef(0);
 
   /* ========== Fetch ========== */
   const fetchData = useCallback(async () => {
+    const fetchId = fetchIdRef.current + 1;
+    fetchIdRef.current = fetchId;
+
     try {
       setLoading(true);
+      setResolvingStock(false);
       const [lowStockRes, retailProductsRes, wholesaleProductsRes] =
         await Promise.all([
           api.get("/reports/low-stock", {
@@ -96,10 +100,17 @@ export default function LowStockReorderPage() {
       const lowItems: LowStockItem[] = Array.isArray(lowStockRes.data)
         ? lowStockRes.data
         : [];
+
+      if (fetchIdRef.current !== fetchId) return;
+
       setData(lowItems);
+      setRetailStock({});
+      setWholesaleStock({});
 
       const relevantProductIds = Array.from(
-        new Set(lowItems.map((item) => Number(item.product_id)).filter(Boolean)),
+        new Set(
+          lowItems.map((item) => Number(item.product_id)).filter(Boolean),
+        ),
       );
 
       const retailProducts: any[] = Array.isArray(retailProductsRes.data)
@@ -131,6 +142,10 @@ export default function LowStockReorderPage() {
         variantsByProduct[productId].push(variant);
       }
 
+      if (fetchIdRef.current !== fetchId) return;
+
+      setLoading(false);
+
       const retailById = new Map<number, any>(
         retailProducts.map((item) => [Number(item.id), item]),
       );
@@ -144,6 +159,12 @@ export default function LowStockReorderPage() {
       const wholesaleCandidates = relevantProductIds
         .map((productId) => wholesaleById.get(productId))
         .filter(Boolean);
+
+      if (retailCandidates.length === 0 && wholesaleCandidates.length === 0) {
+        return;
+      }
+
+      setResolvingStock(true);
 
       const [retailEntries, wholesaleEntries] = await Promise.all([
         prefetchResolvedProductQuantities({
@@ -162,21 +183,29 @@ export default function LowStockReorderPage() {
         }),
       ]);
 
+      if (fetchIdRef.current !== fetchId) return;
+
       const retailMap = Object.fromEntries(
         retailEntries.map(({ productId, quantity }) => [productId, quantity]),
       );
       const wsMap = Object.fromEntries(
-        wholesaleEntries.map(({ productId, quantity }) => [productId, quantity]),
+        wholesaleEntries.map(({ productId, quantity }) => [
+          productId,
+          quantity,
+        ]),
       );
 
       setRetailStock(retailMap);
       setWholesaleStock(wsMap);
     } catch {
+      if (fetchIdRef.current !== fetchId) return;
       setData([]);
       setRetailStock({});
       setWholesaleStock({});
     } finally {
+      if (fetchIdRef.current !== fetchId) return;
       setLoading(false);
+      setResolvingStock(false);
     }
   }, []);
 
@@ -332,7 +361,12 @@ export default function LowStockReorderPage() {
             <Badge variant="secondary">
               {filteredData.length} صنف رصيده 5 أو أقل
             </Badge>
-            {cart.length > 0 && <Badge>{cart.length} في العربة</Badge>}
+            <div className="flex items-center gap-2">
+              {resolvingStock && (
+                <Badge variant="outline">جاري تدقيق الأرصدة...</Badge>
+              )}
+              {cart.length > 0 && <Badge>{cart.length} في العربة</Badge>}
+            </div>
           </CardContent>
         </Card>
       )}
