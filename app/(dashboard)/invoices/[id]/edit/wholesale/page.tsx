@@ -89,6 +89,10 @@ export default function EditWholesaleInvoicePage() {
   const router = useRouter();
   const [loadingInvoice, setLoadingInvoice] = useState(true);
   const canEditInvoice = authReady && hasPermission(user, "invoice_edit");
+  const draftKey = useMemo(
+    () => `invoice_edit_draft_wholesale_${String(id ?? "")}`,
+    [id],
+  );
 
   /* =========================================================
      1️⃣ Invoice Header States
@@ -187,6 +191,46 @@ export default function EditWholesaleInvoicePage() {
   const [extraDiscount, setExtraDiscount] = useState("0");
   const [paidAmount, setPaidAmount] = useState("0");
   const [applyItemsDiscount, setApplyItemsDiscount] = useState(true);
+  const draftRestoredRef = useRef(false);
+  const initialDraftSnapshotRef = useRef("");
+
+  const buildDraftPayload = useCallback(
+    () => ({
+      movementType,
+      invoiceDate,
+      invoiceNotes,
+      customerName,
+      customerPhone,
+      customerId,
+      previousBalance,
+      extraDiscount,
+      paidAmount,
+      applyItemsDiscount,
+      supplierName,
+      supplierPhone,
+      items,
+    }),
+    [
+      movementType,
+      invoiceDate,
+      invoiceNotes,
+      customerName,
+      customerPhone,
+      customerId,
+      previousBalance,
+      extraDiscount,
+      paidAmount,
+      applyItemsDiscount,
+      supplierName,
+      supplierPhone,
+      items,
+    ],
+  );
+
+  const clearDraft = useCallback(() => {
+    if (typeof window === "undefined") return;
+    localStorage.removeItem(draftKey);
+  }, [draftKey]);
 
   /* =========================================================
      5️⃣ Fetch Invoice Data
@@ -216,21 +260,6 @@ export default function EditWholesaleInvoicePage() {
           return;
         }
 
-        setMovementType(inv.movement_type);
-        setInvoiceDate(
-          inv.invoice_date ? inv.invoice_date.substring(0, 10) : "",
-        );
-        setInvoiceNotes(inv.notes || "");
-        if (inv.notes) setShowNotes(true);
-        setCustomerName(inv.customer_name || "");
-        setCustomerPhone(inv.customer_phone || "");
-        setSupplierName(inv.supplier_name || "");
-        setSupplierPhone(inv.supplier_phone || "");
-        setPreviousBalance(String(inv.previous_balance || 0));
-        setExtraDiscount(String(inv.extra_discount || 0));
-        setPaidAmount(String(inv.paid_amount || 0));
-        setApplyItemsDiscount(inv.apply_items_discount ?? true);
-
         const loadedItems = (inv.items || []).map((item: any, idx: number) => ({
           uid: `${item.product_id}_${idx}_${Date.now()}`,
           product_name: item.product_name,
@@ -243,8 +272,67 @@ export default function EditWholesaleInvoicePage() {
           is_return: item.is_return || false,
         }));
 
-        setItems(loadedItems);
+        const baseDraft = {
+          movementType: inv.movement_type,
+          invoiceDate: inv.invoice_date ? inv.invoice_date.substring(0, 10) : "",
+          invoiceNotes: inv.notes || "",
+          customerName: inv.customer_name || "",
+          customerPhone: inv.customer_phone || "",
+          customerId: inv.customer_id || null,
+          previousBalance: String(inv.previous_balance || 0),
+          extraDiscount: String(inv.extra_discount || 0),
+          paidAmount: String(inv.paid_amount || 0),
+          applyItemsDiscount: inv.apply_items_discount ?? true,
+          supplierName: inv.supplier_name || "",
+          supplierPhone: inv.supplier_phone || "",
+          items: loadedItems,
+        };
+
+        initialDraftSnapshotRef.current = JSON.stringify(baseDraft);
+
+        let nextDraft = baseDraft;
+        let restoredDraft = false;
+
+        try {
+          const rawDraft = localStorage.getItem(draftKey);
+          if (rawDraft) {
+            const parsedDraft = JSON.parse(rawDraft);
+            nextDraft = {
+              ...baseDraft,
+              ...parsedDraft,
+              applyItemsDiscount:
+                parsedDraft.applyItemsDiscount ?? baseDraft.applyItemsDiscount,
+              items: Array.isArray(parsedDraft.items)
+                ? parsedDraft.items
+                : baseDraft.items,
+            };
+            restoredDraft = true;
+          }
+        } catch {
+          clearDraft();
+        }
+
+        setMovementType(nextDraft.movementType);
+        setInvoiceDate(nextDraft.invoiceDate);
+        setInvoiceNotes(nextDraft.invoiceNotes || "");
+        if (nextDraft.invoiceNotes) setShowNotes(true);
+        setCustomerName(nextDraft.customerName || "");
+        setCustomerPhone(nextDraft.customerPhone || "");
+        setCustomerId(nextDraft.customerId || null);
+        setSupplierName(nextDraft.supplierName || "");
+        setSupplierPhone(nextDraft.supplierPhone || "");
+        setPreviousBalance(nextDraft.previousBalance);
+        setExtraDiscount(nextDraft.extraDiscount);
+        setPaidAmount(nextDraft.paidAmount);
+        setApplyItemsDiscount(nextDraft.applyItemsDiscount);
+
+        setItems(nextDraft.items);
         setOriginalItems(loadedItems);
+        draftRestoredRef.current = true;
+
+        if (restoredDraft) {
+          toast.info("تم استعادة تعديلات الفاتورة غير المحفوظة");
+        }
       } catch {
         toast.error("فشل تحميل بيانات الفاتورة");
         router.push("/invoices");
@@ -254,7 +342,21 @@ export default function EditWholesaleInvoicePage() {
     };
 
     if (id) fetchInvoice();
-  }, [authReady, canEditInvoice, id, user]);
+  }, [authReady, canEditInvoice, clearDraft, draftKey, id, router, user]);
+
+  useEffect(() => {
+    if (loadingInvoice || !draftRestoredRef.current) return;
+
+    const draft = buildDraftPayload();
+    const snapshot = JSON.stringify(draft);
+
+    if (snapshot === initialDraftSnapshotRef.current) {
+      clearDraft();
+      return;
+    }
+
+    localStorage.setItem(draftKey, snapshot);
+  }, [buildDraftPayload, clearDraft, draftKey, loadingInvoice]);
 
   /* =========================================================
      6️⃣ Fetch Products From Backend
@@ -644,6 +746,7 @@ export default function EditWholesaleInvoicePage() {
 
       // Backend handles cash_in sync in the PUT transaction
 
+      clearDraft();
       toast.success("تم تعديل الفاتورة بنجاح");
       broadcastUpdate("invoice_updated");
       invalidateCache();
