@@ -18,11 +18,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Printer, Search } from "lucide-react";
+import { FileText, Loader2, Printer, Search } from "lucide-react";
 import { ExportButtons, type ExportColumn } from "@/components/export-buttons";
 import { useRealtime } from "@/hooks/use-realtime";
 import { Skeleton } from "@/components/ui/skeleton";
 import { normalizePackageName } from "@/lib/package-stock";
+import { exportDataToPdf } from "@/lib/export-utils";
 
 const INVENTORY_SUMMARY_PRINT_STORAGE_KEY = "inventorySummaryPrintData";
 
@@ -446,6 +447,33 @@ export default function InventorySummaryPage() {
     balance: Number(item.total_in || 0) - Number(item.total_out || 0),
   }));
 
+  const pdfColumns: ExportColumn[] = [
+    { header: "اسم الصنف", key: "product_name", width: 56 },
+    { header: "العبوة", key: "package_name", width: 24 },
+    { header: "الرصيد", key: "balance", width: 20 },
+  ];
+
+  const pdfData = displayedData.map((item) => {
+    const totalIn = Number(item.total_in || 0);
+    const totalOut = Number(item.total_out || 0);
+
+    return {
+      product_name: item.product_name,
+      package_name: getWholesalePackageOnly(item.package_name) || "—",
+      balance: totalIn - totalOut,
+    };
+  });
+
+  const handlePdfExport = useCallback(async () => {
+    await exportDataToPdf(
+      pdfColumns,
+      pdfData,
+      `حركة-المخزون-${new Date().toISOString().slice(0, 10)}`,
+      "تقرير حركة المخزون",
+      "portrait",
+    );
+  }, [pdfColumns, pdfData]);
+
   const handlePrint = useCallback(() => {
     const printRows = displayedData.map((item) => {
       const totalIn = Number(item.total_in || 0);
@@ -519,13 +547,17 @@ export default function InventorySummaryPage() {
               <Printer className="h-4 w-4" />
               طباعة الاسم والرصيد
             </Button>
+            <Button variant="outline" size="sm" onClick={handlePdfExport}>
+              <FileText className="h-4 w-4" />
+              تصدير PDF الاسم والرصيد
+            </Button>
             <ExportButtons
               tableRef={tableRef}
               columns={exportColumns}
               data={exportData}
               filename={`حركة-المخزون-${new Date().toISOString().slice(0, 10)}`}
               title="تقرير حركة المخزون"
-              pdfOrientation="landscape"
+              excelOnly
             />
           </div>
         )}

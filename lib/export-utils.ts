@@ -147,6 +147,147 @@ export async function exportToPdf(
   printWindow.document.close();
 }
 
+function escapeHtml(value: unknown) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+export async function exportDataToPdf<T extends Record<string, unknown>>(
+  columns: { header: string; key: string; width?: number }[],
+  rows: T[],
+  filename: string,
+  title?: string,
+  orientation: "portrait" | "landscape" = "portrait",
+) {
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) {
+    alert("يرجى السماح بالنوافذ المنبثقة لتنزيل PDF");
+    return;
+  }
+
+  const dateStr = new Date().toLocaleDateString("ar-EG", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const headersHtml = columns
+    .map(
+      (column) =>
+        `<th style="width:${column.width || 20}%">${escapeHtml(column.header)}</th>`,
+    )
+    .join("");
+
+  const rowsHtml = rows
+    .map(
+      (row, rowIndex) => `<tr>
+        ${columns
+          .map((column, columnIndex) => {
+            const value = row[column.key];
+            const text =
+              value === null || value === undefined || value === ""
+                ? "—"
+                : String(value);
+            const className = columnIndex === 0 ? "text-right" : "text-center";
+            return `<td class="${className}">${columnIndex === 0 ? `${rowIndex + 1}. ` : ""}${escapeHtml(text)}</td>`;
+          })
+          .join("")}
+      </tr>`,
+    )
+    .join("");
+
+  printWindow.document.write(`<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>${escapeHtml(filename)}</title>
+  <style>
+    @page {
+      size: ${orientation === "landscape" ? "landscape" : "portrait"};
+      margin: 10mm;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: Tahoma, "Segoe UI", Arial, sans-serif;
+      direction: rtl;
+      background: #fff;
+      color: #000;
+      margin: 0;
+      padding: 16px;
+    }
+    .pdf-title {
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .pdf-date {
+      text-align: center;
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 16px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    th, td {
+      border: 1px solid #d1d5db;
+      padding: 8px 10px;
+      vertical-align: middle;
+    }
+    th {
+      background-color: #f3f4f6;
+      font-weight: 700;
+      text-align: center;
+    }
+    td.text-right {
+      text-align: right;
+      font-weight: 600;
+    }
+    td.text-center {
+      text-align: center;
+    }
+    tr:nth-child(even) td {
+      background-color: #f9fafb;
+    }
+    .print-hint {
+      text-align: center;
+      margin-top: 20px;
+      padding: 12px;
+      background: #fef3c7;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #92400e;
+    }
+    @media print {
+      .print-hint { display: none; }
+    }
+  </style>
+</head>
+<body>
+  ${title ? `<div class="pdf-title">${escapeHtml(title)}</div>` : ""}
+  <div class="pdf-date">${escapeHtml(dateStr)}</div>
+  <table>
+    <thead>
+      <tr>${headersHtml}</tr>
+    </thead>
+    <tbody>
+      ${rowsHtml}
+    </tbody>
+  </table>
+  <div class="print-hint">اضغط Ctrl+P واختر Save as PDF لحفظ الملف</div>
+  <script>window.onload = function() { window.print(); }<\/script>
+</body>
+</html>`);
+  printWindow.document.close();
+}
+
 /* ================================================================
    WhatsApp Invoice Sharing
    ================================================================ */
