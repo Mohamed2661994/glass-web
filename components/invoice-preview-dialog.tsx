@@ -3,10 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import {
-  getPrintPageRule,
-  shouldUseBrowserOrientationSelection,
-} from "@/lib/print";
 import { Printer, X } from "lucide-react";
 
 /* ─────────── Types ─────────── */
@@ -136,8 +132,6 @@ export function InvoicePreviewDialog({
   const handlePrint = () => {
     const content = printRef.current;
     if (!content) return;
-    const allowBrowserOrientationSelection =
-      shouldUseBrowserOrientationSelection();
 
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
@@ -195,12 +189,7 @@ export function InvoicePreviewDialog({
       font-size: 12px;
       color: #999;
     }
-    ${getPrintPageRule({
-      paperSize: "A5",
-      margin: "8mm",
-      orientation: "portrait",
-      allowBrowserOrientationSelection,
-    })}
+    @page { size: A5 portrait; margin: 8mm; }
     @media print {
       .invoice-wrap { width: 100%; margin: 0; padding: 0; }
       table { page-break-inside: auto; break-inside: auto; }

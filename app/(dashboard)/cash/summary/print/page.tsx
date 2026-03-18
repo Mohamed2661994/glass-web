@@ -2,7 +2,6 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import api from "@/services/api";
 import { noSpaces, normalizeArabic } from "@/lib/utils";
 
@@ -12,7 +11,6 @@ const getCustomerLookupKey = (value?: string | null) =>
 const DISCOUNT_DIFF_MARKER = "{{discount_diff}}";
 const WESTERN_NUMBER_LOCALE = "en-US";
 const FIXED_CASH_SUMMARY_PAPER_SIZE = "A4";
-type Orientation = "portrait" | "landscape";
 
 /* ================= TYPES ================= */
 
@@ -117,16 +115,14 @@ function CashSummaryPrintInner() {
   const from = searchParams.get("from");
   const to = searchParams.get("to");
   const includeOpeningBalance = searchParams.get("includeOpeningBalance");
-  const initialOrientation: Orientation =
-    searchParams.get("orientation") === "landscape"
-      ? "landscape"
-      : "portrait";
+  const orientation = searchParams.get("orientation") || "portrait";
   const fontSize = searchParams.get("fontSize") || "medium";
   const fontWeight = searchParams.get("fontWeight") || "normal";
   const tableOrderParam =
     searchParams.get("tableOrder") || "revenue,expenses,purchases,supplier";
   const hideMarketCustomers = searchParams.get("hideMarketCustomers") === "1";
   const tableOrder = tableOrderParam.split(",");
+  const isLandscape = orientation === "landscape";
   const isBold = fontWeight === "bold";
 
   const showOpeningBalance = includeOpeningBalance === "1";
@@ -140,20 +136,12 @@ function CashSummaryPrintInner() {
     new Set(),
   );
   const [loading, setLoading] = useState(true);
-  const [orientation, setOrientation] =
-    useState<Orientation>(initialOrientation);
-
-  const isLandscape = orientation === "landscape";
 
   const isMarketCustomerEntry = useCallback(
     (item: CashInItem) =>
       marketCustomerKeys.has(getCustomerLookupKey(item.customer_name)),
     [marketCustomerKeys],
   );
-
-  useEffect(() => {
-    setOrientation(initialOrientation);
-  }, [initialOrientation]);
 
   /* ================= FETCH ================= */
 
@@ -196,9 +184,12 @@ function CashSummaryPrintInner() {
 
   /* ================= PRINT SETUP ================= */
 
-  const handlePrint = useCallback(() => {
-    window.print();
-  }, []);
+  useEffect(() => {
+    if (!loading) {
+      const timer = setTimeout(() => window.print(), 600);
+      return () => clearTimeout(timer);
+    }
+  }, [loading]);
 
   /* ================= FILTER ================= */
 
@@ -385,36 +376,6 @@ function CashSummaryPrintInner() {
       className={`bg-white text-black min-h-screen ${weightClass}`}
       style={{ colorScheme: "light" }}
     >
-      <div className="print:hidden sticky top-0 z-10 border-b border-gray-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-[1100px] flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <div>
-            <div className="text-sm font-semibold">اتجاه الورقة</div>
-            <div className="text-xs text-gray-600">
-              اختر الاتجاه ثم اضغط طباعة
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant={orientation === "portrait" ? "default" : "outline"}
-              onClick={() => setOrientation("portrait")}
-            >
-              طولي
-            </Button>
-            <Button
-              type="button"
-              variant={orientation === "landscape" ? "default" : "outline"}
-              onClick={() => setOrientation("landscape")}
-            >
-              عرضي
-            </Button>
-            <Button type="button" onClick={handlePrint}>
-              طباعة
-            </Button>
-          </div>
-        </div>
-      </div>
-
       <div
         className={`${isLandscape ? "max-w-[1100px]" : "max-w-[800px]"} mx-auto border border-black p-5 print:border-0 print:p-5`}
       >

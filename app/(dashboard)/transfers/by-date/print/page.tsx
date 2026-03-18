@@ -195,7 +195,7 @@ td.name-cell { text-align: right; font-weight: 500; }
   color: #999 !important;
 }
 
-@page { size: A5; margin: 0; }
+@page { size: A5 portrait; margin: 0; }
 
 @media print {
   body * { visibility: hidden; }
