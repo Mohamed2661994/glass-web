@@ -66,6 +66,10 @@ type Product = {
   wholesale_package?: string | null;
 };
 
+type ProductCurrentStockResponse = {
+  total_current_stock?: number;
+};
+
 type WarehouseFilter = "الكل" | "المخزن الرئيسي" | "مخزن المعرض";
 
 /* ========== Component ========== */
@@ -79,6 +83,8 @@ function ProductMovementPageContent() {
 
   const [data, setData] = useState<MovementItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [currentStock, setCurrentStock] = useState<number | null>(null);
+  const [currentStockLoading, setCurrentStockLoading] = useState(false);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
@@ -96,6 +102,14 @@ function ProductMovementPageContent() {
         ? "المخزن الرئيسي"
         : "الكل",
   );
+
+  const effectiveWarehouseId = useMemo(() => {
+    if (isShowroomUser) return 1;
+    if (isWarehouseUser) return 2;
+    if (selectedWarehouse === "مخزن المعرض") return 1;
+    if (selectedWarehouse === "المخزن الرئيسي") return 2;
+    return null;
+  }, [isShowroomUser, isWarehouseUser, selectedWarehouse]);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
@@ -233,11 +247,49 @@ function ProductMovementPageContent() {
     }
   }, [selectedProduct, fromDate, toDate]);
 
+  const fetchCurrentStock = useCallback(async () => {
+    if (!selectedProduct) {
+      setCurrentStock(null);
+      return;
+    }
+
+    try {
+      setCurrentStockLoading(true);
+      const res = await api.get<ProductCurrentStockResponse>(
+        "/reports/product-current-stock",
+        {
+          params: {
+            product_id: selectedProduct.id,
+            warehouse_id: effectiveWarehouseId || undefined,
+          },
+        },
+      );
+      setCurrentStock(Number(res.data?.total_current_stock || 0));
+    } catch {
+      setCurrentStock(null);
+    } finally {
+      setCurrentStockLoading(false);
+    }
+  }, [effectiveWarehouseId, selectedProduct]);
+
   useEffect(() => {
     if (selectedProduct) fetchMovement();
   }, [fetchMovement, selectedProduct]);
 
-  useRealtime(["data:invoices", "data:stock"], fetchMovement);
+  useEffect(() => {
+    if (selectedProduct) {
+      fetchCurrentStock();
+    } else {
+      setCurrentStock(null);
+    }
+  }, [fetchCurrentStock, selectedProduct]);
+
+  const refreshReport = useCallback(() => {
+    fetchMovement();
+    fetchCurrentStock();
+  }, [fetchCurrentStock, fetchMovement]);
+
+  useRealtime(["data:invoices", "data:stock"], refreshReport);
 
   /* ========== Filter ========== */
   const filteredData = useMemo(() => {
@@ -376,6 +428,11 @@ function ProductMovementPageContent() {
 
     return { totalIn: inQty, totalOut: outQty, packageTotals };
   }, [filteredData, getDisplayedPackageLabel]);
+
+  const periodBalance = totalIn - totalOut;
+  const currentStockDisplay = currentStockLoading
+    ? "..."
+    : (currentStock ?? 0).toLocaleString();
 
   /* ========== Export columns ========== */
   const exportColumns: ExportColumn[] = [
@@ -773,29 +830,35 @@ function ProductMovementPageContent() {
         )}
 
         {/* Summary totals */}
-        {!loading && filteredData.length > 0 && (
+        {!loading && selectedProduct && (
           <div className="space-y-3">
-            {/* الإجمالي العام */}
             <div className="flex flex-wrap justify-center gap-4 text-sm font-semibold">
               <span className="text-green-600">
-                إجمالي الوارد: {totalIn.toLocaleString()}
+                إجمالي الوارد للفترة: {totalIn.toLocaleString()}
               </span>
               <span className="text-muted-foreground">—</span>
               <span className="text-red-600">
-                إجمالي الصادر: {totalOut.toLocaleString()}
+                إجمالي الصادر للفترة: {totalOut.toLocaleString()}
               </span>
               <span className="text-muted-foreground">—</span>
               <span
                 className={
-                  totalIn - totalOut >= 0 ? "text-green-600" : "text-red-600"
+                  periodBalance >= 0 ? "text-green-600" : "text-red-600"
                 }
               >
-                الرصيد الفعلي: {(totalIn - totalOut).toLocaleString()}
+                صافي الفترة: {periodBalance.toLocaleString()}
+              </span>
+              <span className="text-muted-foreground">—</span>
+              <span
+                className={
+                  (currentStock ?? 0) >= 0 ? "text-green-600" : "text-red-600"
+                }
+              >
+                الرصيد الفعلي الحالي: {currentStockDisplay}
               </span>
             </div>
 
-            {/* تفصيل حسب العبوة */}
-            {packageTotals.length > 1 && (
+            {filteredData.length > 0 && packageTotals.length > 1 && (
               <div className="flex flex-wrap justify-center gap-3 text-xs">
                 {packageTotals.map((pt) => (
                   <div
