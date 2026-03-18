@@ -188,6 +188,7 @@ export default function EditRetailInvoicePage() {
   const [applyItemsDiscount, setApplyItemsDiscount] = useState(true);
   const draftRestoredRef = useRef(false);
   const initialDraftSnapshotRef = useRef("");
+  const preserveDraftOnUnloadRef = useRef(false);
 
   const buildDraftPayload = useCallback(
     () => ({
@@ -224,8 +225,24 @@ export default function EditRetailInvoicePage() {
 
   const clearDraft = useCallback(() => {
     if (typeof window === "undefined") return;
+    sessionStorage.removeItem(draftKey);
     localStorage.removeItem(draftKey);
   }, [draftKey]);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      preserveDraftOnUnloadRef.current = true;
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      if (!preserveDraftOnUnloadRef.current) {
+        clearDraft();
+      }
+    };
+  }, [clearDraft]);
 
   /* =========================================================
      5️⃣ Fetch Invoice Data
@@ -287,9 +304,20 @@ export default function EditRetailInvoicePage() {
 
         let nextDraft = baseDraft;
         let restoredDraft = false;
+        const navigationEntry = performance.getEntriesByType(
+          "navigation",
+        )[0] as PerformanceNavigationTiming | undefined;
+        const shouldRestoreDraft = navigationEntry?.type === "reload";
 
         try {
-          const rawDraft = localStorage.getItem(draftKey);
+          if (!shouldRestoreDraft) {
+            clearDraft();
+          }
+
+          const rawDraft = shouldRestoreDraft
+            ? sessionStorage.getItem(draftKey)
+            : null;
+
           if (rawDraft) {
             const parsedDraft = JSON.parse(rawDraft);
             nextDraft = {
@@ -350,7 +378,7 @@ export default function EditRetailInvoicePage() {
       return;
     }
 
-    localStorage.setItem(draftKey, snapshot);
+    sessionStorage.setItem(draftKey, snapshot);
   }, [buildDraftPayload, clearDraft, draftKey, loadingInvoice]);
 
   /* =========================================================
