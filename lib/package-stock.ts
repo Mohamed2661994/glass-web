@@ -24,6 +24,18 @@ export type PackagePickerOption = {
   variant?: PackageVariant;
 };
 
+type ProductCurrentStockRow = {
+  warehouse_id?: number | null;
+  variant_id?: number | null;
+  current_stock?: number | null;
+  package_name?: string | null;
+};
+
+type ProductCurrentStockResponse = {
+  total_current_stock?: number;
+  rows?: ProductCurrentStockRow[];
+};
+
 export function getPackageVariantId(variant?: PackageVariant | null): number {
   return Number(variant?.variant_id ?? variant?.id ?? 0);
 }
@@ -307,22 +319,6 @@ export function buildPackagePickerOptions({
     );
 }
 
-type MovementRow = {
-  warehouse_name?: string | null;
-  movement_type?: string | null;
-  invoice_movement_type?: string | null;
-  quantity?: number | null;
-  package_name?: string | null;
-};
-
-const IN_MOVEMENT_TYPES = new Set([
-  "purchase",
-  "transfer_in",
-  "replace_in",
-  "return_sale",
-  "in",
-]);
-
 export function normalizePackageName(name?: string | null): string {
   const toWesternDigits = (value: string) =>
     value.replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)));
@@ -345,19 +341,32 @@ export function normalizePackageName(name?: string | null): string {
   return withoutTrailingPiece;
 }
 
-function matchesBranchWarehouse(warehouseName: string, branchId: number) {
-  const normalized = warehouseName.trim();
-  if (branchId === 1) {
-    return normalized.includes("المعرض");
+function getWarehouseIdForBranch(branchId: number): number | undefined {
+  if (branchId === 1 || branchId === 2) {
+    return branchId;
   }
 
-  if (branchId === 2) {
-    return (
-      normalized.includes("الرئيسي") || normalized.includes("المخزن الرئيسي")
-    );
-  }
+  return undefined;
+}
 
-  return true;
+async function fetchProductCurrentStockRows({
+  productId,
+  branchId,
+}: {
+  productId: number;
+  branchId: number;
+}): Promise<ProductCurrentStockRow[]> {
+  const response = await api.get<ProductCurrentStockResponse>(
+    "/reports/product-current-stock",
+    {
+      params: {
+        product_id: productId,
+        warehouse_id: getWarehouseIdForBranch(branchId),
+      },
+    },
+  );
+
+  return Array.isArray(response.data?.rows) ? response.data.rows : [];
 }
 
 export async function fetchPackageStockMapFromMovements({
@@ -375,42 +384,25 @@ export async function fetchPackageStockMapFromMovements({
   variants?: PackageVariant[];
   packageField?: "wholesale_package" | "retail_package";
 }): Promise<PackageStockMap> {
-  const response = await api.get("/reports/product-movement", {
-    params: { product_name: productName },
-  });
+  void productName;
+  void basePackage;
+  void packageField;
 
-  const rows: MovementRow[] = Array.isArray(response.data) ? response.data : [];
-  const totalsByPackage = new Map<string, number>();
+  const rows = await fetchProductCurrentStockRows({ productId, branchId });
+  const stockMap: PackageStockMap = {};
 
   for (const row of rows) {
-    if (!matchesBranchWarehouse(String(row.warehouse_name || ""), branchId)) {
-      continue;
-    }
+    const variantId = Number(row.variant_id ?? 0);
+    const quantity = Number(row.current_stock ?? 0);
+    if (!Number.isFinite(quantity)) continue;
 
-    const qty = Number(row.quantity || 0);
-    if (!Number.isFinite(qty) || qty === 0) continue;
-
-    const movementType = row.movement_type || row.invoice_movement_type || "";
-    const delta = IN_MOVEMENT_TYPES.has(movementType) ? qty : -qty;
-    const pkg = normalizePackageName(row.package_name || basePackage || "-");
-    totalsByPackage.set(pkg, (totalsByPackage.get(pkg) || 0) + delta);
+    stockMap[variantId] = Number(stockMap[variantId] || 0) + quantity;
   }
-
-  const stockMap: PackageStockMap = {};
-  const assignedPackages = new Set<string>();
-
-  const baseLabel = normalizePackageName(basePackage || "-");
-  stockMap[0] = Number(totalsByPackage.get(baseLabel) || 0);
-  assignedPackages.add(baseLabel);
 
   for (const variant of variants || []) {
     const variantId = getPackageVariantId(variant);
-    const label = getVariantPackageLabel(variant, packageField, basePackage);
-    if (assignedPackages.has(label)) {
+    if (!Object.prototype.hasOwnProperty.call(stockMap, variantId)) {
       stockMap[variantId] = 0;
-    } else {
-      stockMap[variantId] = Number(totalsByPackage.get(label) || 0);
-      assignedPackages.add(label);
     }
   }
 
@@ -420,36 +412,27 @@ export async function fetchPackageStockMapFromMovements({
 export type MovementBalanceEntry = { package: string; quantity: number };
 
 /**
- * Returns per-package balances computed directly from the movement report.
- * No variant-ID mapping — uses the raw package_name from each movement row,
- * exactly matching the logic in تقرير حركة الأصناف.
+ * Returns per-package balances using the current stock table,
+ * matching الرصيد الفعلي الحالي المستخدم في صفحة حركة الأصناف.
  */
 export async function fetchMovementBalances({
+  productId,
   productName,
   branchId,
 }: {
+  productId: number;
   productName: string;
   branchId: number;
 }): Promise<{ entries: MovementBalanceEntry[]; total: number }> {
-  const response = await api.get("/reports/product-movement", {
-    params: { product_name: productName },
-  });
-
-  const rows: MovementRow[] = Array.isArray(response.data) ? response.data : [];
+  const rows = await fetchProductCurrentStockRows({ productId, branchId });
   const totalsByPackage = new Map<string, number>();
 
   for (const row of rows) {
-    if (!matchesBranchWarehouse(String(row.warehouse_name || ""), branchId)) {
-      continue;
-    }
+    const qty = Number(row.current_stock || 0);
+    if (!Number.isFinite(qty)) continue;
 
-    const qty = Number(row.quantity || 0);
-    if (!Number.isFinite(qty) || qty === 0) continue;
-
-    const movementType = row.movement_type || row.invoice_movement_type || "";
-    const delta = IN_MOVEMENT_TYPES.has(movementType) ? qty : -qty;
-    const pkg = normalizePackageName(row.package_name || "-");
-    totalsByPackage.set(pkg, (totalsByPackage.get(pkg) || 0) + delta);
+    const pkg = normalizePackageName(row.package_name || productName || "-");
+    totalsByPackage.set(pkg, (totalsByPackage.get(pkg) || 0) + qty);
   }
 
   const total = Array.from(totalsByPackage.values()).reduce(

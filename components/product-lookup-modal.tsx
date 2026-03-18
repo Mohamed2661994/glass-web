@@ -171,6 +171,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
         }
         balanceLoadingRef.current[key] = true;
         fetchMovementBalances({
+          productId: product.id,
           productName: product.name,
           branchId: targetBranchId,
         })
