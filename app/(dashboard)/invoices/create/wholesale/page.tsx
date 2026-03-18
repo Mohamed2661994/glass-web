@@ -1563,12 +1563,9 @@ export default function CreateWholesaleInvoicePage() {
                             }
                           />
                           {(() => {
-                            const prod = products.find(
-                              (pr: any) => pr.id === item.product_id,
+                            const avail = getResolvedAvailableQuantity(
+                              item.product_id,
                             );
-                            const avail = prod
-                              ? Number(prod.available_quantity)
-                              : null;
                             return avail !== null &&
                               Number(item.quantity) > avail ? (
                               <div className="text-[11px] text-red-500 mt-1">
@@ -1870,12 +1867,9 @@ export default function CreateWholesaleInvoicePage() {
                           }
                         />
                         {(() => {
-                          const prod = products.find(
-                            (pr: any) => pr.id === item.product_id,
+                          const avail = getResolvedAvailableQuantity(
+                            item.product_id,
                           );
-                          const avail = prod
-                            ? Number(prod.available_quantity)
-                            : null;
                           return avail !== null &&
                             Number(item.quantity) > avail ? (
                             <div className="text-[11px] text-red-500">

@@ -161,7 +161,9 @@ function ProductMovementPageContent() {
           retail_package:
             product.retail_package || adminProduct?.retail_package || null,
           wholesale_package:
-            product.wholesale_package || adminProduct?.wholesale_package || null,
+            product.wholesale_package ||
+            adminProduct?.wholesale_package ||
+            null,
         };
       });
 
@@ -234,6 +236,7 @@ function ProductMovementPageContent() {
       setLoading(true);
       const res = await api.get("/reports/product-movement", {
         params: {
+          product_id: selectedProduct.id,
           product_name: selectedProduct.name,
           from: fromDate || undefined,
           to: toDate || undefined,
