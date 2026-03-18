@@ -162,6 +162,9 @@ export async function exportDataToPdf<T extends Record<string, unknown>>(
   filename: string,
   title?: string,
   orientation: "portrait" | "landscape" = "portrait",
+  options?: {
+    layout?: "single-table" | "two-tables";
+  },
 ) {
   const printWindow = window.open("", "_blank");
   if (!printWindow) {
@@ -182,23 +185,52 @@ export async function exportDataToPdf<T extends Record<string, unknown>>(
     )
     .join("");
 
-  const rowsHtml = rows
-    .map(
-      (row, rowIndex) => `<tr>
-        ${columns
-          .map((column, columnIndex) => {
-            const value = row[column.key];
-            const text =
-              value === null || value === undefined || value === ""
-                ? "—"
-                : String(value);
-            const className = columnIndex === 0 ? "text-right" : "text-center";
-            return `<td class="${className}">${columnIndex === 0 ? `${rowIndex + 1}. ` : ""}${escapeHtml(text)}</td>`;
-          })
-          .join("")}
-      </tr>`,
-    )
-    .join("");
+  const buildRowsHtml = (tableRows: T[], startIndex = 0) =>
+    tableRows
+      .map(
+        (row, rowIndex) => `<tr>
+          ${columns
+            .map((column, columnIndex) => {
+              const value = row[column.key];
+              const text =
+                value === null || value === undefined || value === ""
+                  ? "—"
+                  : String(value);
+              const className = columnIndex === 0 ? "text-right" : "text-center";
+              return `<td class="${className}">${columnIndex === 0 ? `${startIndex + rowIndex + 1}. ` : ""}${escapeHtml(text)}</td>`;
+            })
+            .join("")}
+        </tr>`,
+      )
+      .join("");
+
+  const renderTable = (tableRows: T[], startIndex = 0) => `
+    <table>
+      <thead>
+        <tr>${headersHtml}</tr>
+      </thead>
+      <tbody>
+        ${buildRowsHtml(tableRows, startIndex)}
+      </tbody>
+    </table>
+  `;
+
+  const layout = options?.layout || "single-table";
+  const contentHtml =
+    layout === "two-tables"
+      ? (() => {
+          const splitIndex = Math.ceil(rows.length / 2);
+          const leftRows = rows.slice(0, splitIndex);
+          const rightRows = rows.slice(splitIndex);
+
+          return `
+            <div class="tables-grid">
+              <div class="table-pane">${renderTable(leftRows, 0)}</div>
+              <div class="table-pane">${renderTable(rightRows, splitIndex)}</div>
+            </div>
+          `;
+        })()
+      : renderTable(rows, 0);
 
   printWindow.document.write(`<!DOCTYPE html>
 <html dir="rtl" lang="ar">
@@ -230,6 +262,15 @@ export async function exportDataToPdf<T extends Record<string, unknown>>(
       font-size: 12px;
       color: #666;
       margin-bottom: 16px;
+    }
+    .tables-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      align-items: start;
+    }
+    .table-pane {
+      min-width: 0;
     }
     table {
       width: 100%;
@@ -273,14 +314,7 @@ export async function exportDataToPdf<T extends Record<string, unknown>>(
 <body>
   ${title ? `<div class="pdf-title">${escapeHtml(title)}</div>` : ""}
   <div class="pdf-date">${escapeHtml(dateStr)}</div>
-  <table>
-    <thead>
-      <tr>${headersHtml}</tr>
-    </thead>
-    <tbody>
-      ${rowsHtml}
-    </tbody>
-  </table>
+  ${contentHtml}
   <div class="print-hint">اضغط Ctrl+P واختر Save as PDF لحفظ الملف</div>
   <script>window.onload = function() { window.print(); }<\/script>
 </body>

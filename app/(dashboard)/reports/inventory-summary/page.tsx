@@ -457,14 +457,27 @@ export default function InventorySummaryPage() {
     const totalOut = Number(item.total_out || 0);
 
     return {
-      product_name_full: [
-        item.product_name,
-        getWholesalePackageOnly(item.package_name),
-        item.manufacturer_name || "",
-      ]
-        .map((value) => String(value || "").trim())
-        .filter(Boolean)
-        .join(" - "),
+      product_name_full: (() => {
+        const productName = String(item.product_name || "").trim();
+        const manufacturerName = String(item.manufacturer_name || "").trim();
+        const packageName = String(
+          getWholesalePackageOnly(item.package_name) || "",
+        ).trim();
+
+        if (manufacturerName && packageName) {
+          return `${productName} - ${manufacturerName} (${packageName})`;
+        }
+
+        if (manufacturerName) {
+          return `${productName} - ${manufacturerName}`;
+        }
+
+        if (packageName) {
+          return `${productName} (${packageName})`;
+        }
+
+        return productName;
+      })(),
       balance: totalIn - totalOut,
     };
   });
@@ -476,6 +489,7 @@ export default function InventorySummaryPage() {
       `حركة-المخزون-${new Date().toISOString().slice(0, 10)}`,
       "تقرير حركة المخزون",
       "portrait",
+      { layout: "two-tables" },
     );
   }, [pdfColumns, pdfData]);
 
