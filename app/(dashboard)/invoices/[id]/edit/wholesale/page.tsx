@@ -38,6 +38,7 @@ import {
 import { QuickTransferModal } from "@/components/quick-transfer-modal";
 import { ProductFormDialog } from "@/components/product-form-dialog";
 import { useCachedProducts } from "@/hooks/use-cached-products";
+import { fetchResolvedProductQuantity } from "@/lib/package-stock";
 import { highlightText } from "@/lib/highlight-text";
 import { multiWordMatch, multiWordScore } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
@@ -78,22 +79,16 @@ import {
    ========================================================= */
 
 export default function EditWholesaleInvoicePage() {
+  type ResolvedStockProduct = {
+    id?: number | string | null;
+    available_quantity?: number | string | null;
+  };
+
   const { user, authReady } = useAuth();
   const { id } = useParams();
   const router = useRouter();
   const [loadingInvoice, setLoadingInvoice] = useState(true);
   const canEditInvoice = authReady && hasPermission(user, "invoice_edit");
-  const [invoiceMeta, setInvoiceMeta] = useState<{
-    createdBy: number | null;
-    createdByName: string;
-    updatedBy: number | null;
-    updatedByName: string;
-  }>({
-    createdBy: null,
-    createdByName: "",
-    updatedBy: null,
-    updatedByName: "",
-  });
 
   /* =========================================================
      1️⃣ Invoice Header States
@@ -235,12 +230,6 @@ export default function EditWholesaleInvoicePage() {
         setExtraDiscount(String(inv.extra_discount || 0));
         setPaidAmount(String(inv.paid_amount || 0));
         setApplyItemsDiscount(inv.apply_items_discount ?? true);
-        setInvoiceMeta({
-          createdBy: Number(inv.created_by || 0) || null,
-          createdByName: String(inv.created_by_name || ""),
-          updatedBy: Number(inv.updated_by || 0) || null,
-          updatedByName: String(inv.updated_by_name || ""),
-        });
 
         const loadedItems = (inv.items || []).map((item: any, idx: number) => ({
           uid: `${item.product_id}_${idx}_${Date.now()}`,
@@ -278,8 +267,6 @@ export default function EditWholesaleInvoicePage() {
     refresh: refreshProducts,
     refreshSilently: refreshProductsSilently,
     invalidateCache,
-    getResolvedAvailableQuantity,
-    ensureResolvedAvailableQuantities,
   } = useCachedProducts({
     endpoint: "/products",
     params: {
@@ -290,6 +277,35 @@ export default function EditWholesaleInvoicePage() {
     fetchVariants: true,
     cacheKey: `wholesale_${movementType}`,
   });
+
+  const [resolvedAvailableQtyById, setResolvedAvailableQtyById] = useState<
+    Record<number, number>
+  >({});
+  const resolvingAvailableQtyRef = useRef<Record<number, boolean>>({});
+
+  const productById = useMemo(() => {
+    const map: Record<number, ResolvedStockProduct> = {};
+    products.forEach((product) => {
+      map[Number(product.id)] = product as ResolvedStockProduct;
+    });
+    return map;
+  }, [products]);
+
+  const getResolvedAvailableQuantity = useCallback(
+    (productOrId: number | ResolvedStockProduct | null | undefined) => {
+      const productId =
+        typeof productOrId === "number"
+          ? productOrId
+          : Number(productOrId?.id || 0);
+      const fallbackQuantity =
+        typeof productOrId === "object" && productOrId
+          ? Number(productOrId.available_quantity) || 0
+          : Number(productById[productId]?.available_quantity) || 0;
+
+      return Number(resolvedAvailableQtyById[productId] ?? fallbackQuantity);
+    },
+    [productById, resolvedAvailableQtyById],
+  );
 
   /* =========================================================
      7️⃣ Customer Search By Name
@@ -644,6 +660,8 @@ export default function EditWholesaleInvoicePage() {
      ========================================================= */
   useEffect(() => {
     if (showProductModal) {
+      setResolvedAvailableQtyById({});
+      resolvingAvailableQtyRef.current = {};
       refreshProductsSilently();
     }
   }, [showProductModal, refreshProductsSilently]);
@@ -704,6 +722,10 @@ export default function EditWholesaleInvoicePage() {
     });
 
     return filtered.sort((a, b) => {
+      const aInStock = getResolvedAvailableQuantity(a) > 0 ? 1 : 0;
+      const bInStock = getResolvedAvailableQuantity(b) > 0 ? 1 : 0;
+      if (aInStock !== bInStock) return bInStock - aInStock;
+
       if (search.trim()) {
         const scoreA = multiWordScore(
           search,
@@ -722,20 +744,7 @@ export default function EditWholesaleInvoicePage() {
           b.manufacturer,
         );
         if (scoreA !== scoreB) return scoreB - scoreA;
-
-        const nameCompare = String(a.name || "").localeCompare(
-          String(b.name || ""),
-          "ar",
-        );
-        if (nameCompare !== 0) return nameCompare;
-
-        return Number(a.id || 0) - Number(b.id || 0);
       }
-
-      const aInStock = getResolvedAvailableQuantity(a) > 0 ? 1 : 0;
-      const bInStock = getResolvedAvailableQuantity(b) > 0 ? 1 : 0;
-      if (aInStock !== bInStock) return bInStock - aInStock;
-
       return String(a.name || "").localeCompare(String(b.name || ""), "ar");
     });
   }, [getResolvedAvailableQuantity, products, search]);
@@ -749,8 +758,52 @@ export default function EditWholesaleInvoicePage() {
   useEffect(() => {
     if (!showProductModal) return;
 
-    ensureResolvedAvailableQuantities(displayedProducts);
-  }, [displayedProducts, ensureResolvedAvailableQuantities, showProductModal]);
+    displayedProducts.forEach((product) => {
+      if (
+        Object.prototype.hasOwnProperty.call(
+          resolvedAvailableQtyById,
+          product.id,
+        )
+      ) {
+        return;
+      }
+
+      if (resolvingAvailableQtyRef.current[product.id]) {
+        return;
+      }
+
+      resolvingAvailableQtyRef.current[product.id] = true;
+      fetchResolvedProductQuantity({
+        productId: product.id,
+        productName: product.name,
+        branchId: 2,
+        fallbackQuantity: product.available_quantity,
+        basePackage: product.wholesale_package,
+        variants: variantsMap[product.id] || [],
+        packageField: "wholesale_package",
+      })
+        .then((quantity) => {
+          setResolvedAvailableQtyById((prev) => ({
+            ...prev,
+            [product.id]: quantity,
+          }));
+        })
+        .catch(() => {
+          setResolvedAvailableQtyById((prev) => ({
+            ...prev,
+            [product.id]: Number(product.available_quantity) || 0,
+          }));
+        })
+        .finally(() => {
+          resolvingAvailableQtyRef.current[product.id] = false;
+        });
+    });
+  }, [
+    displayedProducts,
+    resolvedAvailableQtyById,
+    showProductModal,
+    variantsMap,
+  ]);
 
   const handleSearchKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -839,47 +892,12 @@ export default function EditWholesaleInvoicePage() {
     );
   }
 
-  const isInboundInvoiceForWarehouse =
-    Number(user?.branch_id) === 2 &&
-    !!invoiceMeta.createdByName &&
-    (invoiceMeta.createdBy !== Number(user?.id || 0) ||
-      invoiceMeta.createdByName !== user?.username);
-
   return (
     <div className="mx-auto px-4" style={{ maxWidth: 950, width: "100%" }}>
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-center">
           تعديل فاتورة جملة #{id}
         </h1>
-
-        {isInboundInvoiceForWarehouse && (
-          <Card className="border-amber-300 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-950/30">
-            <div className="flex flex-wrap items-center justify-between gap-3 p-4">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <Badge
-                    variant="outline"
-                    className="border-amber-400 text-amber-700 dark:border-amber-700 dark:text-amber-300"
-                  >
-                    فاتورة واردة
-                  </Badge>
-                  <span className="text-sm font-medium text-amber-900 dark:text-amber-100">
-                    تم استلام هذه الفاتورة من {invoiceMeta.createdByName}
-                  </span>
-                </div>
-                <p className="text-xs text-amber-800/80 dark:text-amber-200/80">
-                  بعد مراجعتها وحفظ التعديل ستختفي من قسم فواتير الجملة المعلقة
-                  عند منشئها.
-                </p>
-              </div>
-              {invoiceMeta.updatedByName && (
-                <div className="text-xs text-amber-800/80 dark:text-amber-200/80">
-                  آخر تعديل: {invoiceMeta.updatedByName}
-                </div>
-              )}
-            </div>
-          </Card>
-        )}
 
         <Card className="p-6 space-y-6">
           <div className="space-y-6">

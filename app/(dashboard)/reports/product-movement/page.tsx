@@ -12,18 +12,6 @@ import { useSearchParams } from "next/navigation";
 import api from "@/services/api";
 import { highlightText } from "@/lib/highlight-text";
 import { multiWordMatch } from "@/lib/utils";
-import {
-  fetchUnifiedMovementRows,
-  summarizeUnifiedMovementRows,
-  type MovementDisplayPackageMode,
-  type MovementWarehouseScope,
-  type UnifiedMovementRow,
-} from "@/lib/package-stock";
-import {
-  fetchProductPackageMap,
-  getCachedProductPackageMap,
-  type ProductPackageMeta,
-} from "@/lib/product-package-cache";
 import { useAuth } from "@/app/context/auth-context";
 import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent } from "@/components/ui/card";
@@ -50,6 +38,25 @@ import { useRealtime } from "@/hooks/use-realtime";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /* ========== Types ========== */
+type MovementItem = {
+  created_at?: string | null;
+  movement_date?: string | null;
+  invoice_date?: string | null;
+  entry_date?: string | null;
+  product_name: string;
+  manufacturer_name?: string | null;
+  warehouse_name: string;
+  movement_type: string;
+  quantity: number;
+  note?: string | null;
+  party_name?: string | null;
+  invoice_type?: string | null;
+  invoice_movement_type?: string | null;
+  package_name?: string | null;
+  variant_id?: number | null;
+  invoice_id?: number | null;
+};
+
 type Product = {
   id: number;
   name: string;
@@ -61,62 +68,6 @@ type Product = {
 
 type WarehouseFilter = "الكل" | "المخزن الرئيسي" | "مخزن المعرض";
 
-function isTruthyFlag(value: unknown) {
-  return value === true || value === "true" || value === 1 || value === "1";
-}
-
-function buildProductList(
-  reportProducts: Product[],
-  adminById: Map<number, ProductPackageMeta>,
-  isWarehouseUser: boolean,
-) {
-  let list: Product[] = reportProducts.map((product) => {
-    const adminProduct = adminById.get(Number(product.id));
-
-    return {
-      ...product,
-      manufacturer: product.manufacturer || adminProduct?.manufacturer || null,
-      manufacturer_name:
-        product.manufacturer_name || adminProduct?.manufacturer_name || null,
-      retail_package:
-        product.retail_package || adminProduct?.retail_package || null,
-      wholesale_package:
-        product.wholesale_package || adminProduct?.wholesale_package || null,
-    };
-  });
-
-  if (!isWarehouseUser) {
-    return list;
-  }
-
-  const allowedIds = new Set<number>();
-
-  for (const product of adminById.values()) {
-    if (!isTruthyFlag(product?.is_active)) continue;
-
-    const wholesalePackage = String(product?.wholesale_package || "").trim();
-    const validByPackage =
-      wholesalePackage !== "" &&
-      wholesalePackage !== "0" &&
-      wholesalePackage !== "كرتونة 0" &&
-      wholesalePackage !== "-" &&
-      wholesalePackage !== "بدون عبوة";
-
-    const hasWholesalePrice = Number(product?.wholesale_price || 0) > 0;
-
-    if (
-      (isTruthyFlag(product?.has_wholesale) || validByPackage) &&
-      validByPackage &&
-      hasWholesalePrice
-    ) {
-      allowedIds.add(Number(product.id));
-    }
-  }
-
-  list = list.filter((product) => allowedIds.has(Number(product.id)));
-  return list;
-}
-
 /* ========== Component ========== */
 function ProductMovementPageContent() {
   const searchParams = useSearchParams();
@@ -126,12 +77,11 @@ function ProductMovementPageContent() {
   const isShowroomUser = user?.branch_id === 1;
   const isWarehouseUser = user?.branch_id === 2;
 
-  const [data, setData] = useState<UnifiedMovementRow[]>([]);
+  const [data, setData] = useState<MovementItem[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
-  const [productsEnriching, setProductsEnriching] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showProductModal, setShowProductModal] = useState(false);
   const [productSearch, setProductSearch] = useState("");
@@ -150,34 +100,102 @@ function ProductMovementPageContent() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
 
+  const normalizePackageName = useCallback((name?: string | null) => {
+    const toWesternDigits = (value: string) =>
+      value.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+
+    const cleaned = toWesternDigits(String(name || "بدون عبوة"))
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const withoutTrailingPiece = cleaned.replace(/\s+(قطعة|قطع|قطعه)$/i, "");
+    const tokens = withoutTrailingPiece.split(" ").filter(Boolean);
+
+    if (
+      tokens.length === 2 &&
+      /^\d+$/.test(tokens[0]) &&
+      !/^\d+$/.test(tokens[1])
+    ) {
+      return `${tokens[1]} ${tokens[0]}`;
+    }
+
+    return withoutTrailingPiece;
+  }, []);
+
   /* ========== Fetch Products ========== */
   const fetchProducts = useCallback(async () => {
     try {
       setProductsLoading(true);
-      const cachedAdminById = getCachedProductPackageMap();
-      const reportPromise = api.get("/reports/products");
-      const adminPromise = fetchProductPackageMap({
-        force: cachedAdminById.size > 0,
+      const [res, adminRes] = await Promise.all([
+        api.get("/reports/products"),
+        api.get("/admin/products", {
+          params: { active: "all" },
+        }),
+      ]);
+      const reportProducts: Product[] = Array.isArray(res.data) ? res.data : [];
+      const adminItems: any[] = Array.isArray(adminRes.data)
+        ? adminRes.data
+        : [];
+      const adminById = new Map<number, any>(
+        adminItems.map((item) => [Number(item.id), item]),
+      );
+
+      let list: Product[] = reportProducts.map((product) => {
+        const adminProduct = adminById.get(Number(product.id));
+        return {
+          ...product,
+          retail_package:
+            product.retail_package || adminProduct?.retail_package || null,
+          wholesale_package:
+            product.wholesale_package || adminProduct?.wholesale_package || null,
+        };
       });
 
-      const res = await reportPromise;
-      const reportProducts: Product[] = Array.isArray(res.data) ? res.data : [];
+      if (isWarehouseUser) {
+        const allowedIds = new Set<number>();
+        for (const p of adminItems) {
+          const isActive =
+            p?.is_active === true ||
+            p?.is_active === "true" ||
+            p?.is_active === 1 ||
+            p?.is_active === "1";
 
-      if (cachedAdminById.size > 0) {
-        setProducts(
-          buildProductList(reportProducts, cachedAdminById, isWarehouseUser),
-        );
-        setProductsLoading(false);
-        setProductsEnriching(true);
+          if (!isActive) continue;
+
+          const hasWholesaleFlag = p?.has_wholesale;
+          const wp = String(p?.wholesale_package || "").trim();
+          const validByPackage =
+            wp !== "" &&
+            wp !== "0" &&
+            wp !== "كرتونة 0" &&
+            wp !== "-" &&
+            wp !== "بدون عبوة";
+
+          const hasWholesaleByFlag =
+            hasWholesaleFlag === true ||
+            hasWholesaleFlag === "true" ||
+            hasWholesaleFlag === 1 ||
+            hasWholesaleFlag === "1";
+
+          const hasWholesalePrice = Number(p?.wholesale_price || 0) > 0;
+
+          if (
+            (hasWholesaleByFlag || validByPackage) &&
+            validByPackage &&
+            hasWholesalePrice
+          ) {
+            allowedIds.add(Number(p.id));
+          }
+        }
+
+        list = list.filter((p) => allowedIds.has(Number(p.id)));
       }
 
-      const adminById = await adminPromise;
-      setProducts(buildProductList(reportProducts, adminById, isWarehouseUser));
+      setProducts(list);
     } catch {
       /* ignore */
     } finally {
       setProductsLoading(false);
-      setProductsEnriching(false);
     }
   }, [isWarehouseUser]);
 
@@ -195,99 +213,25 @@ function ProductMovementPageContent() {
     }
   }, [productParam, products, selectedProduct]);
 
-  useEffect(() => {
-    if (!selectedProduct || products.length === 0) return;
-
-    const latestProduct = products.find(
-      (product) => Number(product.id) === Number(selectedProduct.id),
-    );
-
-    if (!latestProduct) return;
-
-    const nextRetailPackage =
-      latestProduct.retail_package || selectedProduct.retail_package || null;
-    const nextWholesalePackage =
-      latestProduct.wholesale_package ||
-      selectedProduct.wholesale_package ||
-      null;
-    const nextManufacturerName =
-      latestProduct.manufacturer_name ||
-      selectedProduct.manufacturer_name ||
-      null;
-    const nextManufacturer =
-      latestProduct.manufacturer || selectedProduct.manufacturer || null;
-
-    if (
-      nextRetailPackage === selectedProduct.retail_package &&
-      nextWholesalePackage === selectedProduct.wholesale_package &&
-      nextManufacturerName === selectedProduct.manufacturer_name &&
-      nextManufacturer === selectedProduct.manufacturer
-    ) {
-      return;
-    }
-
-    setSelectedProduct((current) => {
-      if (!current || Number(current.id) !== Number(latestProduct.id)) {
-        return current;
-      }
-
-      return {
-        ...current,
-        ...latestProduct,
-        retail_package: nextRetailPackage,
-        wholesale_package: nextWholesalePackage,
-        manufacturer_name: nextManufacturerName,
-        manufacturer: nextManufacturer,
-      };
-    });
-  }, [products, selectedProduct]);
-
   /* ========== Fetch Movement ========== */
   const fetchMovement = useCallback(async () => {
     if (!selectedProduct) return;
     try {
       setLoading(true);
-
-      const warehouseScope: MovementWarehouseScope = isShowroomUser
-        ? "showroom"
-        : isWarehouseUser
-          ? "warehouse"
-          : selectedWarehouse === "الكل"
-            ? "all"
-            : "named";
-
-      const displayMode: MovementDisplayPackageMode =
-        isShowroomUser ||
-        (!isWarehouseUser && selectedWarehouse === "مخزن المعرض")
-          ? "retail"
-          : "movement";
-
-      const rows = await fetchUnifiedMovementRows({
-        productName: selectedProduct.name,
-        from: fromDate,
-        to: toDate,
-        warehouseScope,
-        namedWarehouse:
-          warehouseScope === "named" ? selectedWarehouse : undefined,
-        displayMode,
-        retailPackage: selectedProduct.retail_package,
-        wholesalePackage: selectedProduct.wholesale_package,
+      const res = await api.get("/reports/product-movement", {
+        params: {
+          product_name: selectedProduct.name,
+          from: fromDate || undefined,
+          to: toDate || undefined,
+        },
       });
-
-      setData(rows);
+      setData(Array.isArray(res.data) ? res.data : []);
     } catch {
       setData([]);
     } finally {
       setLoading(false);
     }
-  }, [
-    fromDate,
-    isShowroomUser,
-    isWarehouseUser,
-    selectedProduct,
-    selectedWarehouse,
-    toDate,
-  ]);
+  }, [selectedProduct, fromDate, toDate]);
 
   useEffect(() => {
     if (selectedProduct) fetchMovement();
@@ -296,7 +240,30 @@ function ProductMovementPageContent() {
   useRealtime(["data:invoices", "data:stock"], fetchMovement);
 
   /* ========== Filter ========== */
-  const filteredData = useMemo(() => data, [data]);
+  const filteredData = useMemo(() => {
+    let result = data;
+
+    if (isShowroomUser) {
+      result = result.filter((i) =>
+        (i.warehouse_name || "").trim().includes("المعرض"),
+      );
+    } else if (isWarehouseUser) {
+      result = result.filter(
+        (i) =>
+          (i.warehouse_name || "").trim().includes("الرئيسي") ||
+          (i.warehouse_name || "").trim().includes("المخزن الرئيسي"),
+      );
+    }
+
+    if (!isShowroomUser && !isWarehouseUser && selectedWarehouse !== "الكل") {
+      result = result.filter(
+        (item) =>
+          (item.warehouse_name || "").trim() === selectedWarehouse.trim(),
+      );
+    }
+
+    return result;
+  }, [data, selectedWarehouse, isShowroomUser, isWarehouseUser]);
 
   /* ========== Product list filter ========== */
   const filteredProducts = useMemo(() => {
@@ -319,7 +286,7 @@ function ProductMovementPageContent() {
       : [];
 
   /* ========== Get date for row ========== */
-  const getDate = (item: UnifiedMovementRow) => {
+  const getDate = (item: MovementItem) => {
     const d =
       item.entry_date ||
       item.invoice_date ||
@@ -328,11 +295,87 @@ function ProductMovementPageContent() {
     return d ? new Date(d).toLocaleDateString("ar-EG") : "—";
   };
 
-  /* ========== Totals ========== */
-  const { totalIn, totalOut, packageTotals } = useMemo(
-    () => summarizeUnifiedMovementRows(filteredData),
-    [filteredData],
+  const retailPackageLabel = useMemo(() => {
+    const rawRetailPackage = String(
+      selectedProduct?.retail_package || "",
+    ).trim();
+    if (!rawRetailPackage || rawRetailPackage === "بدون عبوة") {
+      return "";
+    }
+
+    return normalizePackageName(rawRetailPackage);
+  }, [normalizePackageName, selectedProduct?.retail_package]);
+
+  const forceRetailPackageView =
+    Boolean(retailPackageLabel) &&
+    (isShowroomUser ||
+      (!isWarehouseUser && selectedWarehouse === "مخزن المعرض"));
+
+  const getDisplayedPackageLabel = useCallback(
+    (item?: MovementItem) => {
+      if (forceRetailPackageView) {
+        return retailPackageLabel;
+      }
+
+      const rawPackageName = String(item?.package_name || "").trim();
+      if (!rawPackageName) return "";
+
+      return normalizePackageName(rawPackageName);
+    },
+    [forceRetailPackageView, retailPackageLabel, normalizePackageName],
   );
+
+  /* ========== Totals ========== */
+  const { totalIn, totalOut, packageTotals } = useMemo(() => {
+    let inQty = 0;
+    let outQty = 0;
+    const byPackage = new Map<
+      string,
+      { label: string; inQty: number; outQty: number }
+    >();
+
+    for (const item of filteredData) {
+      const mt = item.movement_type || item.invoice_movement_type || "";
+      const isIn = [
+        "purchase",
+        "transfer_in",
+        "replace_in",
+        "return_sale",
+        "in",
+      ].includes(mt);
+      const qty = Number(item.quantity);
+      const pkgLabel = getDisplayedPackageLabel(item) || "بدون عبوة";
+      const pkgKey = pkgLabel;
+
+      if (!byPackage.has(pkgKey)) {
+        byPackage.set(pkgKey, { label: pkgLabel, inQty: 0, outQty: 0 });
+      }
+
+      const entry = byPackage.get(pkgKey)!;
+      if (pkgLabel.length > entry.label.length) {
+        entry.label = pkgLabel;
+      }
+
+      if (isIn) {
+        inQty += qty;
+        entry.inQty += qty;
+      } else {
+        outQty += qty;
+        entry.outQty += qty;
+      }
+    }
+
+    const packageTotals = Array.from(byPackage.values())
+      .map((totals) => ({
+        package: totals.label,
+        totalIn: totals.inQty,
+        totalOut: totals.outQty,
+        balance: totals.inQty - totals.outQty,
+      }))
+      .sort((a, b) => a.package.localeCompare(b.package, "ar"));
+
+    return { totalIn: inQty, totalOut: outQty, packageTotals };
+  }, [filteredData, getDisplayedPackageLabel]);
 
   /* ========== Export columns ========== */
   const exportColumns: ExportColumn[] = [
@@ -347,12 +390,20 @@ function ProductMovementPageContent() {
   ];
 
   const exportData = filteredData.map((item) => {
+    const mt = item.movement_type || item.invoice_movement_type || "";
+    const isIn = [
+      "purchase",
+      "transfer_in",
+      "replace_in",
+      "return_sale",
+      "in",
+    ].includes(mt);
     return {
       ...item,
       date_formatted: getDate(item),
-      type_label: item.is_in ? "وارد" : "صادر",
+      type_label: isIn ? "وارد" : "صادر",
       invoice_id: item.invoice_id || "—",
-      pkg: item.display_package_name || "—",
+      pkg: getDisplayedPackageLabel(item) || "—",
       party_name: item.party_name || "—",
       note: item.note || "",
     };
@@ -567,6 +618,18 @@ function ProductMovementPageContent() {
                     </TableHeader>
                     <TableBody>
                       {filteredData.map((item, idx) => {
+                        const mt =
+                          item.movement_type ||
+                          item.invoice_movement_type ||
+                          "";
+                        const isIn = [
+                          "purchase",
+                          "transfer_in",
+                          "replace_in",
+                          "return_sale",
+                          "in",
+                        ].includes(mt);
+
                         return (
                           <TableRow key={idx}>
                             <TableCell className="text-center text-xs">
@@ -576,10 +639,8 @@ function ProductMovementPageContent() {
                               {item.warehouse_name}
                             </TableCell>
                             <TableCell className="text-center">
-                              <Badge
-                                variant={item.is_in ? "default" : "destructive"}
-                              >
-                                {item.is_in ? "وارد" : "صادر"}
+                              <Badge variant={isIn ? "default" : "destructive"}>
+                                {isIn ? "وارد" : "صادر"}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-center text-xs">
@@ -595,12 +656,12 @@ function ProductMovementPageContent() {
                               )}
                             </TableCell>
                             <TableCell
-                              className={`text-center font-bold ${item.is_in ? "text-green-600" : "text-red-600"}`}
+                              className={`text-center font-bold ${isIn ? "text-green-600" : "text-red-600"}`}
                             >
                               {item.quantity}
                             </TableCell>
                             <TableCell className="text-center text-xs">
-                              {item.display_package_name || "—"}
+                              {getDisplayedPackageLabel(item) || "—"}
                             </TableCell>
                             <TableCell className="text-center text-xs font-medium">
                               {item.party_name || "—"}
@@ -620,16 +681,26 @@ function ProductMovementPageContent() {
             {/* Mobile Cards */}
             <div className="md:hidden space-y-2">
               {filteredData.map((item, idx) => {
+                const mt =
+                  item.movement_type || item.invoice_movement_type || "";
+                const isIn = [
+                  "purchase",
+                  "transfer_in",
+                  "replace_in",
+                  "return_sale",
+                  "in",
+                ].includes(mt);
+
                 return (
                   <Card key={idx} className="p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <Badge
-                            variant={item.is_in ? "default" : "destructive"}
+                            variant={isIn ? "default" : "destructive"}
                             className="text-xs"
                           >
-                            {item.is_in ? "وارد" : "صادر"}
+                            {isIn ? "وارد" : "صادر"}
                           </Badge>
                           <span className="text-xs text-muted-foreground">
                             {getDate(item)}
@@ -644,13 +715,13 @@ function ProductMovementPageContent() {
                       </div>
                       <div className="text-left">
                         <p
-                          className={`text-lg font-bold ${item.is_in ? "text-green-600" : "text-red-600"}`}
+                          className={`text-lg font-bold ${isIn ? "text-green-600" : "text-red-600"}`}
                         >
                           {item.quantity}
                         </p>
-                        {item.display_package_name && (
+                        {getDisplayedPackageLabel(item) && (
                           <p className="text-xs text-muted-foreground">
-                            {item.display_package_name}
+                            {getDisplayedPackageLabel(item)}
                           </p>
                         )}
                       </div>
@@ -776,11 +847,6 @@ function ProductMovementPageContent() {
                 className="pr-9"
               />
             </div>
-            {productsEnriching && !productsLoading && (
-              <p className="mt-2 text-center text-xs text-muted-foreground">
-                جاري استكمال بيانات الأصناف...
-              </p>
-            )}
           </div>
 
           {/* Product list */}

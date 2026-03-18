@@ -1,22 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import api from "@/services/api";
-import {
-  isStockAffectingEvent,
-  onUpdate,
-  STOCK_AFFECTING_EVENTS,
-} from "@/lib/broadcast";
-import {
-  fetchResolvedProductQuantity,
-  mergePackageVariants,
-  prefetchResolvedProductQuantities,
-} from "@/lib/package-stock";
-import {
-  fetchStockSnapshot,
-  getCachedStockSnapshot,
-  getStaleStockSnapshot,
-} from "@/lib/stock-snapshot";
+import { onUpdate } from "@/lib/broadcast";
 
 // =====================================================
 //  🏪  Product Cache — localStorage + auto-refresh
@@ -26,9 +12,8 @@ import {
 
 const CACHE_KEY_PREFIX = "products_cache_";
 const VARIANTS_CACHE_KEY_PREFIX = "variants_cache_";
-const RESOLVED_QTY_CACHE_KEY_PREFIX = "resolved_qty_cache_";
 const CACHE_DURATION = 60 * 60 * 1000; // ساعة واحدة
-const CACHE_VERSION = 3; // زيادة الرقم تمسح الكاش القديم تلقائي
+const CACHE_VERSION = 2; // زيادة الرقم تمسح الكاش القديم تلقائي
 const INVALIDATION_KEY = "products_cache_invalidated_at";
 
 // =====================================================
@@ -43,15 +28,8 @@ if (typeof window !== "undefined") {
     } catch {}
   };
 
-  const handleLocalInvalidation = (event: Event) => {
-    const detail = (event as CustomEvent<{ type?: string }>).detail;
-    if (isStockAffectingEvent(detail?.type)) {
-      markInvalidated();
-    }
-  };
-
   // Same-tab events (CustomEvent dispatched by broadcastUpdate)
-  window.addEventListener("glass_update", handleLocalInvalidation);
+  window.addEventListener("glass_update", markInvalidated);
 
   // Cross-tab events (BroadcastChannel)
   try {
@@ -59,7 +37,14 @@ if (typeof window !== "undefined") {
       const invalidationChannel = new BroadcastChannel("glass_system_updates");
       invalidationChannel.addEventListener("message", (e) => {
         const type = e.data?.type;
-        if (isStockAffectingEvent(type)) {
+        if (
+          [
+            "invoice_created",
+            "invoice_updated",
+            "invoice_deleted",
+            "transfer_created",
+          ].includes(type)
+        ) {
           markInvalidated();
         }
       });
@@ -88,15 +73,6 @@ interface UseCachedProductsOptions {
   /** unique cache key suffix — auto-generated from params if not provided */
   cacheKey?: string;
 }
-
-type ResolvedStockProduct = {
-  id?: number | string | null;
-  name?: string | null;
-  available_quantity?: number | string | null;
-  retail_package?: string | null;
-  wholesale_package?: string | null;
-  variant_stock?: any[] | null;
-};
 
 function getCacheKey(prefix: string, key: string) {
   return `${prefix}${key}`;
@@ -131,26 +107,6 @@ function getFromCache<T>(
   }
 }
 
-/**
- * Return cached data even if expired or globally invalidated.
- * Only checks params match and cache version — ignores timestamps.
- */
-function getStaleFromCache<T>(
-  prefix: string,
-  key: string,
-  params: string,
-): T | null {
-  try {
-    const raw = localStorage.getItem(getCacheKey(prefix, key));
-    if (!raw) return null;
-    const entry: CacheEntry<T> = JSON.parse(raw);
-    if (entry.params !== params || entry.version !== CACHE_VERSION) return null;
-    return entry.data;
-  } catch {
-    return null;
-  }
-}
-
 function setCache<T>(prefix: string, key: string, data: T, params: string) {
   try {
     const entry: CacheEntry<T> = {
@@ -175,375 +131,13 @@ export function useCachedProducts({
 }: UseCachedProductsOptions = {}) {
   const [products, setProducts] = useState<any[]>([]);
   const [variantsMap, setVariantsMap] = useState<Record<number, any[]>>({});
-  const [resolvedAvailableQtyById, setResolvedAvailableQtyById] = useState<
-    Record<number, number>
-  >({});
   const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const resolvingAvailableQtyRef = useRef<Record<number, boolean>>({});
-  const fetchProductsRef = useRef<
-    (forceRefresh?: boolean, silent?: boolean) => Promise<any[]>
-  >(async () => []);
-  const variantsRequestRef = useRef<
-    Record<string, Promise<Record<number, any[]>>>
-  >({});
 
   // Generate cache key from params if not provided
   const resolvedCacheKey = cacheKey || JSON.stringify({ endpoint, ...params });
   const paramsString = JSON.stringify(params);
-  const requestParams = useMemo(() => params, [paramsString]);
-  const quantityBranchId = Number(params.branch_id || 0);
-  const shouldResolveAvailableQty =
-    endpoint === "/products" && quantityBranchId > 0;
-  const shouldUseSnapshotSource =
-    endpoint === "/products" && quantityBranchId > 0;
-  const shouldUseVariants = fetchVariants || shouldResolveAvailableQty;
-  const shouldPrefetchAllVariants = fetchVariants;
-  const quantityPackageField =
-    quantityBranchId === 1 || params.invoice_type === "retail"
-      ? "retail_package"
-      : "wholesale_package";
-
-  const productById = useMemo(() => {
-    const map: Record<number, ResolvedStockProduct> = {};
-    products.forEach((product) => {
-      map[Number(product.id)] = product as ResolvedStockProduct;
-    });
-    return map;
-  }, [products]);
-
-  const resetResolvedAvailableQty = useCallback(() => {
-    resolvingAvailableQtyRef.current = {};
-    setResolvedAvailableQtyById({});
-    try {
-      localStorage.removeItem(
-        getCacheKey(RESOLVED_QTY_CACHE_KEY_PREFIX, resolvedCacheKey),
-      );
-    } catch {}
-  }, [resolvedCacheKey]);
-
-  const mergeResolvedAvailableQty = useCallback(
-    (updates: Record<number, number>) => {
-      if (Object.keys(updates).length === 0) {
-        return;
-      }
-
-      setResolvedAvailableQtyById((prev) => {
-        const next = { ...prev, ...updates };
-        setCache(
-          RESOLVED_QTY_CACHE_KEY_PREFIX,
-          resolvedCacheKey,
-          next,
-          paramsString,
-        );
-        return next;
-      });
-    },
-    [paramsString, resolvedCacheKey],
-  );
-
-  const mergeVariantsMap = useCallback(
-    (updates: Record<number, any[]>) => {
-      if (Object.keys(updates).length === 0) {
-        return;
-      }
-
-      setVariantsMap((prev) => {
-        const next = { ...prev, ...updates };
-        setCache(
-          VARIANTS_CACHE_KEY_PREFIX,
-          resolvedCacheKey,
-          next,
-          paramsString,
-        );
-        return next;
-      });
-    },
-    [paramsString, resolvedCacheKey],
-  );
-
-  const getResolvedAvailableQuantity = useCallback(
-    (productOrId: number | ResolvedStockProduct | null | undefined) => {
-      const productId =
-        typeof productOrId === "number"
-          ? productOrId
-          : Number(productOrId?.id || 0);
-      const fallbackQuantity =
-        typeof productOrId === "object" && productOrId
-          ? Number(productOrId.available_quantity) || 0
-          : Number(productById[productId]?.available_quantity) || 0;
-
-      return Number(resolvedAvailableQtyById[productId] ?? fallbackQuantity);
-    },
-    [productById, resolvedAvailableQtyById],
-  );
-
-  const ensureVariantsMap = useCallback(
-    async (
-      productsList: ResolvedStockProduct[],
-      forceRefresh = false,
-    ): Promise<Record<number, any[]>> => {
-      if (!shouldUseVariants || productsList.length === 0) {
-        return variantsMap;
-      }
-
-      let currentMap = variantsMap;
-
-      if (!forceRefresh) {
-        const cachedVariants = getFromCache<Record<number, any[]>>(
-          VARIANTS_CACHE_KEY_PREFIX,
-          resolvedCacheKey,
-          cacheDuration,
-          paramsString,
-        );
-        if (cachedVariants) {
-          currentMap = { ...cachedVariants, ...currentMap };
-          setVariantsMap(currentMap);
-        }
-      }
-
-      const requestedIds = Array.from(
-        new Set(
-          productsList
-            .map((product) => Number(product.id || 0))
-            .filter((productId) => productId > 0),
-        ),
-      );
-
-      if (requestedIds.length === 0) {
-        return currentMap;
-      }
-
-      const missingIds = forceRefresh
-        ? requestedIds
-        : requestedIds.filter(
-            (productId) =>
-              !Object.prototype.hasOwnProperty.call(currentMap, productId),
-          );
-
-      if (missingIds.length === 0) {
-        return currentMap;
-      }
-
-      try {
-        const ids = missingIds.join(",");
-        let request = variantsRequestRef.current[ids];
-
-        if (!request) {
-          request = api
-            .get("/products/variants", {
-              params: { product_ids: ids },
-            })
-            .then((vRes) => {
-              const map: Record<number, any[]> = {};
-              missingIds.forEach((productId) => {
-                map[productId] = [];
-              });
-              for (const variant of vRes.data || []) {
-                if (!map[variant.product_id]) map[variant.product_id] = [];
-                map[variant.product_id].push(variant);
-              }
-              return map;
-            })
-            .finally(() => {
-              delete variantsRequestRef.current[ids];
-            });
-
-          variantsRequestRef.current[ids] = request;
-        }
-
-        const map = await request;
-        const nextMap = { ...currentMap, ...map };
-        mergeVariantsMap(map);
-        return nextMap;
-      } catch {
-        return currentMap;
-      }
-    },
-    [
-      cacheDuration,
-      mergeVariantsMap,
-      paramsString,
-      resolvedCacheKey,
-      shouldUseVariants,
-      variantsMap,
-    ],
-  );
-
-  const resolveAvailableQuantity = useCallback(
-    async (productOrId: number | ResolvedStockProduct | null | undefined) => {
-      const product =
-        typeof productOrId === "object" && productOrId
-          ? productOrId
-          : productById[Number(productOrId || 0)];
-
-      if (!product) return 0;
-
-      const productId = Number(product.id || 0);
-      const fallbackQuantity = Number(product.available_quantity) || 0;
-
-      if (!shouldResolveAvailableQty || !productId) {
-        return fallbackQuantity;
-      }
-
-      if (
-        Object.prototype.hasOwnProperty.call(
-          resolvedAvailableQtyById,
-          productId,
-        )
-      ) {
-        return Number(resolvedAvailableQtyById[productId] ?? fallbackQuantity);
-      }
-
-      if (resolvingAvailableQtyRef.current[productId]) {
-        return fallbackQuantity;
-      }
-
-      resolvingAvailableQtyRef.current[productId] = true;
-
-      try {
-        const currentVariantsMap = await ensureVariantsMap([product]);
-        const quantity = await fetchResolvedProductQuantity({
-          productId,
-          productName: String(product.name || ""),
-          branchId: quantityBranchId,
-          fallbackQuantity,
-          basePackage:
-            quantityPackageField === "retail_package"
-              ? product.retail_package
-              : product.wholesale_package,
-          variants: mergePackageVariants(
-            Array.isArray(product.variant_stock) ? product.variant_stock : [],
-            currentVariantsMap[productId] || [],
-          ),
-          packageField: quantityPackageField,
-        });
-
-        mergeResolvedAvailableQty({ [productId]: quantity });
-
-        return quantity;
-      } catch {
-        mergeResolvedAvailableQty({ [productId]: fallbackQuantity });
-        return fallbackQuantity;
-      } finally {
-        resolvingAvailableQtyRef.current[productId] = false;
-      }
-    },
-    [
-      ensureVariantsMap,
-      mergeResolvedAvailableQty,
-      productById,
-      quantityBranchId,
-      quantityPackageField,
-      resolvedAvailableQtyById,
-      shouldResolveAvailableQty,
-    ],
-  );
-
-  const ensureResolvedAvailableQuantities = useCallback(
-    async (
-      productsList: Array<number | ResolvedStockProduct | null | undefined>,
-    ) => {
-      if (!shouldResolveAvailableQty) return;
-
-      const normalizedProducts = productsList
-        .map((product) => {
-          if (!product) return null;
-          return typeof product === "object"
-            ? product
-            : productById[Number(product || 0)] || null;
-        })
-        .filter((product): product is ResolvedStockProduct => Boolean(product));
-
-      const pendingProducts = normalizedProducts.filter((product) => {
-        const productId = Number(product.id || 0);
-        if (!productId) {
-          return false;
-        }
-
-        if (
-          Object.prototype.hasOwnProperty.call(
-            resolvedAvailableQtyById,
-            productId,
-          ) ||
-          resolvingAvailableQtyRef.current[productId]
-        ) {
-          return false;
-        }
-
-        resolvingAvailableQtyRef.current[productId] = true;
-        return true;
-      });
-
-      if (pendingProducts.length === 0) {
-        return;
-      }
-
-      try {
-        const currentVariantsMap = await ensureVariantsMap(pendingProducts);
-        const results = await prefetchResolvedProductQuantities({
-          products: pendingProducts,
-          branchId: quantityBranchId,
-          variantsMap: currentVariantsMap,
-          packageField: quantityPackageField,
-          maxConcurrency: 4,
-        });
-
-        mergeResolvedAvailableQty(
-          Object.fromEntries(
-            results.map(({ productId, quantity }) => [productId, quantity]),
-          ),
-        );
-      } catch {
-        mergeResolvedAvailableQty(
-          Object.fromEntries(
-            pendingProducts.map((product) => [
-              Number(product.id || 0),
-              Number(product.available_quantity) || 0,
-            ]),
-          ),
-        );
-      } finally {
-        pendingProducts.forEach((product) => {
-          resolvingAvailableQtyRef.current[Number(product.id || 0)] = false;
-        });
-      }
-    },
-    [
-      ensureVariantsMap,
-      mergeResolvedAvailableQty,
-      productById,
-      quantityBranchId,
-      quantityPackageField,
-      resolvedAvailableQtyById,
-      shouldResolveAvailableQty,
-    ],
-  );
-
-  useEffect(() => {
-    resolvingAvailableQtyRef.current = {};
-
-    if (!shouldResolveAvailableQty) {
-      setResolvedAvailableQtyById({});
-      return;
-    }
-
-    const cachedResolved = getFromCache<Record<number, number>>(
-      RESOLVED_QTY_CACHE_KEY_PREFIX,
-      resolvedCacheKey,
-      cacheDuration,
-      paramsString,
-    );
-    setResolvedAvailableQtyById(cachedResolved || {});
-  }, [
-    cacheDuration,
-    paramsString,
-    resolvedCacheKey,
-    shouldResolveAvailableQty,
-  ]);
 
   const fetchProducts = useCallback(
     async (forceRefresh = false, silent = false) => {
@@ -553,47 +147,9 @@ export function useCachedProducts({
         try {
           localStorage.setItem(INVALIDATION_KEY, Date.now().toString());
         } catch {}
-
-        resetResolvedAvailableQty();
       }
 
-      // 1. Try unified snapshot cache first for stock-driven product screens.
-      if (shouldUseSnapshotSource && !forceRefresh) {
-        const cachedSnapshot = getCachedStockSnapshot(
-          resolvedCacheKey,
-          requestParams,
-          cacheDuration,
-        );
-        if (cachedSnapshot) {
-          setProducts(cachedSnapshot.products);
-          setVariantsMap(cachedSnapshot.variantsMap || {});
-          setResolvedAvailableQtyById(cachedSnapshot.resolvedQtyById || {});
-          setLastUpdated(new Date(cachedSnapshot.generatedAt || Date.now()));
-
-          setCache(
-            CACHE_KEY_PREFIX,
-            resolvedCacheKey,
-            cachedSnapshot.products,
-            paramsString,
-          );
-          setCache(
-            VARIANTS_CACHE_KEY_PREFIX,
-            resolvedCacheKey,
-            cachedSnapshot.variantsMap || {},
-            paramsString,
-          );
-          setCache(
-            RESOLVED_QTY_CACHE_KEY_PREFIX,
-            resolvedCacheKey,
-            cachedSnapshot.resolvedQtyById || {},
-            paramsString,
-          );
-
-          return cachedSnapshot.products;
-        }
-      }
-
-      // 2. Try fresh cache first (unless force refresh)
+      // 1. Try cache first (unless force refresh)
       if (!forceRefresh) {
         const cached = getFromCache<any[]>(
           CACHE_KEY_PREFIX,
@@ -603,26 +159,17 @@ export function useCachedProducts({
         );
         if (cached) {
           setProducts(cached);
-          if (shouldResolveAvailableQty) {
-            const cachedResolved = getFromCache<Record<number, number>>(
-              RESOLVED_QTY_CACHE_KEY_PREFIX,
-              resolvedCacheKey,
-              cacheDuration,
-              paramsString,
-            );
-            setResolvedAvailableQtyById(cachedResolved || {});
-          }
-          if (shouldUseVariants) {
+          // Also try variants cache
+          if (fetchVariants) {
             const cachedVariants = getFromCache<Record<number, any[]>>(
               VARIANTS_CACHE_KEY_PREFIX,
               resolvedCacheKey,
               cacheDuration,
               paramsString,
             );
-            if (cachedVariants) {
-              setVariantsMap(cachedVariants);
-            }
+            if (cachedVariants) setVariantsMap(cachedVariants);
           }
+          // Get timestamp from cache
           try {
             const raw = localStorage.getItem(
               getCacheKey(CACHE_KEY_PREFIX, resolvedCacheKey),
@@ -636,128 +183,43 @@ export function useCachedProducts({
         }
       }
 
-      // 3. STALE-WHILE-REVALIDATE: show stale data immediately
-      //    instead of a loading spinner when cache is expired/invalidated
-      let hasVisibleProducts = products.length > 0;
-      if (!hasVisibleProducts) {
-        if (shouldUseSnapshotSource) {
-          const staleSnapshot = getStaleStockSnapshot(
-            resolvedCacheKey,
-            requestParams,
-          );
-          if (staleSnapshot?.products?.length) {
-            setProducts(staleSnapshot.products);
-            setVariantsMap(staleSnapshot.variantsMap || {});
-            setResolvedAvailableQtyById(staleSnapshot.resolvedQtyById || {});
-            setLastUpdated(new Date(staleSnapshot.generatedAt || Date.now()));
-            hasVisibleProducts = true;
-          }
-        }
-
-        const staleData = getStaleFromCache<any[]>(
-          CACHE_KEY_PREFIX,
-          resolvedCacheKey,
-          paramsString,
-        );
-        if (staleData && staleData.length > 0) {
-          setProducts(staleData);
-          if (shouldUseVariants) {
-            const sv = getStaleFromCache<Record<number, any[]>>(
-              VARIANTS_CACHE_KEY_PREFIX,
-              resolvedCacheKey,
-              paramsString,
-            );
-            if (sv) setVariantsMap(sv);
-          }
-          if (shouldResolveAvailableQty) {
-            const sr = getStaleFromCache<Record<number, number>>(
-              RESOLVED_QTY_CACHE_KEY_PREFIX,
-              resolvedCacheKey,
-              paramsString,
-            );
-            if (sr) setResolvedAvailableQtyById(sr);
-          }
-          try {
-            const raw = localStorage.getItem(
-              getCacheKey(CACHE_KEY_PREFIX, resolvedCacheKey),
-            );
-            if (raw) {
-              const entry = JSON.parse(raw);
-              setLastUpdated(new Date(entry.timestamp));
-            }
-          } catch {}
-          hasVisibleProducts = true;
-        }
-      }
-
-      const shouldShowBlockingLoader = !silent && !hasVisibleProducts;
-      const shouldTrackRefresh = silent || hasVisibleProducts;
-
-      // 4. Fetch from API / snapshot source
+      // 2. Fetch from API
       try {
-        if (shouldShowBlockingLoader) {
+        if (!silent) {
           setLoading(true);
         }
-        if (shouldTrackRefresh) {
-          setRefreshing(true);
-        }
-
-        if (shouldUseSnapshotSource) {
-          const snapshot = await fetchStockSnapshot({
-            endpoint: "/products",
-            params: requestParams,
-            cacheKey: resolvedCacheKey,
-            cacheDuration,
-            forceRefresh,
-          });
-
-          const prods = snapshot.products || [];
-          setProducts(prods);
-          setVariantsMap(snapshot.variantsMap || {});
-          setResolvedAvailableQtyById(snapshot.resolvedQtyById || {});
-          setLastUpdated(new Date(snapshot.generatedAt || Date.now()));
-
-          setCache(CACHE_KEY_PREFIX, resolvedCacheKey, prods, paramsString);
-          setCache(
-            VARIANTS_CACHE_KEY_PREFIX,
-            resolvedCacheKey,
-            snapshot.variantsMap || {},
-            paramsString,
-          );
-          setCache(
-            RESOLVED_QTY_CACHE_KEY_PREFIX,
-            resolvedCacheKey,
-            snapshot.resolvedQtyById || {},
-            paramsString,
-          );
-
-          return prods;
-        }
-
         const res = await api.get(endpoint, {
-          params:
-            Object.keys(requestParams).length > 0 ? requestParams : undefined,
+          params: Object.keys(params).length > 0 ? params : undefined,
         });
         const prods = res.data || [];
         setProducts(prods);
         setLastUpdated(new Date());
 
-        if (shouldResolveAvailableQty) {
-          const cachedResolved = getFromCache<Record<number, number>>(
-            RESOLVED_QTY_CACHE_KEY_PREFIX,
-            resolvedCacheKey,
-            cacheDuration,
-            paramsString,
-          );
-          setResolvedAvailableQtyById(cachedResolved || {});
-        }
-
         // Save to cache
         setCache(CACHE_KEY_PREFIX, resolvedCacheKey, prods, paramsString);
 
         // 3. Fetch variants if needed
-        if (shouldPrefetchAllVariants && prods.length > 0) {
-          void ensureVariantsMap(prods, forceRefresh);
+        if (fetchVariants && prods.length > 0) {
+          try {
+            const ids = prods.map((p: any) => p.id).join(",");
+            const vRes = await api.get("/products/variants", {
+              params: { product_ids: ids },
+            });
+            const map: Record<number, any[]> = {};
+            for (const v of vRes.data || []) {
+              if (!map[v.product_id]) map[v.product_id] = [];
+              map[v.product_id].push(v);
+            }
+            setVariantsMap(map);
+            setCache(
+              VARIANTS_CACHE_KEY_PREFIX,
+              resolvedCacheKey,
+              map,
+              paramsString,
+            );
+          } catch {
+            /* silent */
+          }
         }
 
         return prods;
@@ -776,78 +238,54 @@ export function useCachedProducts({
         } catch {}
         return [];
       } finally {
-        if (shouldShowBlockingLoader) {
+        if (!silent) {
           setLoading(false);
-        }
-        if (shouldTrackRefresh) {
-          setRefreshing(false);
         }
       }
     },
-    [
-      cacheDuration,
-      endpoint,
-      ensureVariantsMap,
-      paramsString,
-      products.length,
-      requestParams,
-      resetResolvedAvailableQty,
-      resolvedCacheKey,
-      shouldPrefetchAllVariants,
-      shouldResolveAvailableQty,
-      shouldUseSnapshotSource,
-      shouldUseVariants,
-    ],
+    [endpoint, paramsString, resolvedCacheKey, fetchVariants, cacheDuration],
   );
-
-  useEffect(() => {
-    fetchProductsRef.current = fetchProducts;
-  }, [fetchProducts]);
 
   // Force refresh (bypasses cache)
-  const refresh = useCallback(() => fetchProductsRef.current(true), []);
+  const refresh = useCallback(() => fetchProducts(true), [fetchProducts]);
   const refreshSilently = useCallback(
-    () => fetchProductsRef.current(true, true),
-    [],
+    () => fetchProducts(true, true),
+    [fetchProducts],
   );
-
-  const scheduleSilentRefresh = useCallback(() => {
-    if (refreshTimeoutRef.current) {
-      clearTimeout(refreshTimeoutRef.current);
-    }
-
-    refreshTimeoutRef.current = setTimeout(() => {
-      refreshTimeoutRef.current = null;
-      void fetchProductsRef.current(true, true);
-    }, 150);
-  }, []);
 
   // Auto-fetch on mount
   useEffect(() => {
     if (autoFetch) {
-      void fetchProductsRef.current();
+      fetchProducts();
     }
-  }, [autoFetch, paramsString, resolvedCacheKey]);
+  }, [autoFetch, fetchProducts]);
 
   // Auto-refresh every cacheDuration
   useEffect(() => {
     intervalRef.current = setInterval(() => {
-      void fetchProductsRef.current(true);
+      fetchProducts(true);
     }, cacheDuration);
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
-      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
     };
-  }, [cacheDuration, paramsString, resolvedCacheKey]);
+  }, [fetchProducts, cacheDuration]);
 
   // Auto-refresh when invoices/transfers are created or updated
   useEffect(() => {
-    const cleanup = onUpdate(STOCK_AFFECTING_EVENTS, () => {
-      scheduleSilentRefresh();
-    });
+    const cleanup = onUpdate(
+      [
+        "invoice_created",
+        "invoice_updated",
+        "invoice_deleted",
+        "transfer_created",
+      ],
+      () => {
+        fetchProducts(true, true);
+      },
+    );
     return cleanup;
-  }, [scheduleSilentRefresh]);
+  }, [fetchProducts]);
 
   // Invalidate cache manually
   const invalidateCache = useCallback(() => {
@@ -856,12 +294,8 @@ export function useCachedProducts({
       localStorage.removeItem(
         getCacheKey(VARIANTS_CACHE_KEY_PREFIX, resolvedCacheKey),
       );
-      localStorage.removeItem(
-        getCacheKey(RESOLVED_QTY_CACHE_KEY_PREFIX, resolvedCacheKey),
-      );
     } catch {}
-    resetResolvedAvailableQty();
-  }, [resetResolvedAvailableQty, resolvedCacheKey]);
+  }, [resolvedCacheKey]);
 
   return {
     products,
@@ -869,13 +303,7 @@ export function useCachedProducts({
     variantsMap,
     setVariantsMap,
     loading,
-    refreshing,
     lastUpdated,
-    resolvedAvailableQtyById,
-    getResolvedAvailableQuantity,
-    resolveAvailableQuantity,
-    ensureResolvedAvailableQuantities,
-    resetResolvedAvailableQty,
     refresh,
     refreshSilently,
     invalidateCache,
@@ -892,8 +320,7 @@ export function clearAllProductCaches() {
     for (const key of keys) {
       if (
         key.startsWith(CACHE_KEY_PREFIX) ||
-        key.startsWith(VARIANTS_CACHE_KEY_PREFIX) ||
-        key.startsWith(RESOLVED_QTY_CACHE_KEY_PREFIX)
+        key.startsWith(VARIANTS_CACHE_KEY_PREFIX)
       ) {
         localStorage.removeItem(key);
       }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "@/services/api";
 import { useAuth } from "@/app/context/auth-context";
 import { useRouter } from "next/navigation";
@@ -29,13 +29,19 @@ import { multiWordMatch } from "@/lib/utils";
 import { useRealtime } from "@/hooks/use-realtime";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchStockSnapshot } from "@/lib/stock-snapshot";
-import {
-  getTransferNeededProducts,
-  type LowStockReorderItem as LowStockItem,
-} from "@/lib/low-stock-reorder";
 
 /* ========== Types ========== */
+type LowStockItem = {
+  product_id: number;
+  product_name: string;
+  manufacturer_name?: string | null;
+  warehouse_name: string;
+  current_stock: number;
+  wholesale_package?: string | null;
+  retail_package?: string | null;
+  variant_id?: number;
+};
+
 type CartItem = {
   product_id: number;
   product_name: string;
@@ -54,139 +60,65 @@ export default function LowStockReorderPage() {
     {},
   );
   const [loading, setLoading] = useState(true);
-  const [resolvingStock, setResolvingStock] = useState(false);
-  const [firstResolvedLoadDone, setFirstResolvedLoadDone] = useState(false);
   const [search, setSearch] = useState("");
   const [onlyWithWholesaleStock, setOnlyWithWholesaleStock] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCartModal, setShowCartModal] = useState(false);
-  const fetchIdRef = useRef(0);
-  const hasCachedDataRef = useRef(false);
-
-  const LOW_STOCK_CACHE_KEY = "low_stock_reorder_cache_v1";
-
-  /* ========== Restore cached results immediately ========== */
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(LOW_STOCK_CACHE_KEY);
-      if (raw) {
-        const cached = JSON.parse(raw);
-        if (cached.data?.length) {
-          setData(cached.data);
-          setRetailStock(cached.retailStock || {});
-          setWholesaleStock(cached.wholesaleStock || {});
-          setLoading(false);
-          setFirstResolvedLoadDone(true);
-          hasCachedDataRef.current = true;
-        }
-      }
-    } catch {}
-  }, []);
 
   /* ========== Fetch ========== */
   const fetchData = useCallback(async () => {
-    const fetchId = fetchIdRef.current + 1;
-    fetchIdRef.current = fetchId;
-
-    const hasCachedData = hasCachedDataRef.current;
-
     try {
-      if (!hasCachedData) setLoading(true);
-      setResolvingStock(false);
-      if (!hasCachedData) setFirstResolvedLoadDone(false);
-      const [lowStockRes, retailSnapshot, wholesaleSnapshot] =
+      setLoading(true);
+      const [lowStockRes, retailProductsRes, wholesaleProductsRes] =
         await Promise.all([
           api.get("/reports/low-stock", {
             params: { limit_quantity: 5 },
           }),
-          fetchStockSnapshot({
-            endpoint: "/products",
+          api.get("/products", {
             params: {
               branch_id: 1,
               invoice_type: "retail",
               movement_type: "sale",
             },
-            cacheKey: "lookup_retail",
           }),
-          fetchStockSnapshot({
-            endpoint: "/products",
+          api.get("/products", {
             params: {
               branch_id: 2,
               invoice_type: "wholesale",
               movement_type: "sale",
             },
-            cacheKey: "lookup_wholesale",
           }),
         ]);
 
       const lowItems: LowStockItem[] = Array.isArray(lowStockRes.data)
         ? lowStockRes.data
         : [];
-
-      if (fetchIdRef.current !== fetchId) return;
-
       setData(lowItems);
+
+      const retailProducts: any[] = Array.isArray(retailProductsRes.data)
+        ? retailProductsRes.data
+        : [];
+      const retailMap: Record<number, number> = {};
+      for (const item of retailProducts) {
+        retailMap[Number(item.id)] = Number(item.available_quantity) || 0;
+      }
+      setRetailStock(retailMap);
+
+      // Build wholesale stock map from aggregated /products endpoint (same as lookup modal)
+      const wsItems: any[] = Array.isArray(wholesaleProductsRes.data)
+        ? wholesaleProductsRes.data
+        : [];
+      const wsMap: Record<number, number> = {};
+      for (const item of wsItems) {
+        wsMap[Number(item.id)] = Number(item.available_quantity) || 0;
+      }
+      setWholesaleStock(wsMap);
+    } catch {
+      setData([]);
       setRetailStock({});
       setWholesaleStock({});
-
-      const relevantProductIds = Array.from(
-        new Set(
-          lowItems.map((item) => Number(item.product_id)).filter(Boolean),
-        ),
-      );
-
-      if (fetchIdRef.current !== fetchId) return;
-
-      setLoading(false);
-
-      if (relevantProductIds.length === 0) {
-        setFirstResolvedLoadDone(true);
-        return;
-      }
-
-      setResolvingStock(true);
-
-      if (fetchIdRef.current !== fetchId) return;
-
-      const retailMap = Object.fromEntries(
-        relevantProductIds.map((productId) => [
-          productId,
-          Number(retailSnapshot?.resolvedQtyById?.[productId] || 0),
-        ]),
-      );
-      const wsMap = Object.fromEntries(
-        relevantProductIds.map((productId) => [
-          productId,
-          Number(wholesaleSnapshot?.resolvedQtyById?.[productId] || 0),
-        ]),
-      );
-
-      setRetailStock(retailMap);
-      setWholesaleStock(wsMap);
-      setFirstResolvedLoadDone(true);
-
-      try {
-        localStorage.setItem(
-          LOW_STOCK_CACHE_KEY,
-          JSON.stringify({
-            data: lowItems,
-            retailStock: retailMap,
-            wholesaleStock: wsMap,
-          }),
-        );
-      } catch {}
-    } catch {
-      if (fetchIdRef.current !== fetchId) return;
-      if (!hasCachedData) {
-        setData([]);
-        setRetailStock({});
-        setWholesaleStock({});
-      }
-      setFirstResolvedLoadDone(true);
     } finally {
-      if (fetchIdRef.current !== fetchId) return;
       setLoading(false);
-      setResolvingStock(false);
     }
   }, []);
 
@@ -198,9 +130,42 @@ export default function LowStockReorderPage() {
 
   /* ========== Filter — show only retail warehouse items with stock ≤ 5 ========== */
   const filteredData = useMemo(() => {
-    let result = getTransferNeededProducts(data, retailStock, wholesaleStock, {
-      onlyWithWholesaleStock,
+    let result = data.filter((i) => {
+      const retailQty =
+        retailStock[i.product_id] ?? Number(i.current_stock) ?? 0;
+      const wsQty = wholesaleStock[i.product_id] ?? 0;
+
+      if (
+        i.warehouse_name !== "مخزن المعرض" ||
+        retailQty > 5 ||
+        retailQty < 0 ||
+        !i.wholesale_package
+      ) {
+        return false;
+      }
+
+      if (!(retailQty > 0 || wsQty > 0)) {
+        return false;
+      }
+
+      if (onlyWithWholesaleStock && wsQty <= 0) {
+        return false;
+      }
+
+      return true;
     });
+
+    // Keep one row per product and show total retail stock to match product lookup.
+    const byProduct = new Map<number, LowStockItem>();
+    for (const item of result) {
+      if (byProduct.has(item.product_id)) continue;
+      byProduct.set(item.product_id, {
+        ...item,
+        current_stock:
+          retailStock[item.product_id] ?? Number(item.current_stock) ?? 0,
+      });
+    }
+    result = Array.from(byProduct.values());
 
     if (search.trim()) {
       result = result.filter((item) =>
@@ -306,19 +271,10 @@ export default function LowStockReorderPage() {
       {!loading && (
         <Card className="mb-4">
           <CardContent className="p-3 flex items-center justify-between">
-            {firstResolvedLoadDone ? (
-              <Badge variant="secondary">
-                {filteredData.length} صنف رصيده 5 أو أقل
-              </Badge>
-            ) : (
-              <Badge variant="outline">جاري تجهيز النتائج...</Badge>
-            )}
-            <div className="flex items-center gap-2">
-              {resolvingStock && (
-                <Badge variant="outline">جاري تدقيق الأرصدة...</Badge>
-              )}
-              {cart.length > 0 && <Badge>{cart.length} في العربة</Badge>}
-            </div>
+            <Badge variant="secondary">
+              {filteredData.length} صنف رصيده 5 أو أقل
+            </Badge>
+            {cart.length > 0 && <Badge>{cart.length} في العربة</Badge>}
           </CardContent>
         </Card>
       )}
@@ -374,7 +330,7 @@ export default function LowStockReorderPage() {
       )}
 
       {/* ===== Table - Desktop ===== */}
-      {!loading && firstResolvedLoadDone && filteredData.length > 0 && (
+      {!loading && filteredData.length > 0 && (
         <Card className="hidden md:block">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -450,7 +406,7 @@ export default function LowStockReorderPage() {
       )}
 
       {/* ===== Mobile Cards ===== */}
-      {!loading && firstResolvedLoadDone && filteredData.length > 0 && (
+      {!loading && filteredData.length > 0 && (
         <div className="md:hidden space-y-2">
           {filteredData.map((item) => {
             const wsQty = wholesaleStock[item.product_id] ?? 0;
@@ -504,16 +460,7 @@ export default function LowStockReorderPage() {
       )}
 
       {/* ===== Empty ===== */}
-      {!loading && !firstResolvedLoadDone && (
-        <Card>
-          <CardContent className="py-16 flex items-center justify-center gap-2 text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            جاري تجهيز الأصناف...
-          </CardContent>
-        </Card>
-      )}
-
-      {!loading && firstResolvedLoadDone && filteredData.length === 0 && (
+      {!loading && filteredData.length === 0 && (
         <div className="text-center py-16 text-muted-foreground">
           لا توجد أصناف منخفضة حالياً
         </div>

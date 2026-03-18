@@ -4,7 +4,6 @@
  */
 
 const CHANNEL_NAME = "glass_system_updates";
-const PRODUCT_CACHE_INVALIDATION_KEY = "products_cache_invalidated_at";
 
 export type UpdateEvent =
   | "invoice_created"
@@ -13,29 +12,8 @@ export type UpdateEvent =
   | "transfer_created"
   | "transfer_updated"
   | "transfer_cancelled"
-  | "product_created"
-  | "product_updated"
-  | "product_deleted"
   | "cash_in_created"
   | "cash_out_created";
-
-export const STOCK_AFFECTING_EVENTS: UpdateEvent[] = [
-  "invoice_created",
-  "invoice_updated",
-  "invoice_deleted",
-  "transfer_created",
-  "transfer_updated",
-  "transfer_cancelled",
-  "product_created",
-  "product_updated",
-  "product_deleted",
-];
-
-export function isStockAffectingEvent(event: string | null | undefined) {
-  return Boolean(
-    event && STOCK_AFFECTING_EVENTS.includes(event as UpdateEvent),
-  );
-}
 
 let channel: BroadcastChannel | null = null;
 
@@ -59,15 +37,13 @@ export function broadcastUpdate(event: UpdateEvent) {
     window.dispatchEvent(
       new CustomEvent("glass_update", { detail: { type: event } }),
     );
-
-    if (isStockAffectingEvent(event)) {
-      try {
-        localStorage.setItem(
-          PRODUCT_CACHE_INVALIDATION_KEY,
-          Date.now().toString(),
-        );
-      } catch {}
-    }
+    // Invalidate product caches so they refetch on next mount
+    try {
+      localStorage.setItem(
+        "products_cache_invalidated_at",
+        Date.now().toString(),
+      );
+    } catch {}
   }
 }
 

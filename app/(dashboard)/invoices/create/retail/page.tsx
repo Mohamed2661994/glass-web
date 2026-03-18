@@ -37,6 +37,7 @@ import { useCachedProducts } from "@/hooks/use-cached-products";
 import { CustomerLookupModal } from "@/components/customer-lookup-modal";
 import { QuickTransferModal } from "@/components/quick-transfer-modal";
 import {
+  fetchResolvedProductQuantity,
   fetchPackageStockMapFromMovements,
   getPackageVariantId,
 } from "@/lib/package-stock";
@@ -82,6 +83,11 @@ import { InvoicePreviewDialog } from "@/components/invoice-preview-dialog";
    ========================================================= */
 
 export default function CreateRetailInvoicePage() {
+  type ResolvedStockProduct = {
+    id?: number | string | null;
+    available_quantity?: number | string | null;
+  };
+
   const { user } = useAuth();
 
   const DRAFT_KEY = "invoice_draft_retail";
@@ -425,8 +431,6 @@ export default function CreateRetailInvoicePage() {
     loading: loadingProducts,
     refresh: refreshProducts,
     refreshSilently: refreshProductsSilently,
-    getResolvedAvailableQuantity,
-    ensureResolvedAvailableQuantities,
   } = useCachedProducts({
     endpoint: "/products",
     params: {
@@ -437,6 +441,35 @@ export default function CreateRetailInvoicePage() {
     fetchVariants: true,
     cacheKey: `retail_${movementType}`,
   });
+
+  const [resolvedAvailableQtyById, setResolvedAvailableQtyById] = useState<
+    Record<number, number>
+  >({});
+  const resolvingAvailableQtyRef = useRef<Record<number, boolean>>({});
+
+  const productById = useMemo(() => {
+    const map: Record<number, ResolvedStockProduct> = {};
+    products.forEach((product) => {
+      map[Number(product.id)] = product as ResolvedStockProduct;
+    });
+    return map;
+  }, [products]);
+
+  const getResolvedAvailableQuantity = useCallback(
+    (productOrId: number | ResolvedStockProduct | null | undefined) => {
+      const productId =
+        typeof productOrId === "number"
+          ? productOrId
+          : Number(productOrId?.id || 0);
+      const fallbackQuantity =
+        typeof productOrId === "object" && productOrId
+          ? Number(productOrId.available_quantity) || 0
+          : Number(productById[productId]?.available_quantity) || 0;
+
+      return Number(resolvedAvailableQtyById[productId] ?? fallbackQuantity);
+    },
+    [productById, resolvedAvailableQtyById],
+  );
 
   // Enrich restored draft items with barcode from products
   useEffect(() => {
@@ -1265,6 +1298,8 @@ export default function CreateRetailInvoicePage() {
      ========================================================= */
   useEffect(() => {
     if (showProductModal) {
+      setResolvedAvailableQtyById({});
+      resolvingAvailableQtyRef.current = {};
       refreshProductsSilently();
     }
   }, [showProductModal, refreshProductsSilently]);
@@ -1323,6 +1358,10 @@ export default function CreateRetailInvoicePage() {
     );
 
     return filtered.sort((a, b) => {
+      const aInStock = getResolvedAvailableQuantity(a) > 0 ? 1 : 0;
+      const bInStock = getResolvedAvailableQuantity(b) > 0 ? 1 : 0;
+      if (aInStock !== bInStock) return bInStock - aInStock;
+
       if (search.trim()) {
         const scoreA = multiWordScore(
           search,
@@ -1341,20 +1380,7 @@ export default function CreateRetailInvoicePage() {
           b.manufacturer,
         );
         if (scoreA !== scoreB) return scoreB - scoreA;
-
-        const nameCompare = String(a.name || "").localeCompare(
-          String(b.name || ""),
-          "ar",
-        );
-        if (nameCompare !== 0) return nameCompare;
-
-        return Number(a.id || 0) - Number(b.id || 0);
       }
-
-      const aInStock = getResolvedAvailableQuantity(a) > 0 ? 1 : 0;
-      const bInStock = getResolvedAvailableQuantity(b) > 0 ? 1 : 0;
-      if (aInStock !== bInStock) return bInStock - aInStock;
-
       return String(a.name || "").localeCompare(String(b.name || ""), "ar");
     });
   }, [getResolvedAvailableQuantity, products, search]);
@@ -1368,8 +1394,52 @@ export default function CreateRetailInvoicePage() {
   useEffect(() => {
     if (!showProductModal) return;
 
-    ensureResolvedAvailableQuantities(displayedProducts);
-  }, [displayedProducts, ensureResolvedAvailableQuantities, showProductModal]);
+    displayedProducts.forEach((product) => {
+      if (
+        Object.prototype.hasOwnProperty.call(
+          resolvedAvailableQtyById,
+          product.id,
+        )
+      ) {
+        return;
+      }
+
+      if (resolvingAvailableQtyRef.current[product.id]) {
+        return;
+      }
+
+      resolvingAvailableQtyRef.current[product.id] = true;
+      fetchResolvedProductQuantity({
+        productId: product.id,
+        productName: product.name,
+        branchId: 1,
+        fallbackQuantity: product.available_quantity,
+        basePackage: product.retail_package,
+        variants: variantsMap[product.id] || [],
+        packageField: "retail_package",
+      })
+        .then((quantity) => {
+          setResolvedAvailableQtyById((prev) => ({
+            ...prev,
+            [product.id]: quantity,
+          }));
+        })
+        .catch(() => {
+          setResolvedAvailableQtyById((prev) => ({
+            ...prev,
+            [product.id]: Number(product.available_quantity) || 0,
+          }));
+        })
+        .finally(() => {
+          resolvingAvailableQtyRef.current[product.id] = false;
+        });
+    });
+  }, [
+    displayedProducts,
+    resolvedAvailableQtyById,
+    showProductModal,
+    variantsMap,
+  ]);
 
   /* =========================================================
      Handle search keydown (Enter & arrows)
@@ -1966,9 +2036,12 @@ export default function CreateRetailInvoicePage() {
                             }
                           />
                           {(() => {
-                            const avail = getResolvedAvailableQuantity(
-                              item.product_id,
+                            const prod = products.find(
+                              (pr: any) => pr.id === item.product_id,
                             );
+                            const avail = prod
+                              ? Number(prod.available_quantity)
+                              : null;
                             return avail !== null &&
                               Number(item.quantity) > avail ? (
                               <div className="text-[11px] text-red-500 mt-1">
@@ -2269,9 +2342,12 @@ export default function CreateRetailInvoicePage() {
                           }
                         />
                         {(() => {
-                          const avail = getResolvedAvailableQuantity(
-                            item.product_id,
+                          const prod = products.find(
+                            (pr: any) => pr.id === item.product_id,
                           );
+                          const avail = prod
+                            ? Number(prod.available_quantity)
+                            : null;
                           return avail !== null &&
                             Number(item.quantity) > avail ? (
                             <div className="text-[11px] text-red-500">

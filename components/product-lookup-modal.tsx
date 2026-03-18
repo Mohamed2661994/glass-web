@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import api from "@/services/api";
 import {
   Dialog,
   DialogContent,
@@ -15,12 +14,8 @@ import { Button } from "@/components/ui/button";
 import { useCachedProducts } from "@/hooks/use-cached-products";
 import { highlightText } from "@/lib/highlight-text";
 import {
-  buildPackagePickerOptions,
-  getPackageVariantId,
-  mergePackageVariants,
-  normalizePackageName,
-  prefetchMovementBalances,
-  type PackageVariant,
+  fetchMovementBalances,
+  type MovementBalanceEntry,
 } from "@/lib/package-stock";
 import { multiWordMatch, multiWordScore } from "@/lib/utils";
 
@@ -29,22 +24,6 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   branchId: number;
 }
-
-type LookupProduct = {
-  id: number;
-  name?: string;
-  description?: string;
-  barcode?: string;
-  manufacturer?: string;
-  retail_package?: string;
-  wholesale_package?: string;
-  has_wholesale?: boolean;
-  price?: number | string | null;
-  retail_price?: number | string | null;
-  wholesale_price?: number | string | null;
-  discount_amount?: number | string | null;
-  variant_stock?: PackageVariant[];
-};
 
 export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
   const [search, setSearch] = useState("");
@@ -59,16 +38,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
   /* =========================================================
      Fetch products (Cached — localStorage + auto-refresh)
      ========================================================= */
-  const {
-    products,
-    variantsMap,
-    loading,
-    refresh,
-    refreshSilently,
-    refreshing,
-    getResolvedAvailableQuantity,
-    ensureResolvedAvailableQuantities,
-  } = useCachedProducts({
+  const { products, loading, refresh } = useCachedProducts({
     endpoint: "/products",
     params: {
       branch_id: branchId,
@@ -80,11 +50,8 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
 
   const {
     products: otherBranchProducts,
+    loading: otherLoading,
     refresh: refreshOther,
-    refreshSilently: refreshOtherSilently,
-    getResolvedAvailableQuantity: getOtherBranchResolvedAvailableQuantity,
-    ensureResolvedAvailableQuantities:
-      ensureOtherBranchResolvedAvailableQuantities,
   } = useCachedProducts({
     endpoint: "/products",
     params: {
@@ -99,205 +66,38 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
   const otherBranchQtyMap = useMemo(() => {
     const map: Record<number, number> = {};
     otherBranchProducts.forEach((p) => {
-      map[p.id] = getOtherBranchResolvedAvailableQuantity(p);
+      map[p.id] = Number(p.available_quantity) || 0;
     });
     return map;
-  }, [getOtherBranchResolvedAvailableQuantity, otherBranchProducts]);
+  }, [otherBranchProducts]);
 
-  const [packageStockByKey, setPackageStockByKey] = useState<
-    Record<string, Record<number, number>>
+  const [movementBalancesByKey, setMovementBalancesByKey] = useState<
+    Record<string, { entries: MovementBalanceEntry[]; total: number }>
   >({});
-  const [wholesaleMovementEntriesByKey, setWholesaleMovementEntriesByKey] =
-    useState<Record<string, Array<{ package: string; quantity: number }>>>({});
-  const packageStockLoadingRef = useRef<Record<string, boolean>>({});
+  const balanceLoadingRef = useRef<Record<string, boolean>>({});
 
-  const getWholesalePackageRows = useCallback(
-    (product: LookupProduct) => {
-      const rows = new Map<
-        string,
-        { key: string; label: string; price: number | string | null }
-      >();
+  const [refreshing, setRefreshing] = useState(false);
 
-      const getVariantWholesaleLabel = (variant: PackageVariant) =>
-        String(
-          variant.wholesale_package ||
-            variant.package_name ||
-            variant.retail_package ||
-            "",
-        ).trim();
-
-      const addRow = (
-        rawLabel: string | null | undefined,
-        price: number | string | null | undefined,
-        keyHint: string,
-      ) => {
-        const label = String(rawLabel || "").trim();
-        if (!label || label === "-" || label === "كرتونة 0") {
-          return;
-        }
-
-        const normalized = normalizePackageName(label);
-        const existing = rows.get(normalized);
-
-        if (!existing) {
-          rows.set(normalized, {
-            key: `${normalized}:${keyHint}`,
-            label,
-            price: price ?? null,
-          });
-          return;
-        }
-
-        if ((Number(existing.price) || 0) <= 0 && (Number(price) || 0) > 0) {
-          rows.set(normalized, {
-            ...existing,
-            price: price ?? existing.price ?? null,
-          });
-        }
-      };
-
-      addRow(product.wholesale_package, product.wholesale_price, "base");
-
-      const mergedVariants = mergePackageVariants(
-        Array.isArray(product.variant_stock) ? product.variant_stock : [],
-        variantsMap[product.id] || [],
-      );
-
-      mergedVariants.forEach((variant, index) => {
-        addRow(
-          getVariantWholesaleLabel(variant),
-          variant.wholesale_price ?? variant.price,
-          String(getPackageVariantId(variant) || index + 1),
-        );
-      });
-
-      return Array.from(rows.values()).sort((left, right) =>
-        left.label.localeCompare(right.label, "ar"),
-      );
-    },
-    [variantsMap],
-  );
-
-  // Refresh silently every time the modal opens so the UI stays instant.
+  // Force refresh every time the modal opens so data is always fresh
   useEffect(() => {
     if (!open) return;
-    const resetTimer = window.setTimeout(() => {
-      setSearch("");
-      setFocusedIndex(-1);
-      setPackageStockByKey({});
-      setWholesaleMovementEntriesByKey({});
-    }, 0);
-    packageStockLoadingRef.current = {};
-    refreshSilently();
-    refreshOtherSilently();
-    return () => {
-      window.clearTimeout(resetTimer);
-    };
-  }, [open, refreshOtherSilently, refreshSilently]);
+    setSearch("");
+    setFocusedIndex(-1);
+    setMovementBalancesByKey({});
+    balanceLoadingRef.current = {};
+    // Silent refresh — checks cache validity (invalidation key) and refetches if needed
+    refresh();
+    refreshOther();
+  }, [open]);
 
   const handleRefresh = async () => {
-    await Promise.all([refresh(), refreshOther()]);
+    setRefreshing(true);
+    try {
+      await Promise.all([refresh(), refreshOther()]);
+    } finally {
+      setRefreshing(false);
+    }
   };
-
-  const getBalanceKey = useCallback(
-    (productId: number, targetBranchId: number) =>
-      `${productId}:${targetBranchId}`,
-    [],
-  );
-
-  const getProductPackageVariants = useCallback(
-    (product: LookupProduct) =>
-      mergePackageVariants(
-        Array.isArray(product.variant_stock) ? product.variant_stock : [],
-        variantsMap[product.id] || [],
-      ),
-    [variantsMap],
-  );
-
-  const getDisplayQuantity = useCallback(
-    (product: LookupProduct, targetBranchId: number) => {
-      if (targetBranchId === branchId) {
-        return getResolvedAvailableQuantity(product);
-      }
-
-      return Number(otherBranchQtyMap[product.id]) || 0;
-    },
-    [branchId, getResolvedAvailableQuantity, otherBranchQtyMap],
-  );
-
-  const getWholesaleBalanceRows = useCallback(
-    (product: LookupProduct, targetBranchId: number) => {
-      if (targetBranchId !== 2) {
-        return [] as Array<{ key: string; label: string; quantity: number }>;
-      }
-
-      const packageRows = getWholesalePackageRows(product);
-      if (packageRows.length === 0) {
-        return [] as Array<{ key: string; label: string; quantity: number }>;
-      }
-
-      const stockKey = getBalanceKey(product.id, targetBranchId);
-      const movementEntries = wholesaleMovementEntriesByKey[stockKey];
-      if (Array.isArray(movementEntries) && movementEntries.length > 0) {
-        const quantityByPackage = new Map<string, number>();
-
-        movementEntries.forEach((entry) => {
-          const normalized = normalizePackageName(entry.package);
-          quantityByPackage.set(normalized, Number(entry.quantity) || 0);
-        });
-
-        return packageRows.map((pkg) => {
-          const normalized = normalizePackageName(pkg.label);
-          return {
-            key: `${targetBranchId}:${normalized}`,
-            label: pkg.label,
-            quantity: quantityByPackage.get(normalized) ?? 0,
-          };
-        });
-      }
-
-      const quantityMap = packageStockByKey[stockKey];
-      if (!quantityMap) {
-        return [] as Array<{ key: string; label: string; quantity: number }>;
-      }
-
-      const packageOptions = buildPackagePickerOptions({
-        basePackage: product.wholesale_package,
-        totalQuantity: getDisplayQuantity(product, targetBranchId),
-        variants: getProductPackageVariants(product),
-        quantityMap,
-        packageField: "wholesale_package",
-        fallbackPrice: Number(product.wholesale_price) || 0,
-      });
-
-      const quantityByPackage = new Map<string, number>();
-
-      packageOptions.forEach((option) => {
-        const normalized = normalizePackageName(option.packageName);
-        quantityByPackage.set(normalized, Number(option.quantity) || 0);
-      });
-
-      const rows = packageRows.map((pkg) => {
-        const normalized = normalizePackageName(pkg.label);
-        return {
-          key: `${targetBranchId}:${normalized}`,
-          label: pkg.label,
-          quantity: quantityByPackage.get(normalized) ?? 0,
-        };
-      });
-
-      return rows;
-    },
-    [
-      buildPackagePickerOptions,
-      getBalanceKey,
-      getDisplayQuantity,
-      getProductPackageVariants,
-      getWholesalePackageRows,
-      packageStockByKey,
-      wholesaleMovementEntriesByKey,
-    ],
-  );
 
   /* =========================================================
      Filtered products
@@ -306,8 +106,9 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     const filtered = products.filter((p) => {
       // For wholesale branch, only show products with wholesale package
       if (invoiceType === "wholesale") {
+        const wp = (p.wholesale_package || "").trim();
         const hasWholesale =
-          p.has_wholesale !== false && getWholesalePackageRows(p).length > 0;
+          p.has_wholesale !== false && wp !== "" && wp !== "كرتونة 0";
         if (!hasWholesale) return false;
       }
       return multiWordMatch(
@@ -321,6 +122,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     });
 
     return filtered.sort((a, b) => {
+      // Relevance sort when searching
       if (search.trim()) {
         const scoreA = multiWordScore(
           search,
@@ -339,186 +141,60 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
           b.manufacturer,
         );
         if (scoreA !== scoreB) return scoreB - scoreA;
-
-        const nameCompare = String(a.name || "").localeCompare(
-          String(b.name || ""),
-          "ar",
-        );
-        if (nameCompare !== 0) return nameCompare;
-
-        return Number(a.id || 0) - Number(b.id || 0);
       }
-
-      // Without search, keep in-stock items first.
-      const aInStock = getDisplayQuantity(a, branchId) > 0 ? 1 : 0;
-      const bInStock = getDisplayQuantity(b, branchId) > 0 ? 1 : 0;
+      const aInStock = Number(a.available_quantity) > 0 ? 1 : 0;
+      const bInStock = Number(b.available_quantity) > 0 ? 1 : 0;
       if (aInStock !== bInStock) return bInStock - aInStock;
-
       return String(a.name || "").localeCompare(String(b.name || ""), "ar");
     });
-  }, [
-    branchId,
-    getDisplayQuantity,
-    getWholesalePackageRows,
-    invoiceType,
-    products,
-    search,
-  ]);
+  }, [products, search]);
+
+  const getBalanceKey = useCallback(
+    (productId: number, targetBranchId: number) =>
+      `${productId}:${targetBranchId}`,
+    [],
+  );
 
   useEffect(() => {
     if (!open) return;
 
     const candidates = filteredProducts.slice(0, 30);
-    ensureResolvedAvailableQuantities(candidates);
-    ensureOtherBranchResolvedAvailableQuantities(
-      candidates.map((product) => product.id),
-    );
-  }, [
-    ensureOtherBranchResolvedAvailableQuantities,
-    ensureResolvedAvailableQuantities,
-    filteredProducts,
-    open,
-  ]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const candidates = filteredProducts.slice(0, 30);
-    const multiWholesaleCandidates = candidates.filter(
-      (product) => getWholesalePackageRows(product).length > 1,
-    );
-    const targetBranchId = branchId === 2 ? 2 : otherBranchId === 2 ? 2 : 0;
-    if (targetBranchId !== 2 || multiWholesaleCandidates.length === 0) {
-      return;
-    }
-
-    const pendingKeys: Array<{ productId: number; key: string }> = [];
-
-    multiWholesaleCandidates.forEach((product) => {
-      const key = getBalanceKey(product.id, targetBranchId);
-      if (
-        Object.prototype.hasOwnProperty.call(packageStockByKey, key) ||
-        packageStockLoadingRef.current[key]
-      ) {
-        return;
-      }
-
-      packageStockLoadingRef.current[key] = true;
-      pendingKeys.push({ productId: product.id, key });
-    });
-
-    if (pendingKeys.length === 0) {
-      return;
-    }
-
-    let cancelled = false;
-
-    void (async () => {
-      const pendingKeySet = new Set(pendingKeys.map(({ key }) => key));
-
-      const movementResults = await prefetchMovementBalances({
-        products: multiWholesaleCandidates,
-        branchIds: [targetBranchId],
-        maxConcurrency: 6,
-        shouldSkip: (productId, branchIdValue) =>
-          branchIdValue !== targetBranchId ||
-          !pendingKeySet.has(getBalanceKey(productId, branchIdValue)),
-      }).catch(() => []);
-
-      const movementEntriesByKey = new Map<
-        string,
-        Array<{ package: string; quantity: number }>
-      >();
-
-      movementResults.forEach(
-        ({ productId, branchId: branchIdValue, result }) => {
-          const key = getBalanceKey(productId, branchIdValue);
-          if (Array.isArray(result?.entries) && result.entries.length > 0) {
-            movementEntriesByKey.set(key, result.entries);
-          }
-        },
-      );
-
-      const fallbackResults = await Promise.all(
-        pendingKeys
-          .filter(({ key }) => !movementEntriesByKey.has(key))
-          .map(async ({ productId, key }) => {
-            try {
-              const response = await api.get("/stock/quantity-all", {
-                params: {
-                  product_id: productId,
-                  branch_id: targetBranchId,
-                },
-              });
-
-              return {
-                key,
-                stockMap: Object.fromEntries(
-                  Object.entries(response.data || {}).map(
-                    ([variantId, quantity]) => [
-                      Number(variantId),
-                      Number(quantity) || 0,
-                    ],
-                  ),
-                ) as Record<number, number>,
-              };
-            } catch {
-              return {
-                key,
-                stockMap: null,
-              };
-            }
-          }),
-      );
-
-      return {
-        fallbackResults,
-        movementEntriesByKey,
-      };
-    })()
-      .then((results) => {
-        if (cancelled || !results) {
+    candidates.forEach((product) => {
+      const branches = [branchId, otherBranchId];
+      branches.forEach((targetBranchId) => {
+        const key = getBalanceKey(product.id, targetBranchId);
+        if (
+          Object.prototype.hasOwnProperty.call(movementBalancesByKey, key) ||
+          balanceLoadingRef.current[key]
+        ) {
           return;
         }
-
-        setPackageStockByKey((prev) => {
-          const next = { ...prev };
-          results.fallbackResults.forEach(({ key, stockMap }) => {
-            if (stockMap) {
-              next[key] = stockMap;
-            }
+        balanceLoadingRef.current[key] = true;
+        fetchMovementBalances({
+          productName: product.name,
+          branchId: targetBranchId,
+        })
+          .then((result) => {
+            setMovementBalancesByKey((prev) => ({ ...prev, [key]: result }));
+          })
+          .catch(() => {
+            setMovementBalancesByKey((prev) => ({
+              ...prev,
+              [key]: { entries: [], total: 0 },
+            }));
+          })
+          .finally(() => {
+            balanceLoadingRef.current[key] = false;
           });
-          return next;
-        });
-
-        setWholesaleMovementEntriesByKey((prev) => {
-          const next = { ...prev };
-          results.movementEntriesByKey.forEach((movementEntries, key) => {
-            next[key] = movementEntries;
-          });
-          return next;
-        });
-      })
-      .finally(() => {
-        pendingKeys.forEach(({ key }) => {
-          packageStockLoadingRef.current[key] = false;
-        });
       });
-
-    return () => {
-      cancelled = true;
-      pendingKeys.forEach(({ key }) => {
-        packageStockLoadingRef.current[key] = false;
-      });
-    };
+    });
   }, [
     branchId,
+    open,
     filteredProducts,
     getBalanceKey,
-    getWholesalePackageRows,
     otherBranchId,
-    open,
-    packageStockByKey,
+    movementBalancesByKey,
   ]);
 
   /* =========================================================
@@ -529,14 +205,14 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
     (startIndex: number, direction: 1 | -1): number => {
       let idx = startIndex + direction;
       while (idx >= 0 && idx < filteredProducts.length) {
-        if (getDisplayQuantity(filteredProducts[idx], branchId) > 0) {
+        if (Number(filteredProducts[idx].available_quantity) > 0) {
           return idx;
         }
         idx += direction;
       }
       return -1;
     },
-    [branchId, filteredProducts, getDisplayQuantity],
+    [filteredProducts],
   );
 
   const handleSearchKeyDown = useCallback(
@@ -545,7 +221,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
         e.preventDefault();
         // Find first in-stock product
         const firstAvailable = filteredProducts.findIndex(
-          (p) => getDisplayQuantity(p, branchId) > 0,
+          (p) => Number(p.available_quantity) > 0,
         );
         if (firstAvailable !== -1) {
           setFocusedIndex(firstAvailable);
@@ -558,7 +234,7 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
         }
       }
     },
-    [branchId, filteredProducts, getDisplayQuantity],
+    [filteredProducts],
   );
 
   const handleListKeyDown = useCallback(
@@ -646,11 +322,6 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
           ref={listRef}
           className="flex-1 overflow-y-auto scrollbar-hide p-4 space-y-2"
         >
-          {!loading && refreshing && filteredProducts.length > 0 && (
-            <div className="text-xs text-muted-foreground mb-2 text-center">
-              جاري تحديث الأصناف...
-            </div>
-          )}
           {loading ? (
             <div className="space-y-3">
               {Array.from({ length: 6 }).map((_, i) => (
@@ -666,24 +337,24 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
             </div>
           ) : (
             filteredProducts.map((product, index) => {
-              const wholesalePackageRows = getWholesalePackageRows(product);
-              const currentBranchDisplayQuantity = getDisplayQuantity(
-                product,
-                branchId,
-              );
-              const currentBranchWholesaleBalances =
-                branchId === 2
-                  ? getWholesaleBalanceRows(product, branchId)
-                  : [];
+              const currentBalance =
+                movementBalancesByKey[getBalanceKey(product.id, branchId)];
+              const otherBalance =
+                movementBalancesByKey[
+                  getBalanceKey(product.id, otherBranchId)
+                ];
 
-              const otherDisplayQuantity = getDisplayQuantity(
-                product,
-                otherBranchId,
-              );
-              const otherBranchWholesaleBalances =
-                otherBranchId === 2
-                  ? getWholesaleBalanceRows(product, otherBranchId)
-                  : [];
+              const currentBranchEntries = currentBalance?.entries ?? [];
+              const currentBranchDisplayQuantity =
+                currentBalance !== undefined
+                  ? currentBalance.total
+                  : Number(product.available_quantity) || 0;
+
+              const otherEntries = otherBalance?.entries ?? [];
+              const otherDisplayQuantity =
+                otherBalance !== undefined
+                  ? otherBalance.total
+                  : Number(otherBranchQtyMap[product.id]) || 0;
 
               const outOfStock = currentBranchDisplayQuantity <= 0;
 
@@ -738,32 +409,44 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                     )}
                   </div>
 
-                  {wholesalePackageRows.length > 0 && (
+                  {product.wholesale_package && (
                     <div className="text-xs mt-1 flex flex-wrap gap-x-4 gap-y-1 text-orange-600 dark:text-orange-400">
-                      {wholesalePackageRows.length > 1 ? (
+                      {product.variant_stock &&
+                      product.variant_stock.length > 1 ? (
                         <>
-                          {wholesalePackageRows.map((pkg) => {
-                            const variantPrice =
-                              pkg.price ?? product.wholesale_price;
-                            return (
-                              <span key={pkg.key}>
-                                {pkg.label}:{" "}
-                                <span className="font-semibold">
-                                  {variantPrice ?? product.wholesale_price}
+                          {product.variant_stock.map(
+                            (
+                              vs: {
+                                variant_id: number;
+                                package_name: string;
+                                quantity: number;
+                                price: number | null;
+                              },
+                              idx: number,
+                            ) => {
+                              const variantPrice =
+                                vs.price ??
+                                (vs.variant_id === 0
+                                  ? product.wholesale_price
+                                  : null);
+                              return (
+                                <span key={vs.variant_id ?? idx}>
+                                  {vs.package_name}:{" "}
+                                  <span className="font-semibold">
+                                    {variantPrice ?? product.wholesale_price}
+                                  </span>
                                 </span>
-                              </span>
-                            );
-                          })}
+                              );
+                            },
+                          )}
                         </>
                       ) : (
                         <>
-                          <span>
-                            عبوة جملة: {wholesalePackageRows[0].label}
-                          </span>
-                          {wholesalePackageRows[0].price != null &&
-                            Number(wholesalePackageRows[0].price) > 0 && (
+                          <span>عبوة جملة: {product.wholesale_package}</span>
+                          {product.wholesale_price != null &&
+                            Number(product.wholesale_price) > 0 && (
                               <span className="font-semibold">
-                                سعر الجملة: {wholesalePackageRows[0].price}
+                                سعر الجملة: {product.wholesale_price}
                               </span>
                             )}
                         </>
@@ -772,8 +455,25 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                   )}
 
                   <div className="text-xs mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
-                    {(branchId !== 2 ||
-                      currentBranchWholesaleBalances.length <= 1) && (
+                    {branchId === 2 && currentBranchEntries.length > 1 ? (
+                      <div className="flex flex-wrap gap-x-3 gap-y-1">
+                        <span className="text-muted-foreground">
+                          رصيد الجملة:
+                        </span>
+                        {currentBranchEntries.map((entry) => (
+                          <span
+                            key={entry.package}
+                            className={
+                              entry.quantity > 0
+                                ? "text-orange-600 dark:text-orange-400 font-semibold"
+                                : "text-red-500 font-semibold"
+                            }
+                          >
+                            {entry.package}: {entry.quantity}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
                       <span
                         className={
                           currentBranchDisplayQuantity > 0
@@ -783,54 +483,41 @@ export function ProductLookupModal({ open, onOpenChange, branchId }: Props) {
                             : "text-red-500 font-semibold"
                         }
                       >
-                        {`رصيد ${branchId === 1 ? "القطاعي" : "الجملة"}`}:{" "}
+                        رصيد {branchId === 1 ? "القطاعي" : "الجملة"}:{" "}
                         {currentBranchDisplayQuantity}
                       </span>
                     )}
 
-                    {branchId === 2 &&
-                      currentBranchWholesaleBalances.length > 1 &&
-                      currentBranchWholesaleBalances.map((row) => (
-                        <span
-                          key={row.key}
-                          className={
-                            row.quantity > 0
-                              ? "text-orange-600 dark:text-orange-400 font-semibold"
-                              : "text-red-500 font-semibold"
-                          }
-                        >
-                          رصيد {row.label}: {row.quantity}
-                        </span>
-                      ))}
-
                     {branchId === 1 ? (
-                      <>
-                        {otherBranchWholesaleBalances.length <= 1 && (
-                          <span
-                            className={
-                              otherDisplayQuantity > 0
-                                ? "text-orange-600 dark:text-orange-400 font-semibold"
-                                : "text-red-500 font-semibold"
-                            }
-                          >
-                            رصيد الجملة: {otherDisplayQuantity || 0}
+                      otherEntries.length > 1 ? (
+                        <div className="flex flex-wrap gap-x-3 gap-y-1">
+                          <span className="text-muted-foreground">
+                            رصيد الجملة:
                           </span>
-                        )}
-
-                        {otherBranchWholesaleBalances.length > 1 &&
-                          otherBranchWholesaleBalances.map((row) => (
+                          {otherEntries.map((entry) => (
                             <span
-                              key={row.key}
+                              key={entry.package}
                               className={
-                                row.quantity > 0
+                                entry.quantity > 0
                                   ? "text-orange-600 dark:text-orange-400 font-semibold"
                                   : "text-red-500 font-semibold"
                               }
                             >
-                              رصيد {row.label}: {row.quantity}
+                              {entry.package}: {entry.quantity}
                             </span>
                           ))}
-                      </>
+                        </div>
+                      ) : (
+                        <span
+                          className={
+                            otherDisplayQuantity > 0
+                              ? "text-orange-600 dark:text-orange-400 font-semibold"
+                              : "text-red-500 font-semibold"
+                          }
+                        >
+                          رصيد الجملة: {otherDisplayQuantity || 0}
+                        </span>
+                      )
                     ) : (
                       <span
                         className={

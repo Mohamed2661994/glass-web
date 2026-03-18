@@ -158,8 +158,8 @@ export default function CustomerBalancesPage() {
               }));
 
             // ترتيب بالـ invoice_id (أكبر = أحدث)
-            const allRows = [...debtRows, ...missing].sort(
-              (a, b) => Number(a.invoice_id || 0) - Number(b.invoice_id || 0),
+            const allRows = [...debtRows, ...missing].sort((a, b) =>
+              Number(a.invoice_id || 0) - Number(b.invoice_id || 0),
             );
 
             let totalSales = 0;
@@ -176,10 +176,11 @@ export default function CustomerBalancesPage() {
                 totalPaid += Number(row.paid_amount || 0);
                 lastInvoiceRemaining = Number(row.remaining_amount || 0);
                 paymentsAfterLast = 0;
-                const d = (row.invoice_date || row.created_at || "").substring(
-                  0,
-                  10,
-                );
+                const d = (
+                  row.invoice_date ||
+                  row.created_at ||
+                  ""
+                ).substring(0, 10);
                 if (d && (!lastDate || d > lastDate)) lastDate = d;
               } else {
                 paymentsAfterLast += Number(row.paid_amount || 0);

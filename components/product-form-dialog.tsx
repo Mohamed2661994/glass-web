@@ -22,7 +22,6 @@ import { toast } from "sonner";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { broadcastUpdate } from "@/lib/broadcast";
 
 interface Props {
   open: boolean;
@@ -410,7 +409,6 @@ export function ProductFormDialog({
         }
       }
 
-      broadcastUpdate(isEdit ? "product_updated" : "product_created");
       toast.success("تم الحفظ بنجاح");
       setForm(emptyForm);
       setVariantForms([]);

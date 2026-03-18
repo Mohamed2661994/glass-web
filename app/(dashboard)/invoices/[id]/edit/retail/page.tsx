@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/table";
 import { QuickTransferModal } from "@/components/quick-transfer-modal";
 import { useCachedProducts } from "@/hooks/use-cached-products";
+import { fetchResolvedProductQuantity } from "@/lib/package-stock";
 import { highlightText } from "@/lib/highlight-text";
 import { multiWordMatch, multiWordScore } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
@@ -76,6 +77,11 @@ import {
    ========================================================= */
 
 export default function EditRetailInvoicePage() {
+  type ResolvedStockProduct = {
+    id?: number | string | null;
+    available_quantity?: number | string | null;
+  };
+
   const { user, authReady } = useAuth();
   const { id } = useParams();
   const router = useRouter();
@@ -256,8 +262,6 @@ export default function EditRetailInvoicePage() {
     refresh: refreshProducts,
     refreshSilently: refreshProductsSilently,
     invalidateCache,
-    getResolvedAvailableQuantity,
-    ensureResolvedAvailableQuantities,
   } = useCachedProducts({
     endpoint: "/products",
     params: {
@@ -268,6 +272,35 @@ export default function EditRetailInvoicePage() {
     fetchVariants: true,
     cacheKey: `retail_${movementType}`,
   });
+
+  const [resolvedAvailableQtyById, setResolvedAvailableQtyById] = useState<
+    Record<number, number>
+  >({});
+  const resolvingAvailableQtyRef = useRef<Record<number, boolean>>({});
+
+  const productById = useMemo(() => {
+    const map: Record<number, ResolvedStockProduct> = {};
+    products.forEach((product) => {
+      map[Number(product.id)] = product as ResolvedStockProduct;
+    });
+    return map;
+  }, [products]);
+
+  const getResolvedAvailableQuantity = useCallback(
+    (productOrId: number | ResolvedStockProduct | null | undefined) => {
+      const productId =
+        typeof productOrId === "number"
+          ? productOrId
+          : Number(productOrId?.id || 0);
+      const fallbackQuantity =
+        typeof productOrId === "object" && productOrId
+          ? Number(productOrId.available_quantity) || 0
+          : Number(productById[productId]?.available_quantity) || 0;
+
+      return Number(resolvedAvailableQtyById[productId] ?? fallbackQuantity);
+    },
+    [productById, resolvedAvailableQtyById],
+  );
 
   /* =========================================================
      6.5 Barcode Scan
@@ -692,6 +725,8 @@ export default function EditRetailInvoicePage() {
      ========================================================= */
   useEffect(() => {
     if (showProductModal) {
+      setResolvedAvailableQtyById({});
+      resolvingAvailableQtyRef.current = {};
       refreshProductsSilently();
     }
   }, [showProductModal, refreshProductsSilently]);
@@ -735,6 +770,10 @@ export default function EditRetailInvoicePage() {
     );
 
     return filtered.sort((a, b) => {
+      const aInStock = getResolvedAvailableQuantity(a) > 0 ? 1 : 0;
+      const bInStock = getResolvedAvailableQuantity(b) > 0 ? 1 : 0;
+      if (aInStock !== bInStock) return bInStock - aInStock;
+
       if (search.trim()) {
         const scoreA = multiWordScore(
           search,
@@ -753,20 +792,7 @@ export default function EditRetailInvoicePage() {
           b.manufacturer,
         );
         if (scoreA !== scoreB) return scoreB - scoreA;
-
-        const nameCompare = String(a.name || "").localeCompare(
-          String(b.name || ""),
-          "ar",
-        );
-        if (nameCompare !== 0) return nameCompare;
-
-        return Number(a.id || 0) - Number(b.id || 0);
       }
-
-      const aInStock = getResolvedAvailableQuantity(a) > 0 ? 1 : 0;
-      const bInStock = getResolvedAvailableQuantity(b) > 0 ? 1 : 0;
-      if (aInStock !== bInStock) return bInStock - aInStock;
-
       return String(a.name || "").localeCompare(String(b.name || ""), "ar");
     });
   }, [getResolvedAvailableQuantity, products, search]);
@@ -780,8 +806,52 @@ export default function EditRetailInvoicePage() {
   useEffect(() => {
     if (!showProductModal) return;
 
-    ensureResolvedAvailableQuantities(displayedProducts);
-  }, [displayedProducts, ensureResolvedAvailableQuantities, showProductModal]);
+    displayedProducts.forEach((product) => {
+      if (
+        Object.prototype.hasOwnProperty.call(
+          resolvedAvailableQtyById,
+          product.id,
+        )
+      ) {
+        return;
+      }
+
+      if (resolvingAvailableQtyRef.current[product.id]) {
+        return;
+      }
+
+      resolvingAvailableQtyRef.current[product.id] = true;
+      fetchResolvedProductQuantity({
+        productId: product.id,
+        productName: product.name,
+        branchId: 1,
+        fallbackQuantity: product.available_quantity,
+        basePackage: product.retail_package,
+        variants: variantsMap[product.id] || [],
+        packageField: "retail_package",
+      })
+        .then((quantity) => {
+          setResolvedAvailableQtyById((prev) => ({
+            ...prev,
+            [product.id]: quantity,
+          }));
+        })
+        .catch(() => {
+          setResolvedAvailableQtyById((prev) => ({
+            ...prev,
+            [product.id]: Number(product.available_quantity) || 0,
+          }));
+        })
+        .finally(() => {
+          resolvingAvailableQtyRef.current[product.id] = false;
+        });
+    });
+  }, [
+    displayedProducts,
+    resolvedAvailableQtyById,
+    showProductModal,
+    variantsMap,
+  ]);
 
   const handleSearchKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {

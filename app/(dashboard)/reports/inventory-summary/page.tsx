@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useDeferredValue,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import api from "@/services/api";
 import { multiWordMatch } from "@/lib/utils";
@@ -29,13 +22,7 @@ import { Loader2, Printer, Search } from "lucide-react";
 import { ExportButtons, type ExportColumn } from "@/components/export-buttons";
 import { useRealtime } from "@/hooks/use-realtime";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  fetchUnifiedMovementRows,
-  normalizePackageName,
-  summarizeInventoryMovementRows,
-  type MovementDisplayPackageMode,
-  type MovementWarehouseScope,
-} from "@/lib/package-stock";
+import { normalizePackageName } from "@/lib/package-stock";
 
 const INVENTORY_SUMMARY_PRINT_STORAGE_KEY = "inventorySummaryPrintData";
 
@@ -61,6 +48,15 @@ type InventoryItem = {
   package_name?: string | null;
 };
 
+type MovementItem = {
+  variant_id?: number | null;
+  warehouse_name?: string | null;
+  movement_type?: string | null;
+  invoice_movement_type?: string | null;
+  quantity?: number | null;
+  package_name?: string | null;
+};
+
 type ReportProduct = {
   id: number;
   wholesale_package?: string | null;
@@ -75,39 +71,15 @@ type ProductVariant = {
   package_name?: string | null;
 };
 
+const IN_MOVEMENT_TYPES = new Set([
+  "purchase",
+  "transfer_in",
+  "replace_in",
+  "return_sale",
+  "in",
+]);
+
 type WarehouseFilter = "الكل" | "المخزن الرئيسي" | "مخزن المعرض";
-
-const ACCURATE_RECALC_CONCURRENCY = 6;
-
-async function mapWithConcurrency<T, R>(
-  items: T[],
-  concurrency: number,
-  mapper: (item: T) => Promise<R>,
-) {
-  if (items.length === 0) {
-    return [] as R[];
-  }
-
-  const safeConcurrency = Math.max(1, Math.min(concurrency, items.length));
-  const results: R[] = new Array(items.length);
-  let nextIndex = 0;
-
-  const workers = Array.from({ length: safeConcurrency }, async () => {
-    while (true) {
-      const currentIndex = nextIndex;
-      nextIndex += 1;
-
-      if (currentIndex >= items.length) {
-        return;
-      }
-
-      results[currentIndex] = await mapper(items[currentIndex]);
-    }
-  });
-
-  await Promise.all(workers);
-  return results;
-}
 
 /* ========== Component ========== */
 export default function InventorySummaryPage() {
@@ -117,9 +89,7 @@ export default function InventorySummaryPage() {
 
   const [data, setData] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [accurateLoading, setAccurateLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
-  const deferredSearchText = useDeferredValue(searchText);
   const [packageLabelMap, setPackageLabelMap] = useState<
     Record<string, string>
   >({});
@@ -127,7 +97,6 @@ export default function InventorySummaryPage() {
     Record<number, InventoryItem[]>
   >({});
   const tableRef = useRef<HTMLDivElement>(null);
-  const reportFetchTokenRef = useRef(0);
   const [selectedWarehouse, setSelectedWarehouse] = useState<WarehouseFilter>(
     isShowroomUser
       ? "مخزن المعرض"
@@ -138,88 +107,35 @@ export default function InventorySummaryPage() {
 
   /* ========== Fetch ========== */
   const fetchReport = useCallback(async () => {
-    const fetchToken = reportFetchTokenRef.current + 1;
-    reportFetchTokenRef.current = fetchToken;
-
     try {
       setLoading(true);
-      const invRes = await api.get("/reports/inventory-summary");
-
-      const rawItems = Array.isArray(invRes.data)
-        ? (invRes.data as Array<Record<string, unknown>>)
-        : [];
-
-      const items: InventoryItem[] = rawItems.map((item) => ({
-        product_id: Number(item.product_id || 0),
-        product_name: String(item.product_name || ""),
-        manufacturer_name: item.manufacturer_name
-          ? String(item.manufacturer_name)
-          : null,
-        barcode: item.barcode ? String(item.barcode) : null,
-        warehouse_name: item.warehouse_name ? String(item.warehouse_name) : null,
-        total_in: Number(item.total_in || 0),
-        total_out: Number(item.total_out || 0),
-        current_stock: Number(item.current_stock || 0),
-        package_name: item.package_name ? String(item.package_name) : null,
+      const [invRes, prodRes] = await Promise.all([
+        api.get("/reports/inventory-summary"),
+        api.get("/products", {
+          params: {
+            branch_id: isShowroomUser ? 1 : 2,
+            invoice_type: isShowroomUser ? "retail" : "wholesale",
+            movement_type: "sale",
+          },
+        }),
+      ]);
+      const products: any[] = Array.isArray(prodRes.data)
+        ? prodRes.data
+        : (prodRes.data?.data ?? []);
+      const barcodeMap: Record<number, string> = {};
+      products.forEach((p: any) => {
+        if (p.barcode) barcodeMap[p.id] = p.barcode;
+      });
+      const items: InventoryItem[] = (
+        Array.isArray(invRes.data) ? invRes.data : []
+      ).map((item: any) => ({
+        ...item,
+        barcode: item.barcode || barcodeMap[item.product_id] || null,
       }));
-
-      if (reportFetchTokenRef.current !== fetchToken) return;
       setData(items);
-
-      const missingBarcodeProductIds = Array.from(
-        new Set(
-          items
-            .filter((item) => !String(item.barcode || "").trim())
-            .map((item) => Number(item.product_id))
-            .filter((productId) => Number.isFinite(productId) && productId > 0),
-        ),
-      );
-
-      if (missingBarcodeProductIds.length > 0) {
-        void api
-          .get("/products", {
-            params: {
-              branch_id: isShowroomUser ? 1 : 2,
-              invoice_type: isShowroomUser ? "retail" : "wholesale",
-              movement_type: "sale",
-            },
-          })
-          .then((prodRes) => {
-            if (reportFetchTokenRef.current !== fetchToken) return;
-
-            const products = Array.isArray(prodRes.data)
-              ? (prodRes.data as Array<Record<string, unknown>>)
-              : Array.isArray((prodRes.data as { data?: unknown })?.data)
-                ? ((prodRes.data as { data: Array<Record<string, unknown>> })
-                    .data ?? [])
-                : [];
-
-            const barcodeMap: Record<number, string> = {};
-            products.forEach((product) => {
-              if (product?.barcode) {
-                barcodeMap[Number(product.id)] = String(product.barcode);
-              }
-            });
-
-            if (Object.keys(barcodeMap).length === 0) return;
-
-            setData((previous) =>
-              previous.map((item) => ({
-                ...item,
-                barcode:
-                  item.barcode || barcodeMap[Number(item.product_id)] || null,
-              })),
-            );
-          })
-          .catch(() => {
-            /* ignore barcode enrichment failures */
-          });
-      }
     } catch {
-      if (reportFetchTokenRef.current !== fetchToken) return;
       setData([]);
     } finally {
-      if (reportFetchTokenRef.current !== fetchToken) return;
       setLoading(false);
     }
   }, [isShowroomUser]);
@@ -229,6 +145,36 @@ export default function InventorySummaryPage() {
   }, [fetchReport]);
 
   useRealtime(["data:products", "data:stock", "data:invoices"], fetchReport);
+
+  const filterMovementRowsByWarehouse = useCallback(
+    (rows: MovementItem[]) => {
+      let result = rows;
+
+      if (isShowroomUser) {
+        result = result.filter((item) =>
+          (item.warehouse_name || "").trim().includes("المعرض"),
+        );
+      } else if (isWarehouseUser) {
+        result = result.filter((item) => {
+          const warehouseName = (item.warehouse_name || "").trim();
+          return (
+            warehouseName.includes("الرئيسي") ||
+            warehouseName.includes("المخزن الرئيسي")
+          );
+        });
+      }
+
+      if (!isShowroomUser && !isWarehouseUser && selectedWarehouse !== "الكل") {
+        result = result.filter(
+          (item) =>
+            (item.warehouse_name || "").trim() === selectedWarehouse.trim(),
+        );
+      }
+
+      return result;
+    },
+    [isShowroomUser, isWarehouseUser, selectedWarehouse],
+  );
 
   /* ========== Filter ========== */
   const filteredData = useMemo(() => {
@@ -254,10 +200,10 @@ export default function InventorySummaryPage() {
     }
 
     // بحث
-    if (deferredSearchText.trim()) {
+    if (searchText.trim()) {
       result = result.filter((item) =>
         multiWordMatch(
-          deferredSearchText,
+          searchText,
           item.product_name,
           item.manufacturer_name || "",
           item.barcode || "",
@@ -266,20 +212,9 @@ export default function InventorySummaryPage() {
     }
 
     return result;
-  }, [
-    data,
-    selectedWarehouse,
-    deferredSearchText,
-    isShowroomUser,
-    isWarehouseUser,
-  ]);
+  }, [data, selectedWarehouse, searchText, isShowroomUser, isWarehouseUser]);
 
   useEffect(() => {
-    if (isShowroomUser) {
-      setPackageLabelMap({});
-      return;
-    }
-
     const productIds = Array.from(
       new Set(
         filteredData.map((item) => Number(item.product_id)).filter(Boolean),
@@ -348,70 +283,13 @@ export default function InventorySummaryPage() {
     };
   }, [filteredData, isShowroomUser]);
 
-  const movementWarehouseScope: MovementWarehouseScope = isShowroomUser
-    ? "showroom"
-    : isWarehouseUser
-      ? "warehouse"
-      : selectedWarehouse === "الكل"
-        ? "all"
-        : "named";
-
-  const movementDisplayMode: MovementDisplayPackageMode =
-    isShowroomUser || (!isWarehouseUser && selectedWarehouse === "مخزن المعرض")
-      ? "retail"
-      : "movement";
-
-  const showroomFallbackRows = useMemo(() => {
-    if (!isShowroomUser) {
-      return [] as InventoryItem[];
-    }
-
-    const grouped = new Map<number, InventoryItem>();
-
-    for (const item of filteredData) {
-      const productId = Number(item.product_id);
-      if (!Number.isFinite(productId) || productId <= 0) continue;
-
-      const totalIn = Number(item.total_in || 0);
-      const totalOut = Number(item.total_out || 0);
-      const existing = grouped.get(productId);
-
-      if (!existing) {
-        grouped.set(productId, {
-          ...item,
-          product_id: productId,
-          warehouse_name: "مخزن المعرض",
-          total_in: totalIn,
-          total_out: totalOut,
-          current_stock: totalIn - totalOut,
-          package_name: null,
-        });
-        continue;
-      }
-
-      const mergedIn = Number(existing.total_in || 0) + totalIn;
-      const mergedOut = Number(existing.total_out || 0) + totalOut;
-      grouped.set(productId, {
-        ...existing,
-        total_in: mergedIn,
-        total_out: mergedOut,
-        current_stock: mergedIn - mergedOut,
-        barcode: existing.barcode || item.barcode || null,
-      });
-    }
-
-    return Array.from(grouped.values());
-  }, [filteredData, isShowroomUser]);
-
   useEffect(() => {
-    const shouldRecalculate = isShowroomUser
-      ? filteredData.length > 0
-      : filteredData.length > 0 &&
-        (deferredSearchText.trim().length > 0 || filteredData.length <= 30);
+    const shouldRecalculate =
+      filteredData.length > 0 &&
+      (searchText.trim().length > 0 || filteredData.length <= 30);
 
     if (!shouldRecalculate) {
       setAccurateRowsByProductId({});
-      setAccurateLoading(false);
       return;
     }
 
@@ -420,58 +298,62 @@ export default function InventorySummaryPage() {
     );
 
     let cancelled = false;
-    setAccurateLoading(true);
 
-    mapWithConcurrency(
-      uniqueProducts,
-      ACCURATE_RECALC_CONCURRENCY,
-      async (item) => {
+    Promise.all(
+      uniqueProducts.map(async (item) => {
         try {
-          const movementRows = await fetchUnifiedMovementRows({
-            productName: item.product_name,
-            warehouseScope: movementWarehouseScope,
-            namedWarehouse:
-              movementWarehouseScope === "named"
-                ? selectedWarehouse
-                : undefined,
-            displayMode: movementDisplayMode,
-            retailPackage: isShowroomUser
-              ? null
-              : packageLabelMap[`${item.product_id}:0`] || null,
-            wholesalePackage: isShowroomUser
-              ? null
-              : packageLabelMap[`${item.product_id}:0`] || null,
+          const res = await api.get("/reports/product-movement", {
+            params: { product_name: item.product_name },
           });
 
-          if (isShowroomUser) {
-            const totalIn = movementRows.reduce(
-              (sum, row) => sum + (row.is_in ? Number(row.quantity || 0) : 0),
-              0,
-            );
-            const totalOut = movementRows.reduce(
-              (sum, row) => sum + (!row.is_in ? Number(row.quantity || 0) : 0),
-              0,
-            );
+          const movementRows = filterMovementRowsByWarehouse(
+            Array.isArray(res.data) ? res.data : [],
+          );
 
-            return [
-              item.product_id,
-              [
-                {
-                  product_id: item.product_id,
-                  product_name: item.product_name,
-                  manufacturer_name: item.manufacturer_name,
-                  barcode: item.barcode,
-                  warehouse_name: "مخزن المعرض",
-                  total_in: totalIn,
-                  total_out: totalOut,
-                  current_stock: totalIn - totalOut,
-                  package_name: null,
-                },
-              ],
-            ] as const;
+          const grouped = new Map<
+            string,
+            {
+              warehouse_name: string;
+              package_name: string;
+              total_in: number;
+              total_out: number;
+            }
+          >();
+
+          for (const row of movementRows) {
+            const qty = Number(row.quantity || 0);
+            if (!Number.isFinite(qty) || qty === 0) continue;
+
+            const warehouseName = (row.warehouse_name || "—").trim() || "—";
+            const variantId = Number(row.variant_id || 0);
+            const rawPkg = (row.package_name || "").trim();
+            // في القطاعي: كل الحركات في سطر واحد لكن مع عرض عبوة القطاعي نفسها
+            const packageName = isShowroomUser
+              ? packageLabelMap[`${item.product_id}:0`] || "—"
+              : rawPkg
+                ? normalizePackageName(rawPkg)
+                : packageLabelMap[`${item.product_id}:${variantId}`] || "—";
+            const key = `${warehouseName}__${packageName}`;
+            const existing = grouped.get(key) || {
+              warehouse_name: warehouseName,
+              package_name: packageName,
+              total_in: 0,
+              total_out: 0,
+            };
+
+            const movementType =
+              row.movement_type || row.invoice_movement_type || "";
+
+            if (IN_MOVEMENT_TYPES.has(movementType)) {
+              existing.total_in += qty;
+            } else {
+              existing.total_out += qty;
+            }
+
+            grouped.set(key, existing);
           }
 
-          const accurateRows = summarizeInventoryMovementRows(movementRows)
+          const accurateRows = Array.from(grouped.values())
             .map((groupedRow) => ({
               product_id: item.product_id,
               product_name: item.product_name,
@@ -495,75 +377,28 @@ export default function InventorySummaryPage() {
 
           return [item.product_id, accurateRows] as const;
         } catch {
-          if (isShowroomUser) {
-            return [
-              item.product_id,
-              [
-                {
-                  ...item,
-                  warehouse_name: "مخزن المعرض",
-                  package_name: null,
-                },
-              ],
-            ] as const;
-          }
-
           return [item.product_id, []] as const;
         }
-      },
-    )
-      .then((entries) => {
-        if (cancelled) return;
-        setAccurateRowsByProductId(Object.fromEntries(entries));
-      })
-      .finally(() => {
-        if (cancelled) return;
-        setAccurateLoading(false);
-      });
+      }),
+    ).then((entries) => {
+      if (cancelled) return;
+      setAccurateRowsByProductId(Object.fromEntries(entries));
+    });
 
     return () => {
       cancelled = true;
     };
   }, [
     filteredData,
-    isShowroomUser,
-    movementDisplayMode,
-    movementWarehouseScope,
+    filterMovementRowsByWarehouse,
     packageLabelMap,
-    deferredSearchText,
-    selectedWarehouse,
+    searchText,
   ]);
 
   const displayedData = useMemo(() => {
-    if (isShowroomUser) {
-      const fallbackByProductId = new Map(
-        showroomFallbackRows.map((row) => [Number(row.product_id), row]),
-      );
-      const result: InventoryItem[] = [];
-      const handledProductIds = new Set<number>();
-
-      for (const item of filteredData) {
-        if (handledProductIds.has(item.product_id)) continue;
-        handledProductIds.add(item.product_id);
-
-        const accurateRows = accurateRowsByProductId[item.product_id];
-        if (accurateRows && accurateRows.length > 0) {
-          result.push(...accurateRows);
-          continue;
-        }
-
-        const fallbackRow = fallbackByProductId.get(Number(item.product_id));
-        if (fallbackRow) {
-          result.push(fallbackRow);
-        }
-      }
-
-      return result;
-    }
-
     const shouldUseAccurate =
       filteredData.length > 0 &&
-      (deferredSearchText.trim().length > 0 || filteredData.length <= 30);
+      (searchText.trim().length > 0 || filteredData.length <= 30);
 
     if (!shouldUseAccurate) {
       return filteredData;
@@ -588,16 +423,7 @@ export default function InventorySummaryPage() {
     }
 
     return result;
-  }, [
-    accurateRowsByProductId,
-    deferredSearchText,
-    filteredData,
-    isShowroomUser,
-    showroomFallbackRows,
-  ]);
-
-  const showroomAccurateLoading =
-    isShowroomUser && !loading && filteredData.length > 0 && accurateLoading;
+  }, [accurateRowsByProductId, filteredData, searchText]);
 
   /* ========== Export columns ========== */
   const exportColumns: ExportColumn[] = [
@@ -701,13 +527,6 @@ export default function InventorySummaryPage() {
               title="تقرير حركة المخزون"
               pdfOrientation="landscape"
             />
-          </div>
-        )}
-
-        {showroomAccurateLoading && (
-          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            جاري تحسين دقة الأرقام في الخلفية...
           </div>
         )}
 

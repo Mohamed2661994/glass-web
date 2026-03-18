@@ -24,11 +24,6 @@ import { useUserPreferences } from "@/hooks/use-user-preferences";
 import api from "@/services/api";
 import { getTodayDate } from "@/lib/constants";
 import { ProductLookupModal } from "@/components/product-lookup-modal";
-import { loadStockSnapshot } from "@/lib/stock-snapshot";
-import {
-  getTransferNeededProducts,
-  type LowStockReorderItem,
-} from "@/lib/low-stock-reorder";
 import {
   FileText,
   Truck,
@@ -242,8 +237,6 @@ interface Invoice {
   created_at: string;
   created_by?: number;
   created_by_name?: string;
-  updated_by?: number;
-  updated_by_name?: string;
 }
 
 interface Transfer {
@@ -793,7 +786,6 @@ export default function DashboardPage() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   const isRetail = branchId === 1;
-  const LOW_STOCK_CACHE_KEY = "low_stock_reorder_cache_v1";
 
   // Real-time: refresh dashboard when any data changes
   useRealtime(
@@ -1101,100 +1093,59 @@ export default function DashboardPage() {
       setLoadingTransferCount(false);
       return;
     }
-
-    let restoredFromCache = false;
-
-    try {
-      const raw = localStorage.getItem(LOW_STOCK_CACHE_KEY);
-      if (raw) {
-        const cached = JSON.parse(raw) as {
-          data?: LowStockReorderItem[];
-          retailStock?: Record<number, number>;
-          wholesaleStock?: Record<number, number>;
-        };
-
-        if (Array.isArray(cached?.data)) {
-          setTransferNeededCount(
-            getTransferNeededProducts(
-              cached.data,
-              cached.retailStock || {},
-              cached.wholesaleStock || {},
-            ).length,
-          );
-          setLoadingTransferCount(false);
-          restoredFromCache = true;
-        }
-      }
-    } catch {}
-
-    if (!restoredFromCache) {
-      setLoadingTransferCount(true);
-    }
-
+    setLoadingTransferCount(true);
     (async () => {
       try {
-        const [lowStockRes, retailSnapshot, wholesaleSnapshot] =
-          await Promise.all([
-            api.get("/reports/low-stock", {
-              params: { limit_quantity: 5, _t: Date.now() },
-            }),
-            loadStockSnapshot({
-              endpoint: "/products",
-              params: {
-                branch_id: 1,
-                invoice_type: "retail",
-                movement_type: "sale",
-              },
-              cacheKey: "lookup_retail",
-            }),
-            loadStockSnapshot({
-              endpoint: "/products",
-              params: {
-                branch_id: 2,
-                invoice_type: "wholesale",
-                movement_type: "sale",
-              },
-              cacheKey: "lookup_wholesale",
-            }),
-          ]);
+        const [lowStockRes, wholesaleRes] = await Promise.all([
+          api.get("/reports/low-stock", {
+            params: { limit_quantity: 5, _t: Date.now() },
+          }),
+          api.get("/reports/low-stock", {
+            params: { limit_quantity: 999999, warehouse_id: 2, _t: Date.now() },
+          }),
+        ]);
 
-        const lowItems: LowStockReorderItem[] = Array.isArray(lowStockRes.data)
-          ? lowStockRes.data
-          : [];
+        const lowItems: {
+          product_id: number;
+          warehouse_name: string;
+          current_stock: number;
+          wholesale_package?: string | null;
+        }[] = Array.isArray(lowStockRes.data) ? lowStockRes.data : [];
 
-        const relevantProductIds = Array.from(
-          new Set(
-            lowItems.map((item) => Number(item.product_id)).filter(Boolean),
-          ),
-        );
+        // Build wholesale stock map
+        const wsItems: {
+          product_id: number;
+          warehouse_name: string;
+          current_stock: number;
+        }[] = Array.isArray(wholesaleRes.data) ? wholesaleRes.data : [];
+        const wsMap: Record<number, number> = {};
+        for (const item of wsItems) {
+          if (item.warehouse_name === "المخزن الرئيسي") {
+            wsMap[item.product_id] = Math.max(
+              wsMap[item.product_id] || 0,
+              item.current_stock,
+            );
+          }
+        }
 
-        const retailMap = Object.fromEntries(
-          relevantProductIds.map((productId) => [
-            productId,
-            Number(retailSnapshot?.resolvedQtyById?.[productId] || 0),
-          ]),
-        );
-        const wholesaleMap = Object.fromEntries(
-          relevantProductIds.map((productId) => [
-            productId,
-            Number(wholesaleSnapshot?.resolvedQtyById?.[productId] || 0),
-          ]),
-        );
+        // Apply same filters as low-stock-reorder page
+        const filtered = lowItems.filter((i) => {
+          const wsQty = wsMap[i.product_id] ?? 0;
+          if (
+            i.warehouse_name !== "مخزن المعرض" ||
+            i.current_stock > 5 ||
+            i.current_stock < 0 ||
+            !i.wholesale_package
+          ) {
+            return false;
+          }
+          if (!(i.current_stock > 0 || wsQty > 0)) {
+            return false;
+          }
+          return true;
+        });
 
-        try {
-          localStorage.setItem(
-            LOW_STOCK_CACHE_KEY,
-            JSON.stringify({
-              data: lowItems,
-              retailStock: retailMap,
-              wholesaleStock: wholesaleMap,
-            }),
-          );
-        } catch {}
-
-        setTransferNeededCount(
-          getTransferNeededProducts(lowItems, retailMap, wholesaleMap).length,
-        );
+        setTransferNeededCount(filtered.length);
       } catch {
         setTransferNeededCount(0);
       } finally {
@@ -1370,41 +1321,13 @@ export default function DashboardPage() {
         });
         const all: Invoice[] = Array.isArray(data) ? data : (data.data ?? []);
         const wsInvoices = all.filter((i) => i.invoice_type === "wholesale");
-        const candidateInvoices = wsInvoices.filter((inv) => {
-          const createdByCurrentUser =
-            inv.created_by === user?.id ||
-            inv.created_by_name === user?.username;
-
-          return createdByCurrentUser && inv.payment_status !== "paid";
-        });
-
-        const invoiceDetails = await Promise.allSettled(
-          candidateInvoices.map(async (invoice) => {
-            try {
-              const detailRes = await api.get(`/invoices/${invoice.id}`);
-              const detailedInvoice = detailRes.data as Invoice;
-              return detailedInvoice || invoice;
-            } catch {
-              return invoice;
-            }
-          }),
-        );
-
-        const pending = invoiceDetails
-          .map((result, index) =>
-            result.status === "fulfilled"
-              ? result.value
-              : candidateInvoices[index],
+        // Show wholesale invoices created by this retail user that are not yet paid
+        const pending = wsInvoices
+          .filter(
+            (inv) =>
+              inv.created_by_name === user?.username &&
+              inv.payment_status !== "paid",
           )
-          .filter((inv) => {
-            const handledByAnotherUser =
-              (inv.updated_by && inv.updated_by !== inv.created_by) ||
-              (inv.updated_by_name &&
-                inv.updated_by_name !== inv.created_by_name &&
-                inv.updated_by_name !== user?.username);
-
-            return !handledByAnotherUser;
-          })
           .sort((a, b) => b.id - a.id);
         setPendingWholesale(pending);
       } catch (err) {
