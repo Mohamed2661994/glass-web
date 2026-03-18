@@ -2,6 +2,10 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
+import {
+  getPrintPageRule,
+  shouldUseBrowserOrientationSelection,
+} from "@/lib/print";
 import api from "@/services/api";
 
 interface InvoiceItem {
@@ -107,12 +111,20 @@ function InvoicePrintPage() {
   const [showCustomPhone, setShowCustomPhone] = useState(true);
   const [fontFamily, setFontFamily] = useState("Tahoma, Arial, sans-serif");
   const [isPrinting, setIsPrinting] = useState(false);
+  const [allowBrowserOrientationSelection, setAllowBrowserOrientationSelection] =
+    useState(false);
+  const [printBrowserReady, setPrintBrowserReady] = useState(false);
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const invoiceRef = useRef<HTMLDivElement>(null);
   const paperSize = FIXED_INVOICE_PAPER_SIZE;
 
   /* ──── تحميل الإعدادات من localStorage ──── */
+  useEffect(() => {
+    setAllowBrowserOrientationSelection(shouldUseBrowserOrientationSelection());
+    setPrintBrowserReady(true);
+  }, []);
+
   useEffect(() => {
     try {
       const raw = localStorage.getItem("appSettings");
@@ -242,7 +254,13 @@ function InvoicePrintPage() {
         tfoot .summary-row td { border-bottom:none; padding:1px 4px; font-size:${fontSize + 1}px; }
         tfoot .summary-remaining td { font-size:${fontSize + 3}px; }
         hr { border:none; border-top:2px solid #000; margin-bottom:10px; }
-        @page { size:${pageW}mm ${pageH}mm; margin:${marginMM}mm; }
+        ${getPrintPageRule({
+          paperSize,
+          margin: `${marginMM}mm`,
+          widthMM: pageW,
+          heightMM: pageH,
+          allowBrowserOrientationSelection,
+        })}
         table { page-break-inside:auto; break-inside:auto; }
         tr { page-break-inside:avoid; break-inside:avoid; }
         thead { display:table-header-group; }
@@ -323,7 +341,7 @@ function InvoicePrintPage() {
 
   /* ──── Auto-print ──── */
   useEffect(() => {
-    if (invoice && !loading && !isPreview) {
+    if (invoice && !loading && !isPreview && printBrowserReady) {
       try {
         const raw = localStorage.getItem("appSettings");
         if (raw) {
@@ -333,7 +351,7 @@ function InvoicePrintPage() {
       } catch {}
       setTimeout(() => handlePrint(), 600);
     }
-  }, [invoice, loading, isPreview, handlePrint]);
+  }, [invoice, loading, isPreview, handlePrint, printBrowserReady]);
 
   if (loading) {
     return (
@@ -745,6 +763,19 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                     </button>
                   ))}
                 </div>
+                {allowBrowserOrientationSelection && (
+                  <p
+                    style={{
+                      marginTop: 8,
+                      fontSize: 12,
+                      color: "#92400e",
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    على Windows داخل Chrome وEdge يتم اختيار اتجاه الورقة من
+                    نافذة الطباعة لضمان نفس السلوك في المتصفحين.
+                  </p>
+                )}
               </div>
 
               {/* الهوامش */}

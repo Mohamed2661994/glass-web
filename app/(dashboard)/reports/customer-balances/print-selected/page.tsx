@@ -79,7 +79,7 @@ export default function PrintSelectedCustomersPage() {
     >
       <style>{`
         @page {
-          size: A4 landscape;
+          size: A4;
           margin: 8mm 10mm;
         }
 

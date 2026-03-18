@@ -180,7 +180,7 @@ export default function InventorySummaryPrintPage() {
         }
 
         @page {
-          size: A4 portrait;
+          size: A4;
           margin: 10mm;
         }
 
