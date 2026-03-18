@@ -286,12 +286,15 @@ export default function EditWholesaleInvoicePage() {
           price: item.price,
           quantity: item.quantity,
           discount: item.discount || 0,
+          variant_id: Number(item.variant_id || 0),
           is_return: item.is_return || false,
         }));
 
         const baseDraft = {
           movementType: inv.movement_type,
-          invoiceDate: inv.invoice_date ? inv.invoice_date.substring(0, 10) : "",
+          invoiceDate: inv.invoice_date
+            ? inv.invoice_date.substring(0, 10)
+            : "",
           invoiceNotes: inv.notes || "",
           customerName: inv.customer_name || "",
           customerPhone: inv.customer_phone || "",
