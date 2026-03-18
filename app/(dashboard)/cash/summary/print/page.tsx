@@ -437,7 +437,7 @@ function CashSummaryPrintInner() {
       {/* Print styles */}
       <style>{`
         @media print {
-          @page { size: ${isLandscape ? `${FIXED_CASH_SUMMARY_PAPER_SIZE} landscape` : FIXED_CASH_SUMMARY_PAPER_SIZE}; margin: 15mm; }
+          @page { size: ${FIXED_CASH_SUMMARY_PAPER_SIZE}; margin: 15mm; }
           body { background: #fff !important; }
           * { overflow: visible !important; }
         }
