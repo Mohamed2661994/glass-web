@@ -448,8 +448,7 @@ export default function InventorySummaryPage() {
   }));
 
   const pdfColumns: ExportColumn[] = [
-    { header: "اسم الصنف", key: "product_name", width: 56 },
-    { header: "العبوة", key: "package_name", width: 24 },
+    { header: "اسم الصنف - العبوة - المصنع", key: "product_name_full", width: 80 },
     { header: "الرصيد", key: "balance", width: 20 },
   ];
 
@@ -458,8 +457,14 @@ export default function InventorySummaryPage() {
     const totalOut = Number(item.total_out || 0);
 
     return {
-      product_name: item.product_name,
-      package_name: getWholesalePackageOnly(item.package_name) || "—",
+      product_name_full: [
+        item.product_name,
+        getWholesalePackageOnly(item.package_name),
+        item.manufacturer_name || "",
+      ]
+        .map((value) => String(value || "").trim())
+        .filter(Boolean)
+        .join(" - "),
       balance: totalIn - totalOut,
     };
   });
