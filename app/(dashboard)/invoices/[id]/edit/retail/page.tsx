@@ -100,6 +100,7 @@ export default function EditRetailInvoicePage() {
   const [invoiceDate, setInvoiceDate] = useState("");
   const [invoiceNotes, setInvoiceNotes] = useState("");
   const [showNotes, setShowNotes] = useState(false);
+  const [invoiceRevision, setInvoiceRevision] = useState<number | null>(null);
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -271,6 +272,8 @@ export default function EditRetailInvoicePage() {
           router.push("/invoices");
           return;
         }
+
+        setInvoiceRevision(Number(inv.invoice_revision || 0));
 
         const loadedItems = (inv.items || []).map((item: any, idx: number) => ({
           uid: `${item.product_id}_${idx}_${Date.now()}`,
@@ -768,6 +771,11 @@ export default function EditRetailInvoicePage() {
   const [previewOpen, setPreviewOpen] = useState(false);
 
   const updateInvoice = async () => {
+    if (invoiceRevision === null) {
+      toast.error("بيانات الفاتورة لم تكتمل بعد");
+      return;
+    }
+
     if (items.length === 0) {
       toast.error("لا يوجد أصناف");
       return;
@@ -819,6 +827,7 @@ export default function EditRetailInvoicePage() {
         previous_balance: Number(previousBalance) ?? 0,
         apply_items_discount: applyItemsDiscount,
         invoice_date: invoiceDate || undefined,
+        invoice_revision: invoiceRevision,
         updated_by: user?.id,
         updated_by_name: user?.username,
         ...(movementType === "purchase" && supplierName
@@ -837,6 +846,16 @@ export default function EditRetailInvoicePage() {
       invalidateCache();
       window.location.reload();
     } catch (err: any) {
+      if (err.response?.status === 409) {
+        toast.error(
+          err.response?.data?.error ||
+            "الفاتورة اتعدلت من شاشة أخرى. سنعيد تحميل أحدث نسخة مع الاحتفاظ بتعديلاتك",
+        );
+        preserveDraftOnUnloadRef.current = true;
+        window.location.reload();
+        return;
+      }
+
       console.error(
         "❌ Invoice update error:",
         err.response?.status,
