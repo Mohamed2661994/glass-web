@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, Globe, Pencil, Printer } from "lucide-react";
+import { Eye, Globe, Pencil, Printer, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/services/api";
 import { useAuth } from "@/app/context/auth-context";
 import { useRealtime } from "@/hooks/use-realtime";
-import { onUpdate } from "@/lib/broadcast";
+import { broadcastUpdate, onUpdate } from "@/lib/broadcast";
 import { hasPermission } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,16 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type InvoiceTypeFilter = "all" | "retail" | "wholesale";
 
@@ -49,9 +59,13 @@ export default function OnlineInvoicesPage() {
   const router = useRouter();
   const { user, authReady } = useAuth();
   const canEditInvoice = authReady && hasPermission(user, "invoice_edit");
+  const canDeleteInvoice = authReady && hasPermission(user, "invoice_delete");
 
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<OnlineInvoice[]>([]);
+  const [deleting, setDeleting] = useState<number | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [invoiceType, setInvoiceType] = useState<InvoiceTypeFilter>("all");
   const [search, setSearch] = useState("");
@@ -99,7 +113,15 @@ export default function OnlineInvoicesPage() {
     } finally {
       setLoading(false);
     }
-  }, [dateFrom, dateTo, externalOrderIdSearch, invoiceIdSearch, invoiceType, page, search]);
+  }, [
+    dateFrom,
+    dateTo,
+    externalOrderIdSearch,
+    invoiceIdSearch,
+    invoiceType,
+    page,
+    search,
+  ]);
 
   useEffect(() => {
     fetchInvoices();
@@ -125,6 +147,29 @@ export default function OnlineInvoicesPage() {
     setPage(1);
   };
 
+  const confirmDelete = (id: number) => {
+    setInvoiceToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!invoiceToDelete || deleting) return;
+
+    try {
+      setDeleting(invoiceToDelete);
+      setDeleteDialogOpen(false);
+      await api.delete(`/invoices/${invoiceToDelete}`);
+      toast.success("تم حذف الفاتورة الأونلاين");
+      broadcastUpdate("invoice_deleted");
+      fetchInvoices();
+    } catch {
+      toast.error("فشل حذف الفاتورة الأونلاين");
+    } finally {
+      setDeleting(null);
+      setInvoiceToDelete(null);
+    }
+  };
+
   const getStatusBadge = (status: OnlineInvoice["payment_status"]) => {
     if (status === "paid") {
       return <Badge className="bg-green-600">مدفوعة</Badge>;
@@ -136,7 +181,12 @@ export default function OnlineInvoicesPage() {
   };
 
   const hasActiveFilters = Boolean(
-    search || invoiceIdSearch || externalOrderIdSearch || dateFrom || dateTo || invoiceType !== "all",
+    search ||
+    invoiceIdSearch ||
+    externalOrderIdSearch ||
+    dateFrom ||
+    dateTo ||
+    invoiceType !== "all",
   );
 
   return (
@@ -256,7 +306,10 @@ export default function OnlineInvoicesPage() {
                 ))
               ) : data.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="p-8 text-center text-muted-foreground">
+                  <td
+                    colSpan={11}
+                    className="p-8 text-center text-muted-foreground"
+                  >
                     لا توجد فواتير أونلاين
                   </td>
                 </tr>
@@ -271,7 +324,9 @@ export default function OnlineInvoicesPage() {
                       </Badge>
                     </td>
                     <td className="p-3">{invoice.customer_name || "نقدي"}</td>
-                    <td className="p-3">{toNumber(invoice.total).toFixed(2)}</td>
+                    <td className="p-3">
+                      {toNumber(invoice.total).toFixed(2)}
+                    </td>
                     <td className="p-3 text-green-600">
                       {toNumber(invoice.paid_amount).toFixed(2)}
                     </td>
@@ -279,11 +334,17 @@ export default function OnlineInvoicesPage() {
                       {toNumber(invoice.remaining_amount).toFixed(2)}
                     </td>
                     <td className="p-3">
-                      <Badge className="bg-sky-600">{invoice.invoice_source || "online"}</Badge>
+                      <Badge className="bg-sky-600">
+                        {invoice.invoice_source || "online"}
+                      </Badge>
                     </td>
-                    <td className="p-3">{getStatusBadge(invoice.payment_status)}</td>
+                    <td className="p-3">
+                      {getStatusBadge(invoice.payment_status)}
+                    </td>
                     <td className="p-3 text-xs text-muted-foreground">
-                      {new Date(invoice.invoice_date || invoice.created_at).toLocaleDateString("ar-EG")}
+                      {new Date(
+                        invoice.invoice_date || invoice.created_at,
+                      ).toLocaleDateString("ar-EG")}
                     </td>
                     <td className="p-3">
                       <div className="flex items-center justify-center gap-2">
@@ -299,16 +360,33 @@ export default function OnlineInvoicesPage() {
                             size="icon"
                             variant="outline"
                             onClick={() =>
-                              router.push(`/invoices/${invoice.id}/edit/${invoice.invoice_type}`)
+                              router.push(
+                                `/invoices/${invoice.id}/edit/${invoice.invoice_type}`,
+                              )
                             }
                           >
                             <Pencil size={16} />
                           </Button>
                         )}
+                        {canDeleteInvoice && (
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            disabled={deleting === invoice.id}
+                            onClick={() => confirmDelete(invoice.id)}
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        )}
                         <Button
                           size="icon"
                           variant="outline"
-                          onClick={() => window.open(`/invoices/${invoice.id}/print`, "_blank")}
+                          onClick={() =>
+                            window.open(
+                              `/invoices/${invoice.id}/print`,
+                              "_blank",
+                            )
+                          }
                         >
                           <Printer size={16} />
                         </Button>
@@ -355,19 +433,27 @@ export default function OnlineInvoicesPage() {
 
                 <div className="p-3 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium">{invoice.customer_name || "نقدي"}</span>
+                    <span className="font-medium">
+                      {invoice.customer_name || "نقدي"}
+                    </span>
                     <Badge variant="outline">
                       {invoice.invoice_type === "retail" ? "قطاعي" : "جملة"}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">المصدر</span>
-                    <Badge className="bg-sky-600">{invoice.invoice_source || "online"}</Badge>
+                    <Badge className="bg-sky-600">
+                      {invoice.invoice_source || "online"}
+                    </Badge>
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center pt-1">
                     <div>
-                      <p className="text-[10px] text-muted-foreground">الإجمالي</p>
-                      <p className="font-bold text-sm">{toNumber(invoice.total).toFixed(0)}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        الإجمالي
+                      </p>
+                      <p className="font-bold text-sm">
+                        {toNumber(invoice.total).toFixed(0)}
+                      </p>
                     </div>
                     <div>
                       <p className="text-[10px] text-muted-foreground">مدفوع</p>
@@ -386,7 +472,9 @@ export default function OnlineInvoicesPage() {
 
                 <div className="flex items-center justify-between border-t border-border/50 px-2 py-2 bg-muted/30">
                   <span className="text-[10px] text-muted-foreground">
-                    {new Date(invoice.invoice_date || invoice.created_at).toLocaleDateString("ar-EG")}
+                    {new Date(
+                      invoice.invoice_date || invoice.created_at,
+                    ).toLocaleDateString("ar-EG")}
                   </span>
                   <div className="flex items-center gap-1">
                     <Button
@@ -403,17 +491,32 @@ export default function OnlineInvoicesPage() {
                         variant="ghost"
                         className="h-7 w-7"
                         onClick={() =>
-                          router.push(`/invoices/${invoice.id}/edit/${invoice.invoice_type}`)
+                          router.push(
+                            `/invoices/${invoice.id}/edit/${invoice.invoice_type}`,
+                          )
                         }
                       >
                         <Pencil size={14} />
+                      </Button>
+                    )}
+                    {canDeleteInvoice && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7"
+                        disabled={deleting === invoice.id}
+                        onClick={() => confirmDelete(invoice.id)}
+                      >
+                        <Trash2 size={14} />
                       </Button>
                     )}
                     <Button
                       size="icon"
                       variant="ghost"
                       className="h-7 w-7"
-                      onClick={() => window.open(`/invoices/${invoice.id}/print`, "_blank")}
+                      onClick={() =>
+                        window.open(`/invoices/${invoice.id}/print`, "_blank")
+                      }
                     >
                       <Printer size={14} />
                     </Button>
@@ -426,7 +529,11 @@ export default function OnlineInvoicesPage() {
       </div>
 
       <div className="flex justify-between items-center">
-        <Button variant="outline" disabled={page === 1} onClick={() => setPage((prev) => prev - 1)}>
+        <Button
+          variant="outline"
+          disabled={page === 1}
+          onClick={() => setPage((prev) => prev - 1)}
+        >
           السابق
         </Button>
         <span>صفحة {page}</span>
@@ -438,6 +545,26 @@ export default function OnlineInvoicesPage() {
           التالي
         </Button>
       </div>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>هل أنت متأكد من حذف الفاتورة؟</AlertDialogTitle>
+            <AlertDialogDescription>
+              سيتم حذف الفاتورة الأونلاين رقم {invoiceToDelete} نهائياً وسيتم مسح القيد المرتبط بها من اليومية. لا يمكن التراجع عن هذا الإجراء.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              حذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
