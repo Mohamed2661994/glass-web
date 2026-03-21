@@ -1,0 +1,51 @@
+{
+  "info": {
+    "name": "Glass Online Invoices",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Collection for creating online invoices from the external website into Glass System."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://your-backend-domain.com"
+    },
+    {
+      "key": "apiKey",
+      "value": "replace-with-online-invoice-api-key"
+    }
+  ],
+  "item": [
+    {
+      "name": "Create Online Invoice",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"source\": \"website\",\n  \"externalOrderId\": \"ORD-10025\",\n  \"invoiceType\": \"retail\",\n  \"customer\": {\n    \"name\": \"اسم العميل\",\n    \"phone\": \"01000000000\"\n  },\n  \"notes\": \"ملاحظات الطلب\",\n  \"paidAmount\": 0,\n  \"items\": [\n    {\n      \"code\": \"6223001234567\",\n      \"quantity\": 2\n    },\n    {\n      \"code\": \"6223000001111\",\n      \"quantity\": 1,\n      \"package\": \"علبة\"\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/integrations/online-invoices",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "integrations",
+            "online-invoices"
+          ]
+        },
+        "description": "Creates a normal invoice inside Glass System from a confirmed website order."
+      },
+      "response": []
+    }
+  ]
+}

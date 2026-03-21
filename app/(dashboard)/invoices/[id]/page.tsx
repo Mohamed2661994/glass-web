@@ -165,6 +165,9 @@ export default function InvoiceDetailsPage() {
         {invoice.is_return && (
           <Badge className="bg-orange-500 mr-3 text-sm">مرتجع</Badge>
         )}
+        {invoice.invoice_source && (
+          <Badge className="bg-sky-600 mr-3 text-sm">أونلاين</Badge>
+        )}
       </h1>
 
       {/* Invoice Info */}
@@ -216,6 +219,16 @@ export default function InvoiceDetailsPage() {
           {invoice.created_by_name && (
             <p>
               <strong>أنشأها:</strong> {invoice.created_by_name}
+            </p>
+          )}
+          {invoice.invoice_source && (
+            <p>
+              <strong>المصدر:</strong> {invoice.invoice_source}
+            </p>
+          )}
+          {invoice.external_order_id && (
+            <p>
+              <strong>رقم الطلب الخارجي:</strong> {invoice.external_order_id}
             </p>
           )}
           {invoice.updated_by_name && (

@@ -620,6 +620,7 @@ const ALL_PAGES: { label: string; href: string }[] = [
   { label: "فاتورة قطاعي", href: "/invoices/create/retail" },
   { label: "فاتورة جملة", href: "/invoices/create/wholesale" },
   { label: "قائمة الفواتير", href: "/invoices" },
+  { label: "فواتير الأونلاين", href: "/invoices/online" },
   /* ── الأصناف ── */
   { label: "الأصناف", href: "/products" },
   { label: "استيراد أصناف", href: "/products/import" },
