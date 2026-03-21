@@ -22,6 +22,7 @@ type CashInItem = {
   remaining_amount: number;
   source_type: "manual" | "invoice" | "customer_payment";
   customer_name: string;
+  invoice_source?: string | null;
   notes?: string | null;
 };
 
@@ -101,6 +102,13 @@ const parseMetadata = (notes?: string | null) => {
 
 const cleanNotes = (notes?: string | null) =>
   notes?.replace(/\{\{[-\d.|]+\}\}/, "").trim() || null;
+
+const isOnlineInvoiceCashEntry = (item: CashInItem) => {
+  if (item.source_type !== "invoice") return false;
+  if (String(item.invoice_source || "").trim()) return true;
+
+  return /طلب\s+اونلاين/i.test(cleanNotes(item.notes) || "");
+};
 
 const effectivePaid = (i: CashInItem) => {
   const meta = parseMetadata(i.notes);
@@ -308,11 +316,12 @@ function CashSummaryPrintInner() {
             isBold={isBold}
             rows={filteredIn.map((i) => {
               const meta = parseMetadata(i.notes);
+              const isOnlineInvoice = isOnlineInvoiceCashEntry(i);
               const remaining = meta
                 ? meta.remaining
                 : Number(i.remaining_amount || 0);
               return [
-                i.customer_name,
+                isOnlineInvoice ? `${i.customer_name} [أونلاين]` : i.customer_name,
                 effectivePaid(i),
                 remaining !== 0 ? remaining : "-",
               ];

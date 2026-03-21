@@ -56,6 +56,7 @@ type CashInItem = {
   paid_amount: number;
   source_type: "manual" | "invoice" | "customer_payment";
   customer_name: string;
+  invoice_source?: string | null;
   notes?: string | null;
 };
 
@@ -99,6 +100,13 @@ const parseMetadata = (notes?: string | null) => {
 
 const cleanNotes = (notes?: string | null) =>
   notes?.replace(/\{\{[-\d.|]+\}\}/, "").trim() || null;
+
+const isOnlineInvoiceCashEntry = (item: CashInItem) => {
+  if (item.source_type !== "invoice") return false;
+  if (String(item.invoice_source || "").trim()) return true;
+
+  return /طلب\s+اونلاين/i.test(cleanNotes(item.notes) || "");
+};
 
 /** Get effective paid amount for a cash-in item */
 const effectivePaid = (i: CashInItem) => {
@@ -881,6 +889,7 @@ export default function CashSummaryPage() {
 
               {filteredCashIn.map((i, idx) => {
                 const meta = parseMetadata(i.notes);
+                const isOnlineInvoice = isOnlineInvoiceCashEntry(i);
                 const displayAmount = meta
                   ? meta.paid
                   : i.source_type === "invoice"
@@ -895,9 +904,16 @@ export default function CashSummaryPage() {
                     className={`py-3 space-y-1.5 ${idx > 0 ? "border-t" : ""}`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-sm">
-                        {i.customer_name}
-                      </span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="font-bold text-sm truncate">
+                          {i.customer_name}
+                        </span>
+                        {isOnlineInvoice && (
+                          <Badge className="bg-sky-100 text-sky-700 border border-sky-200 hover:bg-sky-100 text-[10px] px-1.5 py-0 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-900">
+                            أونلاين
+                          </Badge>
+                        )}
+                      </div>
                       <span className="text-green-500 font-extrabold tabular-nums">
                         {Math.round(Number(displayAmount)).toLocaleString()} ج.م
                       </span>
@@ -928,7 +944,9 @@ export default function CashSummaryPage() {
                         }
                       >
                         {i.source_type === "invoice"
-                          ? "فاتورة"
+                          ? isOnlineInvoice
+                            ? "فاتورة أونلاين"
+                            : "فاتورة"
                           : i.source_type === "customer_payment"
                             ? "سداد عميل"
                             : "وارد يدوي"}
