@@ -43,7 +43,8 @@ export default function InvoiceDetailsPage() {
   const [sharingWa, setSharingWa] = useState(false);
   const [togglingHidden, setTogglingHidden] = useState(false);
   const canEditInvoice = authReady && hasPermission(user, "invoice_edit");
-  const canManageInvoiceVisibility = authReady && isAdminUser(user);
+  const canManageInvoiceVisibility =
+    authReady && Number(user?.id) === 7 && invoice?.invoice_type === "wholesale";
 
   const fetchInvoice = useCallback(async () => {
     try {

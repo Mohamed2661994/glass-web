@@ -58,6 +58,7 @@ interface Invoice {
   created_by_name?: string;
   updated_by?: number;
   updated_by_name?: string;
+  hidden_from_list?: boolean;
 }
 
 interface InvoiceResolvedFinancials {
@@ -119,6 +120,8 @@ export default function InvoicesPage() {
   const { user, authReady } = useAuth();
   const canEditInvoice = authReady && hasPermission(user, "invoice_edit");
   const canDeleteInvoice = authReady && hasPermission(user, "invoice_delete");
+  const canManageHiddenInvoices =
+    authReady && Number(user?.id) === 7 && user?.branch_id === 2;
 
   // branch_id 1 = retail, branch_id 2 = wholesale
   const invoiceType =
@@ -132,6 +135,7 @@ export default function InvoicesPage() {
   const [invoiceIdSearch, setInvoiceIdSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [listVisibility, setListVisibility] = useState("visible");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
@@ -171,6 +175,7 @@ export default function InvoicesPage() {
       if (movementType !== "all") params.movement_type = movementType;
       if (debouncedSearch) params.customer_name = debouncedSearch;
       if (invoiceIdSearch) params.invoice_id = invoiceIdSearch;
+      if (canManageHiddenInvoices) params.list_visibility = listVisibility;
 
       if (hasDateFilter) {
         if (dateFrom) params.date_from = dateFrom;
@@ -210,6 +215,7 @@ export default function InvoicesPage() {
     page,
     invoiceType,
     movementType,
+    listVisibility,
     debouncedSearch,
     invoiceIdSearch,
     dateFrom,
@@ -236,6 +242,7 @@ export default function InvoicesPage() {
     invoiceType,
     page,
     movementType,
+    listVisibility,
     debouncedSearch,
     invoiceIdSearch,
     dateFrom,
@@ -402,6 +409,25 @@ export default function InvoicesPage() {
               </SelectContent>
             </Select>
 
+            {canManageHiddenInvoices && (
+              <Select
+                value={listVisibility}
+                onValueChange={(value) => {
+                  setListVisibility(value);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="md:w-40">
+                  <SelectValue placeholder="ظهور الفواتير" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="visible">الظاهرة فقط</SelectItem>
+                  <SelectItem value="hidden">المخفية فقط</SelectItem>
+                  <SelectItem value="all">الكل</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground whitespace-nowrap">
                 من
@@ -436,6 +462,8 @@ export default function InvoicesPage() {
             invoiceIdSearch ||
             search ||
             movementType !== "all") && (
+            movementType !== "all" ||
+            (canManageHiddenInvoices && listVisibility !== "visible")) && (
             <Button
               variant="ghost"
               size="sm"
@@ -446,6 +474,7 @@ export default function InvoicesPage() {
                 setDateFrom("");
                 setDateTo("");
                 setMovementType("all");
+                setListVisibility("visible");
                 setPage(1);
               }}
             >
