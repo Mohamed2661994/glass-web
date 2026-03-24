@@ -18,7 +18,7 @@ import {
 import { useRealtime } from "@/hooks/use-realtime";
 import { onUpdate } from "@/lib/broadcast";
 import { useAuth } from "@/app/context/auth-context";
-import { hasPermission } from "@/lib/permissions";
+import { hasPermission, isAdminUser } from "@/lib/permissions";
 
 interface InvoiceItem {
   product_id: number;
@@ -41,7 +41,9 @@ export default function InvoiceDetailsPage() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [sharingWa, setSharingWa] = useState(false);
+  const [togglingHidden, setTogglingHidden] = useState(false);
   const canEditInvoice = authReady && hasPermission(user, "invoice_edit");
+  const canManageInvoiceVisibility = authReady && isAdminUser(user);
 
   const fetchInvoice = useCallback(async () => {
     try {
@@ -158,6 +160,35 @@ export default function InvoiceDetailsPage() {
     ? new Date(invoiceDateValue).toLocaleDateString("ar-EG")
     : "-";
 
+  const toggleInvoiceVisibility = async () => {
+    if (!canManageInvoiceVisibility || togglingHidden) return;
+
+    try {
+      setTogglingHidden(true);
+      const nextHiddenState = !Boolean(invoice.hidden_from_list);
+      const res = await axios.patch(`/invoices/${invoice.id}/list-visibility`, {
+        hidden_from_list: nextHiddenState,
+      });
+
+      setInvoice((prev: any) => ({
+        ...prev,
+        hidden_from_list: Boolean(res.data?.invoice?.hidden_from_list),
+        hidden_from_list_at: res.data?.invoice?.hidden_from_list_at || null,
+        hidden_from_list_by: res.data?.invoice?.hidden_from_list_by || null,
+      }));
+
+      toast.success(
+        nextHiddenState
+          ? "تم إخفاء الفاتورة من صفحة عرض الفواتير"
+          : "تمت إعادة إظهار الفاتورة في صفحة عرض الفواتير",
+      );
+    } catch {
+      toast.error("فشل تحديث ظهور الفاتورة");
+    } finally {
+      setTogglingHidden(false);
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto" dir="rtl">
       <h1 className="text-xl md:text-2xl font-bold">
@@ -167,6 +198,9 @@ export default function InvoiceDetailsPage() {
         )}
         {invoice.invoice_source && (
           <Badge className="bg-sky-600 mr-3 text-sm">أونلاين</Badge>
+        )}
+        {invoice.hidden_from_list && (
+          <Badge className="bg-slate-700 mr-3 text-sm">مخفية من العرض</Badge>
         )}
       </h1>
 
@@ -234,6 +268,12 @@ export default function InvoiceDetailsPage() {
           {invoice.updated_by_name && (
             <p>
               <strong>آخر تعديل:</strong> {invoice.updated_by_name}
+            </p>
+          )}
+          {invoice.hidden_from_list && (
+            <p>
+              <strong>إخفاؤها من العرض بواسطة:</strong>{" "}
+              {invoice.hidden_from_list_by || "Admin"}
             </p>
           )}
         </CardContent>
@@ -362,6 +402,19 @@ export default function InvoiceDetailsPage() {
       )}
 
       <div className="flex gap-3 flex-wrap">
+        {canManageInvoiceVisibility && (
+          <Button
+            variant={invoice.hidden_from_list ? "default" : "destructive"}
+            disabled={togglingHidden}
+            onClick={toggleInvoiceVisibility}
+          >
+            {togglingHidden
+              ? "جارٍ التنفيذ..."
+              : invoice.hidden_from_list
+                ? "إظهار في صفحة الفواتير"
+                : "إخفاء من صفحة الفواتير"}
+          </Button>
+        )}
         {canEditInvoice && (
           <Button
             variant="outline"
