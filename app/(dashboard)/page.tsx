@@ -237,6 +237,7 @@ interface Invoice {
   created_at: string;
   created_by?: number;
   created_by_name?: string;
+  updated_by_name?: string;
 }
 
 interface Transfer {
@@ -1327,7 +1328,9 @@ export default function DashboardPage() {
           .filter(
             (inv) =>
               inv.created_by_name === user?.username &&
-              inv.payment_status !== "paid",
+              inv.payment_status !== "paid" &&
+              (!inv.updated_by_name ||
+                inv.updated_by_name === inv.created_by_name),
           )
           .sort((a, b) => b.id - a.id);
         setPendingWholesale(pending);
