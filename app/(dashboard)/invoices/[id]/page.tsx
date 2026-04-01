@@ -44,7 +44,9 @@ export default function InvoiceDetailsPage() {
   const [togglingHidden, setTogglingHidden] = useState(false);
   const canEditInvoice = authReady && hasPermission(user, "invoice_edit");
   const canManageInvoiceVisibility =
-    authReady && Number(user?.id) === 7 && invoice?.invoice_type === "wholesale";
+    authReady &&
+    Number(user?.id) === 7 &&
+    invoice?.invoice_type === "wholesale";
 
   const fetchInvoice = useCallback(async () => {
     try {
@@ -307,6 +309,12 @@ export default function InvoiceDetailsPage() {
                   {items.map((item, idx) => {
                     const unitPrice = calcUnitPrice(item);
                     const itemTotal = calcItemTotal(item);
+                    const itemDisplayName = [
+                      item.product_name,
+                      item.manufacturer,
+                    ]
+                      .filter(Boolean)
+                      .join(" - ");
                     return (
                       <tr
                         key={idx}
@@ -314,7 +322,7 @@ export default function InvoiceDetailsPage() {
                       >
                         <td className="p-2">{idx + 1}</td>
                         <td className="p-2">
-                          {item.product_name}
+                          {itemDisplayName}
                           {item.is_return && (
                             <Badge className="bg-orange-500 mr-2 text-[10px] px-1 py-0">
                               مرتجع
@@ -365,6 +373,9 @@ export default function InvoiceDetailsPage() {
               {items.map((item, idx) => {
                 const unitPrice = calcUnitPrice(item);
                 const itemTotal = calcItemTotal(item);
+                const itemDisplayName = [item.product_name, item.manufacturer]
+                  .filter(Boolean)
+                  .join(" - ");
                 return (
                   <div
                     key={idx}
@@ -372,7 +383,7 @@ export default function InvoiceDetailsPage() {
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-sm">
-                        {idx + 1}. {item.product_name}
+                        {idx + 1}. {itemDisplayName}
                       </span>
                       {item.is_return && (
                         <Badge className="bg-orange-500 text-[10px] px-1.5 py-0">
