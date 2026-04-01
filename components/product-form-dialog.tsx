@@ -210,8 +210,10 @@ export function ProductFormDialog({
     setForm({
       ...prod,
       purchase_price: prod.purchase_price ?? "",
-      purchase_price_adjustment: "",
-      purchase_price_adjustment_is_percentage: false,
+      purchase_price_adjustment: prod.purchase_price_adjustment ?? "",
+      purchase_price_adjustment_is_percentage: Boolean(
+        prod.purchase_price_adjustment_is_percentage,
+      ),
       wholesale_price: prod.wholesale_price ?? "",
       retail_purchase_price: prod.retail_purchase_price ?? "",
       retail_price: prod.retail_price ?? "",
@@ -408,8 +410,12 @@ export function ProductFormDialog({
         wholesale_package,
         retail_package,
         purchase_price: hasWholesale ? Number(form.purchase_price || 0) : 0,
-        purchase_price_adjustment: 0,
-        purchase_price_adjustment_is_percentage: false,
+        purchase_price_adjustment: hasWholesale
+          ? Number(form.purchase_price_adjustment || 0)
+          : 0,
+        purchase_price_adjustment_is_percentage: hasWholesale
+          ? Boolean(form.purchase_price_adjustment_is_percentage)
+          : false,
         retail_purchase_price: Number(form.retail_purchase_price || 0),
         wholesale_price: hasWholesale ? Number(form.wholesale_price || 0) : 0,
         retail_price: Number(form.retail_price || 0),
