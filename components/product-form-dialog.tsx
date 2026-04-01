@@ -197,6 +197,33 @@ export function ProductFormDialog({
     return formatPriceValue(Math.max(0, base - discountValue));
   };
 
+  const getPurchasePriceBaseFromSavedValue = (
+    rawSavedPrice: unknown,
+    rawAdjustment: unknown,
+    isPercentage: boolean,
+  ) => {
+    const savedPrice = Number(rawSavedPrice);
+    const adjustment = Number(rawAdjustment);
+
+    if (!Number.isFinite(savedPrice)) {
+      return "";
+    }
+
+    if (!Number.isFinite(adjustment) || adjustment === 0) {
+      return formatPriceValue(savedPrice);
+    }
+
+    if (isPercentage) {
+      const ratio = 1 - adjustment / 100;
+      if (ratio <= 0) {
+        return formatPriceValue(savedPrice);
+      }
+      return formatPriceValue(savedPrice / ratio);
+    }
+
+    return formatPriceValue(savedPrice + adjustment);
+  };
+
   const populateForm = (prod: any) => {
     const wholesaleParsed = parseWholesale(prod.wholesale_package);
     const retailParsed = parseRetail(prod.retail_package);
@@ -224,7 +251,13 @@ export function ProductFormDialog({
       retail_package_qty2: retailParsed.qty2 || "",
       retail_package_type: retailParsed.type,
     });
-    setPurchasePriceBase(String(prod.purchase_price ?? ""));
+    setPurchasePriceBase(
+      getPurchasePriceBaseFromSavedValue(
+        prod.purchase_price,
+        prod.purchase_price_adjustment,
+        Boolean(prod.purchase_price_adjustment_is_percentage),
+      ),
+    );
 
     setShowDescription(!!prod.description);
   };
