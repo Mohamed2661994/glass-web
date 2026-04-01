@@ -1313,8 +1313,6 @@ export default function DashboardPage() {
       return;
     }
 
-    let cancelled = false;
-
     setLoadingPendingWS(true);
     (async () => {
       try {
@@ -1327,60 +1325,34 @@ export default function DashboardPage() {
         });
         const all: Invoice[] = Array.isArray(data) ? data : (data.data ?? []);
         const wsInvoices = all.filter((i) => i.invoice_type === "wholesale");
-        const candidatePending = wsInvoices.filter((inv) => {
-          const createdByCurrentUser =
-            (user?.id !== undefined && inv.created_by === Number(user.id)) ||
-            inv.created_by_name === user?.username;
-
-          return createdByCurrentUser && inv.payment_status !== "paid";
-        });
-
-        const detailResults = await Promise.allSettled(
-          candidatePending.map(async (invoice) => {
-            try {
-              const { data: detail } = await api.get(
-                `/invoices/${invoice.id}/edit`,
-                {
-                  params: { _t: Date.now() },
-                },
-              );
-
+        // Show wholesale invoices created by this retail user that are not yet paid
+        const pending = wsInvoices
+          .filter(
+            (inv) => {
+              const createdByCurrentUser =
+                (user?.id !== undefined && inv.created_by === Number(user.id)) ||
+                inv.created_by_name === user?.username;
               const reviewedByAnotherUser =
-                (detail?.created_by !== undefined &&
-                  detail?.updated_by !== undefined &&
-                  detail.updated_by !== detail.created_by) ||
-                (!!detail?.updated_by_name &&
-                  detail.updated_by_name !== detail.created_by_name);
+                (inv.updated_by !== undefined && inv.updated_by !== inv.created_by) ||
+                (!!inv.updated_by_name &&
+                  inv.updated_by_name !== inv.created_by_name);
 
-              return reviewedByAnotherUser ? null : invoice;
-            } catch {
-              return invoice;
-            }
-          }),
-        );
-
-        const pending = detailResults
-          .flatMap((result) =>
-            result.status === "fulfilled" && result.value ? [result.value] : [],
+              return (
+                createdByCurrentUser &&
+                inv.payment_status !== "paid" &&
+                !reviewedByAnotherUser
+              );
+            },
           )
           .sort((a, b) => b.id - a.id);
-
-        if (!cancelled) {
-          setPendingWholesale(pending);
-        }
+        setPendingWholesale(pending);
       } catch (err) {
         console.error("[pending-ws] error:", err);
       } finally {
-        if (!cancelled) {
-          setLoadingPendingWS(false);
-        }
+        setLoadingPendingWS(false);
       }
     })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [branchId, user?.id, user?.username, refreshKey]);
+  }, [branchId, user?.id, refreshKey]);
 
   /* ---------- skeleton rows ---------- */
   const skelRows = (cols: number) =>
