@@ -174,7 +174,10 @@ export function ProductFormDialog({
     const rounded = Math.round(value * 100) / 100;
     return Number.isInteger(rounded)
       ? String(rounded)
-      : rounded.toFixed(2).replace(/\.0+$/, "").replace(/(\.\d*[1-9])0$/, "$1");
+      : rounded
+          .toFixed(2)
+          .replace(/\.0+$/, "")
+          .replace(/(\.\d*[1-9])0$/, "$1");
   };
 
   const getAdjustedPurchasePrice = (
@@ -816,30 +819,35 @@ export function ProductFormDialog({
           {/* Prices */}
           <div className="grid grid-cols-2 gap-3">
             {hasWholesale && (
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <label className="text-xs text-muted-foreground">
                   سعر الشراء جملة
                 </label>
-                <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
-                  <Input
-                    type="number"
-                    placeholder="0.00"
-                    value={form.purchase_price}
-                    onChange={(e) => {
-                      const nextValue = e.target.value;
-                      setPurchasePriceBase(nextValue);
-                      setForm({
-                        ...form,
-                        purchase_price: nextValue,
-                        purchase_price_adjustment: "",
-                        purchase_price_adjustment_is_percentage: false,
-                      });
-                    }}
-                  />
-                  <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  placeholder="0.00"
+                  value={form.purchase_price}
+                  onChange={(e) => {
+                    const nextValue = e.target.value;
+                    setPurchasePriceBase(nextValue);
+                    setForm({
+                      ...form,
+                      purchase_price: nextValue,
+                      purchase_price_adjustment: "",
+                      purchase_price_adjustment_is_percentage: false,
+                    });
+                  }}
+                />
+                <div className="rounded-lg border border-border/60 bg-muted/20 p-2.5 space-y-2">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>خصم على سعر الشراء</span>
+                    <span>يطبّق على الجملة فقط</span>
+                  </div>
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-center">
                     <Input
                       type="number"
                       placeholder="خصم"
+                      className="bg-background text-center"
                       value={form.purchase_price_adjustment}
                       onChange={(e) => {
                         const nextAdjustment = e.target.value;
@@ -854,14 +862,15 @@ export function ProductFormDialog({
                         });
                       }}
                     />
-                    <label className="flex h-10 shrink-0 items-center gap-2 rounded-md border px-3 text-sm text-muted-foreground">
+                    <label className="flex h-10 shrink-0 items-center gap-2 rounded-md border border-border bg-background px-3 text-sm text-muted-foreground">
                       <Checkbox
                         checked={form.purchase_price_adjustment_is_percentage}
                         onCheckedChange={(checked) => {
                           const isPercentage = !!checked;
                           setForm({
                             ...form,
-                            purchase_price_adjustment_is_percentage: isPercentage,
+                            purchase_price_adjustment_is_percentage:
+                              isPercentage,
                             purchase_price: getAdjustedPurchasePrice(
                               purchasePriceBase,
                               form.purchase_price_adjustment,
