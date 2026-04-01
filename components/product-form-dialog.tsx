@@ -56,6 +56,25 @@ interface VariantForm {
   _deleted?: boolean; // علشان نعرف نحذفه من الباك
 }
 
+interface ProductFormState {
+  barcode: string;
+  name: string;
+  description: string;
+  manufacturer: string;
+  wholesale_package_type: string;
+  wholesale_package_qty: string;
+  retail_package_type: string;
+  retail_package_qty: string;
+  retail_package_qty2: string;
+  purchase_price: string;
+  purchase_price_adjustment: string;
+  purchase_price_adjustment_is_percentage: boolean;
+  wholesale_price: string;
+  retail_purchase_price: string;
+  retail_price: string;
+  discount_amount: string;
+}
+
 export function ProductFormDialog({
   open,
   onOpenChange,
@@ -117,13 +136,15 @@ export function ProductFormDialog({
     retail_package_qty: "",
     retail_package_qty2: "",
     purchase_price: "",
+    purchase_price_adjustment: "",
+    purchase_price_adjustment_is_percentage: false,
     wholesale_price: "",
     retail_purchase_price: "",
     retail_price: "",
     discount_amount: "",
   };
 
-  const [form, setForm] = useState<any>(emptyForm);
+  const [form, setForm] = useState<ProductFormState>(emptyForm);
   const [variantForms, setVariantForms] = useState<VariantForm[]>([]);
   const [showDescription, setShowDescription] = useState(false);
   const [hasWholesale, setHasWholesale] = useState(true);
@@ -160,6 +181,10 @@ export function ProductFormDialog({
     setForm({
       ...prod,
       purchase_price: prod.purchase_price ?? "",
+      purchase_price_adjustment: prod.purchase_price_adjustment ?? "",
+      purchase_price_adjustment_is_percentage: Boolean(
+        prod.purchase_price_adjustment_is_percentage,
+      ),
       wholesale_price: prod.wholesale_price ?? "",
       retail_purchase_price: prod.retail_purchase_price ?? "",
       retail_price: prod.retail_price ?? "",
@@ -179,7 +204,11 @@ export function ProductFormDialog({
 
     if (product) {
       // لو الصنف ناقصه بيانات الأسعار (مثلاً جاي من صفحة الفاتورة) → نجيبه كامل من الباك
-      if (product.purchase_price === undefined) {
+      if (
+        product.purchase_price === undefined ||
+        product.purchase_price_adjustment === undefined ||
+        product.purchase_price_adjustment_is_percentage === undefined
+      ) {
         api
           .get(`/admin/products/${product.id}`)
           .then((res) => {
@@ -350,6 +379,12 @@ export function ProductFormDialog({
         wholesale_package,
         retail_package,
         purchase_price: hasWholesale ? Number(form.purchase_price || 0) : 0,
+        purchase_price_adjustment: hasWholesale
+          ? Number(form.purchase_price_adjustment || 0)
+          : 0,
+        purchase_price_adjustment_is_percentage: hasWholesale
+          ? Boolean(form.purchase_price_adjustment_is_percentage)
+          : false,
         retail_purchase_price: Number(form.retail_purchase_price || 0),
         wholesale_price: hasWholesale ? Number(form.wholesale_price || 0) : 0,
         retail_price: Number(form.retail_price || 0),
@@ -721,14 +756,41 @@ export function ProductFormDialog({
                 <label className="text-xs text-muted-foreground">
                   سعر الشراء جملة
                 </label>
-                <Input
-                  type="number"
-                  placeholder="0.00"
-                  value={form.purchase_price}
-                  onChange={(e) =>
-                    setForm({ ...form, purchase_price: e.target.value })
-                  }
-                />
+                <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
+                  <Input
+                    type="number"
+                    placeholder="0.00"
+                    value={form.purchase_price}
+                    onChange={(e) =>
+                      setForm({ ...form, purchase_price: e.target.value })
+                    }
+                  />
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      placeholder="إضافة"
+                      value={form.purchase_price_adjustment}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          purchase_price_adjustment: e.target.value,
+                        })
+                      }
+                    />
+                    <label className="flex h-10 shrink-0 items-center gap-2 rounded-md border px-3 text-sm text-muted-foreground">
+                      <Checkbox
+                        checked={form.purchase_price_adjustment_is_percentage}
+                        onCheckedChange={(checked) =>
+                          setForm({
+                            ...form,
+                            purchase_price_adjustment_is_percentage: !!checked,
+                          })
+                        }
+                      />
+                      <span>%</span>
+                    </label>
+                  </div>
+                </div>
               </div>
             )}
 
