@@ -1312,6 +1312,9 @@ export default function DashboardPage() {
       setLoadingPendingWS(false);
       return;
     }
+
+    let cancelled = false;
+
     setLoadingPendingWS(true);
     (async () => {
       try {
@@ -1324,34 +1327,60 @@ export default function DashboardPage() {
         });
         const all: Invoice[] = Array.isArray(data) ? data : (data.data ?? []);
         const wsInvoices = all.filter((i) => i.invoice_type === "wholesale");
-        // Show wholesale invoices created by this retail user that are not yet paid
-        const pending = wsInvoices
-          .filter(
-            (inv) => {
-              const createdByCurrentUser =
-                (user?.id !== undefined && inv.created_by === Number(user.id)) ||
-                inv.created_by_name === user?.username;
-              const reviewedByAnotherUser =
-                (inv.updated_by !== undefined && inv.updated_by !== inv.created_by) ||
-                (!!inv.updated_by_name &&
-                  inv.updated_by_name !== inv.created_by_name);
+        const candidatePending = wsInvoices.filter((inv) => {
+          const createdByCurrentUser =
+            (user?.id !== undefined && inv.created_by === Number(user.id)) ||
+            inv.created_by_name === user?.username;
 
-              return (
-                createdByCurrentUser &&
-                inv.payment_status !== "paid" &&
-                !reviewedByAnotherUser
+          return createdByCurrentUser && inv.payment_status !== "paid";
+        });
+
+        const detailResults = await Promise.allSettled(
+          candidatePending.map(async (invoice) => {
+            try {
+              const { data: detail } = await api.get(
+                `/invoices/${invoice.id}/edit`,
+                {
+                  params: { _t: Date.now() },
+                },
               );
-            },
+
+              const reviewedByAnotherUser =
+                (detail?.created_by !== undefined &&
+                  detail?.updated_by !== undefined &&
+                  detail.updated_by !== detail.created_by) ||
+                (!!detail?.updated_by_name &&
+                  detail.updated_by_name !== detail.created_by_name);
+
+              return reviewedByAnotherUser ? null : invoice;
+            } catch {
+              return invoice;
+            }
+          }),
+        );
+
+        const pending = detailResults
+          .flatMap((result) =>
+            result.status === "fulfilled" && result.value ? [result.value] : [],
           )
           .sort((a, b) => b.id - a.id);
-        setPendingWholesale(pending);
+
+        if (!cancelled) {
+          setPendingWholesale(pending);
+        }
       } catch (err) {
         console.error("[pending-ws] error:", err);
       } finally {
-        setLoadingPendingWS(false);
+        if (!cancelled) {
+          setLoadingPendingWS(false);
+        }
       }
     })();
-  }, [branchId, user?.id, refreshKey]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [branchId, user?.id, user?.username, refreshKey]);
 
   /* ---------- skeleton rows ---------- */
   const skelRows = (cols: number) =>
