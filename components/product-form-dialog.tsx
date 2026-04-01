@@ -83,6 +83,7 @@ export function ProductFormDialog({
 }: Props) {
   const isEdit = !!product;
   const formRef = useRef<HTMLDivElement>(null);
+  const [purchasePriceBase, setPurchasePriceBase] = useState("");
 
   // Enter key navigation between fields
   const handleEnterNav = useCallback(
@@ -168,6 +169,34 @@ export function ProductFormDialog({
     return { qty: qtyPart, qty2: "", type };
   };
 
+  const formatPriceValue = (value: number) => {
+    if (!Number.isFinite(value)) return "";
+    const rounded = Math.round(value * 100) / 100;
+    return Number.isInteger(rounded)
+      ? String(rounded)
+      : rounded.toFixed(2).replace(/\.0+$/, "").replace(/(\.\d*[1-9])0$/, "$1");
+  };
+
+  const getAdjustedPurchasePrice = (
+    rawBase: string,
+    rawAdjustment: string,
+    isPercentage: boolean,
+  ) => {
+    const base = Number(rawBase);
+    const adjustment = Number(rawAdjustment);
+
+    if (!rawBase || !Number.isFinite(base)) {
+      return "";
+    }
+
+    if (!rawAdjustment || !Number.isFinite(adjustment)) {
+      return rawBase;
+    }
+
+    const discountValue = isPercentage ? (base * adjustment) / 100 : adjustment;
+    return formatPriceValue(Math.max(0, base - discountValue));
+  };
+
   const populateForm = (prod: any) => {
     const wholesaleParsed = parseWholesale(prod.wholesale_package);
     const retailParsed = parseRetail(prod.retail_package);
@@ -181,10 +210,8 @@ export function ProductFormDialog({
     setForm({
       ...prod,
       purchase_price: prod.purchase_price ?? "",
-      purchase_price_adjustment: prod.purchase_price_adjustment ?? "",
-      purchase_price_adjustment_is_percentage: Boolean(
-        prod.purchase_price_adjustment_is_percentage,
-      ),
+      purchase_price_adjustment: "",
+      purchase_price_adjustment_is_percentage: false,
       wholesale_price: prod.wholesale_price ?? "",
       retail_purchase_price: prod.retail_purchase_price ?? "",
       retail_price: prod.retail_price ?? "",
@@ -195,6 +222,7 @@ export function ProductFormDialog({
       retail_package_qty2: retailParsed.qty2 || "",
       retail_package_type: retailParsed.type,
     });
+    setPurchasePriceBase(String(prod.purchase_price ?? ""));
 
     setShowDescription(!!prod.description);
   };
@@ -226,6 +254,7 @@ export function ProductFormDialog({
       fetchExistingVariants(product.id);
     } else {
       setForm(emptyForm);
+      setPurchasePriceBase("");
       setVariantForms([]);
       setShowDescription(false);
       setHasWholesale(true);
@@ -379,12 +408,8 @@ export function ProductFormDialog({
         wholesale_package,
         retail_package,
         purchase_price: hasWholesale ? Number(form.purchase_price || 0) : 0,
-        purchase_price_adjustment: hasWholesale
-          ? Number(form.purchase_price_adjustment || 0)
-          : 0,
-        purchase_price_adjustment_is_percentage: hasWholesale
-          ? Boolean(form.purchase_price_adjustment_is_percentage)
-          : false,
+        purchase_price_adjustment: 0,
+        purchase_price_adjustment_is_percentage: false,
         retail_purchase_price: Number(form.retail_purchase_price || 0),
         wholesale_price: hasWholesale ? Number(form.wholesale_price || 0) : 0,
         retail_price: Number(form.retail_price || 0),
@@ -761,31 +786,50 @@ export function ProductFormDialog({
                     type="number"
                     placeholder="0.00"
                     value={form.purchase_price}
-                    onChange={(e) =>
-                      setForm({ ...form, purchase_price: e.target.value })
-                    }
+                    onChange={(e) => {
+                      const nextValue = e.target.value;
+                      setPurchasePriceBase(nextValue);
+                      setForm({
+                        ...form,
+                        purchase_price: nextValue,
+                        purchase_price_adjustment: "",
+                        purchase_price_adjustment_is_percentage: false,
+                      });
+                    }}
                   />
                   <div className="flex items-center gap-2">
                     <Input
                       type="number"
-                      placeholder="إضافة"
+                      placeholder="خصم"
                       value={form.purchase_price_adjustment}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        const nextAdjustment = e.target.value;
                         setForm({
                           ...form,
-                          purchase_price_adjustment: e.target.value,
-                        })
-                      }
+                          purchase_price_adjustment: nextAdjustment,
+                          purchase_price: getAdjustedPurchasePrice(
+                            purchasePriceBase,
+                            nextAdjustment,
+                            form.purchase_price_adjustment_is_percentage,
+                          ),
+                        });
+                      }}
                     />
                     <label className="flex h-10 shrink-0 items-center gap-2 rounded-md border px-3 text-sm text-muted-foreground">
                       <Checkbox
                         checked={form.purchase_price_adjustment_is_percentage}
-                        onCheckedChange={(checked) =>
+                        onCheckedChange={(checked) => {
+                          const isPercentage = !!checked;
                           setForm({
                             ...form,
-                            purchase_price_adjustment_is_percentage: !!checked,
-                          })
-                        }
+                            purchase_price_adjustment_is_percentage: isPercentage,
+                            purchase_price: getAdjustedPurchasePrice(
+                              purchasePriceBase,
+                              form.purchase_price_adjustment,
+                              isPercentage,
+                            ),
+                          });
+                        }}
                       />
                       <span>%</span>
                     </label>
