@@ -1333,7 +1333,7 @@ export default function DashboardPage() {
                 (user?.id !== undefined && inv.created_by === Number(user.id)) ||
                 inv.created_by_name === user?.username;
               const reviewedByAnotherUser =
-                (inv.updated_by !== undefined && inv.updated_by !== inv.created_by) ||
+                (inv.updated_by != null && inv.updated_by !== inv.created_by) ||
                 (!!inv.updated_by_name &&
                   inv.updated_by_name !== inv.created_by_name);
 
