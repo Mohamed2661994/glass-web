@@ -39,6 +39,12 @@ interface InvoiceData {
   items: InvoiceItem[];
 }
 
+interface CustomPhoneEntry {
+  id: string;
+  value: string;
+  visible: boolean;
+}
+
 type PaperSize = "A5" | "A4" | "A6";
 type Orientation = "portrait" | "landscape";
 type MarginSize = "normal" | "narrow" | "none";
@@ -68,6 +74,45 @@ const FONT_OPTIONS = [
   { label: "Almarai", value: "Almarai, sans-serif" },
   { label: "Noto Sans Arabic", value: "Noto Sans Arabic, sans-serif" },
 ];
+
+const createPhoneEntry = (
+  value = "",
+  visible = true,
+): CustomPhoneEntry => ({
+  id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+  value,
+  visible,
+});
+
+const normalizeCustomPhones = (
+  raw: unknown,
+  legacyValue = "",
+  legacyVisible = true,
+): CustomPhoneEntry[] => {
+  if (Array.isArray(raw)) {
+    const normalized = raw
+      .map((entry) => {
+        if (!entry || typeof entry !== "object") return null;
+
+        const phone = entry as Partial<CustomPhoneEntry>;
+        return createPhoneEntry(
+          typeof phone.value === "string" ? phone.value : "",
+          phone.visible !== undefined ? Boolean(phone.visible) : true,
+        );
+      })
+      .filter((entry): entry is CustomPhoneEntry => entry !== null);
+
+    if (normalized.length > 0) {
+      return normalized;
+    }
+  }
+
+  if (typeof legacyValue === "string" && legacyValue.trim()) {
+    return [createPhoneEntry(legacyValue, legacyVisible)];
+  }
+
+  return [createPhoneEntry()];
+};
 
 export default function InvoicePrintPageWrapper() {
   return (
@@ -103,8 +148,9 @@ function InvoicePrintPage() {
   const [verticalBorderColor, setVerticalBorderColor] = useState("#cccccc");
   const [showLogo, setShowLogo] = useState(true);
   const [showPhone, setShowPhone] = useState(true);
-  const [customPhone, setCustomPhone] = useState("");
-  const [showCustomPhone, setShowCustomPhone] = useState(true);
+  const [customPhones, setCustomPhones] = useState<CustomPhoneEntry[]>([
+    createPhoneEntry(),
+  ]);
   const [fontFamily, setFontFamily] = useState("Tahoma, Arial, sans-serif");
   const [isPrinting, setIsPrinting] = useState(false);
 
@@ -137,9 +183,13 @@ function InvoicePrintPage() {
           setVerticalBorderColor(s.verticalBorderColor);
         if (s.showLogo !== undefined) setShowLogo(s.showLogo);
         if (s.showPhone !== undefined) setShowPhone(s.showPhone);
-        if (s.customPhone !== undefined) setCustomPhone(s.customPhone);
-        if (s.showCustomPhone !== undefined)
-          setShowCustomPhone(s.showCustomPhone);
+        setCustomPhones(
+          normalizeCustomPhones(
+            s.customPhones,
+            typeof s.customPhone === "string" ? s.customPhone : "",
+            s.showCustomPhone !== undefined ? Boolean(s.showCustomPhone) : true,
+          ),
+        );
         if (s.fontFamily) setFontFamily(s.fontFamily);
       }
     } catch {}
@@ -151,6 +201,8 @@ function InvoicePrintPage() {
       try {
         const raw = localStorage.getItem("printSettings");
         const prev = raw ? JSON.parse(raw) : {};
+        const legacyPrimaryPhone = customPhones[0]?.value ?? "";
+        const legacyPrimaryVisible = customPhones[0]?.visible ?? true;
         const next = {
           ...prev,
           copies,
@@ -163,8 +215,9 @@ function InvoicePrintPage() {
           verticalBorderColor,
           showLogo,
           showPhone,
-          customPhone,
-          showCustomPhone,
+          customPhones,
+          customPhone: legacyPrimaryPhone,
+          showCustomPhone: legacyPrimaryVisible,
           fontFamily,
           ...patch,
           paperSize: FIXED_INVOICE_PAPER_SIZE,
@@ -184,8 +237,7 @@ function InvoicePrintPage() {
       verticalBorderColor,
       showLogo,
       showPhone,
-      customPhone,
-      showCustomPhone,
+      customPhones,
       fontFamily,
     ],
   );
@@ -227,6 +279,7 @@ function InvoicePrintPage() {
         .invoice-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
         .invoice-info { font-size:${fontSize}px; line-height:1.4; text-align:right; min-width:170px; }
         .logo-section { display:flex; flex-direction:row; align-items:center; gap:8px; }
+        .logo-phone-list { display:flex; flex-direction:column; align-items:center; gap:2px; }
         .logo-phone { font-size:${fontSize}px; font-weight:bold; }
         table { width:100%; border-collapse:collapse; font-size:${fontSize}px; }
         thead th { background:#f3f3f3; font-weight:bold; border-bottom:2px solid #000; }
@@ -447,6 +500,51 @@ function InvoicePrintPage() {
     invoice.created_by_name ||
     ""
   ).trim();
+  const visibleCustomPhones = customPhones.filter(
+    (phone) => phone.visible && phone.value.trim(),
+  );
+  const hasVisibleCustomPhones = visibleCustomPhones.length > 0;
+
+  const updateCustomPhone = (id: string, value: string) => {
+    const nextPhones = customPhones.map((phone) =>
+      phone.id === id ? { ...phone, value } : phone,
+    );
+    setCustomPhones(nextPhones);
+    savePrintSettings({
+      customPhones: nextPhones,
+      customPhone: nextPhones[0]?.value ?? "",
+      showCustomPhone: nextPhones[0]?.visible ?? true,
+    });
+  };
+
+  const toggleCustomPhoneVisibility = (id: string) => {
+    const nextPhones = customPhones.map((phone) =>
+      phone.id === id ? { ...phone, visible: !phone.visible } : phone,
+    );
+    setCustomPhones(nextPhones);
+    savePrintSettings({
+      customPhones: nextPhones,
+      customPhone: nextPhones[0]?.value ?? "",
+      showCustomPhone: nextPhones[0]?.visible ?? true,
+    });
+  };
+
+  const addCustomPhone = () => {
+    const nextPhones = [...customPhones, createPhoneEntry()];
+    setCustomPhones(nextPhones);
+    savePrintSettings({ customPhones: nextPhones });
+  };
+
+  const removeCustomPhone = (id: string) => {
+    const nextPhones = customPhones.filter((phone) => phone.id !== id);
+    const safePhones = nextPhones.length > 0 ? nextPhones : [createPhoneEntry()];
+    setCustomPhones(safePhones);
+    savePrintSettings({
+      customPhones: safePhones,
+      customPhone: safePhones[0]?.value ?? "",
+      showCustomPhone: safePhones[0]?.visible ?? true,
+    });
+  };
 
   /* ──── مقياس المعاينة ──── */
   const previewScale = Math.min(1, 520 / ((pageW / 25.4) * 96));
@@ -613,7 +711,23 @@ body { background:#3b3b3b; font-family:${fontFamily}; color:#000; }
 }
 .invoice-info { line-height:1.4; text-align:right; min-width:170px; color:#000; }
 .logo-section { display:flex; flex-direction:row; align-items:center; gap:8px; }
+.logo-phone-list { display:flex; flex-direction:column; align-items:center; gap:2px; }
 .logo-phone { font-weight:bold; color:#000; }
+.phone-list { display:flex; flex-direction:column; gap:10px; }
+.phone-item { border:1px solid #e2e8f0; border-radius:10px; padding:10px; background:#f8fafc; }
+.phone-item-header { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
+.phone-item-actions { display:flex; align-items:center; gap:8px; }
+.btn-add-phone, .btn-remove-phone {
+  border:1px solid #cbd5e1; border-radius:8px; background:#fff; color:#334155;
+  font-size:12px; font-family:inherit; cursor:pointer;
+}
+.btn-add-phone {
+  width:100%; padding:8px 10px; font-weight:600;
+}
+.btn-remove-phone {
+  padding:6px 10px;
+}
+.btn-add-phone:hover, .btn-remove-phone:hover { background:#f1f5f9; }
 table { width:100%; border-collapse:collapse; background:#fff !important; color:#000; }
 thead th { background:#f3f3f3 !important; font-weight:bold; border-bottom:2px solid #000; color:#000 !important; }
 thead th:first-child, thead th:nth-child(3), thead th:nth-child(4), thead th:nth-child(5) { ${verticalBorderWidth > 0 ? `border-left:${verticalBorderWidth}px solid ${verticalBorderColor};` : ""} }
@@ -1003,30 +1117,54 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
 
               {/* رقم تليفون مخصص بجانب اللوجو */}
               <div className="setting-group">
-                <div className="setting-row" style={{ marginBottom: 8 }}>
-                  <span className="setting-row-label">تليفون بجانب اللوجو</span>
-                  <div
-                    className={`toggle-track ${showCustomPhone ? "active" : ""}`}
-                    onClick={() => {
-                      setShowCustomPhone(!showCustomPhone);
-                      savePrintSettings({ showCustomPhone: !showCustomPhone });
-                    }}
+                <label className="setting-label">أرقام التليفون بجانب اللوجو</label>
+                <div className="phone-list">
+                  {customPhones.map((phone, index) => (
+                    <div key={phone.id} className="phone-item">
+                      <div className="phone-item-header">
+                        <span className="setting-row-label">رقم {index + 1}</span>
+                        <div className="phone-item-actions">
+                          <div
+                            className={`toggle-track ${phone.visible ? "active" : ""}`}
+                            onClick={() => toggleCustomPhoneVisibility(phone.id)}
+                            title={phone.visible ? "إخفاء الرقم" : "إظهار الرقم"}
+                          >
+                            <div className="toggle-thumb" />
+                          </div>
+                          <button
+                            type="button"
+                            className="btn-remove-phone"
+                            onClick={() => removeCustomPhone(phone.id)}
+                            disabled={customPhones.length === 1}
+                            style={{
+                              opacity: customPhones.length === 1 ? 0.5 : 1,
+                              cursor:
+                                customPhones.length === 1 ? "not-allowed" : "pointer",
+                            }}
+                          >
+                            حذف
+                          </button>
+                        </div>
+                      </div>
+                      <input
+                        className="s-input"
+                        type="tel"
+                        placeholder="اكتب رقم التليفون..."
+                        value={phone.value}
+                        autoComplete="tel"
+                        onChange={(e) => updateCustomPhone(phone.id, e.target.value)}
+                        style={{ direction: "ltr", textAlign: "center" }}
+                      />
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className="btn-add-phone"
+                    onClick={addCustomPhone}
                   >
-                    <div className="toggle-thumb" />
-                  </div>
+                    إضافة رقم جديد
+                  </button>
                 </div>
-                <input
-                  className="s-input"
-                  type="tel"
-                  placeholder="اكتب رقم التليفون..."
-                  value={customPhone}
-                  autoComplete="tel"
-                  onChange={(e) => {
-                    setCustomPhone(e.target.value);
-                    savePrintSettings({ customPhone: e.target.value });
-                  }}
-                  style={{ direction: "ltr", textAlign: "center" }}
-                />
               </div>
 
               {/* إظهار/إخفاء التليفون */}
@@ -1132,7 +1270,7 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                         (e.target as HTMLImageElement).style.display = "none";
                       }}
                     />
-                    {(invoiceUserName || (customPhone && showCustomPhone)) && (
+                    {(invoiceUserName || hasVisibleCustomPhones) && (
                       <div
                         style={{
                           display: "flex",
@@ -1152,12 +1290,17 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                             {invoiceUserName}
                           </div>
                         )}
-                        {customPhone && showCustomPhone && (
-                          <div
-                            className="logo-phone"
-                            style={{ fontSize: `${fontSize}px` }}
-                          >
-                            {customPhone}
+                        {hasVisibleCustomPhones && (
+                          <div className="logo-phone-list">
+                            {visibleCustomPhones.map((phone) => (
+                              <div
+                                key={phone.id}
+                                className="logo-phone"
+                                style={{ fontSize: `${fontSize}px` }}
+                              >
+                                {phone.value}
+                              </div>
+                            ))}
                           </div>
                         )}
                       </div>
@@ -1165,7 +1308,7 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                   </div>
                 )}
                 {!showLogo &&
-                  (invoiceUserName || (customPhone && showCustomPhone)) && (
+                  (invoiceUserName || hasVisibleCustomPhones) && (
                     <div
                       style={{
                         display: "flex",
@@ -1185,15 +1328,20 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                           {invoiceUserName}
                         </div>
                       )}
-                      {customPhone && showCustomPhone && (
-                        <div
-                          className="logo-phone"
-                          style={{
-                            fontSize: `${fontSize}px`,
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {customPhone}
+                      {hasVisibleCustomPhones && (
+                        <div className="logo-phone-list">
+                          {visibleCustomPhones.map((phone) => (
+                            <div
+                              key={phone.id}
+                              className="logo-phone"
+                              style={{
+                                fontSize: `${fontSize}px`,
+                                fontWeight: "bold",
+                              }}
+                            >
+                              {phone.value}
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
