@@ -50,88 +50,8 @@ import { hasPermission } from "@/lib/permissions";
 
 type CashOutEntryType = "expense" | "purchase" | "supplier_payment";
 
-interface CashOutAutofillEntry {
-  entryType: CashOutEntryType;
-  name: string;
-  amount: string;
-  notes: string;
-  supplierId: number | null;
-  supplierName: string;
-  updatedAt: string;
-}
-
-const CASH_OUT_AUTOFILL_KEY = "cash-out-autofill-cache-v1";
-
 function normalizeCacheText(value: string) {
   return normalizeArabic(noSpaces(value).toLowerCase());
-}
-
-function supportsCashOutAutofill(entryType: CashOutEntryType) {
-  return entryType === "expense" || entryType === "purchase";
-}
-
-function getAutofillCacheKey(entry: CashOutAutofillEntry) {
-  if (entry.entryType === "supplier_payment") {
-    return `${entry.entryType}:${entry.supplierId ?? normalizeCacheText(entry.supplierName || entry.name)}`;
-  }
-
-  return `${entry.entryType}:${normalizeCacheText(entry.name)}`;
-}
-
-function readCashOutAutofillCache() {
-  if (typeof window === "undefined") {
-    return [] as CashOutAutofillEntry[];
-  }
-
-  try {
-    const rawValue = window.localStorage.getItem(CASH_OUT_AUTOFILL_KEY);
-    if (!rawValue) {
-      return [] as CashOutAutofillEntry[];
-    }
-
-    const parsedValue = JSON.parse(rawValue);
-    if (!Array.isArray(parsedValue)) {
-      return [] as CashOutAutofillEntry[];
-    }
-
-    return parsedValue
-      .map((item) => ({
-        entryType: item?.entryType,
-        name: String(item?.name || ""),
-        amount: String(item?.amount || ""),
-        notes: String(item?.notes || ""),
-        supplierId:
-          typeof item?.supplierId === "number" ? item.supplierId : null,
-        supplierName: String(item?.supplierName || ""),
-        updatedAt: String(item?.updatedAt || ""),
-      }))
-      .filter(
-        (item): item is CashOutAutofillEntry =>
-          ["expense", "purchase", "supplier_payment"].includes(
-            item.entryType,
-          ) &&
-          (item.name.trim().length > 0 || item.supplierName.trim().length > 0),
-      )
-      .slice(0, 20);
-  } catch {
-    return [] as CashOutAutofillEntry[];
-  }
-}
-
-function writeCashOutAutofillCache(entry: CashOutAutofillEntry) {
-  if (typeof window === "undefined") {
-    return [] as CashOutAutofillEntry[];
-  }
-
-  const currentEntries = readCashOutAutofillCache();
-  const nextEntries = [entry, ...currentEntries.filter((item) => getAutofillCacheKey(item) !== getAutofillCacheKey(entry))].slice(0, 20);
-
-  window.localStorage.setItem(
-    CASH_OUT_AUTOFILL_KEY,
-    JSON.stringify(nextEntries),
-  );
-
-  return nextEntries;
 }
 
 export default function CashOutPageWrapper() {
@@ -155,12 +75,10 @@ function CashOutPage() {
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
   const [entryType, setEntryType] = useState<CashOutEntryType>("expense");
-  const [autofillCache, setAutofillCache] = useState<CashOutAutofillEntry[]>(
-    [],
-  );
-  const [autofilledCacheKey, setAutofilledCacheKey] = useState<string | null>(
-    null,
-  );
+  const [cashOutNameHistory, setCashOutNameHistory] = useState<
+    { name: string; entryType: CashOutEntryType }[]
+  >([]);
+  const [showNameDropdown, setShowNameDropdown] = useState(false);
 
   /* ========== Field Refs for Enter Navigation ========== */
   const nameRef = useRef<HTMLInputElement>(null);
@@ -202,6 +120,34 @@ function CashOutPage() {
   const [modalLoading, setModalLoading] = useState(false);
   const [modalSearch, setModalSearch] = useState("");
   const [deleteItem, setDeleteItem] = useState<CashOutItem | null>(null);
+
+  const filteredNameSuggestions = useMemo(() => {
+    if (entryType === "supplier_payment") {
+      return [] as string[];
+    }
+
+    const normalizedValue = normalizeCacheText(name);
+    if (!normalizedValue) {
+      return [] as string[];
+    }
+
+    const seenNames = new Set<string>();
+
+    return cashOutNameHistory
+      .filter((item) => item.entryType === entryType)
+      .map((item) => item.name.trim())
+      .filter(Boolean)
+      .filter((itemName) => normalizeCacheText(itemName).includes(normalizedValue))
+      .filter((itemName) => {
+        const key = normalizeCacheText(itemName);
+        if (seenNames.has(key)) {
+          return false;
+        }
+        seenNames.add(key);
+        return true;
+      })
+      .slice(0, 8);
+  }, [cashOutNameHistory, entryType, name]);
 
   const openModal = useCallback(async () => {
     setModalOpen(true);
@@ -265,19 +211,6 @@ function CashOutPage() {
     }
   }, []);
 
-  const applyAutofillEntry = useCallback(
-    (entry: CashOutAutofillEntry) => {
-      setAmount(entry.amount || "");
-      setNotes(entry.notes || "");
-      setAutofilledCacheKey(getAutofillCacheKey(entry));
-      setName(entry.name);
-      setSupplierId(null);
-      setSupplierSearch("");
-      setSupplierBalance(null);
-    },
-    [],
-  );
-
   useEffect(() => {
     if (entryType !== "supplier_payment" || !supplierSearch.trim()) {
       setSupplierResults([]);
@@ -307,63 +240,24 @@ function CashOutPage() {
       return;
     }
 
-    setAutofillCache(readCashOutAutofillCache());
-  }, [isEdit]);
-
-  useEffect(() => {
-    if (isEdit || autofillCache.length === 0) {
-      return;
-    }
-
-    if (!supportsCashOutAutofill(entryType)) {
-      setAutofilledCacheKey(null);
-      return;
-    }
-
-    const normalizedValue = normalizeCacheText(name);
-    if (!normalizedValue) {
-      setAutofilledCacheKey(null);
-      return;
-    }
-
-    const matchingEntry = autofillCache.find((item) => {
-      if (item.entryType !== entryType) {
-        return false;
+    (async () => {
+      try {
+        const { data } = await api.get("/cash/out");
+        const items: CashOutItem[] = data.data || data || [];
+        setCashOutNameHistory(
+          items
+            .filter((item) => item.entry_type !== "supplier_payment")
+            .sort((a, b) => b.id - a.id)
+            .map((item) => ({
+              name: item.name,
+              entryType: item.entry_type,
+            })),
+        );
+      } catch {
+        // ignore
       }
-
-      return normalizeCacheText(item.name) === normalizedValue;
-    });
-
-    if (!matchingEntry) {
-      setAutofilledCacheKey(null);
-      return;
-    }
-
-    const matchingKey = getAutofillCacheKey(matchingEntry);
-    if (autofilledCacheKey === matchingKey) {
-      return;
-    }
-
-    applyAutofillEntry(matchingEntry);
-  }, [
-    applyAutofillEntry,
-    autofillCache,
-    autofilledCacheKey,
-    entryType,
-    isEdit,
-    name,
-  ]);
-
-  useEffect(() => {
-    if (!supportsCashOutAutofill(entryType)) {
-      setAutofilledCacheKey(null);
-      return;
-    }
-
-    if (!name.trim()) {
-      setAutofilledCacheKey(null);
-    }
-  }, [entryType, name]);
+    })();
+  }, [isEdit]);
 
   /* load edit data */
   useEffect(() => {
@@ -440,18 +334,17 @@ function CashOutPage() {
       setPermissionNumber(data.permission_number);
       setSuccessOpen(true);
 
-      if (supportsCashOutAutofill(entryType)) {
-        setAutofillCache(
-          writeCashOutAutofillCache({
-            entryType,
-            name,
-            amount,
-            notes,
-            supplierId: null,
-            supplierName: "",
-            updatedAt: new Date().toISOString(),
-          }),
-        );
+      if (entryType !== "supplier_payment") {
+        setCashOutNameHistory((prev) => [
+          { name, entryType },
+          ...prev.filter(
+            (item) =>
+              !(
+                item.entryType === entryType &&
+                normalizeCacheText(item.name) === normalizeCacheText(name)
+              ),
+          ),
+        ]);
       }
 
       if (!isEdit) {
@@ -461,7 +354,7 @@ function CashOutPage() {
         setSupplierId(null);
         setSupplierSearch("");
         setSupplierBalance(null);
-        setAutofilledCacheKey(null);
+        setShowNameDropdown(false);
       }
     } catch (err: any) {
       toast.error(err.response?.data?.error || "فشل حفظ إذن الصرف");
@@ -519,7 +412,6 @@ function CashOutPage() {
                       setSupplierSearch(e.target.value);
                       setSupplierId(null);
                       setSupplierBalance(null);
-                      setAutofilledCacheKey(null);
                       setShowSupplierDropdown(true);
                     }}
                     onFocus={() =>
@@ -574,8 +466,11 @@ function CashOutPage() {
                 value={name}
                 onChange={(e) => {
                   setName(e.target.value);
-                  setAutofilledCacheKey(null);
+                  setShowNameDropdown(true);
                 }}
+                onFocus={() =>
+                  filteredNameSuggestions.length > 0 && setShowNameDropdown(true)
+                }
                 placeholder="مثال: كهرباء – مصروفات"
                 className="mt-2"
                 onKeyDown={(e) => {
@@ -585,6 +480,24 @@ function CashOutPage() {
                   }
                 }}
               />
+              {showNameDropdown && filteredNameSuggestions.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-background border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  {filteredNameSuggestions.map((itemName) => (
+                    <button
+                      key={`${entryType}:${itemName}`}
+                      type="button"
+                      className="w-full text-right px-3 py-2 hover:bg-muted text-sm transition-colors"
+                      onClick={() => {
+                        setName(itemName);
+                        setShowNameDropdown(false);
+                        amountRef.current?.focus();
+                      }}
+                    >
+                      {itemName}
+                    </button>
+                  ))}
+                </div>
+              )}
             )}
           </div>
 
@@ -595,6 +508,7 @@ function CashOutPage() {
               value={entryType}
               onValueChange={(v) => {
                 setEntryType(v as CashOutEntryType);
+                setShowNameDropdown(false);
                 if (v !== "supplier_payment") {
                   setSupplierId(null);
                   setSupplierSearch("");
