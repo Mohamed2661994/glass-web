@@ -48,6 +48,92 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/app/context/auth-context";
 import { hasPermission } from "@/lib/permissions";
 
+type CashOutEntryType = "expense" | "purchase" | "supplier_payment";
+
+interface CashOutAutofillEntry {
+  entryType: CashOutEntryType;
+  name: string;
+  amount: string;
+  notes: string;
+  supplierId: number | null;
+  supplierName: string;
+  updatedAt: string;
+}
+
+const CASH_OUT_AUTOFILL_KEY = "cash-out-autofill-cache-v1";
+
+function normalizeCacheText(value: string) {
+  return normalizeArabic(noSpaces(value).toLowerCase());
+}
+
+function supportsCashOutAutofill(entryType: CashOutEntryType) {
+  return entryType === "expense" || entryType === "purchase";
+}
+
+function getAutofillCacheKey(entry: CashOutAutofillEntry) {
+  if (entry.entryType === "supplier_payment") {
+    return `${entry.entryType}:${entry.supplierId ?? normalizeCacheText(entry.supplierName || entry.name)}`;
+  }
+
+  return `${entry.entryType}:${normalizeCacheText(entry.name)}`;
+}
+
+function readCashOutAutofillCache() {
+  if (typeof window === "undefined") {
+    return [] as CashOutAutofillEntry[];
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(CASH_OUT_AUTOFILL_KEY);
+    if (!rawValue) {
+      return [] as CashOutAutofillEntry[];
+    }
+
+    const parsedValue = JSON.parse(rawValue);
+    if (!Array.isArray(parsedValue)) {
+      return [] as CashOutAutofillEntry[];
+    }
+
+    return parsedValue
+      .map((item) => ({
+        entryType: item?.entryType,
+        name: String(item?.name || ""),
+        amount: String(item?.amount || ""),
+        notes: String(item?.notes || ""),
+        supplierId:
+          typeof item?.supplierId === "number" ? item.supplierId : null,
+        supplierName: String(item?.supplierName || ""),
+        updatedAt: String(item?.updatedAt || ""),
+      }))
+      .filter(
+        (item): item is CashOutAutofillEntry =>
+          ["expense", "purchase", "supplier_payment"].includes(
+            item.entryType,
+          ) &&
+          (item.name.trim().length > 0 || item.supplierName.trim().length > 0),
+      )
+      .slice(0, 20);
+  } catch {
+    return [] as CashOutAutofillEntry[];
+  }
+}
+
+function writeCashOutAutofillCache(entry: CashOutAutofillEntry) {
+  if (typeof window === "undefined") {
+    return [] as CashOutAutofillEntry[];
+  }
+
+  const currentEntries = readCashOutAutofillCache();
+  const nextEntries = [entry, ...currentEntries.filter((item) => getAutofillCacheKey(item) !== getAutofillCacheKey(entry))].slice(0, 20);
+
+  window.localStorage.setItem(
+    CASH_OUT_AUTOFILL_KEY,
+    JSON.stringify(nextEntries),
+  );
+
+  return nextEntries;
+}
+
 export default function CashOutPageWrapper() {
   return (
     <Suspense>
@@ -68,9 +154,13 @@ function CashOutPage() {
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
-  const [entryType, setEntryType] = useState<
-    "expense" | "purchase" | "supplier_payment"
-  >("expense");
+  const [entryType, setEntryType] = useState<CashOutEntryType>("expense");
+  const [autofillCache, setAutofillCache] = useState<CashOutAutofillEntry[]>(
+    [],
+  );
+  const [autofilledCacheKey, setAutofilledCacheKey] = useState<string | null>(
+    null,
+  );
 
   /* ========== Field Refs for Enter Navigation ========== */
   const nameRef = useRef<HTMLInputElement>(null);
@@ -103,7 +193,7 @@ function CashOutPage() {
     notes: string | null;
     transaction_date: string;
     permission_number: string;
-    entry_type: "expense" | "purchase" | "supplier_payment";
+    entry_type: CashOutEntryType;
     supplier_id?: number;
     supplier_name?: string;
   }
@@ -156,7 +246,7 @@ function CashOutPage() {
   };
 
   /* ========== Supplier Search ========== */
-  const fetchSupplierBalance = async (supplierName: string) => {
+  const fetchSupplierBalance = useCallback(async (supplierName: string) => {
     try {
       setBalanceLoading(true);
       const res = await api.get("/reports/supplier-balances", {
@@ -173,13 +263,27 @@ function CashOutPage() {
     } finally {
       setBalanceLoading(false);
     }
-  };
+  }, []);
+
+  const applyAutofillEntry = useCallback(
+    (entry: CashOutAutofillEntry) => {
+      setAmount(entry.amount || "");
+      setNotes(entry.notes || "");
+      setAutofilledCacheKey(getAutofillCacheKey(entry));
+      setName(entry.name);
+      setSupplierId(null);
+      setSupplierSearch("");
+      setSupplierBalance(null);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (entryType !== "supplier_payment" || !supplierSearch.trim()) {
       setSupplierResults([]);
       return;
     }
+
     const timer = setTimeout(async () => {
       try {
         setSupplierSearching(true);
@@ -194,20 +298,85 @@ function CashOutPage() {
         setSupplierSearching(false);
       }
     }, 300);
+
     return () => clearTimeout(timer);
   }, [supplierSearch, entryType]);
+
+  useEffect(() => {
+    if (isEdit) {
+      return;
+    }
+
+    setAutofillCache(readCashOutAutofillCache());
+  }, [isEdit]);
+
+  useEffect(() => {
+    if (isEdit || autofillCache.length === 0) {
+      return;
+    }
+
+    if (!supportsCashOutAutofill(entryType)) {
+      setAutofilledCacheKey(null);
+      return;
+    }
+
+    const normalizedValue = normalizeCacheText(name);
+    if (!normalizedValue) {
+      setAutofilledCacheKey(null);
+      return;
+    }
+
+    const matchingEntry = autofillCache.find((item) => {
+      if (item.entryType !== entryType) {
+        return false;
+      }
+
+      return normalizeCacheText(item.name) === normalizedValue;
+    });
+
+    if (!matchingEntry) {
+      setAutofilledCacheKey(null);
+      return;
+    }
+
+    const matchingKey = getAutofillCacheKey(matchingEntry);
+    if (autofilledCacheKey === matchingKey) {
+      return;
+    }
+
+    applyAutofillEntry(matchingEntry);
+  }, [
+    applyAutofillEntry,
+    autofillCache,
+    autofilledCacheKey,
+    entryType,
+    isEdit,
+    name,
+  ]);
+
+  useEffect(() => {
+    if (!supportsCashOutAutofill(entryType)) {
+      setAutofilledCacheKey(null);
+      return;
+    }
+
+    if (!name.trim()) {
+      setAutofilledCacheKey(null);
+    }
+  }, [entryType, name]);
 
   /* load edit data */
   useEffect(() => {
     if (!user || !authReady) return;
 
-    if (isEdit && user && !canEditCashOut) {
+    if (isEdit && !canEditCashOut) {
       toast.error("ليس لديك صلاحية تعديل المنصرف");
       router.replace("/cash/out");
       return;
     }
 
     if (!editId) return;
+
     (async () => {
       try {
         const { data } = await api.get(`/cash/out/${editId}`);
@@ -228,7 +397,15 @@ function CashOutPage() {
         toast.error("فشل تحميل بيانات المنصرف");
       }
     })();
-  }, [authReady, canEditCashOut, editId, isEdit, router, user]);
+  }, [
+    authReady,
+    canEditCashOut,
+    editId,
+    fetchSupplierBalance,
+    isEdit,
+    router,
+    user,
+  ]);
 
   const handleSave = async () => {
     if (entryType === "supplier_payment") {
@@ -240,11 +417,9 @@ function CashOutPage() {
         toast.error("من فضلك أدخل المبلغ");
         return;
       }
-    } else {
-      if (!name.trim() || !amount) {
-        toast.error("من فضلك أدخل الاسم والمبلغ");
-        return;
-      }
+    } else if (!name.trim() || !amount) {
+      toast.error("من فضلك أدخل الاسم والمبلغ");
+      return;
     }
 
     setLoading(true);
@@ -265,6 +440,20 @@ function CashOutPage() {
       setPermissionNumber(data.permission_number);
       setSuccessOpen(true);
 
+      if (supportsCashOutAutofill(entryType)) {
+        setAutofillCache(
+          writeCashOutAutofillCache({
+            entryType,
+            name,
+            amount,
+            notes,
+            supplierId: null,
+            supplierName: "",
+            updatedAt: new Date().toISOString(),
+          }),
+        );
+      }
+
       if (!isEdit) {
         setName("");
         setAmount("");
@@ -272,6 +461,7 @@ function CashOutPage() {
         setSupplierId(null);
         setSupplierSearch("");
         setSupplierBalance(null);
+        setAutofilledCacheKey(null);
       }
     } catch (err: any) {
       toast.error(err.response?.data?.error || "فشل حفظ إذن الصرف");
@@ -329,6 +519,7 @@ function CashOutPage() {
                       setSupplierSearch(e.target.value);
                       setSupplierId(null);
                       setSupplierBalance(null);
+                      setAutofilledCacheKey(null);
                       setShowSupplierDropdown(true);
                     }}
                     onFocus={() =>
@@ -381,7 +572,10 @@ function CashOutPage() {
               <Input
                 ref={nameRef}
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setAutofilledCacheKey(null);
+                }}
                 placeholder="مثال: كهرباء – مصروفات"
                 className="mt-2"
                 onKeyDown={(e) => {
@@ -400,7 +594,7 @@ function CashOutPage() {
             <RadioGroup
               value={entryType}
               onValueChange={(v) => {
-                setEntryType(v as "expense" | "purchase" | "supplier_payment");
+                setEntryType(v as CashOutEntryType);
                 if (v !== "supplier_payment") {
                   setSupplierId(null);
                   setSupplierSearch("");
