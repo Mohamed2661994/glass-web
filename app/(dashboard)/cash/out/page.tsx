@@ -461,43 +461,46 @@ function CashOutPage() {
                   )}
               </>
             ) : (
-              <Input
-                ref={nameRef}
-                value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  setShowNameDropdown(true);
-                }}
-                onFocus={() =>
-                  filteredNameSuggestions.length > 0 && setShowNameDropdown(true)
-                }
-                placeholder="مثال: كهرباء – مصروفات"
-                className="mt-2"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    amountRef.current?.focus();
+              <>
+                <Input
+                  ref={nameRef}
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    setShowNameDropdown(true);
+                  }}
+                  onFocus={() =>
+                    filteredNameSuggestions.length > 0 &&
+                    setShowNameDropdown(true)
                   }
-                }}
-              />
-              {showNameDropdown && filteredNameSuggestions.length > 0 && (
-                <div className="absolute z-50 w-full mt-1 bg-background border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                  {filteredNameSuggestions.map((itemName) => (
-                    <button
-                      key={`${entryType}:${itemName}`}
-                      type="button"
-                      className="w-full text-right px-3 py-2 hover:bg-muted text-sm transition-colors"
-                      onClick={() => {
-                        setName(itemName);
-                        setShowNameDropdown(false);
-                        amountRef.current?.focus();
-                      }}
-                    >
-                      {itemName}
-                    </button>
-                  ))}
-                </div>
-              )}
+                  placeholder="مثال: كهرباء – مصروفات"
+                  className="mt-2"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      amountRef.current?.focus();
+                    }
+                  }}
+                />
+                {showNameDropdown && filteredNameSuggestions.length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-background border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                    {filteredNameSuggestions.map((itemName) => (
+                      <button
+                        key={`${entryType}:${itemName}`}
+                        type="button"
+                        className="w-full text-right px-3 py-2 hover:bg-muted text-sm transition-colors"
+                        onClick={() => {
+                          setName(itemName);
+                          setShowNameDropdown(false);
+                          amountRef.current?.focus();
+                        }}
+                      >
+                        {itemName}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
 
