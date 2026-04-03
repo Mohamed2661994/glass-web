@@ -40,6 +40,19 @@ type CustomerItem = {
   is_market_customer?: boolean;
 };
 
+type CustomerDebtRow = {
+  record_type: "invoice" | "payment";
+  invoice_id: number;
+  invoice_date: string;
+  subtotal?: number;
+  discount_total?: number;
+  total?: number;
+  paid_amount: number;
+  remaining_amount: number;
+  transaction_date?: string;
+  record_date?: string;
+};
+
 const getCustomerLookupKey = (value: string) =>
   normalizeArabic(noSpaces(value || "").toLowerCase());
 
@@ -74,7 +87,7 @@ export default function CustomerBalancesPage() {
       }
 
       // جلب تقرير المديونية مع فلترة server-side حسب الفرع
-      const [balancesRes, customersRes] = await Promise.all([
+      const [balancesRes, customersRes, cashInRes] = await Promise.all([
         api.get("/reports/customer-balances", {
           params: {
             customer_name: customerSearch || undefined,
@@ -84,11 +97,18 @@ export default function CustomerBalancesPage() {
           },
         }),
         api.get("/customers", { params: customersParams }),
+        api.get("/cash-in", {
+          params: {
+            branch_id: user?.branch_id || undefined,
+            limit: 100000,
+          },
+        }),
       ]);
 
       let balances: CustomerBalanceItem[] = Array.isArray(balancesRes.data)
         ? balancesRes.data
         : [];
+      const cashInRows: any[] = cashInRes.data?.data || cashInRes.data || [];
 
       const customers: CustomerItem[] = Array.isArray(customersRes.data)
         ? customersRes.data
@@ -135,13 +155,53 @@ export default function CustomerBalancesPage() {
               ? invoicesRes.data
               : (invoicesRes.data?.data ?? []);
 
+            const customerCashInDateById: Record<string, string> = {};
+            const customerCashInDateByNumber: Record<string, string> = {};
+            const normalizedCustomerName = getCustomerLookupKey(
+              item.customer_name,
+            );
+
+            cashInRows.forEach((row: any) => {
+              if (!row || !row.transaction_date) return;
+
+              const rowCustomerName = getCustomerLookupKey(
+                row.customer_name || "",
+              );
+              if (rowCustomerName !== normalizedCustomerName) return;
+
+              if (row.id != null) {
+                customerCashInDateById[String(row.id)] = row.transaction_date;
+              }
+
+              if (row.cash_in_number != null) {
+                customerCashInDateByNumber[String(row.cash_in_number)] =
+                  row.transaction_date;
+              }
+            });
+
+            const getRowDate = (row: CustomerDebtRow) => {
+              if (row.record_type === "invoice") {
+                return row.invoice_date || "";
+              }
+
+              const key = String(row.invoice_id);
+              return (
+                customerCashInDateById[key] ||
+                customerCashInDateByNumber[key] ||
+                row.transaction_date ||
+                row.record_date ||
+                row.invoice_date ||
+                ""
+              );
+            };
+
             // دمج الفواتير الناقصة (مثل حالة تغيير اسم العميل)
             const existingIds = new Set(
               debtRows
                 .filter((r: any) => r.record_type === "invoice")
                 .map((r: any) => r.invoice_id),
             );
-            const missing = allInvoices
+            const missing: CustomerDebtRow[] = allInvoices
               .filter(
                 (inv: any) =>
                   inv.id &&
@@ -152,38 +212,52 @@ export default function CustomerBalancesPage() {
                 record_type: "invoice" as const,
                 invoice_id: inv.id,
                 invoice_date: inv.invoice_date || inv.created_at || "",
+                subtotal: Number(inv.subtotal || inv.total || 0),
+                discount_total: Number(inv.discount_total || 0),
                 total: Number(inv.total || 0),
                 paid_amount: Number(inv.paid_amount || 0),
                 remaining_amount: Number(inv.remaining_amount || 0),
               }));
 
-            // ترتيب بالـ invoice_id (أكبر = أحدث)
-            const allRows = [...debtRows, ...missing].sort((a, b) =>
-              Number(a.invoice_id || 0) - Number(b.invoice_id || 0),
+            const allRows: CustomerDebtRow[] = [...debtRows, ...missing].sort(
+              (a, b) => {
+                const dateA = getRowDate(a).substring(0, 10);
+                const dateB = getRowDate(b).substring(0, 10);
+
+                const dateCompare = dateA.localeCompare(dateB);
+                if (dateCompare !== 0) {
+                  return dateCompare;
+                }
+
+                return Number(a.invoice_id || 0) - Number(b.invoice_id || 0);
+              },
             );
+
+            const visibleRows = allRows.filter((row) => {
+              const dateStr = getRowDate(row).substring(0, 10);
+              if (!dateStr) return false;
+              if (fromDate && dateStr < fromDate) return false;
+              if (toDate && dateStr > toDate) return false;
+              return true;
+            });
 
             let totalSales = 0;
             let totalPaid = 0;
             let lastDate: string | null = null;
 
-            // المديونية = remaining آخر فاتورة - سندات الدفع بعدها
-            let lastInvoiceRemaining = 0;
-            let paymentsAfterLast = 0;
+            let runningBalance = 0;
 
-            for (const row of allRows) {
+            for (const row of visibleRows) {
               if (row.record_type === "invoice") {
                 totalSales += Number(row.total || 0);
                 totalPaid += Number(row.paid_amount || 0);
-                lastInvoiceRemaining = Number(row.remaining_amount || 0);
-                paymentsAfterLast = 0;
-                const d = (
-                  row.invoice_date ||
-                  row.created_at ||
-                  ""
-                ).substring(0, 10);
+                runningBalance = Number(row.remaining_amount || 0);
+                const d = getRowDate(row).substring(0, 10);
                 if (d && (!lastDate || d > lastDate)) lastDate = d;
               } else {
-                paymentsAfterLast += Number(row.paid_amount || 0);
+                const paymentAmount = Number(row.paid_amount || 0);
+                totalPaid += paymentAmount;
+                runningBalance -= paymentAmount;
               }
             }
 
@@ -191,7 +265,7 @@ export default function CustomerBalancesPage() {
               ...item,
               total_sales: totalSales,
               total_paid: totalPaid,
-              balance_due: lastInvoiceRemaining - paymentsAfterLast,
+              balance_due: runningBalance,
               last_invoice_date: lastDate || item.last_invoice_date,
             };
           } catch {
