@@ -219,19 +219,17 @@ export default function CustomerBalancesPage() {
                 remaining_amount: Number(inv.remaining_amount || 0),
               }));
 
-            const allRows: CustomerDebtRow[] = [...debtRows, ...missing].sort(
-              (a, b) => {
-                const dateA = getRowDate(a).substring(0, 10);
-                const dateB = getRowDate(b).substring(0, 10);
+            const allRows: CustomerDebtRow[] = [...debtRows, ...missing];
 
-                const dateCompare = dateA.localeCompare(dateB);
-                if (dateCompare !== 0) {
-                  return dateCompare;
-                }
-
-                return Number(a.invoice_id || 0) - Number(b.invoice_id || 0);
-              },
-            );
+            // Match the statement page ordering exactly: sort first by the
+            // native row date coming from the debt report/invoice payload,
+            // then rely on stable ordering when later filtering by actual row
+            // date. This preserves same-day invoice/payment order.
+            allRows.sort((a, b) => {
+              const dateA = a.invoice_date || "";
+              const dateB = b.invoice_date || "";
+              return dateA.localeCompare(dateB);
+            });
 
             const visibleRows = allRows.filter((row) => {
               const dateStr = getRowDate(row).substring(0, 10);
