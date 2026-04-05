@@ -113,7 +113,9 @@ export function InvoicePreviewDialog({
 
   const extraDiscount = Number(data.extraDiscount) || 0;
   const previousBalance = Number(data.previousBalance) || 0;
-  const additionalAmount = Number(data.additionalAmount) || 0;
+  const additionalAmount = isWholesale
+    ? Number(data.additionalAmount) || 0
+    : 0;
   const paidAmount = Number(data.paidAmount) || 0;
 
   const invoiceTotal = itemsSubtotal;

@@ -107,7 +107,6 @@ export default function CreateRetailInvoicePage() {
   const [savingPhone, setSavingPhone] = useState(false);
   const [customerId, setCustomerId] = useState<number | null>(null);
   const [previousBalance, setPreviousBalance] = useState("0");
-  const [additionalAmount, setAdditionalAmount] = useState("0");
   const [savedInvoiceId, setSavedInvoiceId] = useState<number | null>(null);
   const [showSavedModal, setShowSavedModal] = useState(false);
   const [journalPosted, setJournalPosted] = useState(false);
@@ -338,8 +337,6 @@ export default function CreateRetailInvoicePage() {
       if (draft.customerId) setCustomerId(draft.customerId);
       if (draft.previousBalance != null)
         setPreviousBalance(draft.previousBalance);
-      if (draft.additionalAmount != null)
-        setAdditionalAmount(draft.additionalAmount);
       if (draft.invoiceNotes != null) setInvoiceNotes(draft.invoiceNotes);
       if (draft.extraDiscount) setExtraDiscount(draft.extraDiscount);
       if (draft.paidAmount) setPaidAmount(draft.paidAmount);
@@ -373,7 +370,6 @@ export default function CreateRetailInvoicePage() {
       customerPhone,
       customerId,
       previousBalance,
-      additionalAmount,
       extraDiscount,
       paidAmount,
       supplierId,
@@ -391,7 +387,6 @@ export default function CreateRetailInvoicePage() {
     customerPhone,
     customerId,
     previousBalance,
-    additionalAmount,
     extraDiscount,
     paidAmount,
     supplierId,
@@ -411,7 +406,6 @@ export default function CreateRetailInvoicePage() {
     setCustomerPhone("");
     setCustomerId(null);
     setPreviousBalance("0");
-    setAdditionalAmount("0");
     setInvoiceNotes("");
     setExtraDiscount("0");
     setPaidAmount("0");
@@ -1180,7 +1174,7 @@ export default function CreateRetailInvoicePage() {
   }, [totalBeforeDiscount, extraDiscount]);
 
   const totalWithPrevious =
-    finalTotal + Number(previousBalance || 0) + Number(additionalAmount || 0);
+    finalTotal + Number(previousBalance || 0);
 
   const remaining = totalWithPrevious - (Number(paidAmount) || 0);
 
@@ -1242,7 +1236,6 @@ export default function CreateRetailInvoicePage() {
         items,
         paid_amount: Number(paidAmount) || 0,
         previous_balance: Number(previousBalance) ?? 0,
-        additional_amount: Number(additionalAmount) ?? 0,
         apply_items_discount: applyItemsDiscount,
         created_by: user?.id,
         created_by_name: user?.username,
@@ -1271,7 +1264,6 @@ export default function CreateRetailInvoicePage() {
       setItems([]);
       setCustomerName("");
       setCustomerPhone("");
-      setAdditionalAmount("0");
       setCustomerId(null);
       setPreviousBalance("0");
       setInvoiceNotes("");
@@ -2550,28 +2542,6 @@ export default function CreateRetailInvoicePage() {
                   if (e.key === "Enter") {
                     e.preventDefault();
                     const el = document.querySelector(
-                      '[data-field="additional-amount"]',
-                    ) as HTMLInputElement;
-                    el?.focus();
-                    el?.select();
-                  }
-                }}
-              />
-              <span />
-            </div>
-
-            <div className="grid grid-cols-3 items-center gap-3">
-              <label className="text-sm text-muted-foreground">إضافة</label>
-              <Input
-                data-field="additional-amount"
-                type="number"
-                className="text-center"
-                value={additionalAmount}
-                onChange={(e) => setAdditionalAmount(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    const el = document.querySelector(
                       '[data-field="paid-amount"]',
                     ) as HTMLInputElement;
                     el?.focus();
@@ -2686,7 +2656,6 @@ export default function CreateRetailInvoicePage() {
                       remaining_amount: remaining,
                       extra_discount: Number(extraDiscount) || 0,
                       previous_balance: Number(previousBalance) || 0,
-                      additional_amount: Number(additionalAmount) || 0,
                       items: items.map((it: any) => ({
                         product_name: it.product_name,
                         package: it.package,
@@ -2744,7 +2713,6 @@ export default function CreateRetailInvoicePage() {
             applyItemsDiscount: applyItemsDiscount,
             extraDiscount: Number(extraDiscount) || 0,
             previousBalance: Number(previousBalance) ?? 0,
-            additionalAmount: Number(additionalAmount) ?? 0,
             paidAmount: Number(paidAmount) || 0,
             notes: invoiceNotes,
           }}
@@ -2901,7 +2869,6 @@ export default function CreateRetailInvoicePage() {
                       remaining_amount: remaining,
                       extra_discount: Number(extraDiscount) || 0,
                       previous_balance: Number(previousBalance) || 0,
-                      additional_amount: Number(additionalAmount) || 0,
                       items: items.map((it: any) => ({
                         product_name: it.product_name,
                         package: it.package,

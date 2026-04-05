@@ -447,7 +447,10 @@ function InvoicePrintPage() {
     invoice.manual_discount ?? invoice.extra_discount ?? 0,
   );
   const previousBalance = Number(invoice.previous_balance) || 0;
-  const additionalAmount = Number(invoice.additional_amount) || 0;
+  const additionalAmount =
+    invoice.invoice_type === "wholesale"
+      ? Number(invoice.additional_amount) || 0
+      : 0;
   const paidAmount = Number(invoice.paid_amount) || 0;
   const netTotal =
     itemsSubtotal + previousBalance + additionalAmount - extraDiscount;
