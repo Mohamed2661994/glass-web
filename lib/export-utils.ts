@@ -196,7 +196,8 @@ export async function exportDataToPdf<T extends Record<string, unknown>>(
                 value === null || value === undefined || value === ""
                   ? "—"
                   : String(value);
-              const className = columnIndex === 0 ? "text-right" : "text-center";
+              const className =
+                columnIndex === 0 ? "text-right" : "text-center";
               return `<td class="${className}">${columnIndex === 0 ? `${startIndex + rowIndex + 1}. ` : ""}${escapeHtml(text)}</td>`;
             })
             .join("")}
@@ -340,6 +341,7 @@ export interface WhatsAppInvoice {
   extra_discount?: number;
   manual_discount?: number;
   previous_balance?: number;
+  additional_amount?: number;
   apply_items_discount?: boolean;
   invoice_type?: string;
   items?: {
@@ -445,6 +447,7 @@ function buildInvoiceHtml(invoice: WhatsAppInvoice): string {
       </div>
       ${extraDiscount > 0 ? `<div class="summary-row red"><span>الخصم</span><span>-${extraDiscount.toFixed(2)}</span></div>` : ""}
       ${Number(invoice.previous_balance || 0) !== 0 ? `<div class="summary-row"><span>حساب سابق</span><span>${Number(invoice.previous_balance).toFixed(2)} جنيه</span></div>` : ""}
+      ${Number(invoice.additional_amount || 0) !== 0 ? `<div class="summary-row"><span>إضافة</span><span>${Number(invoice.additional_amount).toFixed(2)} جنيه</span></div>` : ""}
       <div class="summary-row">
         <span>المدفوع</span>
         <span>${Number(invoice.paid_amount).toFixed(2)} جنيه</span>

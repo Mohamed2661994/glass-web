@@ -106,6 +106,7 @@ export default function EditRetailInvoicePage() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerId, setCustomerId] = useState<number | null>(null);
   const [previousBalance, setPreviousBalance] = useState("0");
+  const [additionalAmount, setAdditionalAmount] = useState("0");
 
   /* previous invoices modal */
   const [prevInvoicesOpen, setPrevInvoicesOpen] = useState(false);
@@ -200,6 +201,7 @@ export default function EditRetailInvoicePage() {
       customerPhone,
       customerId,
       previousBalance,
+      additionalAmount,
       extraDiscount,
       paidAmount,
       applyItemsDiscount,
@@ -215,6 +217,7 @@ export default function EditRetailInvoicePage() {
       customerPhone,
       customerId,
       previousBalance,
+      additionalAmount,
       extraDiscount,
       paidAmount,
       applyItemsDiscount,
@@ -298,6 +301,7 @@ export default function EditRetailInvoicePage() {
           customerPhone: inv.customer_phone || "",
           customerId: inv.customer_id || null,
           previousBalance: String(inv.previous_balance || 0),
+          additionalAmount: String(inv.additional_amount || 0),
           extraDiscount: String(inv.extra_discount || 0),
           paidAmount: String(inv.paid_amount || 0),
           applyItemsDiscount: inv.apply_items_discount ?? true,
@@ -351,6 +355,7 @@ export default function EditRetailInvoicePage() {
         setSupplierName(nextDraft.supplierName || "");
         setSupplierPhone(nextDraft.supplierPhone || "");
         setPreviousBalance(nextDraft.previousBalance);
+        setAdditionalAmount(nextDraft.additionalAmount || "0");
         setExtraDiscount(nextDraft.extraDiscount);
         setPaidAmount(nextDraft.paidAmount);
         setApplyItemsDiscount(nextDraft.applyItemsDiscount);
@@ -756,7 +761,12 @@ export default function EditRetailInvoicePage() {
   }, [totalBeforeDiscount, extraDiscount]);
 
   const totalWithPrevious =
-    Math.round((finalTotal + Number(previousBalance || 0)) * 100) / 100;
+    Math.round(
+      (finalTotal +
+        Number(previousBalance || 0) +
+        Number(additionalAmount || 0)) *
+        100,
+    ) / 100;
 
   const remaining =
     Math.round((totalWithPrevious - (Number(paidAmount) || 0)) * 100) / 100;
@@ -825,6 +835,7 @@ export default function EditRetailInvoicePage() {
         items,
         paid_amount: Number(paidAmount) || 0,
         previous_balance: Number(previousBalance) ?? 0,
+        additional_amount: Number(additionalAmount) ?? 0,
         apply_items_discount: applyItemsDiscount,
         invoice_date: invoiceDate || undefined,
         invoice_revision: invoiceRevision,
@@ -1993,6 +2004,28 @@ export default function EditRetailInvoicePage() {
                   if (e.key === "Enter") {
                     e.preventDefault();
                     const el = document.querySelector(
+                      '[data-field="additional-amount"]',
+                    ) as HTMLInputElement;
+                    el?.focus();
+                    el?.select();
+                  }
+                }}
+              />
+              <span />
+            </div>
+
+            <div className="grid grid-cols-3 items-center gap-3">
+              <label className="text-sm text-muted-foreground">إضافة</label>
+              <Input
+                data-field="additional-amount"
+                type="number"
+                className="text-center"
+                value={additionalAmount}
+                onChange={(e) => setAdditionalAmount(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const el = document.querySelector(
                       '[data-field="paid-amount"]',
                     ) as HTMLInputElement;
                     el?.focus();
@@ -2095,6 +2128,7 @@ export default function EditRetailInvoicePage() {
                       remaining_amount: remaining,
                       extra_discount: Number(extraDiscount) || 0,
                       previous_balance: Number(previousBalance) || 0,
+                      additional_amount: Number(additionalAmount) || 0,
                       items: items.map((it: any) => ({
                         product_name: it.product_name,
                         package: it.package,
@@ -2143,6 +2177,7 @@ export default function EditRetailInvoicePage() {
                         remaining_amount: remaining,
                         extra_discount: Number(extraDiscount) || 0,
                         previous_balance: Number(previousBalance) || 0,
+                        additional_amount: Number(additionalAmount) || 0,
                         items: items.map((it: any) => ({
                           product_name: it.product_name,
                           package: it.package,

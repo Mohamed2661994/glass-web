@@ -28,6 +28,7 @@ export interface InvoicePreviewData {
   applyItemsDiscount?: boolean;
   extraDiscount: number;
   previousBalance: number;
+  additionalAmount?: number;
   paidAmount: number;
 }
 
@@ -112,10 +113,11 @@ export function InvoicePreviewDialog({
 
   const extraDiscount = Number(data.extraDiscount) || 0;
   const previousBalance = Number(data.previousBalance) || 0;
+  const additionalAmount = Number(data.additionalAmount) || 0;
   const paidAmount = Number(data.paidAmount) || 0;
 
   const invoiceTotal = itemsSubtotal;
-  const totalWithPrevious = invoiceTotal + previousBalance;
+  const totalWithPrevious = invoiceTotal + previousBalance + additionalAmount;
   const netTotal = totalWithPrevious - extraDiscount;
   const remaining = netTotal - paidAmount;
 
@@ -450,6 +452,8 @@ export function InvoicePreviewDialog({
               {previousBalance !== 0 && (
                 <div>حساب سابق: {fmt(previousBalance)}</div>
               )}
+
+              {additionalAmount !== 0 && <div>إضافة: {fmt(additionalAmount)}</div>}
 
               {extraDiscount > 0 && <div>خصم : {fmt(extraDiscount)}</div>}
 

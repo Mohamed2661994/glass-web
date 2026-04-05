@@ -30,6 +30,7 @@ interface InvoiceData {
   discount_total: number;
   total: number;
   previous_balance: number;
+  additional_amount?: number;
   paid_amount: number;
   remaining_amount: number;
   payment_status: string;
@@ -75,10 +76,7 @@ const FONT_OPTIONS = [
   { label: "Noto Sans Arabic", value: "Noto Sans Arabic, sans-serif" },
 ];
 
-const createPhoneEntry = (
-  value = "",
-  visible = true,
-): CustomPhoneEntry => ({
+const createPhoneEntry = (value = "", visible = true): CustomPhoneEntry => ({
   id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
   value,
   visible,
@@ -449,8 +447,10 @@ function InvoicePrintPage() {
     invoice.manual_discount ?? invoice.extra_discount ?? 0,
   );
   const previousBalance = Number(invoice.previous_balance) || 0;
+  const additionalAmount = Number(invoice.additional_amount) || 0;
   const paidAmount = Number(invoice.paid_amount) || 0;
-  const netTotal = itemsSubtotal + previousBalance - extraDiscount;
+  const netTotal =
+    itemsSubtotal + previousBalance + additionalAmount - extraDiscount;
   const remaining = netTotal - paidAmount;
 
   const totalQty = items.reduce(
@@ -537,7 +537,8 @@ function InvoicePrintPage() {
 
   const removeCustomPhone = (id: string) => {
     const nextPhones = customPhones.filter((phone) => phone.id !== id);
-    const safePhones = nextPhones.length > 0 ? nextPhones : [createPhoneEntry()];
+    const safePhones =
+      nextPhones.length > 0 ? nextPhones : [createPhoneEntry()];
     setCustomPhones(safePhones);
     savePrintSettings({
       customPhones: safePhones,
@@ -1117,17 +1118,25 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
 
               {/* رقم تليفون مخصص بجانب اللوجو */}
               <div className="setting-group">
-                <label className="setting-label">أرقام التليفون بجانب اللوجو</label>
+                <label className="setting-label">
+                  أرقام التليفون بجانب اللوجو
+                </label>
                 <div className="phone-list">
                   {customPhones.map((phone, index) => (
                     <div key={phone.id} className="phone-item">
                       <div className="phone-item-header">
-                        <span className="setting-row-label">رقم {index + 1}</span>
+                        <span className="setting-row-label">
+                          رقم {index + 1}
+                        </span>
                         <div className="phone-item-actions">
                           <div
                             className={`toggle-track ${phone.visible ? "active" : ""}`}
-                            onClick={() => toggleCustomPhoneVisibility(phone.id)}
-                            title={phone.visible ? "إخفاء الرقم" : "إظهار الرقم"}
+                            onClick={() =>
+                              toggleCustomPhoneVisibility(phone.id)
+                            }
+                            title={
+                              phone.visible ? "إخفاء الرقم" : "إظهار الرقم"
+                            }
                           >
                             <div className="toggle-thumb" />
                           </div>
@@ -1139,7 +1148,9 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                             style={{
                               opacity: customPhones.length === 1 ? 0.5 : 1,
                               cursor:
-                                customPhones.length === 1 ? "not-allowed" : "pointer",
+                                customPhones.length === 1
+                                  ? "not-allowed"
+                                  : "pointer",
                             }}
                           >
                             حذف
@@ -1152,7 +1163,9 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                         placeholder="اكتب رقم التليفون..."
                         value={phone.value}
                         autoComplete="tel"
-                        onChange={(e) => updateCustomPhone(phone.id, e.target.value)}
+                        onChange={(e) =>
+                          updateCustomPhone(phone.id, e.target.value)
+                        }
                         style={{ direction: "ltr", textAlign: "center" }}
                       />
                     </div>
@@ -1307,45 +1320,44 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                     )}
                   </div>
                 )}
-                {!showLogo &&
-                  (invoiceUserName || hasVisibleCustomPhones) && (
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        lineHeight: 1.25,
-                        gap: 1,
-                      }}
-                    >
-                      {invoiceUserName && (
-                        <div
-                          style={{
-                            fontSize: `${Math.max(fontSize - 1, 7)}px`,
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {invoiceUserName}
-                        </div>
-                      )}
-                      {hasVisibleCustomPhones && (
-                        <div className="logo-phone-list">
-                          {visibleCustomPhones.map((phone) => (
-                            <div
-                              key={phone.id}
-                              className="logo-phone"
-                              style={{
-                                fontSize: `${fontSize}px`,
-                                fontWeight: "bold",
-                              }}
-                            >
-                              {phone.value}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                {!showLogo && (invoiceUserName || hasVisibleCustomPhones) && (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      lineHeight: 1.25,
+                      gap: 1,
+                    }}
+                  >
+                    {invoiceUserName && (
+                      <div
+                        style={{
+                          fontSize: `${Math.max(fontSize - 1, 7)}px`,
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {invoiceUserName}
+                      </div>
+                    )}
+                    {hasVisibleCustomPhones && (
+                      <div className="logo-phone-list">
+                        {visibleCustomPhones.map((phone) => (
+                          <div
+                            key={phone.id}
+                            className="logo-phone"
+                            style={{
+                              fontSize: `${fontSize}px`,
+                              fontWeight: "bold",
+                            }}
+                          >
+                            {phone.value}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <hr
@@ -1432,6 +1444,16 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                       <td>{fmt(previousBalance)}</td>
                     </tr>
                   )}
+                  {additionalAmount !== 0 && (
+                    <tr className="summary-row">
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td style={{ textAlign: "left" }}>إضافة</td>
+                      <td>{fmt(additionalAmount)}</td>
+                    </tr>
+                  )}
                   {extraDiscount > 0 && (
                     <tr className="summary-row">
                       <td></td>
@@ -1442,7 +1464,7 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                       <td>{fmt(extraDiscount)}</td>
                     </tr>
                   )}
-                  {(previousBalance !== 0 || extraDiscount > 0) && (
+                  {(previousBalance !== 0 || additionalAmount !== 0 || extraDiscount > 0) && (
                     <tr className="summary-row">
                       <td></td>
                       <td></td>
