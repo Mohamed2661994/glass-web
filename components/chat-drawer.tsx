@@ -6,6 +6,7 @@ import {
   Send,
   ArrowRight,
   Plus,
+  Minus,
   Check,
   CheckCheck,
   Search,
@@ -128,6 +129,12 @@ function getReplyPreviewLabel(message: Message) {
   return message.content || "رسالة";
 }
 
+function shouldShowImageCaption(content?: string) {
+  const value = String(content || "").trim();
+  if (!value) return false;
+  return !/\.(png|jpe?g|gif|webp|bmp|heic|svg)$/i.test(value);
+}
+
 /* ========== Component ========== */
 export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   const { prefs } = useUserPreferences();
@@ -204,9 +211,28 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const imageComposerTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [uploading, setUploading] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
   const [previewImg, setPreviewImg] = useState<string | null>(null);
+  const [previewZoom, setPreviewZoom] = useState(1);
+  const [previewOffset, setPreviewOffset] = useState({ x: 0, y: 0 });
+  const [pendingImage, setPendingImage] = useState<{
+    file: File;
+    previewUrl: string;
+  } | null>(null);
+  const [pendingImageCaption, setPendingImageCaption] = useState("");
+  const imageTapRef = useRef<{ id: number | null; time: number }>({
+    id: null,
+    time: 0,
+  });
+  const previewDragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+  } | null>(null);
 
   /* ---------- Audio notification (PWA-safe) ---------- */
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -391,14 +417,67 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
     }
   }, []);
 
+  const openPreviewImage = useCallback((src: string) => {
+    previewDragRef.current = null;
+    setPreviewZoom(1);
+    setPreviewOffset({ x: 0, y: 0 });
+    setPreviewImg(src);
+  }, []);
+
+  const closePreviewImage = useCallback(() => {
+    previewDragRef.current = null;
+    setPreviewImg(null);
+    setPreviewZoom(1);
+    setPreviewOffset({ x: 0, y: 0 });
+  }, []);
+
+  const closePendingImage = useCallback(() => {
+    setPendingImage((current) => {
+      if (current) {
+        URL.revokeObjectURL(current.previewUrl);
+      }
+      return null;
+    });
+    setPendingImageCaption("");
+  }, []);
+
+  const openPendingImage = useCallback((file: File) => {
+    const previewUrl = URL.createObjectURL(file);
+    setPendingImage((current) => {
+      if (current) {
+        URL.revokeObjectURL(current.previewUrl);
+      }
+      return { file, previewUrl };
+    });
+    setPendingImageCaption("");
+    setAttachOpen(false);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (pendingImage) {
+        URL.revokeObjectURL(pendingImage.previewUrl);
+      }
+    };
+  }, [pendingImage]);
+
   /* ---------- file upload handler ---------- */
   const handleFileUpload = useCallback(
-    async (file: File) => {
+    async (
+      file: File,
+      options?: { content?: string; replyToId?: number | null },
+    ) => {
       if (!activeConv || uploading) return;
       setUploading(true);
       try {
         const formData = new FormData();
         formData.append("file", file);
+        if (options?.content) {
+          formData.append("content", options.content.trim());
+        }
+        if (options?.replyToId) {
+          formData.append("reply_to_id", String(options.replyToId));
+        }
         const { data } = await api.post(
           `/chat/conversations/${activeConv.id}/upload`,
           formData,
@@ -407,13 +486,46 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
         setMessages((prev) => [...prev, data.data]);
         scrollToBottom();
         fetchConversations();
+        return true;
       } catch {
         toast.error("فشل رفع الملف");
+        return false;
       } finally {
         setUploading(false);
       }
     },
     [activeConv, uploading, scrollToBottom, fetchConversations],
+  );
+
+  const handleSendPendingImage = useCallback(async () => {
+    if (!pendingImage) return;
+
+    const uploaded = await handleFileUpload(pendingImage.file, {
+      content: pendingImageCaption,
+      replyToId: replyTo?.id || null,
+    });
+
+    if (!uploaded) return;
+
+    closePendingImage();
+    setReplyTo(null);
+  }, [
+    pendingImage,
+    pendingImageCaption,
+    replyTo,
+    handleFileUpload,
+    closePendingImage,
+  ]);
+
+  const handlePickedFile = useCallback(
+    (file: File) => {
+      if (file.type.startsWith("image/")) {
+        openPendingImage(file);
+        return;
+      }
+      void handleFileUpload(file);
+    },
+    [handleFileUpload, openPendingImage],
   );
 
   /* ---------- fetch unread count ---------- */
@@ -647,6 +759,38 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
       });
     }, 2000);
   };
+
+  const focusReplyToMessage = useCallback((message: Message) => {
+    setReplyTo(message);
+    setTimeout(() => {
+      if (pendingImage) {
+        imageComposerTextareaRef.current?.focus();
+      } else {
+        textareaRef.current?.focus();
+      }
+    }, 0);
+  }, [pendingImage]);
+
+  const handleMessageTouchReply = useCallback((message: Message) => {
+    const now = Date.now();
+    const lastTap = imageTapRef.current;
+
+    if (lastTap.id === message.id && now - lastTap.time < 280) {
+      imageTapRef.current = { id: null, time: 0 };
+      focusReplyToMessage(message);
+      return;
+    }
+
+    imageTapRef.current = { id: message.id, time: now };
+  }, [focusReplyToMessage]);
+
+  const adjustPreviewZoom = useCallback((nextZoom: number) => {
+    const clamped = Math.max(1, Math.min(4, Number(nextZoom.toFixed(2))));
+    setPreviewZoom(clamped);
+    if (clamped === 1) {
+      setPreviewOffset({ x: 0, y: 0 });
+    }
+  }, []);
 
   /* ---------- open conversation ---------- */
   const openConversation = (conv: Conversation) => {
@@ -1045,6 +1189,8 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                     <div
                       key={msg.id}
                       data-msg-id={msg.id}
+                      onDoubleClick={() => focusReplyToMessage(msg)}
+                      onTouchEnd={() => handleMessageTouchReply(msg)}
                       className={cn(
                         "flex items-end gap-1.5 group transition-colors duration-500",
                         isMine ? "justify-end" : "justify-start",
@@ -1056,8 +1202,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                       {isMine && (
                         <button
                           onClick={() => {
-                            setReplyTo(msg);
-                            textareaRef.current?.focus();
+                            focusReplyToMessage(msg);
                           }}
                           className="p-1 rounded-full hover:bg-muted mb-1 text-muted-foreground/30 hover:text-muted-foreground hover:opacity-100 opacity-60 transition-all"
                           title="رد"
@@ -1151,7 +1296,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                           <div
                             className="cursor-pointer"
                             onClick={() =>
-                              setPreviewImg(
+                              openPreviewImage(
                                 msg.file_url!.startsWith("http")
                                   ? msg.file_url!
                                   : `${API_URL}${msg.file_url}`,
@@ -1169,6 +1314,17 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                               className="rounded-xl max-w-full max-h-64 object-cover"
                               loading="lazy"
                             />
+                            {shouldShowImageCaption(msg.content) && (
+                              <p
+                                className={cn(
+                                  "px-2 pb-1 pt-2 text-sm leading-5 [unicode-bidi:plaintext]",
+                                  isMine ? "text-white/90" : "text-current",
+                                )}
+                                dir="auto"
+                              >
+                                {msg.content}
+                              </p>
+                            )}
                           </div>
                         ) : msg.type === "file" && msg.file_url ? (
                           <a
@@ -1232,8 +1388,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                       {!isMine && (
                         <button
                           onClick={() => {
-                            setReplyTo(msg);
-                            textareaRef.current?.focus();
+                            focusReplyToMessage(msg);
                           }}
                           className="p-1 rounded-full hover:bg-muted mb-1 text-muted-foreground/30 hover:text-muted-foreground hover:opacity-100 opacity-60 transition-all"
                           title="رد"
@@ -1267,7 +1422,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
               accept="*/*"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) handleFileUpload(file);
+                if (file) handlePickedFile(file);
                 e.target.value = "";
               }}
             />
@@ -1279,7 +1434,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
               capture="environment"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) handleFileUpload(file);
+                if (file) handlePickedFile(file);
                 e.target.value = "";
               }}
             />
@@ -1376,7 +1531,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                             `paste_${Date.now()}.png`,
                             { type: file.type },
                           );
-                          handleFileUpload(named);
+                            handlePickedFile(named);
                         }
                         return;
                       }
@@ -1410,17 +1565,153 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
         )}
       </SheetContent>
 
+      <Dialog open={!!pendingImage} onOpenChange={(isOpen) => !isOpen && closePendingImage()}>
+        <DialogContent className="w-[95vw] max-w-md overflow-hidden p-0">
+          <DialogTitle className="sr-only">معاينة الصورة قبل الإرسال</DialogTitle>
+          {pendingImage && (
+            <>
+              <div className="bg-black p-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={pendingImage.previewUrl}
+                  alt="معاينة قبل الإرسال"
+                  className="mx-auto max-h-[52vh] w-auto max-w-full rounded-2xl object-contain"
+                />
+              </div>
+              <div className="space-y-3 bg-background p-3">
+                {replyTo && (
+                  <div className="rounded-2xl border bg-muted/40 px-3 py-2 text-right">
+                    <span className="mb-0.5 block text-[11px] font-semibold text-sky-700 dark:text-sky-400">
+                      رد على {replyTo.sender_id === userId ? "أنت" : replyTo.full_name}
+                    </span>
+                    <span className="block line-clamp-1 text-xs leading-5 text-muted-foreground">
+                      {getReplyPreviewLabel(replyTo)}
+                    </span>
+                  </div>
+                )}
+                <textarea
+                  ref={imageComposerTextareaRef}
+                  placeholder="اكتب رسالة مع الصورة..."
+                  value={pendingImageCaption}
+                  onChange={(e) => setPendingImageCaption(e.target.value)}
+                  rows={3}
+                  className="min-h-[88px] w-full resize-none rounded-2xl border bg-background px-4 py-3 text-sm leading-6 ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                />
+                <div className="flex items-center justify-between gap-2">
+                  <Button variant="ghost" onClick={closePendingImage} disabled={uploading}>
+                    إلغاء
+                  </Button>
+                  <Button
+                    onClick={handleSendPendingImage}
+                    disabled={uploading}
+                    className="gap-2"
+                    style={{ backgroundColor: myColor, color: myTextColor }}
+                  >
+                    {uploading ? "جارٍ الإرسال..." : "إرسال الصورة"}
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Image preview modal */}
-      <Dialog open={!!previewImg} onOpenChange={() => setPreviewImg(null)}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] w-[95vw] h-[95vh] p-2 flex items-center justify-center bg-black/90 border-none">
+      <Dialog open={!!previewImg} onOpenChange={(isOpen) => !isOpen && closePreviewImage()}>
+        <DialogContent className="h-[95vh] w-[98vw] max-h-[95vh] max-w-[98vw] overflow-hidden border-none bg-black/95 p-0">
           <DialogTitle className="sr-only">معاينة الصورة</DialogTitle>
           {previewImg && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={previewImg}
-              alt="معاينة"
-              className="w-full h-full object-contain rounded-lg"
-            />
+            <div className="relative flex h-full w-full items-center justify-center overflow-hidden">
+              <div className="absolute left-3 top-3 z-10 flex items-center gap-2 rounded-full bg-black/60 px-2 py-1 text-white backdrop-blur">
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 rounded-full text-white hover:bg-white/10"
+                  onClick={() => adjustPreviewZoom(previewZoom - 0.25)}
+                >
+                  <Minus className="h-4 w-4" />
+                </Button>
+                <button
+                  type="button"
+                  className="min-w-12 text-center text-xs font-medium"
+                  onClick={() => {
+                    setPreviewOffset({ x: 0, y: 0 });
+                    adjustPreviewZoom(1);
+                  }}
+                >
+                  {Math.round(previewZoom * 100)}%
+                </button>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 rounded-full text-white hover:bg-white/10"
+                  onClick={() => adjustPreviewZoom(previewZoom + 0.25)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div
+                className="flex h-full w-full items-center justify-center overflow-hidden"
+                onWheel={(e) => {
+                  e.preventDefault();
+                  adjustPreviewZoom(previewZoom + (e.deltaY < 0 ? 0.2 : -0.2));
+                }}
+                onPointerMove={(e) => {
+                  const drag = previewDragRef.current;
+                  if (!drag || drag.pointerId !== e.pointerId || previewZoom <= 1) {
+                    return;
+                  }
+
+                  setPreviewOffset({
+                    x: drag.originX + (e.clientX - drag.startX),
+                    y: drag.originY + (e.clientY - drag.startY),
+                  });
+                }}
+                onPointerUp={(e) => {
+                  if (previewDragRef.current?.pointerId === e.pointerId) {
+                    previewDragRef.current = null;
+                  }
+                }}
+                onPointerCancel={() => {
+                  previewDragRef.current = null;
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={previewImg}
+                  alt="معاينة"
+                  draggable={false}
+                  onDoubleClick={() => {
+                    if (previewZoom > 1) {
+                      setPreviewOffset({ x: 0, y: 0 });
+                      adjustPreviewZoom(1);
+                    } else {
+                      adjustPreviewZoom(2);
+                    }
+                  }}
+                  onPointerDown={(e) => {
+                    if (previewZoom <= 1) return;
+                    previewDragRef.current = {
+                      pointerId: e.pointerId,
+                      startX: e.clientX,
+                      startY: e.clientY,
+                      originX: previewOffset.x,
+                      originY: previewOffset.y,
+                    };
+                    e.currentTarget.setPointerCapture(e.pointerId);
+                  }}
+                  className="max-h-full max-w-full select-none object-contain transition-transform duration-150"
+                  style={{
+                    transform: `translate(${previewOffset.x}px, ${previewOffset.y}px) scale(${previewZoom})`,
+                    cursor: previewZoom > 1 ? "grab" : "zoom-in",
+                  }}
+                />
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>
