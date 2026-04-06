@@ -79,6 +79,55 @@ interface ChatDrawerProps {
   branchId: number;
 }
 
+function hexToRgb(hex: string) {
+  const value = hex.replace("#", "").trim();
+  const normalized =
+    value.length === 3
+      ? value
+          .split("")
+          .map((part) => part + part)
+          .join("")
+      : value;
+
+  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) {
+    return null;
+  }
+
+  return {
+    r: parseInt(normalized.slice(0, 2), 16),
+    g: parseInt(normalized.slice(2, 4), 16),
+    b: parseInt(normalized.slice(4, 6), 16),
+  };
+}
+
+function getContrastTextColor(hex: string, fallback: string) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return fallback;
+
+  const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+  return luminance > 0.67 ? "#111827" : "#ffffff";
+}
+
+function mixColor(hex: string, target: "white" | "black", amount: number) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+
+  const clamp = Math.max(0, Math.min(1, amount));
+  const targetValue = target === "white" ? 255 : 0;
+  const mix = (channel: number) =>
+    Math.round(channel + (targetValue - channel) * clamp)
+      .toString(16)
+      .padStart(2, "0");
+
+  return `#${mix(rgb.r)}${mix(rgb.g)}${mix(rgb.b)}`;
+}
+
+function getReplyPreviewLabel(message: Message) {
+  if (message.type === "image") return "صورة";
+  if (message.type === "file") return message.content || "ملف مرفق";
+  return message.content || "رسالة";
+}
+
 /* ========== Component ========== */
 export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   const { prefs } = useUserPreferences();
@@ -86,6 +135,18 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   const myColor = chatPrefs.myBubbleColor || "#2563eb";
   const otherColor = chatPrefs.otherBubbleColor || "";
   const soundFile = chatPrefs.notificationSound || "beepmasage.mp3";
+  const myTextColor = getContrastTextColor(myColor, "#ffffff");
+  const otherBubbleBg = otherColor || "var(--muted)";
+  const otherTextColor = otherColor
+    ? getContrastTextColor(otherColor, "var(--foreground)")
+    : "var(--foreground)";
+  const myReplyBg = mixColor(myColor, "black", 0.18);
+  const otherReplyBg = otherColor
+    ? mixColor(otherColor, "white", 0.32)
+    : "rgba(15, 23, 42, 0.06)";
+  const composerBg = otherColor
+    ? mixColor(otherColor, "white", 0.88)
+    : "rgba(248, 250, 252, 0.92)";
 
   // Resolve sound URL: Cloudinary returns full https:// URLs, old uploads use API_URL, built-in use /sounds/
   const getSoundUrl = useCallback(
@@ -665,6 +726,9 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   const displayName = (u: ChatUser | null) =>
     u ? u.full_name || u.username : "محذوف";
 
+  const otherUserOnline =
+    activeConv?.other_user && onlineUsers.has(activeConv.other_user.id);
+
   /* ---------- filtered users for new chat ---------- */
   const filteredUsers = allUsers.filter((u) => {
     if (!userSearch.trim()) return true;
@@ -787,19 +851,22 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
               >
                 <ArrowRight className="h-5 w-5" />
               </Button>
-              <div className="flex-1 text-center">
-                <h2 className="text-sm font-bold">
+              <div className="flex-1 px-2 text-center">
+                <h2 className="truncate text-sm font-bold">
                   {displayName(activeConv?.other_user ?? null)}
                 </h2>
                 {typing ? (
-                  <span className="text-xs text-green-500 animate-pulse">
+                  <span className="text-[11px] font-medium text-green-600 animate-pulse">
                     يكتب...
                   </span>
-                ) : activeConv?.other_user &&
-                  onlineUsers.has(activeConv.other_user.id) ? (
-                  <span className="text-xs text-green-500">متصل الآن</span>
+                ) : otherUserOnline ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-0.5 text-[11px] font-medium text-green-700 dark:text-green-400">
+                    <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                    متصل الآن
+                  </span>
                 ) : (
-                  <span className="text-xs text-muted-foreground">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                    <span className="h-1.5 w-1.5 rounded-full bg-current/60" />
                     غير متصل
                   </span>
                 )}
@@ -973,15 +1040,16 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
               <div className="space-y-2 w-full overflow-hidden">
                 {messages.map((msg) => {
                   const isMine = msg.sender_id === userId;
+                  const bubbleTextColor = isMine ? myTextColor : otherTextColor;
                   return (
                     <div
                       key={msg.id}
                       data-msg-id={msg.id}
                       className={cn(
-                        "flex items-end gap-1 group transition-colors duration-500",
+                        "flex items-end gap-1.5 group transition-colors duration-500",
                         isMine ? "justify-end" : "justify-start",
                         highlightedMsgId === msg.id &&
-                          "bg-blue-500/20 rounded-lg",
+                          "rounded-2xl bg-sky-500/10 ring-1 ring-sky-400/40",
                       )}
                     >
                       {/* Reply button - left side for my messages */}
@@ -999,19 +1067,25 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                       )}
                       <div
                         className={cn(
-                          "max-w-[85%] rounded-2xl text-sm overflow-hidden",
-                          msg.type === "image" ? "p-1" : "px-3.5 py-1.5",
+                          "max-w-[78%] overflow-hidden rounded-3xl text-sm shadow-sm",
+                          msg.type === "image" ? "p-1.5" : "px-4 py-2.5",
                           isMine
-                            ? "text-white rounded-br-sm"
+                            ? "rounded-br-md"
                             : otherColor
-                              ? "rounded-bl-sm"
-                              : "bg-muted rounded-bl-sm",
+                              ? "rounded-bl-md"
+                              : "bg-muted rounded-bl-md",
                         )}
                         style={
                           isMine
-                            ? { backgroundColor: myColor }
+                            ? {
+                                backgroundColor: myColor,
+                                color: bubbleTextColor,
+                              }
                             : otherColor
-                              ? { backgroundColor: otherColor }
+                              ? {
+                                  backgroundColor: otherBubbleBg,
+                                  color: bubbleTextColor,
+                                }
                               : undefined
                         }
                       >
@@ -1019,15 +1093,15 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                         {msg.reply_to_id && (
                           <div
                             className={cn(
-                              "rounded-lg px-3 py-1.5 mb-2 border-r-2 text-xs cursor-pointer hover:opacity-80",
+                              "mb-2 rounded-2xl border-r-[3px] px-3 py-2 text-xs cursor-pointer transition-all hover:scale-[0.99]",
                               isMine
                                 ? "border-r-white/40"
-                                : "border-r-blue-500",
+                                : "border-r-sky-500",
                             )}
                             style={
                               isMine
-                                ? { backgroundColor: "rgba(0,0,0,0.15)" }
-                                : { backgroundColor: "rgba(0,0,0,0.05)" }
+                                ? { backgroundColor: myReplyBg }
+                                : { backgroundColor: otherReplyBg }
                             }
                             onClick={() => {
                               const el = document.querySelector(
@@ -1048,8 +1122,8 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                           >
                             <span
                               className={cn(
-                                "font-semibold block text-[11px]",
-                                isMine ? "text-white/80" : "text-blue-600",
+                                "mb-0.5 block text-[11px] font-semibold",
+                                isMine ? "text-white/85" : "text-sky-700 dark:text-sky-400",
                               )}
                             >
                               {msg.reply_sender_id === userId
@@ -1058,9 +1132,9 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                             </span>
                             <span
                               className={cn(
-                                "line-clamp-2",
+                                "line-clamp-1 leading-5",
                                 isMine
-                                  ? "text-white/60"
+                                  ? "text-white/70"
                                   : "text-muted-foreground",
                               )}
                             >
@@ -1119,7 +1193,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                           </a>
                         ) : (
                           <p
-                            className="whitespace-pre-wrap break-words leading-5 [unicode-bidi:plaintext] [word-break:break-word]"
+                            className="whitespace-pre-wrap break-words leading-6 [unicode-bidi:plaintext] [word-break:break-word]"
                             dir="auto"
                           >
                             {msg.content}
@@ -1133,19 +1207,24 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                         >
                           <span
                             className={cn(
-                              "text-[10px]",
-                              isMine
-                                ? "text-white/60"
-                                : "text-muted-foreground",
+                              "text-[10px] font-medium",
+                              isMine ? "opacity-80" : "text-muted-foreground",
                             )}
+                            style={isMine ? { color: bubbleTextColor } : undefined}
                           >
                             {formatTime(msg.created_at)}
                           </span>
                           {isMine &&
                             (msg.is_read ? (
-                              <CheckCheck className="h-3 w-3 text-white/60" />
+                              <CheckCheck
+                                className="h-3 w-3 opacity-80"
+                                style={{ color: bubbleTextColor }}
+                              />
                             ) : (
-                              <Check className="h-3 w-3 text-white/70" />
+                              <Check
+                                className="h-3 w-3 opacity-80"
+                                style={{ color: bubbleTextColor }}
+                              />
                             ))}
                         </div>
                       </div>
@@ -1168,7 +1247,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
 
                 {typing && (
                   <div className="flex justify-start">
-                    <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-2">
+                    <div className="rounded-3xl rounded-bl-md bg-muted px-4 py-2 shadow-sm">
                       <span className="text-sm text-muted-foreground animate-pulse">
                         يكتب...
                       </span>
@@ -1207,124 +1286,125 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
 
             {/* Reply preview */}
             {replyTo && (
-              <div className="border-t bg-muted/50 px-3 py-2 flex items-center gap-2">
-                <div className="flex-1 border-r-2 border-r-blue-500 pr-2 min-w-0">
-                  <span className="text-xs font-semibold text-blue-600 block">
-                    {replyTo.sender_id === userId ? "أنت" : replyTo.full_name}
-                  </span>
-                  <span className="text-xs text-muted-foreground line-clamp-1">
-                    {replyTo.type === "image"
-                      ? "📷 صورة"
-                      : replyTo.type === "file"
-                        ? "📄 ملف"
-                        : replyTo.content}
-                  </span>
+              <div className="border-t bg-background/95 px-3 pt-3">
+                <div className="flex items-center gap-2 rounded-2xl border bg-muted/40 px-3 py-2.5 shadow-sm">
+                  <div className="min-w-0 flex-1 border-r-[3px] border-r-sky-500 pr-3">
+                    <span className="mb-0.5 block text-[11px] font-semibold text-sky-700 dark:text-sky-400">
+                      {replyTo.sender_id === userId ? "أنت" : replyTo.full_name}
+                    </span>
+                    <span className="block line-clamp-1 text-xs leading-5 text-muted-foreground">
+                      {getReplyPreviewLabel(replyTo)}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setReplyTo(null)}
+                    className="shrink-0 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
                 </div>
-                <button
-                  onClick={() => setReplyTo(null)}
-                  className="shrink-0 p-1 rounded-full hover:bg-muted"
-                >
-                  <X className="h-3.5 w-3.5 text-muted-foreground" />
-                </button>
               </div>
             )}
 
             {/* Input */}
-            <div className="border-t p-3 flex items-center gap-2 shrink-0 safe-area-bottom">
-              <Button
-                size="icon"
-                disabled={!newMsg.trim() || sending}
-                onClick={handleSend}
-                className="shrink-0 text-white hover:opacity-90"
-                style={{ backgroundColor: myColor }}
+            <div className="border-t bg-background/95 px-3 pb-3 pt-2 shrink-0 safe-area-bottom backdrop-blur supports-[backdrop-filter]:bg-background/85">
+              <div
+                className="flex items-end gap-2 rounded-[26px] border px-2 py-2 shadow-sm"
+                style={{ backgroundColor: composerBg }}
               >
-                <Send className="h-4 w-4" />
-              </Button>
-              <textarea
-                ref={textareaRef}
-                placeholder="اكتب رسالة..."
-                value={newMsg}
-                onChange={(e) => {
-                  setNewMsg(e.target.value);
-                  handleTyping();
-                  // Auto-grow
-                  e.target.style.height = "auto";
-                  e.target.style.height =
-                    Math.min(e.target.scrollHeight, 120) + "px";
-                }}
-                onPaste={(e) => {
-                  const items = e.clipboardData?.items;
-                  if (!items) return;
-                  for (let i = 0; i < items.length; i++) {
-                    if (items[i].type.startsWith("image/")) {
-                      e.preventDefault();
-                      const file = items[i].getAsFile();
-                      if (file) {
-                        const named = new File(
-                          [file],
-                          `paste_${Date.now()}.png`,
-                          { type: file.type },
-                        );
-                        handleFileUpload(named);
-                      }
-                      return;
-                    }
-                  }
-                }}
-                onKeyDown={(e) => {
-                  // On mobile/touch devices, Enter = new line. On desktop, Enter = send, Shift+Enter = new line.
-                  const isMobile =
-                    "ontouchstart" in window || navigator.maxTouchPoints > 0;
-                  if (e.key === "Enter" && !e.shiftKey && !isMobile) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                rows={1}
-                className="flex-1 resize-none overflow-y-auto rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                style={{ maxHeight: 120 }}
-                autoFocus
-              />
-              <Popover open={attachOpen} onOpenChange={setAttachOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="shrink-0"
-                    disabled={uploading}
-                  >
-                    {uploading ? (
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    ) : (
-                      <Paperclip className="h-4 w-4" />
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent side="top" align="end" className="w-48 p-2">
-                  <button
-                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted transition-colors"
-                    onClick={() => {
-                      setAttachOpen(false);
-                      fileInputRef.current?.click();
-                    }}
-                  >
-                    <FileText className="h-4 w-4" />
-                    <span>ارسال ملف</span>
-                  </button>
-                  {"ontouchstart" in globalThis && (
+                <Popover open={attachOpen} onOpenChange={setAttachOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="shrink-0 rounded-full"
+                      disabled={uploading}
+                    >
+                      {uploading ? (
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      ) : (
+                        <Paperclip className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent side="top" align="start" className="w-48 p-2">
                     <button
-                      className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted transition-colors"
+                      className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted"
                       onClick={() => {
                         setAttachOpen(false);
-                        cameraInputRef.current?.click();
+                        fileInputRef.current?.click();
                       }}
                     >
-                      <Camera className="h-4 w-4" />
-                      <span>التقاط صورة</span>
+                      <FileText className="h-4 w-4" />
+                      <span>ارسال ملف</span>
                     </button>
-                  )}
-                </PopoverContent>
-              </Popover>
+                    {"ontouchstart" in globalThis && (
+                      <button
+                        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted"
+                        onClick={() => {
+                          setAttachOpen(false);
+                          cameraInputRef.current?.click();
+                        }}
+                      >
+                        <Camera className="h-4 w-4" />
+                        <span>التقاط صورة</span>
+                      </button>
+                    )}
+                  </PopoverContent>
+                </Popover>
+                <textarea
+                  ref={textareaRef}
+                  placeholder={replyTo ? "اكتب ردك هنا..." : "اكتب رسالة أو الصق صورة..."}
+                  value={newMsg}
+                  onChange={(e) => {
+                    setNewMsg(e.target.value);
+                    handleTyping();
+                    e.target.style.height = "auto";
+                    e.target.style.height =
+                      Math.min(e.target.scrollHeight, 120) + "px";
+                  }}
+                  onPaste={(e) => {
+                    const items = e.clipboardData?.items;
+                    if (!items) return;
+                    for (let i = 0; i < items.length; i++) {
+                      if (items[i].type.startsWith("image/")) {
+                        e.preventDefault();
+                        const file = items[i].getAsFile();
+                        if (file) {
+                          const named = new File(
+                            [file],
+                            `paste_${Date.now()}.png`,
+                            { type: file.type },
+                          );
+                          handleFileUpload(named);
+                        }
+                        return;
+                      }
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    const isMobile =
+                      "ontouchstart" in window || navigator.maxTouchPoints > 0;
+                    if (e.key === "Enter" && !e.shiftKey && !isMobile) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  rows={1}
+                  className="min-h-[44px] flex-1 resize-none overflow-y-auto rounded-2xl border border-white/40 bg-background/90 px-4 py-3 text-sm leading-5 ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  style={{ maxHeight: 120 }}
+                  autoFocus
+                />
+                <Button
+                  size="icon"
+                  disabled={!newMsg.trim() || sending}
+                  onClick={handleSend}
+                  className="h-11 w-11 shrink-0 rounded-full border-0 shadow-sm hover:opacity-90"
+                  style={{ backgroundColor: myColor, color: myTextColor }}
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
         )}
