@@ -238,6 +238,7 @@ function ProductMovementPageContent() {
         params: {
           product_id: selectedProduct.id,
           product_name: selectedProduct.name,
+          warehouse_id: effectiveWarehouseId || undefined,
           from: fromDate || undefined,
           to: toDate || undefined,
         },
@@ -248,7 +249,7 @@ function ProductMovementPageContent() {
     } finally {
       setLoading(false);
     }
-  }, [selectedProduct, fromDate, toDate]);
+  }, [selectedProduct, effectiveWarehouseId, fromDate, toDate]);
 
   const fetchCurrentStock = useCallback(async () => {
     if (!selectedProduct) {
