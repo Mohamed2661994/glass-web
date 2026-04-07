@@ -216,6 +216,7 @@ export default function EditWholesaleInvoicePage() {
   const draftRestoredRef = useRef(false);
   const initialDraftSnapshotRef = useRef("");
   const preserveDraftOnUnloadRef = useRef(false);
+  const submitInFlightRef = useRef(false);
 
   const buildDraftPayload = useCallback(
     () => ({
@@ -736,6 +737,10 @@ export default function EditWholesaleInvoicePage() {
   const [previewOpen, setPreviewOpen] = useState(false);
 
   const updateInvoice = async () => {
+    if (submitInFlightRef.current) {
+      return;
+    }
+
     if (invoiceRevision === null) {
       toast.error("بيانات الفاتورة لم تكتمل بعد");
       return;
@@ -787,9 +792,10 @@ export default function EditWholesaleInvoicePage() {
       }
     }
 
+    submitInFlightRef.current = true;
     setSaving(true);
     try {
-      await api.put(`/invoices/${id}`, {
+      const { data } = await api.put(`/invoices/${id}`, {
         customer_name: movementType === "purchase" ? null : customerName,
         customer_phone:
           movementType === "purchase" ? null : customerPhone || null,
@@ -815,15 +821,27 @@ export default function EditWholesaleInvoicePage() {
           : {}),
       });
 
-      // Backend handles cash_in sync in the PUT transaction
-
+      const nextRevision = Number(data?.invoice_revision ?? invoiceRevision);
+      setInvoiceRevision(nextRevision);
+      setOriginalItems(
+        items.map((item: any) => ({
+          ...item,
+          quantity: Number(item.quantity) || 0,
+          discount: Number(item.discount) || 0,
+          variant_id: Number(item.variant_id || 0),
+          is_return: Boolean(item.is_return),
+        })),
+      );
+      initialDraftSnapshotRef.current = JSON.stringify(buildDraftPayload());
       clearDraft();
       toast.success("تم تعديل الفاتورة بنجاح");
       broadcastUpdate("invoice_updated");
       invalidateCache();
-      window.location.reload();
     } catch (err: any) {
       if (err.response?.status === 409) {
+        if (typeof err.response?.data?.current_revision === "number") {
+          setInvoiceRevision(Number(err.response.data.current_revision));
+        }
         toast.error(
           err.response?.data?.error ||
             "الفاتورة اتعدلت من شاشة أخرى. سنعيد تحميل أحدث نسخة مع الاحتفاظ بتعديلاتك",
@@ -836,6 +854,7 @@ export default function EditWholesaleInvoicePage() {
       toast.error(err.response?.data?.error || "فشل التعديل");
     } finally {
       setSaving(false);
+      submitInFlightRef.current = false;
     }
   };
 

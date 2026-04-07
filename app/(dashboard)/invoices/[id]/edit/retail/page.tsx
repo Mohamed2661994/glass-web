@@ -190,6 +190,7 @@ export default function EditRetailInvoicePage() {
   const draftRestoredRef = useRef(false);
   const initialDraftSnapshotRef = useRef("");
   const preserveDraftOnUnloadRef = useRef(false);
+  const submitInFlightRef = useRef(false);
 
   const buildDraftPayload = useCallback(
     () => ({
@@ -772,6 +773,10 @@ export default function EditRetailInvoicePage() {
   const [previewOpen, setPreviewOpen] = useState(false);
 
   const updateInvoice = async () => {
+    if (submitInFlightRef.current) {
+      return;
+    }
+
     if (invoiceRevision === null) {
       toast.error("بيانات الفاتورة لم تكتمل بعد");
       return;
@@ -812,9 +817,10 @@ export default function EditRetailInvoicePage() {
       }
     }
 
+    submitInFlightRef.current = true;
     setSaving(true);
     try {
-      await api.put(`/invoices/retail/${id}`, {
+      const { data } = await api.put(`/invoices/retail/${id}`, {
         customer_name:
           movementType === "purchase" ? null : customerName || "نقدي",
         customer_phone:
@@ -835,14 +841,26 @@ export default function EditRetailInvoicePage() {
           ? {
               supplier_name: supplierName,
               supplier_phone: supplierPhone || null,
-            }
-          : {}),
+      const nextRevision = Number(data?.invoice_revision ?? invoiceRevision);
+      setInvoiceRevision(nextRevision);
+      setOriginalItems(
+        items.map((item: any) => ({
+          ...item,
+          quantity: Number(item.quantity) || 0,
+          discount: Number(item.discount) || 0,
+          variant_id: Number(item.variant_id || 0),
+          is_return: Boolean(item.is_return),
+        })),
+      );
+      initialDraftSnapshotRef.current = JSON.stringify(buildDraftPayload());
       });
 
       // Backend handles cash_in sync in the PUT transaction
-
       clearDraft();
       toast.success("تم تعديل الفاتورة بنجاح");
+        if (typeof err.response?.data?.current_revision === "number") {
+          setInvoiceRevision(Number(err.response.data.current_revision));
+        }
       broadcastUpdate("invoice_updated");
       invalidateCache();
       window.location.reload();
@@ -856,6 +874,7 @@ export default function EditRetailInvoicePage() {
         window.location.reload();
         return;
       }
+        submitInFlightRef.current = false;
 
       console.error(
         "❌ Invoice update error:",
