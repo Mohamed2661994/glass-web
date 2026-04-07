@@ -1484,46 +1484,6 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                 >
                   <Send className="h-4 w-4" />
                 </Button>
-                <Popover open={attachOpen} onOpenChange={setAttachOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="shrink-0 rounded-full text-muted-foreground hover:bg-black/5 hover:text-foreground dark:hover:bg-white/10"
-                      disabled={uploading}
-                    >
-                      {uploading ? (
-                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                      ) : (
-                        <Paperclip className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent side="top" align="start" className="w-48 p-2">
-                    <button
-                      className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted"
-                      onClick={() => {
-                        setAttachOpen(false);
-                        fileInputRef.current?.click();
-                      }}
-                    >
-                      <FileText className="h-4 w-4" />
-                      <span>ارسال ملف</span>
-                    </button>
-                    {"ontouchstart" in globalThis && (
-                      <button
-                        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted"
-                        onClick={() => {
-                          setAttachOpen(false);
-                          cameraInputRef.current?.click();
-                        }}
-                      >
-                        <Camera className="h-4 w-4" />
-                        <span>التقاط صورة</span>
-                      </button>
-                    )}
-                  </PopoverContent>
-                </Popover>
                 <textarea
                   ref={textareaRef}
                   placeholder={
@@ -1565,10 +1525,51 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                     }
                   }}
                   rows={1}
-                  className="min-h-[44px] flex-1 resize-none overflow-y-auto rounded-2xl border border-black/5 bg-white/85 px-4 py-3 text-sm leading-5 text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:border-white/10 dark:bg-slate-950/80"
+                  className="min-h-[44px] flex-1 resize-none overflow-y-auto rounded-2xl border border-slate-200/70 bg-slate-100/95 px-4 py-3 text-right text-sm leading-5 text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:border-white/10 dark:bg-slate-800/85"
                   style={{ maxHeight: 120 }}
+                  dir="auto"
                   autoFocus
                 />
+                <Popover open={attachOpen} onOpenChange={setAttachOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="shrink-0 rounded-full text-muted-foreground hover:bg-black/5 hover:text-foreground dark:hover:bg-white/10"
+                      disabled={uploading}
+                    >
+                      {uploading ? (
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      ) : (
+                        <Paperclip className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent side="top" align="start" className="w-48 p-2">
+                    <button
+                      className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted"
+                      onClick={() => {
+                        setAttachOpen(false);
+                        fileInputRef.current?.click();
+                      }}
+                    >
+                      <FileText className="h-4 w-4" />
+                      <span>ارسال ملف</span>
+                    </button>
+                    {"ontouchstart" in globalThis && (
+                      <button
+                        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted"
+                        onClick={() => {
+                          setAttachOpen(false);
+                          cameraInputRef.current?.click();
+                        }}
+                      >
+                        <Camera className="h-4 w-4" />
+                        <span>التقاط صورة</span>
+                      </button>
+                    )}
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
           </div>
