@@ -151,9 +151,9 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
   const otherReplyBg = otherColor
     ? mixColor(otherColor, "white", 0.32)
     : "rgba(15, 23, 42, 0.06)";
-  const composerBg = otherColor
+  const composerSurfaceBg = otherColor
     ? mixColor(otherColor, "white", 0.88)
-    : "rgba(248, 250, 252, 0.92)";
+    : undefined;
 
   // Resolve sound URL: Cloudinary returns full https:// URLs, old uploads use API_URL, built-in use /sounds/
   const getSoundUrl = useCallback(
@@ -760,29 +760,35 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
     }, 2000);
   };
 
-  const focusReplyToMessage = useCallback((message: Message) => {
-    setReplyTo(message);
-    setTimeout(() => {
-      if (pendingImage) {
-        imageComposerTextareaRef.current?.focus();
-      } else {
-        textareaRef.current?.focus();
+  const focusReplyToMessage = useCallback(
+    (message: Message) => {
+      setReplyTo(message);
+      setTimeout(() => {
+        if (pendingImage) {
+          imageComposerTextareaRef.current?.focus();
+        } else {
+          textareaRef.current?.focus();
+        }
+      }, 0);
+    },
+    [pendingImage],
+  );
+
+  const handleMessageTouchReply = useCallback(
+    (message: Message) => {
+      const now = Date.now();
+      const lastTap = imageTapRef.current;
+
+      if (lastTap.id === message.id && now - lastTap.time < 280) {
+        imageTapRef.current = { id: null, time: 0 };
+        focusReplyToMessage(message);
+        return;
       }
-    }, 0);
-  }, [pendingImage]);
 
-  const handleMessageTouchReply = useCallback((message: Message) => {
-    const now = Date.now();
-    const lastTap = imageTapRef.current;
-
-    if (lastTap.id === message.id && now - lastTap.time < 280) {
-      imageTapRef.current = { id: null, time: 0 };
-      focusReplyToMessage(message);
-      return;
-    }
-
-    imageTapRef.current = { id: message.id, time: now };
-  }, [focusReplyToMessage]);
+      imageTapRef.current = { id: message.id, time: now };
+    },
+    [focusReplyToMessage],
+  );
 
   const adjustPreviewZoom = useCallback((nextZoom: number) => {
     const clamped = Math.max(1, Math.min(4, Number(nextZoom.toFixed(2))));
@@ -1239,9 +1245,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                           <div
                             className={cn(
                               "mb-2 rounded-2xl border-r-[3px] px-3 py-2 text-xs cursor-pointer transition-all hover:scale-[0.99]",
-                              isMine
-                                ? "border-r-white/40"
-                                : "border-r-sky-500",
+                              isMine ? "border-r-white/40" : "border-r-sky-500",
                             )}
                             style={
                               isMine
@@ -1268,7 +1272,9 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                             <span
                               className={cn(
                                 "mb-0.5 block text-[11px] font-semibold",
-                                isMine ? "text-white/85" : "text-sky-700 dark:text-sky-400",
+                                isMine
+                                  ? "text-white/85"
+                                  : "text-sky-700 dark:text-sky-400",
                               )}
                             >
                               {msg.reply_sender_id === userId
@@ -1366,7 +1372,9 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                               "text-[10px] font-medium",
                               isMine ? "opacity-80" : "text-muted-foreground",
                             )}
-                            style={isMine ? { color: bubbleTextColor } : undefined}
+                            style={
+                              isMine ? { color: bubbleTextColor } : undefined
+                            }
                           >
                             {formatTime(msg.created_at)}
                           </span>
@@ -1462,17 +1470,26 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
             )}
 
             {/* Input */}
-            <div className="border-t bg-background/95 px-3 pb-3 pt-2 shrink-0 safe-area-bottom backdrop-blur supports-[backdrop-filter]:bg-background/85">
+            <div className="shrink-0 border-t border-border/60 bg-background/95 px-3 pb-3 pt-2 safe-area-bottom backdrop-blur supports-[backdrop-filter]:bg-background/85 dark:border-white/10 dark:bg-slate-950/95">
               <div
-                className="flex items-end gap-2 rounded-[26px] border px-2 py-2 shadow-sm"
-                style={{ backgroundColor: composerBg }}
+                className="flex items-end gap-2 rounded-[26px] border border-border/60 bg-slate-50/95 px-2 py-2 shadow-sm shadow-black/5 dark:border-white/10 dark:bg-slate-900/90 dark:shadow-black/30"
+                style={composerSurfaceBg ? { backgroundColor: composerSurfaceBg } : undefined}
               >
+                <Button
+                  size="icon"
+                  disabled={!newMsg.trim() || sending}
+                  onClick={handleSend}
+                  className="h-11 w-11 shrink-0 rounded-full border-0 shadow-sm hover:opacity-90"
+                  style={{ backgroundColor: myColor, color: myTextColor }}
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
                 <Popover open={attachOpen} onOpenChange={setAttachOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="shrink-0 rounded-full"
+                      className="shrink-0 rounded-full text-muted-foreground hover:bg-black/5 hover:text-foreground dark:hover:bg-white/10"
                       disabled={uploading}
                     >
                       {uploading ? (
@@ -1509,7 +1526,9 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                 </Popover>
                 <textarea
                   ref={textareaRef}
-                  placeholder={replyTo ? "اكتب ردك هنا..." : "اكتب رسالة أو الصق صورة..."}
+                  placeholder={
+                    replyTo ? "اكتب ردك هنا..." : "اكتب رسالة أو الصق صورة..."
+                  }
                   value={newMsg}
                   onChange={(e) => {
                     setNewMsg(e.target.value);
@@ -1531,7 +1550,7 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                             `paste_${Date.now()}.png`,
                             { type: file.type },
                           );
-                            handlePickedFile(named);
+                          handlePickedFile(named);
                         }
                         return;
                       }
@@ -1546,28 +1565,24 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                     }
                   }}
                   rows={1}
-                  className="min-h-[44px] flex-1 resize-none overflow-y-auto rounded-2xl border border-white/40 bg-background/90 px-4 py-3 text-sm leading-5 ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="min-h-[44px] flex-1 resize-none overflow-y-auto rounded-2xl border border-black/5 bg-white/85 px-4 py-3 text-sm leading-5 text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:border-white/10 dark:bg-slate-950/80"
                   style={{ maxHeight: 120 }}
                   autoFocus
                 />
-                <Button
-                  size="icon"
-                  disabled={!newMsg.trim() || sending}
-                  onClick={handleSend}
-                  className="h-11 w-11 shrink-0 rounded-full border-0 shadow-sm hover:opacity-90"
-                  style={{ backgroundColor: myColor, color: myTextColor }}
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
               </div>
             </div>
           </div>
         )}
       </SheetContent>
 
-      <Dialog open={!!pendingImage} onOpenChange={(isOpen) => !isOpen && closePendingImage()}>
+      <Dialog
+        open={!!pendingImage}
+        onOpenChange={(isOpen) => !isOpen && closePendingImage()}
+      >
         <DialogContent className="w-[95vw] max-w-md overflow-hidden p-0">
-          <DialogTitle className="sr-only">معاينة الصورة قبل الإرسال</DialogTitle>
+          <DialogTitle className="sr-only">
+            معاينة الصورة قبل الإرسال
+          </DialogTitle>
           {pendingImage && (
             <>
               <div className="bg-black p-3">
@@ -1582,7 +1597,8 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                 {replyTo && (
                   <div className="rounded-2xl border bg-muted/40 px-3 py-2 text-right">
                     <span className="mb-0.5 block text-[11px] font-semibold text-sky-700 dark:text-sky-400">
-                      رد على {replyTo.sender_id === userId ? "أنت" : replyTo.full_name}
+                      رد على{" "}
+                      {replyTo.sender_id === userId ? "أنت" : replyTo.full_name}
                     </span>
                     <span className="block line-clamp-1 text-xs leading-5 text-muted-foreground">
                       {getReplyPreviewLabel(replyTo)}
@@ -1598,7 +1614,11 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                   className="min-h-[88px] w-full resize-none rounded-2xl border bg-background px-4 py-3 text-sm leading-6 ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 />
                 <div className="flex items-center justify-between gap-2">
-                  <Button variant="ghost" onClick={closePendingImage} disabled={uploading}>
+                  <Button
+                    variant="ghost"
+                    onClick={closePendingImage}
+                    disabled={uploading}
+                  >
                     إلغاء
                   </Button>
                   <Button
@@ -1618,7 +1638,10 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
       </Dialog>
 
       {/* Image preview modal */}
-      <Dialog open={!!previewImg} onOpenChange={(isOpen) => !isOpen && closePreviewImage()}>
+      <Dialog
+        open={!!previewImg}
+        onOpenChange={(isOpen) => !isOpen && closePreviewImage()}
+      >
         <DialogContent className="h-[95vh] w-[98vw] max-h-[95vh] max-w-[98vw] overflow-hidden border-none bg-black/95 p-0">
           <DialogTitle className="sr-only">معاينة الصورة</DialogTitle>
           {previewImg && (
@@ -1662,7 +1685,11 @@ export function ChatDrawer({ userId, branchId }: ChatDrawerProps) {
                 }}
                 onPointerMove={(e) => {
                   const drag = previewDragRef.current;
-                  if (!drag || drag.pointerId !== e.pointerId || previewZoom <= 1) {
+                  if (
+                    !drag ||
+                    drag.pointerId !== e.pointerId ||
+                    previewZoom <= 1
+                  ) {
                     return;
                   }
 
