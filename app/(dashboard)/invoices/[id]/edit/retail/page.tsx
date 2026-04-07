@@ -841,6 +841,10 @@ export default function EditRetailInvoicePage() {
           ? {
               supplier_name: supplierName,
               supplier_phone: supplierPhone || null,
+            }
+          : {}),
+      });
+
       const nextRevision = Number(data?.invoice_revision ?? invoiceRevision);
       setInvoiceRevision(nextRevision);
       setOriginalItems(
@@ -853,19 +857,14 @@ export default function EditRetailInvoicePage() {
         })),
       );
       initialDraftSnapshotRef.current = JSON.stringify(buildDraftPayload());
-      });
-
-      // Backend handles cash_in sync in the PUT transaction
       clearDraft();
       toast.success("تم تعديل الفاتورة بنجاح");
+      broadcastUpdate("invoice_updated");
+    } catch (err: any) {
+      if (err.response?.status === 409) {
         if (typeof err.response?.data?.current_revision === "number") {
           setInvoiceRevision(Number(err.response.data.current_revision));
         }
-      broadcastUpdate("invoice_updated");
-      invalidateCache();
-      window.location.reload();
-    } catch (err: any) {
-      if (err.response?.status === 409) {
         toast.error(
           err.response?.data?.error ||
             "الفاتورة اتعدلت من شاشة أخرى. سنعيد تحميل أحدث نسخة مع الاحتفاظ بتعديلاتك",
