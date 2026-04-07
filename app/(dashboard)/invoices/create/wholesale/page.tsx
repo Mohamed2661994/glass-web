@@ -87,6 +87,26 @@ export default function CreateWholesaleInvoicePage() {
     available_quantity?: number | string | null;
   };
 
+  const parseSignedDiscountInput = (value: string) => {
+    const normalized = value.replace(/[^0-9.-]/g, "");
+
+    if (!normalized) return "";
+    if (normalized === "-") return "-";
+
+    const negative = normalized.startsWith("-");
+    const unsigned = normalized.replace(/-/g, "");
+    const [wholePart, ...decimalParts] = unsigned.split(".");
+    const decimalPart = decimalParts.join("");
+    const rebuilt = decimalPart.length
+      ? `${wholePart}.${decimalPart}`
+      : wholePart;
+
+    if (!rebuilt) return negative ? "-" : "";
+
+    const parsed = Number(`${negative ? "-" : ""}${rebuilt}`);
+    return Number.isFinite(parsed) ? parsed : "";
+  };
+
   const { user } = useAuth();
   const isRetailUser = user?.branch_id === 1;
 
@@ -1586,11 +1606,12 @@ export default function CreateWholesaleInvoicePage() {
                         <td className="p-3 text-center">
                           <Input
                             type="text"
-                            inputMode="numeric"
+                            inputMode="text"
                             dir="ltr"
                             data-discount-id={item.uid}
                             className="w-20 mx-auto text-center"
-                            value={item.discount}
+                            value={item.discount ?? ""}
+                            onFocus={(e) => e.target.select()}
                             onKeyDown={(e) => {
                               if (e.key === "Enter" || e.key === "Tab") {
                                 e.preventDefault();
@@ -1621,20 +1642,30 @@ export default function CreateWholesaleInvoicePage() {
                               }
                             }}
                             onChange={(e) => {
-                              const raw = e.target.value.replace(
-                                /[^0-9.\-]/g,
-                                "",
-                              );
-                              const hasMinus = raw.includes("-");
-                              const digits = raw.replace(/-/g, "");
-                              const num =
-                                digits === ""
-                                  ? ""
-                                  : (hasMinus ? -1 : 1) * Number(digits);
                               setItems((prev) =>
                                 prev.map((i) =>
                                   i.uid === item.uid
-                                    ? { ...i, discount: num }
+                                    ? {
+                                        ...i,
+                                        discount: parseSignedDiscountInput(
+                                          e.target.value,
+                                        ),
+                                      }
+                                    : i,
+                                ),
+                              );
+                            }}
+                            onBlur={() => {
+                              setItems((prev) =>
+                                prev.map((i) =>
+                                  i.uid === item.uid
+                                    ? {
+                                        ...i,
+                                        discount:
+                                          i.discount === "" || i.discount === "-"
+                                            ? 0
+                                            : i.discount,
+                                      }
                                     : i,
                                 ),
                               );
@@ -1893,11 +1924,11 @@ export default function CreateWholesaleInvoicePage() {
                         </label>
                         <Input
                           type="text"
-                          inputMode="numeric"
+                          inputMode="text"
                           data-mobile-discount-id={item.uid}
                           className="text-center"
                           dir="ltr"
-                          value={item.discount || 0}
+                          value={item.discount ?? ""}
                           onFocus={(e) => e.target.select()}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === "Tab") {
@@ -1929,20 +1960,30 @@ export default function CreateWholesaleInvoicePage() {
                             }
                           }}
                           onChange={(e) => {
-                            const raw = e.target.value.replace(
-                              /[^0-9.\-]/g,
-                              "",
-                            );
-                            const hasMinus = raw.includes("-");
-                            const digits = raw.replace(/-/g, "");
-                            const num =
-                              digits === ""
-                                ? 0
-                                : (hasMinus ? -1 : 1) * Number(digits);
                             setItems((prev) =>
                               prev.map((i) =>
                                 i.uid === item.uid
-                                  ? { ...i, discount: num }
+                                  ? {
+                                      ...i,
+                                      discount: parseSignedDiscountInput(
+                                        e.target.value,
+                                      ),
+                                    }
+                                  : i,
+                              ),
+                            );
+                          }}
+                          onBlur={() => {
+                            setItems((prev) =>
+                              prev.map((i) =>
+                                i.uid === item.uid
+                                  ? {
+                                      ...i,
+                                      discount:
+                                        i.discount === "" || i.discount === "-"
+                                          ? 0
+                                          : i.discount,
+                                    }
                                   : i,
                               ),
                             );
