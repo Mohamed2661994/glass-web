@@ -1642,6 +1642,7 @@ export default function CreateWholesaleInvoicePage() {
                               }
                             }}
                             onChange={(e) => {
+                              setApplyItemsDiscount(true);
                               setItems((prev) =>
                                 prev.map((i) =>
                                   i.uid === item.uid
@@ -1960,6 +1961,7 @@ export default function CreateWholesaleInvoicePage() {
                             }
                           }}
                           onChange={(e) => {
+                            setApplyItemsDiscount(true);
                             setItems((prev) =>
                               prev.map((i) =>
                                 i.uid === item.uid
