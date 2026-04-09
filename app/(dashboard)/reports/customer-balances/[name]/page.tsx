@@ -853,48 +853,94 @@ export default function CustomerDebtDetailsPage() {
 
               {/* Totals */}
               <div className="space-y-1.5">
-                {previewInvoice.subtotal && (
+                {(() => {
+                  const subtotal = Number(previewInvoice.subtotal || 0);
+                  const itemsDiscount = Number(previewInvoice.items_discount || 0);
+                  const extraDiscount = Number(previewInvoice.extra_discount || 0);
+                  const previousBalance = Number(
+                    previewInvoice.previous_balance || 0,
+                  );
+                  const additionalAmount =
+                    previewInvoice.invoice_type === "wholesale"
+                      ? Number(previewInvoice.additional_amount || 0)
+                      : 0;
+                  const invoiceTotal = Number(previewInvoice.total || 0);
+                  const paidAmount = Number(previewInvoice.paid_amount || 0);
+                  const remainingAmount = Number(
+                    previewInvoice.remaining_amount || 0,
+                  );
+                  const totalAfterPrevious =
+                    invoiceTotal + previousBalance + additionalAmount;
+
+                  return (
+                    <>
+                {subtotal !== 0 && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">
                       الإجمالي قبل الخصم
                     </span>
-                    <span>
-                      {Number(previewInvoice.subtotal).toLocaleString()}
-                    </span>
+                    <span>{subtotal.toLocaleString()}</span>
                   </div>
                 )}
-                {Number(previewInvoice.items_discount || 0) > 0 && (
+                {itemsDiscount > 0 && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">خصم الأصناف</span>
                     <span className="text-red-500">
-                      -{Number(previewInvoice.items_discount).toLocaleString()}
+                      -{itemsDiscount.toLocaleString()}
                     </span>
                   </div>
                 )}
-                {Number(previewInvoice.extra_discount || 0) > 0 && (
+                {extraDiscount > 0 && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">خصم إضافي</span>
                     <span className="text-red-500">
-                      -{Number(previewInvoice.extra_discount).toLocaleString()}
+                      -{extraDiscount.toLocaleString()}
                     </span>
                   </div>
                 )}
+                {previousBalance !== 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">الحساب السابق</span>
+                    <span
+                      className={
+                        previousBalance < 0 ? "text-green-600" : undefined
+                      }
+                    >
+                      {previousBalance.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+                {additionalAmount !== 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">إضافة</span>
+                    <span>{additionalAmount.toLocaleString()}</span>
+                  </div>
+                )}
                 <div className="flex justify-between font-bold text-base">
-                  <span>الإجمالي</span>
-                  <span>{Number(previewInvoice.total).toLocaleString()}</span>
+                  <span>إجمالي الفاتورة</span>
+                  <span>{invoiceTotal.toLocaleString()}</span>
                 </div>
+                {(previousBalance !== 0 || additionalAmount !== 0) && (
+                  <div className="flex justify-between font-bold text-base">
+                    <span>الإجمالي بعد الحساب السابق</span>
+                    <span>{totalAfterPrevious.toLocaleString()}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">المدفوع</span>
                   <span className="text-green-600">
-                    {Number(previewInvoice.paid_amount).toLocaleString()}
+                    {paidAmount.toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">المتبقي</span>
                   <span className="text-red-600">
-                    {Number(previewInvoice.remaining_amount).toLocaleString()}
+                    {remainingAmount.toLocaleString()}
                   </span>
                 </div>
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Created/Updated by */}
