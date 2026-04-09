@@ -44,7 +44,6 @@ import {
 import { highlightText } from "@/lib/highlight-text";
 import { multiWordMatch, multiWordScore } from "@/lib/utils";
 import { getTodayDate } from "@/lib/constants";
-import { BarcodeDetector } from "barcode-detector";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -241,12 +240,27 @@ export default function CreateRetailInvoicePage() {
       setShowCameraScanner(true);
 
       // Wait for video element to mount
-      setTimeout(() => {
+      setTimeout(async () => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.play();
 
-          const detector = new BarcodeDetector({
+          const detectorModule = await import("barcode-detector");
+          const DetectorCtor = (
+            "BarcodeDetector" in window
+              ? (window as Window & {
+                  BarcodeDetector?: typeof detectorModule.BarcodeDetector;
+                }).BarcodeDetector
+              : detectorModule.BarcodeDetector
+          ) as typeof detectorModule.BarcodeDetector | undefined;
+
+          if (!DetectorCtor) {
+            toast.error("قارئ الباركود غير مدعوم على هذا المتصفح");
+            stopCamera();
+            return;
+          }
+
+          const detector = new DetectorCtor({
             formats: [
               "ean_13",
               "ean_8",
@@ -1173,8 +1187,7 @@ export default function CreateRetailInvoicePage() {
     return totalBeforeDiscount - (Number(extraDiscount) || 0);
   }, [totalBeforeDiscount, extraDiscount]);
 
-  const totalWithPrevious =
-    finalTotal + Number(previousBalance || 0);
+  const totalWithPrevious = finalTotal + Number(previousBalance || 0);
 
   const remaining = totalWithPrevious - (Number(paidAmount) || 0);
 
