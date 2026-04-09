@@ -38,6 +38,10 @@ import {
 import { QuickTransferModal } from "@/components/quick-transfer-modal";
 import { ProductFormDialog } from "@/components/product-form-dialog";
 import { useCachedProducts } from "@/hooks/use-cached-products";
+import {
+  calculateNetCustomerDebt,
+  extractCustomerBalance,
+} from "@/lib/customer-balance";
 import { fetchResolvedProductQuantity } from "@/lib/package-stock";
 import { highlightText } from "@/lib/highlight-text";
 import { multiWordMatch, multiWordScore } from "@/lib/utils";
@@ -558,36 +562,39 @@ export default function EditWholesaleInvoicePage() {
       const res = await api.get(`/customers/${cid}/balance`, {
         params: { invoice_type: "wholesale" },
       });
-      const d = res.data;
-      let bal: number | null = null;
-      if (d?.total_sales != null && d?.total_paid != null) {
-        bal =
-          Math.round((Number(d.total_sales) - Number(d.total_paid)) * 100) /
-          100;
-      } else {
-        bal = d?.balance ?? d?.balance_due ?? null;
-      }
+      let bal = extractCustomerBalance(res.data);
 
-      // Fallback: compute from invoices remaining_amount (handles negative/credit)
+      // Fallback: compute the same net balance shown in customer account statement.
       if ((bal === 0 || bal == null) && name) {
         try {
-          const invRes = await api.get("/invoices", {
+          const detailsRes = await api.get("/reports/customer-debt-details", {
             params: {
               customer_name: name,
-              invoice_type: "wholesale",
-              _t: Date.now(),
+              warehouse_id: user?.branch_id || undefined,
             },
           });
-          const invoices = Array.isArray(invRes.data)
-            ? invRes.data
-            : (invRes.data?.data ?? []);
-          if (invoices.length > 0) {
-            // Sort by id descending to get the most recent invoice
-            const sorted = [...invoices].sort(
-              (a: any, b: any) => Number(b.id) - Number(a.id),
-            );
-            bal =
-              Math.round(Number(sorted[0].remaining_amount || 0) * 100) / 100;
+          const rows = Array.isArray(detailsRes.data) ? detailsRes.data : [];
+          const netDebt = calculateNetCustomerDebt(rows);
+
+          if (netDebt != null) {
+            bal = netDebt;
+          } else {
+            const invRes = await api.get("/invoices", {
+              params: {
+                customer_name: name,
+                invoice_type: "wholesale",
+                _t: Date.now(),
+              },
+            });
+            const invoices = Array.isArray(invRes.data)
+              ? invRes.data
+              : (invRes.data?.data ?? []);
+            if (invoices.length > 0) {
+              const sorted = [...invoices].sort(
+                (a: any, b: any) => Number(b.id) - Number(a.id),
+              );
+              bal = Math.round(Number(sorted[0].remaining_amount || 0) * 100) / 100;
+            }
           }
         } catch {}
       }
@@ -1505,7 +1512,8 @@ export default function EditWholesaleInvoicePage() {
                                     ? {
                                         ...i,
                                         discount:
-                                          i.discount === "" || i.discount === "-"
+                                          i.discount === "" ||
+                                          i.discount === "-"
                                             ? 0
                                             : i.discount,
                                       }
