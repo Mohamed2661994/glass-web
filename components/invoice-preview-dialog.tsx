@@ -113,15 +113,22 @@ export function InvoicePreviewDialog({
 
   const extraDiscount = Number(data.extraDiscount) || 0;
   const previousBalance = Number(data.previousBalance) || 0;
-  const additionalAmount = isWholesale
-    ? Number(data.additionalAmount) || 0
-    : 0;
+  const additionalAmount = isWholesale ? Number(data.additionalAmount) || 0 : 0;
   const paidAmount = Number(data.paidAmount) || 0;
 
   const invoiceTotal = itemsSubtotal;
   const totalWithPrevious = invoiceTotal + previousBalance + additionalAmount;
   const netTotal = totalWithPrevious - extraDiscount;
   const remaining = netTotal - paidAmount;
+  const summaryRows = [
+    { label: "إجمالي الأصناف", value: invoiceTotal, show: true },
+    { label: "حساب سابق", value: previousBalance, show: previousBalance !== 0 },
+    { label: "إضافة", value: additionalAmount, show: additionalAmount !== 0 },
+    { label: "خصم إضافي", value: extraDiscount, show: extraDiscount !== 0 },
+    { label: "الصافي", value: netTotal, show: true, strong: true },
+    { label: "المدفوع", value: paidAmount, show: true },
+    { label: "المتبقي", value: remaining, show: true, strong: true },
+  ].filter((row) => row.show);
 
   const totalQty = items.reduce(
     (sum, it) => (it.is_return ? sum : sum + Number(it.quantity || 0)),
@@ -182,8 +189,16 @@ export function InvoicePreviewDialog({
       margin-right: auto;
       font-size: 11px;
       line-height: 1.5;
-      text-align: left;
+      text-align: right;
     }
+    .totals-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .totals-label { text-align: right; }
+    .totals-value { text-align: left; direction: ltr; }
     .totals-remaining { font-size: 13px; }
     .draft-badge {
       text-align: center;
@@ -447,29 +462,45 @@ export function InvoicePreviewDialog({
                 marginRight: "auto",
                 fontSize: 11,
                 lineHeight: 1.5,
-                textAlign: "left",
+                textAlign: "right",
                 color: printColor,
               }}
             >
-              {previousBalance !== 0 && (
-                <div>حساب سابق: {fmt(previousBalance)}</div>
-              )}
+              {summaryRows.map((row) => {
+                const valueColor =
+                  row.label === "المتبقي"
+                    ? row.value > 0
+                      ? "#dc2626"
+                      : row.value < 0
+                        ? "#16a34a"
+                        : printColor
+                    : printColor;
 
-              {additionalAmount !== 0 && <div>إضافة: {fmt(additionalAmount)}</div>}
-
-              {extraDiscount > 0 && <div>خصم : {fmt(extraDiscount)}</div>}
-
-              <div>
-                <b>الصافي: {fmt(netTotal)}</b>
-              </div>
-
-              {paidAmount !== 0 && <div>المدفوع: {fmt(paidAmount)}</div>}
-
-              {remaining !== 0 && (
-                <div style={{ fontSize: 13 }}>
-                  <b>المتبقي: {fmt(remaining)}</b>
-                </div>
-              )}
+                return (
+                  <div
+                    key={row.label}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 12,
+                      fontSize: row.label === "المتبقي" ? 13 : 11,
+                      fontWeight: row.strong ? "bold" : "normal",
+                    }}
+                  >
+                    <span style={{ textAlign: "right" }}>{row.label}</span>
+                    <span
+                      style={{
+                        textAlign: "left",
+                        direction: "ltr",
+                        color: valueColor,
+                      }}
+                    >
+                      {fmt(row.value)}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
