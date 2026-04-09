@@ -200,12 +200,17 @@ function DashboardLayoutContent({ children }: { children: ReactNode }) {
   // 🔔 Push notification subscription
   useEffect(() => {
     if (!user?.id) return;
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    if (
+      !("serviceWorker" in navigator) ||
+      !("PushManager" in window) ||
+      !("Notification" in window)
+    )
+      return;
 
     const subscribeToPush = async () => {
       try {
         // Request notification permission
-        const permission = await Notification.requestPermission();
+        const permission = await window.Notification.requestPermission();
         if (permission !== "granted") return;
 
         const registration = await navigator.serviceWorker.ready;
