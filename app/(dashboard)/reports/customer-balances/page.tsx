@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useRealtime } from "@/hooks/use-realtime";
 import { Skeleton } from "@/components/ui/skeleton";
+import { calculateNetCustomerDebt } from "@/lib/customer-balance";
 import { noSpaces, normalizeArabic } from "@/lib/utils";
 
 /* ========== Types ========== */
@@ -239,31 +240,35 @@ export default function CustomerBalancesPage() {
               return true;
             });
 
+            visibleRows.sort((a, b) => {
+              const dateA = getRowDate(a).substring(0, 10);
+              const dateB = getRowDate(b).substring(0, 10);
+              return dateA.localeCompare(dateB);
+            });
+
             let totalSales = 0;
             let totalPaid = 0;
             let lastDate: string | null = null;
-
-            let runningBalance = 0;
 
             for (const row of visibleRows) {
               if (row.record_type === "invoice") {
                 totalSales += Number(row.total || 0);
                 totalPaid += Number(row.paid_amount || 0);
-                runningBalance = Number(row.remaining_amount || 0);
                 const d = getRowDate(row).substring(0, 10);
                 if (d && (!lastDate || d > lastDate)) lastDate = d;
               } else {
                 const paymentAmount = Number(row.paid_amount || 0);
                 totalPaid += paymentAmount;
-                runningBalance -= paymentAmount;
               }
             }
+
+            const balanceDue = calculateNetCustomerDebt(visibleRows);
 
             return {
               ...item,
               total_sales: totalSales,
               total_paid: totalPaid,
-              balance_due: runningBalance,
+              balance_due: balanceDue ?? 0,
               last_invoice_date: lastDate || item.last_invoice_date,
             };
           } catch {
