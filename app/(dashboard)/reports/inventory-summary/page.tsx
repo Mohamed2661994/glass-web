@@ -123,10 +123,13 @@ export default function InventorySummaryPage() {
       const products: any[] = Array.isArray(prodRes.data)
         ? prodRes.data
         : (prodRes.data?.data ?? []);
+      const hasActiveFlag = products.some((product: any) =>
+        Object.prototype.hasOwnProperty.call(product, "is_active"),
+      );
       const activeProductIds = new Set(
         products
           .filter((product: any) => {
-            return (
+            return !hasActiveFlag || (
               product?.is_active === true ||
               product?.is_active === 1 ||
               product?.is_active === "1" ||
@@ -146,7 +149,9 @@ export default function InventorySummaryPage() {
         ...item,
         barcode: item.barcode || barcodeMap[item.product_id] || null,
       }))
-        .filter((item) => activeProductIds.has(Number(item.product_id)));
+        .filter((item) =>
+          hasActiveFlag ? activeProductIds.has(Number(item.product_id)) : true,
+        );
       setData(items);
     } catch {
       setData([]);
