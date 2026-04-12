@@ -35,6 +35,13 @@ type CashOutItem = {
   notes?: string | null;
 };
 
+type TableSection = {
+  key: string;
+  title: string;
+  rows: (string | number | null | undefined)[][];
+  thirdColumnHeader?: string;
+};
+
 /* ================= HELPERS ================= */
 
 const toDateOnly = (d: Date) =>
@@ -140,7 +147,9 @@ function CashSummaryPrintInner() {
 
   const [cashIn, setCashIn] = useState<CashInItem[]>([]);
   const [cashOut, setCashOut] = useState<CashOutItem[]>([]);
-  const [marketCustomerKeys, setMarketCustomerKeys] = useState<Set<string>>(new Set());
+  const [marketCustomerKeys, setMarketCustomerKeys] = useState<Set<string>>(
+    new Set(),
+  );
   const [loading, setLoading] = useState(true);
 
   const isMarketCustomerEntry = useCallback(
@@ -167,8 +176,10 @@ function CashSummaryPrintInner() {
           const rawNotes = item.notes ?? item.description ?? "";
           return !String(rawNotes || "").includes(DISCOUNT_DIFF_MARKER);
         });
-        const marketCustomers: { name: string; is_market_customer?: boolean }[] =
-          Array.isArray(customersRes.data) ? customersRes.data : [];
+        const marketCustomers: {
+          name: string;
+          is_market_customer?: boolean;
+        }[] = Array.isArray(customersRes.data) ? customersRes.data : [];
         setCashIn(visibleCashIn);
         setCashOut(outRes.data.data || []);
         setMarketCustomerKeys(
@@ -300,71 +311,110 @@ function CashSummaryPrintInner() {
     fontSizeClasses[fontSize as keyof typeof fontSizeClasses] ||
     fontSizeClasses.medium;
 
+  const compactCellClass =
+    fontSize === "small"
+      ? "px-1 py-0.5"
+      : fontSize === "large"
+        ? "px-2 py-1"
+        : "px-1.5 py-0.5";
+
   // Font weight class
   const weightClass = isBold ? "font-bold" : "font-normal";
 
-  // Render table based on key
-  const renderTable = (key: string) => {
-    switch (key) {
-      case "revenue":
-        return (
-          <DataTable
-            key="revenue"
-            title="الوارد"
-            thirdColumnHeader="المتبقي"
-            fontStyles={fontStyles}
-            isBold={isBold}
-            rows={filteredIn.map((i) => {
+  const tableSections = useMemo(() => {
+    const sections: TableSection[] = [];
+
+    for (const key of tableOrder) {
+      switch (key) {
+        case "revenue": {
+          sections.push({
+            key,
+            title: "الوارد",
+            thirdColumnHeader: "المتبقي",
+            rows: filteredIn.map((i) => {
               const meta = parseMetadata(i.notes);
               const isOnlineInvoice = isOnlineInvoiceCashEntry(i);
               const remaining = meta
                 ? meta.remaining
                 : Number(i.remaining_amount || 0);
               return [
-                isOnlineInvoice ? `${i.customer_name} [أونلاين]` : i.customer_name,
+                isOnlineInvoice
+                  ? `${i.customer_name} [أونلاين]`
+                  : i.customer_name,
                 effectivePaid(i),
                 remaining !== 0 ? remaining : "-",
               ];
-            })}
-          />
-        );
-      case "expenses":
-        return (
-          <DataTable
-            key="expenses"
-            title="المنصرف (مصروفات)"
-            fontStyles={fontStyles}
-            isBold={isBold}
-            rows={expenses.map((o) => [o.name, o.amount, o.notes || "-"])}
-          />
-        );
-      case "purchases":
-        return purchases.length > 0 ? (
-          <DataTable
-            key="purchases"
-            title="المنصرف (مشتريات)"
-            fontStyles={fontStyles}
-            isBold={isBold}
-            rows={purchases.map((o) => [o.name, o.amount, o.notes || "-"])}
-          />
-        ) : null;
-      case "supplier":
-        return supplierPayments.length > 0 ? (
-          <DataTable
-            key="supplier"
-            title="المنصرف (دفعات موردين)"
-            fontStyles={fontStyles}
-            isBold={isBold}
-            rows={supplierPayments.map((o) => [
-              o.name,
-              o.amount,
-              o.notes || "-",
-            ])}
-          />
-        ) : null;
-      default:
-        return null;
+            }),
+          });
+          break;
+        }
+        case "expenses": {
+          sections.push({
+            key,
+            title: "المنصرف (مصروفات)",
+            rows: expenses.map((o) => [o.name, o.amount, o.notes || "-"]),
+          });
+          break;
+        }
+        case "purchases": {
+          if (purchases.length > 0) {
+            sections.push({
+              key,
+              title: "المنصرف (مشتريات)",
+              rows: purchases.map((o) => [o.name, o.amount, o.notes || "-"]),
+            });
+          }
+          break;
+        }
+        case "supplier": {
+          if (supplierPayments.length > 0) {
+            sections.push({
+              key,
+              title: "المنصرف (دفعات موردين)",
+              rows: supplierPayments.map((o) => [o.name, o.amount, o.notes || "-"]),
+            });
+          }
+          break;
+        }
+      }
     }
+
+    return sections;
+  }, [
+    tableOrder,
+    filteredIn,
+    expenses,
+    purchases,
+    supplierPayments,
+  ]);
+
+  const tableColumns = useMemo(() => {
+    const columns: TableSection[][] = [[], []];
+    const columnHeights = [0, 0];
+
+    for (const section of tableSections) {
+      const targetColumn =
+        columnHeights[0] <= columnHeights[1] ? 0 : 1;
+      columns[targetColumn].push(section);
+      columnHeights[targetColumn] += Math.max(section.rows.length, 1) + 2;
+    }
+
+    return columns;
+  }, [tableSections]);
+
+  // Render table based on section
+  const renderTable = (section: TableSection) => {
+    return (
+      <DataTable
+        key={section.key}
+        title={section.title}
+        thirdColumnHeader={section.thirdColumnHeader}
+        fontStyles={fontStyles}
+        compactCellClass={compactCellClass}
+        isBold={isBold}
+        rows={section.rows}
+      />
+    );
   };
 
   if (loading) {
@@ -401,7 +451,7 @@ function CashSummaryPrintInner() {
         </div>
 
         {/* Summary Box */}
-        <div className="border border-black p-3 mb-5">
+        <div className="border border-black p-2.5 mb-4">
           {showOpeningBalance && (
             <>
               <div className={`text-center mb-2 ${fontStyles.summary}`}>
@@ -414,7 +464,7 @@ function CashSummaryPrintInner() {
                 </span>
                 <span className="font-bold">{formatMoney(openingBalance)}</span>
               </div>
-              <hr className="border-gray-300 my-1" />
+              <hr className="border-gray-300 my-0.5" />
             </>
           )}
           <div className={`flex justify-center gap-8 ${fontStyles.summary}`}>
@@ -434,15 +484,19 @@ function CashSummaryPrintInner() {
         </div>
 
         {/* Tables */}
-        <div className="flex gap-4 items-start flex-wrap">
-          {tableOrder.map((key) => renderTable(key))}
+        <div className="grid grid-cols-2 gap-3 items-start">
+          {tableColumns.map((column, index) => (
+            <div key={index} className="flex flex-col gap-2">
+              {column.map((section) => renderTable(section))}
+            </div>
+          ))}
         </div>
       </div>
 
       {/* Print styles */}
       <style>{`
         @media print {
-          @page { size: ${isLandscape ? `${FIXED_CASH_SUMMARY_PAPER_SIZE} landscape` : FIXED_CASH_SUMMARY_PAPER_SIZE}; margin: 15mm; }
+          @page { size: ${isLandscape ? `${FIXED_CASH_SUMMARY_PAPER_SIZE} landscape` : FIXED_CASH_SUMMARY_PAPER_SIZE}; margin: 8mm; }
           body { background: #fff !important; }
           * { overflow: visible !important; }
         }
@@ -486,23 +540,25 @@ function DataTable({
   rows,
   thirdColumnHeader = "ملاحظات",
   fontStyles,
+  compactCellClass,
   isBold = false,
 }: {
   title: string;
   rows: (string | number | null | undefined)[][];
   thirdColumnHeader?: string;
   fontStyles?: FontStyles;
+  compactCellClass?: string;
   isBold?: boolean;
 }) {
   const tableClass = fontStyles?.table || "text-xs";
   const titleClass = fontStyles?.tableTitle || "text-[15px]";
-  const cellClass = fontStyles?.cell || "p-1.5";
+  const cellClass = compactCellClass || fontStyles?.cell || "p-1.5";
   const weightClass = isBold ? "font-bold" : "font-normal";
   const titleWeight = isBold ? "font-black" : "font-bold";
 
   return (
-    <div className="flex-1 min-w-[200px]">
-      <h3 className={`${titleWeight} ${titleClass} mb-2 mt-2`}>{title}</h3>
+    <div className="min-w-0 break-inside-avoid-page">
+      <h3 className={`${titleWeight} ${titleClass} mb-1 mt-1 leading-tight`}>{title}</h3>
       <table
         className={`w-full border-collapse border border-black ${tableClass} ${weightClass}`}
       >
