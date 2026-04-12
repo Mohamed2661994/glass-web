@@ -123,16 +123,31 @@ export default function InventorySummaryPage() {
       const products: any[] = Array.isArray(prodRes.data)
         ? prodRes.data
         : (prodRes.data?.data ?? []);
+      const hasActiveFlag = products.some((product: any) =>
+        Object.prototype.hasOwnProperty.call(product, "is_active"),
+      );
+      const activeProductIds = new Set(
+        products
+          .filter((product: any) =>
+            hasActiveFlag ? product?.is_active !== false : true,
+          )
+          .map((product: any) => Number(product.id))
+          .filter(Boolean),
+      );
       const barcodeMap: Record<number, string> = {};
       products.forEach((p: any) => {
         if (p.barcode) barcodeMap[p.id] = p.barcode;
       });
       const items: InventoryItem[] = (
         Array.isArray(invRes.data) ? invRes.data : []
-      ).map((item: any) => ({
-        ...item,
-        barcode: item.barcode || barcodeMap[item.product_id] || null,
-      }));
+      )
+        .filter((item: any) =>
+          hasActiveFlag ? activeProductIds.has(Number(item.product_id)) : true,
+        )
+        .map((item: any) => ({
+          ...item,
+          barcode: item.barcode || barcodeMap[item.product_id] || null,
+        }));
       setData(items);
     } catch {
       setData([]);
@@ -448,7 +463,11 @@ export default function InventorySummaryPage() {
   }));
 
   const pdfColumns: ExportColumn[] = [
-    { header: "اسم الصنف - العبوة - المصنع", key: "product_name_full", width: 80 },
+    {
+      header: "اسم الصنف - العبوة - المصنع",
+      key: "product_name_full",
+      width: 80,
+    },
     { header: "الرصيد", key: "balance", width: 20 },
   ];
 
