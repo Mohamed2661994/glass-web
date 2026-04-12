@@ -123,17 +123,16 @@ export default function InventorySummaryPage() {
       const products: any[] = Array.isArray(prodRes.data)
         ? prodRes.data
         : (prodRes.data?.data ?? []);
-      const hasActiveFlag = products.some((product: any) =>
-        Object.prototype.hasOwnProperty.call(product, "is_active"),
-      );
-      const isProductActive = (product: any) =>
-        product?.is_active === true ||
-        product?.is_active === "true" ||
-        product?.is_active === 1 ||
-        product?.is_active === "1";
       const activeProductIds = new Set(
         products
-          .filter((product: any) => (hasActiveFlag ? isProductActive(product) : true))
+          .filter((product: any) => {
+            return (
+              product?.is_active === true ||
+              product?.is_active === 1 ||
+              product?.is_active === "1" ||
+              product?.is_active === "true"
+            );
+          })
           .map((product: any) => Number(product.id))
           .filter(Boolean),
       );
@@ -143,14 +142,11 @@ export default function InventorySummaryPage() {
       });
       const items: InventoryItem[] = (
         Array.isArray(invRes.data) ? invRes.data : []
-      )
-        .filter((item: any) =>
-          hasActiveFlag ? activeProductIds.has(Number(item.product_id)) : true,
-        )
-        .map((item: any) => ({
-          ...item,
-          barcode: item.barcode || barcodeMap[item.product_id] || null,
-        }));
+      ).map((item: any) => ({
+        ...item,
+        barcode: item.barcode || barcodeMap[item.product_id] || null,
+      }))
+        .filter((item) => activeProductIds.has(Number(item.product_id)));
       setData(items);
     } catch {
       setData([]);
