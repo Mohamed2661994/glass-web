@@ -46,6 +46,8 @@ import { noSpaces, normalizeArabic } from "@/lib/utils";
 
 const DISCOUNT_DIFF_MARKER = "{{discount_diff}}";
 const HIDE_MARKET_CUSTOMERS_STORAGE_KEY = "cash-summary-hide-market-customers";
+const CASH_SUMMARY_PRINT_SETTINGS_STORAGE_KEY =
+  "cash-summary-print-settings";
 
 /* ================= TYPES ================= */
 
@@ -136,9 +138,7 @@ export default function CashSummaryPage() {
     useState(true);
   const [marketToggleReady, setMarketToggleReady] = useState(false);
   const [actualCash, setActualCash] = useState<string>("");
-  const [fontSize, setFontSize] = useState<"small" | "medium" | "large">(
-    "medium",
-  );
+  const [fontSize, setFontSize] = useState("12");
   const [fontWeight, setFontWeight] = useState<"normal" | "bold">("normal");
   const [tableOrder, setTableOrder] = useState<string[]>([
     "revenue",
@@ -245,6 +245,38 @@ export default function CashSummaryPage() {
     } catch {}
   }, [hideMarketCustomerEntries, marketToggleReady]);
 
+  useEffect(() => {
+    try {
+      const rawSettings = window.localStorage.getItem(
+        CASH_SUMMARY_PRINT_SETTINGS_STORAGE_KEY,
+      );
+      if (!rawSettings) return;
+
+      const settings = JSON.parse(rawSettings) as {
+        fontSize?: string;
+        fontWeight?: "normal" | "bold";
+      };
+
+      const parsedFontSize = Number(settings.fontSize || "12");
+      if (Number.isFinite(parsedFontSize) && parsedFontSize >= 8) {
+        setFontSize(String(parsedFontSize));
+      }
+
+      if (settings.fontWeight === "normal" || settings.fontWeight === "bold") {
+        setFontWeight(settings.fontWeight);
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        CASH_SUMMARY_PRINT_SETTINGS_STORAGE_KEY,
+        JSON.stringify({ fontSize, fontWeight }),
+      );
+    } catch {}
+  }, [fontSize, fontWeight]);
+
   const isMarketCustomerEntry = useCallback(
     (item: CashInItem) =>
       marketCustomerKeys.has(getCustomerLookupKey(item.customer_name)),
@@ -342,12 +374,16 @@ export default function CashSummaryPage() {
   /* ================= PRINT ================= */
 
   const handlePrint = (landscape = false) => {
+    const parsedFontSize = Number(fontSize);
     const params = new URLSearchParams({
       from: fromDate,
       to: toDate,
       includeOpeningBalance: includeOpeningBalance ? "1" : "0",
       hideMarketCustomers: hideMarketCustomerEntries ? "1" : "0",
-      fontSize: fontSize,
+      fontSize:
+        Number.isFinite(parsedFontSize) && parsedFontSize > 0
+          ? String(parsedFontSize)
+          : "12",
       fontWeight: fontWeight,
       tableOrder: tableOrder.join(","),
       ...(landscape ? { orientation: "landscape" } : {}),
@@ -555,17 +591,28 @@ export default function CashSummaryPage() {
                 <Type className="h-4 w-4 text-muted-foreground" />
                 <p className="font-semibold text-sm">حجم الخط</p>
               </div>
+              <div className="mb-3 max-w-xs">
+                <Input
+                  type="number"
+                  min="8"
+                  max="24"
+                  step="1"
+                  value={fontSize}
+                  onChange={(e) => setFontSize(e.target.value)}
+                  placeholder="اكتب حجم الخط"
+                />
+              </div>
               <div className="flex gap-2">
                 {[
-                  { key: "small", label: "صغير" },
-                  { key: "medium", label: "متوسط" },
-                  { key: "large", label: "كبير" },
+                  { key: "10", label: "صغير" },
+                  { key: "12", label: "متوسط" },
+                  { key: "14", label: "كبير" },
                 ].map((option) => (
                   <Button
                     key={option.key}
                     variant={fontSize === option.key ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setFontSize(option.key as typeof fontSize)}
+                    onClick={() => setFontSize(option.key)}
                     className="flex-1"
                   >
                     {option.label}

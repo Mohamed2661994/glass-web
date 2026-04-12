@@ -11,6 +11,11 @@ const getCustomerLookupKey = (value?: string | null) =>
 const DISCOUNT_DIFF_MARKER = "{{discount_diff}}";
 const WESTERN_NUMBER_LOCALE = "en-US";
 const FIXED_CASH_SUMMARY_PAPER_SIZE = "A4";
+const LEGACY_FONT_SIZE_MAP: Record<string, number> = {
+  small: 10,
+  medium: 12,
+  large: 14,
+};
 
 /* ================= TYPES ================= */
 
@@ -40,6 +45,15 @@ type TableSection = {
   title: string;
   rows: (string | number | null | undefined)[][];
   thirdColumnHeader?: string;
+};
+
+type FontStyles = {
+  titleSize: number;
+  dateSize: number;
+  summarySize: number;
+  tableTitleSize: number;
+  tableSize: number;
+  cellPadding: string;
 };
 
 /* ================= HELPERS ================= */
@@ -123,6 +137,28 @@ const effectivePaid = (i: CashInItem) => {
   return i.source_type === "invoice" ? Number(i.paid_amount) : Number(i.amount);
 };
 
+const getPrintFontStyles = (fontSizeValue: string): FontStyles => {
+  const parsedValue =
+    LEGACY_FONT_SIZE_MAP[fontSizeValue] ?? Number(fontSizeValue);
+  const baseSize = Number.isFinite(parsedValue)
+    ? Math.min(Math.max(parsedValue, 8), 24)
+    : 12;
+
+  return {
+    titleSize: baseSize + 8,
+    dateSize: Math.max(baseSize, 10),
+    summarySize: Math.max(baseSize, 10),
+    tableTitleSize: baseSize + 2,
+    tableSize: baseSize,
+    cellPadding:
+      baseSize <= 10
+        ? "2px 4px"
+        : baseSize <= 12
+          ? "3px 5px"
+          : "4px 6px",
+  };
+};
+
 /* ================= INNER COMPONENT ================= */
 
 function CashSummaryPrintInner() {
@@ -131,7 +167,7 @@ function CashSummaryPrintInner() {
   const to = searchParams.get("to");
   const includeOpeningBalance = searchParams.get("includeOpeningBalance");
   const orientation = searchParams.get("orientation") || "portrait";
-  const fontSize = searchParams.get("fontSize") || "medium";
+  const fontSize = searchParams.get("fontSize") || "12";
   const fontWeight = searchParams.get("fontWeight") || "normal";
   const tableOrderParam =
     searchParams.get("tableOrder") || "revenue,expenses,purchases,supplier";
@@ -279,44 +315,7 @@ function CashSummaryPrintInner() {
     return { totalIn, totalOut, balance: totalIn - totalOut };
   }, [filteredIn, filteredOut, openingBalance]);
 
-  // Font size configuration
-  const fontSizeClasses = {
-    small: {
-      title: "text-lg",
-      date: "text-xs",
-      summary: "text-xs",
-      tableTitle: "text-[13px]",
-      table: "text-[10px]",
-      cell: "p-1",
-    },
-    medium: {
-      title: "text-xl",
-      date: "text-sm",
-      summary: "text-sm",
-      tableTitle: "text-[15px]",
-      table: "text-xs",
-      cell: "p-1.5",
-    },
-    large: {
-      title: "text-2xl",
-      date: "text-base",
-      summary: "text-base",
-      tableTitle: "text-[17px]",
-      table: "text-sm",
-      cell: "p-2",
-    },
-  };
-
-  const fontStyles =
-    fontSizeClasses[fontSize as keyof typeof fontSizeClasses] ||
-    fontSizeClasses.medium;
-
-  const compactCellClass =
-    fontSize === "small"
-      ? "px-1 py-0.5"
-      : fontSize === "large"
-        ? "px-2 py-1"
-        : "px-1.5 py-0.5";
+  const fontStyles = getPrintFontStyles(fontSize);
 
   // Font weight class
   const weightClass = isBold ? "font-bold" : "font-normal";
@@ -410,7 +409,7 @@ function CashSummaryPrintInner() {
         title={section.title}
         thirdColumnHeader={section.thirdColumnHeader}
         fontStyles={fontStyles}
-        compactCellClass={compactCellClass}
+        compactCellPadding={fontStyles.cellPadding}
         isBold={isBold}
         rows={section.rows}
       />
@@ -437,13 +436,15 @@ function CashSummaryPrintInner() {
         {/* Header */}
         <div className="text-center mb-3">
           <h1
-            className={`${fontStyles.title} ${isBold ? "font-black" : "font-bold"}`}
+            className={isBold ? "font-black" : "font-bold"}
+            style={{ fontSize: `${fontStyles.titleSize}px` }}
           >
             اليومية
           </h1>
           {toDate && (
             <p
-              className={`${fontStyles.date} ${isBold ? "font-bold" : "font-semibold"} mt-1`}
+              className={`${isBold ? "font-bold" : "font-semibold"} mt-1`}
+              style={{ fontSize: `${fontStyles.dateSize}px` }}
             >
               {getArabicDayName(toDate)} - {formatDateAr(toDate)}
             </p>
@@ -454,7 +455,10 @@ function CashSummaryPrintInner() {
         <div className="border border-black p-2.5 mb-4">
           {showOpeningBalance && (
             <>
-              <div className={`text-center mb-2 ${fontStyles.summary}`}>
+              <div
+                className="text-center mb-2"
+                style={{ fontSize: `${fontStyles.summarySize}px` }}
+              >
                 <span>
                   الرصيد المُرحَّل
                   {lastPrevDate
@@ -467,7 +471,10 @@ function CashSummaryPrintInner() {
               <hr className="border-gray-300 my-0.5" />
             </>
           )}
-          <div className={`flex justify-center gap-8 ${fontStyles.summary}`}>
+          <div
+            className="flex justify-center gap-8"
+            style={{ fontSize: `${fontStyles.summarySize}px` }}
+          >
             <div>
               <span>إجمالي الوارد : </span>
               <span className="font-bold">{formatMoney(summary.totalIn)}</span>
@@ -477,7 +484,10 @@ function CashSummaryPrintInner() {
               <span className="font-bold">{formatMoney(summary.totalOut)}</span>
             </div>
           </div>
-          <div className={`text-center mt-2 ${fontStyles.summary}`}>
+          <div
+            className="text-center mt-2"
+            style={{ fontSize: `${fontStyles.summarySize}px` }}
+          >
             <span>الرصيد : </span>
             <span className="font-bold">{formatMoney(summary.balance)}</span>
           </div>
@@ -526,51 +536,57 @@ function SummaryRow({
 
 /* ================= DATA TABLE ================= */
 
-type FontStyles = {
-  title: string;
-  date: string;
-  summary: string;
-  tableTitle: string;
-  table: string;
-  cell: string;
-};
-
 function DataTable({
   title,
   rows,
   thirdColumnHeader = "ملاحظات",
   fontStyles,
-  compactCellClass,
+  compactCellPadding,
   isBold = false,
 }: {
   title: string;
   rows: (string | number | null | undefined)[][];
   thirdColumnHeader?: string;
   fontStyles?: FontStyles;
-  compactCellClass?: string;
+  compactCellPadding?: string;
   isBold?: boolean;
 }) {
-  const tableClass = fontStyles?.table || "text-xs";
-  const titleClass = fontStyles?.tableTitle || "text-[15px]";
-  const cellClass = compactCellClass || fontStyles?.cell || "p-1.5";
   const weightClass = isBold ? "font-bold" : "font-normal";
   const titleWeight = isBold ? "font-black" : "font-bold";
+  const tableFontSize = fontStyles?.tableSize ?? 12;
+  const titleFontSize = fontStyles?.tableTitleSize ?? 14;
+  const cellPadding = compactCellPadding || fontStyles?.cellPadding || "3px 5px";
 
   return (
     <div className="min-w-0 break-inside-avoid-page">
-      <h3 className={`${titleWeight} ${titleClass} mb-1 mt-1 leading-tight`}>{title}</h3>
+      <h3
+        className={`${titleWeight} mb-1 mt-1 leading-tight`}
+        style={{ fontSize: `${titleFontSize}px` }}
+      >
+        {title}
+      </h3>
       <table
-        className={`w-full border-collapse border border-black ${tableClass} ${weightClass}`}
+        className={`w-full border-collapse border border-black ${weightClass}`}
+        style={{ fontSize: `${tableFontSize}px` }}
       >
         <thead>
           <tr className="bg-gray-100">
-            <th className={`border border-black ${cellClass} text-right`}>
+            <th
+              className="border border-black text-right"
+              style={{ padding: cellPadding }}
+            >
               الاسم
             </th>
-            <th className={`border border-black ${cellClass} text-center`}>
+            <th
+              className="border border-black text-center"
+              style={{ padding: cellPadding }}
+            >
               المبلغ
             </th>
-            <th className={`border border-black ${cellClass} text-right`}>
+            <th
+              className="border border-black text-right"
+              style={{ padding: cellPadding }}
+            >
               {thirdColumnHeader}
             </th>
           </tr>
@@ -578,13 +594,22 @@ function DataTable({
         <tbody>
           {rows.map((r, i) => (
             <tr key={i}>
-              <td className={`border border-black ${cellClass}`}>
+              <td
+                className="border border-black"
+                style={{ padding: cellPadding }}
+              >
                 {formatCellValue(r[0])}
               </td>
-              <td className={`border border-black ${cellClass} text-center`}>
+              <td
+                className="border border-black text-center"
+                style={{ padding: cellPadding }}
+              >
                 {formatMoney(Number(r[1]))}
               </td>
-              <td className={`border border-black ${cellClass}`}>
+              <td
+                className="border border-black"
+                style={{ padding: cellPadding }}
+              >
                 {formatCellValue(r[2])}
               </td>
             </tr>
