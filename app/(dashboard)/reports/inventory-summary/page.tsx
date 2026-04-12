@@ -126,11 +126,14 @@ export default function InventorySummaryPage() {
       const hasActiveFlag = products.some((product: any) =>
         Object.prototype.hasOwnProperty.call(product, "is_active"),
       );
+      const isProductActive = (product: any) =>
+        product?.is_active === true ||
+        product?.is_active === "true" ||
+        product?.is_active === 1 ||
+        product?.is_active === "1";
       const activeProductIds = new Set(
         products
-          .filter((product: any) =>
-            hasActiveFlag ? product?.is_active !== false : true,
-          )
+          .filter((product: any) => (hasActiveFlag ? isProductActive(product) : true))
           .map((product: any) => Number(product.id))
           .filter(Boolean),
       );
