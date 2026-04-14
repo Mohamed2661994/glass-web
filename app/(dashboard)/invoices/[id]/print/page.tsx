@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import api from "@/services/api";
+import QRCode from "qrcode";
 
 interface InvoiceItem {
   product_id: number;
@@ -51,6 +52,7 @@ type Orientation = "portrait" | "landscape";
 type MarginSize = "normal" | "narrow" | "none";
 
 const FIXED_INVOICE_PAPER_SIZE: PaperSize = "A5";
+const INVOICE_QR_VALUE = "https://www.hg-alshour.online";
 
 const PAPER_DIMS: Record<PaperSize, { w: number; h: number }> = {
   A4: { w: 210, h: 297 },
@@ -151,6 +153,7 @@ function InvoicePrintPage() {
   ]);
   const [fontFamily, setFontFamily] = useState("Tahoma, Arial, sans-serif");
   const [isPrinting, setIsPrinting] = useState(false);
+  const [invoiceQrDataUrl, setInvoiceQrDataUrl] = useState("");
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const invoiceRef = useRef<HTMLDivElement>(null);
@@ -255,6 +258,38 @@ function InvoicePrintPage() {
     if (id) fetchInvoice();
   }, [id]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const generateInvoiceQr = async () => {
+      try {
+        const dataUrl = await QRCode.toDataURL(INVOICE_QR_VALUE, {
+          errorCorrectionLevel: "M",
+          margin: 0,
+          width: 160,
+          color: {
+            dark: "#000000",
+            light: "#FFFFFF",
+          },
+        });
+
+        if (!cancelled) {
+          setInvoiceQrDataUrl(dataUrl);
+        }
+      } catch {
+        if (!cancelled) {
+          setInvoiceQrDataUrl("");
+        }
+      }
+    };
+
+    void generateInvoiceQr();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   /* ──── أبعاد الورقة الفعلية ──── */
   const paper = PAPER_DIMS[FIXED_INVOICE_PAPER_SIZE];
   const pageW = orientation === "portrait" ? paper.w : paper.h;
@@ -275,8 +310,19 @@ function InvoicePrintPage() {
           ${printBold ? "font-weight:bold;" : ""}
         }
         .invoice-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+        .invoice-header.with-qr {
+          display:grid;
+          grid-template-columns:minmax(170px, 1fr) auto minmax(170px, 1fr);
+          align-items:start;
+          column-gap:10px;
+        }
         .invoice-info { font-size:${fontSize}px; line-height:1.4; text-align:right; min-width:170px; }
+        .invoice-header.with-qr .invoice-info { justify-self:end; }
+        .invoice-middle { display:flex; align-items:flex-start; justify-content:center; }
+        .invoice-qr { width:72px; height:72px; object-fit:contain; display:block; }
         .logo-section { display:flex; flex-direction:row; align-items:center; gap:8px; }
+        .invoice-header.with-qr .logo-section,
+        .invoice-header.with-qr .header-meta-block { justify-self:start; }
         .logo-phone-list { display:flex; flex-direction:column; align-items:center; gap:2px; }
         .logo-phone { font-size:${fontSize}px; font-weight:bold; }
         table { width:100%; border-collapse:collapse; font-size:${fontSize}px; }
@@ -507,6 +553,11 @@ function InvoicePrintPage() {
     (phone) => phone.visible && phone.value.trim(),
   );
   const hasVisibleCustomPhones = visibleCustomPhones.length > 0;
+  const showInvoiceQr =
+    invoice.movement_type === "sale" &&
+    (invoice.invoice_type === "retail" ||
+      invoice.invoice_type === "wholesale") &&
+    Boolean(invoiceQrDataUrl);
 
   const updateCustomPhone = (id: string, value: string) => {
     const nextPhones = customPhones.map((phone) =>
@@ -713,8 +764,23 @@ body { background:#3b3b3b; font-family:${fontFamily}; color:#000; }
   display:flex; align-items:center;
   justify-content:space-between; margin-bottom:8px;
 }
+.invoice-header.with-qr {
+  display:grid;
+  grid-template-columns:minmax(170px, 1fr) auto minmax(170px, 1fr);
+  align-items:start;
+  column-gap:10px;
+}
 .invoice-info { line-height:1.4; text-align:right; min-width:170px; color:#000; }
+.invoice-header.with-qr .invoice-info { justify-self:end; }
+.invoice-middle {
+  display:flex; align-items:flex-start; justify-content:center;
+}
+.invoice-qr {
+  width:72px; height:72px; object-fit:contain; display:block;
+}
 .logo-section { display:flex; flex-direction:row; align-items:center; gap:8px; }
+.invoice-header.with-qr .logo-section,
+.invoice-header.with-qr .header-meta-block { justify-self:start; }
 .logo-phone-list { display:flex; flex-direction:column; align-items:center; gap:2px; }
 .logo-phone { font-weight:bold; color:#000; }
 .phone-list { display:flex; flex-direction:column; gap:10px; }
@@ -1256,7 +1322,7 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
               }}
             >
               {/* HEADER */}
-              <div className="invoice-header">
+              <div className={`invoice-header${showInvoiceQr ? " with-qr" : ""}`}>
                 <div
                   className="invoice-info"
                   style={{ fontSize: `${fontSize}px` }}
@@ -1276,6 +1342,11 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                     </div>
                   )}
                 </div>
+                {showInvoiceQr && (
+                  <div className="invoice-middle" aria-hidden="true">
+                    <img src={invoiceQrDataUrl} alt="QR" className="invoice-qr" />
+                  </div>
+                )}
                 {showLogo && (
                   <div className="logo-section">
                     <img
@@ -1325,6 +1396,7 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                 )}
                 {!showLogo && (invoiceUserName || hasVisibleCustomPhones) && (
                   <div
+                    className="header-meta-block"
                     style={{
                       display: "flex",
                       flexDirection: "column",
@@ -1467,7 +1539,9 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                       <td>{fmt(extraDiscount)}</td>
                     </tr>
                   )}
-                  {(previousBalance !== 0 || additionalAmount !== 0 || extraDiscount > 0) && (
+                  {(previousBalance !== 0 ||
+                    additionalAmount !== 0 ||
+                    extraDiscount > 0) && (
                     <tr className="summary-row">
                       <td></td>
                       <td></td>
