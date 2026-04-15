@@ -314,31 +314,31 @@ function InvoicePrintPage() {
           display:grid;
           direction:ltr;
           grid-template-columns:minmax(170px, 1fr) auto minmax(170px, 1fr);
-          align-items:center;
+          align-items:start;
           column-gap:10px;
         }
         .invoice-info { font-size:${fontSize}px; line-height:1.4; text-align:right; min-width:170px; }
         .invoice-header.with-qr .invoice-info {
           direction:rtl;
           grid-column:3;
-          align-self:center;
+          align-self:start;
           justify-self:end;
         }
         .invoice-middle {
           grid-column:2;
           display:flex;
-          align-items:center;
+          align-items:flex-start;
           justify-content:center;
-          align-self:center;
+          align-self:start;
           justify-self:center;
         }
         .invoice-qr { width:72px; height:72px; object-fit:contain; display:block; }
-        .logo-section { display:flex; flex-direction:row; align-items:center; gap:8px; }
+        .logo-section { display:flex; flex-direction:row; align-items:flex-start; gap:8px; }
         .invoice-header.with-qr .logo-section,
         .invoice-header.with-qr .header-meta-block {
           direction:rtl;
           grid-column:1;
-          align-self:center;
+          align-self:start;
           justify-self:start;
         }
         .logo-phone-list { display:flex; flex-direction:column; align-items:center; gap:2px; }
@@ -786,31 +786,31 @@ body { background:#3b3b3b; font-family:${fontFamily}; color:#000; }
   display:grid;
   direction:ltr;
   grid-template-columns:minmax(170px, 1fr) auto minmax(170px, 1fr);
-  align-items:center;
+  align-items:start;
   column-gap:10px;
 }
 .invoice-info { line-height:1.4; text-align:right; min-width:170px; color:#000; }
 .invoice-header.with-qr .invoice-info {
   direction:rtl;
   grid-column:3;
-  align-self:center;
+  align-self:start;
   justify-self:end;
 }
 .invoice-middle {
   grid-column:2;
-  display:flex; align-items:center; justify-content:center;
-  align-self:center;
+  display:flex; align-items:flex-start; justify-content:center;
+  align-self:start;
   justify-self:center;
 }
 .invoice-qr {
   width:72px; height:72px; object-fit:contain; display:block;
 }
-.logo-section { display:flex; flex-direction:row; align-items:center; gap:8px; }
+.logo-section { display:flex; flex-direction:row; align-items:flex-start; gap:8px; }
 .invoice-header.with-qr .logo-section,
 .invoice-header.with-qr .header-meta-block {
   direction:rtl;
   grid-column:1;
-  align-self:center;
+  align-self:start;
   justify-self:start;
 }
 .logo-phone-list { display:flex; flex-direction:column; align-items:center; gap:2px; }
