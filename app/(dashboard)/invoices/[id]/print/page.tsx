@@ -315,14 +315,21 @@ function InvoicePrintPage() {
           grid-template-columns:minmax(170px, 1fr) auto minmax(170px, 1fr);
           align-items:start;
           column-gap:10px;
+          direction:ltr;
         }
         .invoice-info { font-size:${fontSize}px; line-height:1.4; text-align:right; min-width:170px; }
-        .invoice-header.with-qr .invoice-info { justify-self:end; }
+        .invoice-header.with-qr .invoice-info {
+          justify-self:start;
+          direction:rtl;
+        }
         .invoice-middle { display:flex; align-items:flex-start; justify-content:center; }
         .invoice-qr { width:72px; height:72px; object-fit:contain; display:block; }
         .logo-section { display:flex; flex-direction:row; align-items:center; gap:8px; }
         .invoice-header.with-qr .logo-section,
-        .invoice-header.with-qr .header-meta-block { justify-self:start; }
+        .invoice-header.with-qr .header-meta-block {
+          justify-self:end;
+          direction:rtl;
+        }
         .logo-phone-list { display:flex; flex-direction:column; align-items:center; gap:2px; }
         .logo-phone { font-size:${fontSize}px; font-weight:bold; }
         table { width:100%; border-collapse:collapse; font-size:${fontSize}px; }
@@ -769,9 +776,13 @@ body { background:#3b3b3b; font-family:${fontFamily}; color:#000; }
   grid-template-columns:minmax(170px, 1fr) auto minmax(170px, 1fr);
   align-items:start;
   column-gap:10px;
+  direction:ltr;
 }
 .invoice-info { line-height:1.4; text-align:right; min-width:170px; color:#000; }
-.invoice-header.with-qr .invoice-info { justify-self:end; }
+.invoice-header.with-qr .invoice-info {
+  justify-self:start;
+  direction:rtl;
+}
 .invoice-middle {
   display:flex; align-items:flex-start; justify-content:center;
 }
@@ -780,7 +791,10 @@ body { background:#3b3b3b; font-family:${fontFamily}; color:#000; }
 }
 .logo-section { display:flex; flex-direction:row; align-items:center; gap:8px; }
 .invoice-header.with-qr .logo-section,
-.invoice-header.with-qr .header-meta-block { justify-self:start; }
+.invoice-header.with-qr .header-meta-block {
+  justify-self:end;
+  direction:rtl;
+}
 .logo-phone-list { display:flex; flex-direction:column; align-items:center; gap:2px; }
 .logo-phone { font-weight:bold; color:#000; }
 .phone-list { display:flex; flex-direction:column; gap:10px; }
@@ -1322,7 +1336,9 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
               }}
             >
               {/* HEADER */}
-              <div className={`invoice-header${showInvoiceQr ? " with-qr" : ""}`}>
+              <div
+                className={`invoice-header${showInvoiceQr ? " with-qr" : ""}`}
+              >
                 <div
                   className="invoice-info"
                   style={{ fontSize: `${fontSize}px` }}
@@ -1344,7 +1360,11 @@ tfoot .summary-row td { border-bottom:none; padding:1px 4px; }
                 </div>
                 {showInvoiceQr && (
                   <div className="invoice-middle" aria-hidden="true">
-                    <img src={invoiceQrDataUrl} alt="QR" className="invoice-qr" />
+                    <img
+                      src={invoiceQrDataUrl}
+                      alt="QR"
+                      className="invoice-qr"
+                    />
                   </div>
                 )}
                 {showLogo && (
