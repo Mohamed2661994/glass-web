@@ -312,23 +312,31 @@ function InvoicePrintPage() {
         .invoice-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
         .invoice-header.with-qr {
           display:grid;
+          direction:ltr;
           grid-template-columns:minmax(170px, 1fr) auto minmax(170px, 1fr);
           align-items:start;
           column-gap:10px;
-          direction:ltr;
         }
         .invoice-info { font-size:${fontSize}px; line-height:1.4; text-align:right; min-width:170px; }
         .invoice-header.with-qr .invoice-info {
-          justify-self:start;
           direction:rtl;
+          grid-column:3;
+          justify-self:end;
         }
-        .invoice-middle { display:flex; align-items:flex-start; justify-content:center; }
+        .invoice-middle {
+          grid-column:2;
+          display:flex;
+          align-items:flex-start;
+          justify-content:center;
+          justify-self:center;
+        }
         .invoice-qr { width:72px; height:72px; object-fit:contain; display:block; }
         .logo-section { display:flex; flex-direction:row; align-items:center; gap:8px; }
         .invoice-header.with-qr .logo-section,
         .invoice-header.with-qr .header-meta-block {
-          justify-self:end;
           direction:rtl;
+          grid-column:1;
+          justify-self:start;
         }
         .logo-phone-list { display:flex; flex-direction:column; align-items:center; gap:2px; }
         .logo-phone { font-size:${fontSize}px; font-weight:bold; }
@@ -773,18 +781,21 @@ body { background:#3b3b3b; font-family:${fontFamily}; color:#000; }
 }
 .invoice-header.with-qr {
   display:grid;
+  direction:ltr;
   grid-template-columns:minmax(170px, 1fr) auto minmax(170px, 1fr);
   align-items:start;
   column-gap:10px;
-  direction:ltr;
 }
 .invoice-info { line-height:1.4; text-align:right; min-width:170px; color:#000; }
 .invoice-header.with-qr .invoice-info {
-  justify-self:start;
   direction:rtl;
+  grid-column:3;
+  justify-self:end;
 }
 .invoice-middle {
+  grid-column:2;
   display:flex; align-items:flex-start; justify-content:center;
+  justify-self:center;
 }
 .invoice-qr {
   width:72px; height:72px; object-fit:contain; display:block;
@@ -792,8 +803,9 @@ body { background:#3b3b3b; font-family:${fontFamily}; color:#000; }
 .logo-section { display:flex; flex-direction:row; align-items:center; gap:8px; }
 .invoice-header.with-qr .logo-section,
 .invoice-header.with-qr .header-meta-block {
-  justify-self:end;
   direction:rtl;
+  grid-column:1;
+  justify-self:start;
 }
 .logo-phone-list { display:flex; flex-direction:column; align-items:center; gap:2px; }
 .logo-phone { font-weight:bold; color:#000; }
