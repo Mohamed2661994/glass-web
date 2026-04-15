@@ -314,20 +314,22 @@ function InvoicePrintPage() {
           display:grid;
           direction:ltr;
           grid-template-columns:minmax(170px, 1fr) auto minmax(170px, 1fr);
-          align-items:start;
+          align-items:center;
           column-gap:10px;
         }
         .invoice-info { font-size:${fontSize}px; line-height:1.4; text-align:right; min-width:170px; }
         .invoice-header.with-qr .invoice-info {
           direction:rtl;
           grid-column:3;
+          align-self:center;
           justify-self:end;
         }
         .invoice-middle {
           grid-column:2;
           display:flex;
-          align-items:flex-start;
+          align-items:center;
           justify-content:center;
+          align-self:center;
           justify-self:center;
         }
         .invoice-qr { width:72px; height:72px; object-fit:contain; display:block; }
@@ -336,6 +338,7 @@ function InvoicePrintPage() {
         .invoice-header.with-qr .header-meta-block {
           direction:rtl;
           grid-column:1;
+          align-self:center;
           justify-self:start;
         }
         .logo-phone-list { display:flex; flex-direction:column; align-items:center; gap:2px; }
@@ -783,18 +786,20 @@ body { background:#3b3b3b; font-family:${fontFamily}; color:#000; }
   display:grid;
   direction:ltr;
   grid-template-columns:minmax(170px, 1fr) auto minmax(170px, 1fr);
-  align-items:start;
+  align-items:center;
   column-gap:10px;
 }
 .invoice-info { line-height:1.4; text-align:right; min-width:170px; color:#000; }
 .invoice-header.with-qr .invoice-info {
   direction:rtl;
   grid-column:3;
+  align-self:center;
   justify-self:end;
 }
 .invoice-middle {
   grid-column:2;
-  display:flex; align-items:flex-start; justify-content:center;
+  display:flex; align-items:center; justify-content:center;
+  align-self:center;
   justify-self:center;
 }
 .invoice-qr {
@@ -805,6 +810,7 @@ body { background:#3b3b3b; font-family:${fontFamily}; color:#000; }
 .invoice-header.with-qr .header-meta-block {
   direction:rtl;
   grid-column:1;
+  align-self:center;
   justify-self:start;
 }
 .logo-phone-list { display:flex; flex-direction:column; align-items:center; gap:2px; }
