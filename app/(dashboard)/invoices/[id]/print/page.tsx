@@ -316,8 +316,8 @@ function InvoicePrintPage() {
           align-items:start;
           column-gap:10px;
         }
-        .invoice-info { font-size:${fontSize}px; line-height:1.4; text-align:right; min-width:170px; }
-        .invoice-header.with-qr .invoice-info { justify-self:end; }
+        .invoice-info { font-size:${fontSize}px; line-height:1.4; text-align:right; min-width:170px; width:max-content; }
+        .invoice-header.with-qr .invoice-info { justify-self:start; }
         .invoice-middle { display:flex; align-items:flex-start; justify-content:center; }
         .invoice-qr { width:72px; height:72px; object-fit:contain; display:block; }
         .logo-section { display:flex; flex-direction:row; align-items:center; gap:8px; width:max-content; }
@@ -770,8 +770,8 @@ body { background:#3b3b3b; font-family:${fontFamily}; color:#000; }
   align-items:start;
   column-gap:10px;
 }
-.invoice-info { line-height:1.4; text-align:right; min-width:170px; color:#000; }
-.invoice-header.with-qr .invoice-info { justify-self:end; }
+.invoice-info { line-height:1.4; text-align:right; min-width:170px; width:max-content; color:#000; }
+.invoice-header.with-qr .invoice-info { justify-self:start; }
 .invoice-middle {
   display:flex; align-items:flex-start; justify-content:center;
 }
