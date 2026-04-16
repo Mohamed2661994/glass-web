@@ -320,9 +320,9 @@ function InvoicePrintPage() {
         .invoice-header.with-qr .invoice-info { justify-self:end; }
         .invoice-middle { display:flex; align-items:flex-start; justify-content:center; }
         .invoice-qr { width:72px; height:72px; object-fit:contain; display:block; }
-        .logo-section { display:flex; flex-direction:row; align-items:center; gap:8px; }
+        .logo-section { display:flex; flex-direction:row; align-items:center; gap:8px; width:max-content; }
         .invoice-header.with-qr .logo-section,
-        .invoice-header.with-qr .header-meta-block { justify-self:start; }
+        .invoice-header.with-qr .header-meta-block { justify-self:end; }
         .logo-phone-list { display:flex; flex-direction:column; align-items:center; gap:2px; }
         .logo-phone { font-size:${fontSize}px; font-weight:bold; }
         table { width:100%; border-collapse:collapse; font-size:${fontSize}px; }
@@ -778,9 +778,9 @@ body { background:#3b3b3b; font-family:${fontFamily}; color:#000; }
 .invoice-qr {
   width:72px; height:72px; object-fit:contain; display:block;
 }
-.logo-section { display:flex; flex-direction:row; align-items:center; gap:8px; }
+.logo-section { display:flex; flex-direction:row; align-items:center; gap:8px; width:max-content; }
 .invoice-header.with-qr .logo-section,
-.invoice-header.with-qr .header-meta-block { justify-self:start; }
+.invoice-header.with-qr .header-meta-block { justify-self:end; }
 .logo-phone-list { display:flex; flex-direction:column; align-items:center; gap:2px; }
 .logo-phone { font-weight:bold; color:#000; }
 .phone-list { display:flex; flex-direction:column; gap:10px; }
