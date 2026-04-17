@@ -271,10 +271,9 @@ export default function CustomerDebtDetailsPage() {
 
   const visibleData = useMemo(() => {
     let rows = [...data];
-    // ترتيب بالتاريخ الفعلي (بما في ذلك تواريخ سندات الدفع من cash-in)
     rows.sort((a, b) => {
-      const dateA = (getRowDate(a) || "").substring(0, 10);
-      const dateB = (getRowDate(b) || "").substring(0, 10);
+      const dateA = getRowDate(a) || "";
+      const dateB = getRowDate(b) || "";
       return dateA.localeCompare(dateB);
     });
     if (fromDate || toDate) {
@@ -320,8 +319,8 @@ export default function CustomerDebtDetailsPage() {
 
     const rows = [...data];
     rows.sort((a, b) => {
-      const dateA = (getRowDate(a) || "").substring(0, 10);
-      const dateB = (getRowDate(b) || "").substring(0, 10);
+      const dateA = getRowDate(a) || "";
+      const dateB = getRowDate(b) || "";
       return dateA.localeCompare(dateB);
     });
 
@@ -341,7 +340,7 @@ export default function CustomerDebtDetailsPage() {
       const row = visibleData[i];
       if (row.record_type === "invoice") {
         map[i] = runningBalance;
-        runningBalance += Number(row.remaining_amount || 0);
+        runningBalance = Number(row.remaining_amount || 0);
       } else {
         runningBalance -= Number(row.paid_amount || 0);
       }

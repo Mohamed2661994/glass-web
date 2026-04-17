@@ -192,8 +192,8 @@ function CustomerStatementPrintInner() {
     let rows = [...data];
 
     rows.sort((left, right) => {
-      const leftDate = (getRowDate(left) || "").substring(0, 10);
-      const rightDate = (getRowDate(right) || "").substring(0, 10);
+      const leftDate = getRowDate(left) || "";
+      const rightDate = getRowDate(right) || "";
       return leftDate.localeCompare(rightDate);
     });
 
@@ -237,8 +237,8 @@ function CustomerStatementPrintInner() {
 
     const rows = [...data];
     rows.sort((left, right) => {
-      const leftDate = (getRowDate(left) || "").substring(0, 10);
-      const rightDate = (getRowDate(right) || "").substring(0, 10);
+      const leftDate = getRowDate(left) || "";
+      const rightDate = getRowDate(right) || "";
       return leftDate.localeCompare(rightDate);
     });
 
@@ -259,7 +259,7 @@ function CustomerStatementPrintInner() {
 
       if (row.record_type === "invoice") {
         balances[i] = runningBalance;
-        runningBalance += Number(row.remaining_amount || 0);
+        runningBalance = Number(row.remaining_amount || 0);
       } else {
         runningBalance -= Number(row.paid_amount || 0);
       }

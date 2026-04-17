@@ -67,7 +67,7 @@ export const calculateNetCustomerDebt = (
               ? subtotal - discountTotal
               : total) - paidAmount;
 
-      balance += invoiceOutstanding;
+      balance = invoiceOutstanding;
       continue;
     }
 
