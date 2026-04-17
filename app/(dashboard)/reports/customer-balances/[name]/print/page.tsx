@@ -133,8 +133,14 @@ function CustomerStatementPrintInner() {
           remaining_amount: Number(
             source.remaining_amount ?? row.remaining_amount ?? 0,
           ),
-          previous_balance: Number(source.previous_balance ?? 0),
-          additional_amount: Number(source.additional_amount ?? 0),
+          previous_balance:
+            source.previous_balance != null
+              ? Number(source.previous_balance)
+              : undefined,
+          additional_amount:
+            source.additional_amount != null
+              ? Number(source.additional_amount)
+              : undefined,
         };
       });
 
@@ -155,8 +161,14 @@ function CustomerStatementPrintInner() {
           total: Number(invoice.total || 0),
           paid_amount: Number(invoice.paid_amount || 0),
           remaining_amount: Number(invoice.remaining_amount || 0),
-          previous_balance: Number(invoice.previous_balance || 0),
-          additional_amount: Number(invoice.additional_amount || 0),
+          previous_balance:
+            invoice.previous_balance != null
+              ? Number(invoice.previous_balance)
+              : undefined,
+          additional_amount:
+            invoice.additional_amount != null
+              ? Number(invoice.additional_amount)
+              : undefined,
         }));
 
       const allData = [...enrichedDebtRows, ...missingInvoices];

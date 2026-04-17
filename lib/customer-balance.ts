@@ -62,6 +62,7 @@ export const calculateNetCustomerDebt = (
       hasMovement = true;
 
       const remainingAmount = toNumber(row.remaining_amount);
+      const hasPreviousBalance = row.previous_balance != null;
       const subtotal = toNumber(row.subtotal);
       const discountTotal = toNumber(row.discount_total);
       const total = toNumber(row.total);
@@ -74,7 +75,9 @@ export const calculateNetCustomerDebt = (
               ? subtotal - discountTotal
               : total) - paidAmount;
 
-      balance = invoiceOutstanding;
+      balance = hasPreviousBalance
+        ? invoiceOutstanding
+        : balance + invoiceOutstanding;
       continue;
     }
 
@@ -153,7 +156,9 @@ export const orderCustomerStatementRows = <T extends CustomerDebtRow>(
       orderedRows.push(row);
 
       if (row.record_type === "invoice") {
-        currentBalance = toNumber(row.remaining_amount);
+        currentBalance = row.previous_balance != null
+          ? toNumber(row.remaining_amount)
+          : currentBalance + toNumber(row.remaining_amount);
       } else {
         currentBalance -= toNumber(row.paid_amount);
       }

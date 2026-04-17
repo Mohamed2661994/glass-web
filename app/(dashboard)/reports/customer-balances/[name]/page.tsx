@@ -189,8 +189,14 @@ export default function CustomerDebtDetailsPage() {
           remaining_amount: Number(
             source.remaining_amount ?? row.remaining_amount ?? 0,
           ),
-          previous_balance: Number(source.previous_balance ?? 0),
-          additional_amount: Number(source.additional_amount ?? 0),
+          previous_balance:
+            source.previous_balance != null
+              ? Number(source.previous_balance)
+              : undefined,
+          additional_amount:
+            source.additional_amount != null
+              ? Number(source.additional_amount)
+              : undefined,
         };
       });
 
@@ -211,8 +217,14 @@ export default function CustomerDebtDetailsPage() {
           total: Number(inv.total || 0),
           paid_amount: Number(inv.paid_amount || 0),
           remaining_amount: Number(inv.remaining_amount || 0),
-          previous_balance: Number(inv.previous_balance || 0),
-          additional_amount: Number(inv.additional_amount || 0),
+          previous_balance:
+            inv.previous_balance != null
+              ? Number(inv.previous_balance)
+              : undefined,
+          additional_amount:
+            inv.additional_amount != null
+              ? Number(inv.additional_amount)
+              : undefined,
         }));
 
       const allData = [...enrichedDebtRows, ...missingInvoices];
