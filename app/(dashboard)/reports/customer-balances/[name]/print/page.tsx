@@ -251,6 +251,24 @@ function CustomerStatementPrintInner() {
     return rows;
   }, [data, from, to, getRowDate]);
 
+  const openingBalance = useMemo(() => {
+    if (!from) return 0;
+
+    const rows = [...data];
+    rows.sort((left, right) => {
+      const leftDate = getRowDate(left) || "";
+      const rightDate = getRowDate(right) || "";
+      return leftDate.localeCompare(rightDate);
+    });
+
+    const previousRows = rows.filter((row) => {
+      const dateStr = (getRowDate(row) || "").substring(0, 10);
+      return Boolean(dateStr) && dateStr < from;
+    });
+
+    return calculateNetCustomerDebt(orderCustomerStatementRows(previousRows)) ?? 0;
+  }, [data, from, getRowDate]);
+
   /* ========== Totals ========== */
   const orderedVisibleData = useMemo(
     () =>
@@ -281,24 +299,6 @@ function CustomerStatementPrintInner() {
     () => orderedVisibleData.reduce((s, i) => s + Number(i.paid_amount), 0),
     [orderedVisibleData],
   );
-
-  const openingBalance = useMemo(() => {
-    if (!from) return 0;
-
-    const rows = [...data];
-    rows.sort((left, right) => {
-      const leftDate = getRowDate(left) || "";
-      const rightDate = getRowDate(right) || "";
-      return leftDate.localeCompare(rightDate);
-    });
-
-    const previousRows = rows.filter((row) => {
-      const dateStr = (getRowDate(row) || "").substring(0, 10);
-      return Boolean(dateStr) && dateStr < from;
-    });
-
-    return calculateNetCustomerDebt(orderCustomerStatementRows(previousRows)) ?? 0;
-  }, [data, from, getRowDate]);
 
   const netDebt = useMemo(() => {
     return calculateNetCustomerDebt(

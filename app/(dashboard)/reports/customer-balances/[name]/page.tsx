@@ -329,28 +329,6 @@ export default function CustomerDebtDetailsPage() {
     return rows;
   }, [data, fromDate, toDate, getRowDate]);
 
-  /* ========== Totals ========== */
-  const totalAll = useMemo(
-    () =>
-      orderedVisibleData
-        .filter((i) => i.record_type === "invoice")
-        .reduce((s, i) => s + Number(i.subtotal), 0),
-    [orderedVisibleData],
-  );
-
-  const totalDiscount = useMemo(
-    () =>
-      orderedVisibleData
-        .filter((i) => i.record_type === "invoice")
-        .reduce((s, i) => s + Number(i.discount_total), 0),
-    [orderedVisibleData],
-  );
-
-  const totalPaid = useMemo(
-    () => orderedVisibleData.reduce((s, i) => s + Number(i.paid_amount), 0),
-    [orderedVisibleData],
-  );
-
   /* ========== Running Balance (الحساب السابق) ========== */
   // حساب الرصيد الافتتاحي من كل الحركات قبل فترة الفلتر
   const openingBalance = useMemo(() => {
@@ -380,6 +358,28 @@ export default function CustomerDebtDetailsPage() {
         manualOpeningBalanceValue > 0 ? manualOpeningBalanceValue : openingBalance,
       ),
     [manualOpeningBalanceValue, openingBalance, visibleData],
+  );
+
+  /* ========== Totals ========== */
+  const totalAll = useMemo(
+    () =>
+      orderedVisibleData
+        .filter((i) => i.record_type === "invoice")
+        .reduce((s, i) => s + Number(i.subtotal), 0),
+    [orderedVisibleData],
+  );
+
+  const totalDiscount = useMemo(
+    () =>
+      orderedVisibleData
+        .filter((i) => i.record_type === "invoice")
+        .reduce((s, i) => s + Number(i.discount_total), 0),
+    [orderedVisibleData],
+  );
+
+  const totalPaid = useMemo(
+    () => orderedVisibleData.reduce((s, i) => s + Number(i.paid_amount), 0),
+    [orderedVisibleData],
   );
 
   // الحساب السابق = الباقي من الفاتورة السابقة - سندات الدفع بينهم
