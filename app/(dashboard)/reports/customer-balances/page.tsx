@@ -23,7 +23,10 @@ import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useRealtime } from "@/hooks/use-realtime";
 import { Skeleton } from "@/components/ui/skeleton";
-import { calculateNetCustomerDebt } from "@/lib/customer-balance";
+import {
+  calculateNetCustomerDebt,
+  orderCustomerStatementRows,
+} from "@/lib/customer-balance";
 import { noSpaces, normalizeArabic } from "@/lib/utils";
 
 /* ========== Types ========== */
@@ -48,10 +51,12 @@ type CustomerDebtRow = {
   subtotal?: number;
   discount_total?: number;
   total?: number;
+  previous_balance?: number;
   paid_amount: number;
   remaining_amount: number;
   transaction_date?: string;
   record_date?: string;
+  row_sort_key?: string;
 };
 
 const getCustomerLookupKey = (value: string) =>
@@ -183,6 +188,11 @@ export default function CustomerBalancesPage() {
             const allInvoices: any[] = Array.isArray(invoicesRes.data)
               ? invoicesRes.data
               : (invoicesRes.data?.data ?? []);
+            const invoiceSourceById = new Map(
+              allInvoices
+                .filter((inv: any) => inv?.id != null)
+                .map((inv: any) => [Number(inv.id), inv]),
+            );
 
             const customerCashInDateById: Record<string, string> = {};
             const customerCashInDateByNumber: Record<string, string> = {};
@@ -224,6 +234,30 @@ export default function CustomerBalancesPage() {
               );
             };
 
+            const enrichedDebtRows: CustomerDebtRow[] = debtRows.map((row: any) => {
+              if (row.record_type !== "invoice") return row;
+
+              const source = invoiceSourceById.get(Number(row.invoice_id));
+              if (!source) return row;
+
+              return {
+                ...row,
+                subtotal: Number(source.subtotal ?? row.subtotal ?? source.total ?? 0),
+                discount_total: Number(
+                  source.discount_total ?? row.discount_total ?? source.extra_discount ?? 0,
+                ),
+                total: Number(source.total ?? row.total ?? 0),
+                paid_amount: Number(source.paid_amount ?? row.paid_amount ?? 0),
+                remaining_amount: Number(
+                  source.remaining_amount ?? row.remaining_amount ?? 0,
+                ),
+                previous_balance:
+                  source.previous_balance != null
+                    ? Number(source.previous_balance)
+                    : undefined,
+              };
+            });
+
             // دمج الفواتير الناقصة (مثل حالة تغيير اسم العميل)
             const existingIds = new Set(
               debtRows
@@ -244,21 +278,15 @@ export default function CustomerBalancesPage() {
                 subtotal: Number(inv.subtotal || inv.total || 0),
                 discount_total: Number(inv.discount_total || 0),
                 total: Number(inv.total || 0),
+                previous_balance:
+                  inv.previous_balance != null
+                    ? Number(inv.previous_balance)
+                    : undefined,
                 paid_amount: Number(inv.paid_amount || 0),
                 remaining_amount: Number(inv.remaining_amount || 0),
               }));
 
-            const allRows: CustomerDebtRow[] = [...debtRows, ...missing];
-
-            // Match the statement page ordering exactly: sort first by the
-            // native row date coming from the debt report/invoice payload,
-            // then rely on stable ordering when later filtering by actual row
-            // date. This preserves same-day invoice/payment order.
-            allRows.sort((a, b) => {
-              const dateA = a.invoice_date || "";
-              const dateB = b.invoice_date || "";
-              return dateA.localeCompare(dateB);
-            });
+            const allRows: CustomerDebtRow[] = [...enrichedDebtRows, ...missing];
 
             const visibleRows = allRows.filter((row) => {
               const dateStr = getRowDate(row).substring(0, 10);
@@ -268,19 +296,20 @@ export default function CustomerBalancesPage() {
               return true;
             });
 
-            visibleRows.sort((a, b) => {
-              const dateA = getRowDate(a).substring(0, 10);
-              const dateB = getRowDate(b).substring(0, 10);
-              return dateA.localeCompare(dateB);
-            });
+            const orderedVisibleRows = orderCustomerStatementRows(
+              visibleRows.map((row) => ({
+                ...row,
+                row_sort_key: getRowDate(row) || row.invoice_date || "",
+              })),
+            );
 
             let totalSales = 0;
             let totalPaid = 0;
             let lastDate: string | null = null;
 
-            for (const row of visibleRows) {
+            for (const row of orderedVisibleRows) {
               if (row.record_type === "invoice") {
-                totalSales += Number(row.total || 0);
+                totalSales += Number(row.subtotal || 0);
                 totalPaid += Number(row.paid_amount || 0);
                 const d = getRowDate(row).substring(0, 10);
                 if (d && (!lastDate || d > lastDate)) lastDate = d;
@@ -290,7 +319,7 @@ export default function CustomerBalancesPage() {
               }
             }
 
-            const balanceDue = calculateNetCustomerDebt(visibleRows);
+            const balanceDue = calculateNetCustomerDebt(orderedVisibleRows);
 
             return {
               ...item,
