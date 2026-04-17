@@ -6,7 +6,10 @@ import api from "@/services/api";
 import { useAuth } from "@/app/context/auth-context";
 import { PageContainer } from "@/components/layout/page-container";
 import { noSpaces, normalizeArabic } from "@/lib/utils";
-import { calculateNetCustomerDebt } from "@/lib/customer-balance";
+import {
+  calculateNetCustomerDebt,
+  orderCustomerStatementRows,
+} from "@/lib/customer-balance";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -41,6 +44,7 @@ type Invoice = {
   remaining_amount: number;
   previous_balance?: number;
   additional_amount?: number;
+  row_sort_key?: string;
 };
 
 const parseAmountInput = (value: string) => {
@@ -93,6 +97,7 @@ export default function CustomerDebtDetailsPage() {
   const [toDate, setToDate] = useState(defaultWeekRange.to);
   const [manualOpeningBalance, setManualOpeningBalance] = useState("");
   const skipOpeningBalanceSaveRef = useRef(false);
+  const manualOpeningBalanceValue = parseAmountInput(manualOpeningBalance);
 
   const openingBalanceStorageKey = useMemo(() => {
     const branchKey = String(user?.branch_id || "all");
@@ -317,29 +322,33 @@ export default function CustomerDebtDetailsPage() {
         return true;
       });
     }
+    rows = rows.map((row) => ({
+      ...row,
+      row_sort_key: getRowDate(row) || row.invoice_date || "",
+    }));
     return rows;
   }, [data, fromDate, toDate, getRowDate]);
 
   /* ========== Totals ========== */
   const totalAll = useMemo(
     () =>
-      visibleData
+      orderedVisibleData
         .filter((i) => i.record_type === "invoice")
         .reduce((s, i) => s + Number(i.subtotal), 0),
-    [visibleData],
+    [orderedVisibleData],
   );
 
   const totalDiscount = useMemo(
     () =>
-      visibleData
+      orderedVisibleData
         .filter((i) => i.record_type === "invoice")
         .reduce((s, i) => s + Number(i.discount_total), 0),
-    [visibleData],
+    [orderedVisibleData],
   );
 
   const totalPaid = useMemo(
-    () => visibleData.reduce((s, i) => s + Number(i.paid_amount), 0),
-    [visibleData],
+    () => orderedVisibleData.reduce((s, i) => s + Number(i.paid_amount), 0),
+    [orderedVisibleData],
   );
 
   /* ========== Running Balance (الحساب السابق) ========== */
@@ -361,14 +370,25 @@ export default function CustomerDebtDetailsPage() {
       return Boolean(dateStr) && dateStr < fromDate;
     });
 
-    return calculateNetCustomerDebt(previousRows) ?? 0;
+    return calculateNetCustomerDebt(orderCustomerStatementRows(previousRows)) ?? 0;
   }, [data, fromDate, getRowDate]);
+
+  const orderedVisibleData = useMemo(
+    () =>
+      orderCustomerStatementRows(
+        visibleData,
+        manualOpeningBalanceValue > 0 ? manualOpeningBalanceValue : openingBalance,
+      ),
+    [manualOpeningBalanceValue, openingBalance, visibleData],
+  );
 
   // الحساب السابق = الباقي من الفاتورة السابقة - سندات الدفع بينهم
   const netDebt = useMemo(() => {
-    return calculateNetCustomerDebt(visibleData, openingBalance) ?? 0;
-  }, [openingBalance, visibleData]);
-  const manualOpeningBalanceValue = parseAmountInput(manualOpeningBalance);
+    return calculateNetCustomerDebt(
+      orderedVisibleData,
+      manualOpeningBalanceValue > 0 ? manualOpeningBalanceValue : openingBalance,
+    ) ?? 0;
+  }, [manualOpeningBalanceValue, openingBalance, orderedVisibleData]);
 
   return (
     <PageContainer size="xl">
@@ -475,7 +495,7 @@ export default function CustomerDebtDetailsPage() {
         )}
 
         {/* Table (Desktop) + Cards (Mobile) */}
-        {!loading && visibleData.length > 0 && (
+        {!loading && orderedVisibleData.length > 0 && (
           <>
             {/* Desktop Table */}
             <Card className="hidden md:block">
@@ -501,7 +521,7 @@ export default function CustomerDebtDetailsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {visibleData.map((inv, idx) => (
+                      {orderedVisibleData.map((inv, idx) => (
                         <TableRow key={`${inv.record_type}-${inv.invoice_id}`}>
                           <TableCell className="text-center">
                             <Badge
@@ -582,7 +602,7 @@ export default function CustomerDebtDetailsPage() {
 
             {/* Mobile Cards */}
             <div className="md:hidden space-y-2">
-              {visibleData.map((inv, idx) => (
+              {orderedVisibleData.map((inv, idx) => (
                 <Card
                   key={`m-${inv.record_type}-${inv.invoice_id}`}
                   className="overflow-hidden"
@@ -689,14 +709,14 @@ export default function CustomerDebtDetailsPage() {
         )}
 
         {/* Empty */}
-        {!loading && visibleData.length === 0 && (
+        {!loading && orderedVisibleData.length === 0 && (
           <div className="text-center py-16 text-muted-foreground">
             لا توجد بيانات لهذا العميل
           </div>
         )}
 
         {/* Summary */}
-        {!loading && visibleData.length > 0 && (
+        {!loading && orderedVisibleData.length > 0 && (
           <Card>
             <CardContent className="p-4">
               <div className="flex flex-wrap gap-4 justify-center text-sm">

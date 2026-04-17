@@ -3,7 +3,10 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import api from "@/services/api";
-import { calculateNetCustomerDebt } from "@/lib/customer-balance";
+import {
+  calculateNetCustomerDebt,
+  orderCustomerStatementRows,
+} from "@/lib/customer-balance";
 import { noSpaces, normalizeArabic } from "@/lib/utils";
 
 /* ========== Types ========== */
@@ -18,6 +21,7 @@ type Invoice = {
   remaining_amount: number;
   previous_balance?: number;
   additional_amount?: number;
+  row_sort_key?: string;
 };
 
 /* ========== Helpers ========== */
@@ -239,29 +243,43 @@ function CustomerStatementPrintInner() {
       });
     }
 
+    rows = rows.map((row) => ({
+      ...row,
+      row_sort_key: getRowDate(row) || row.invoice_date || "",
+    }));
+
     return rows;
   }, [data, from, to, getRowDate]);
 
   /* ========== Totals ========== */
+  const orderedVisibleData = useMemo(
+    () =>
+      orderCustomerStatementRows(
+        visibleData,
+        manualOpeningBalance > 0 ? manualOpeningBalance : openingBalance,
+      ),
+    [manualOpeningBalance, openingBalance, visibleData],
+  );
+
   const totalInvoices = useMemo(
     () =>
-      visibleData
+      orderedVisibleData
         .filter((i) => i.record_type === "invoice")
         .reduce((s, i) => s + Number(i.subtotal), 0),
-    [visibleData],
+    [orderedVisibleData],
   );
 
   const totalDiscount = useMemo(
     () =>
-      visibleData
+      orderedVisibleData
         .filter((i) => i.record_type === "invoice")
         .reduce((s, i) => s + Number(i.discount_total), 0),
-    [visibleData],
+    [orderedVisibleData],
   );
 
   const totalPaid = useMemo(
-    () => visibleData.reduce((s, i) => s + Number(i.paid_amount), 0),
-    [visibleData],
+    () => orderedVisibleData.reduce((s, i) => s + Number(i.paid_amount), 0),
+    [orderedVisibleData],
   );
 
   const openingBalance = useMemo(() => {
@@ -279,15 +297,15 @@ function CustomerStatementPrintInner() {
       return Boolean(dateStr) && dateStr < from;
     });
 
-    return calculateNetCustomerDebt(previousRows) ?? 0;
+    return calculateNetCustomerDebt(orderCustomerStatementRows(previousRows)) ?? 0;
   }, [data, from, getRowDate]);
 
   const netDebt = useMemo(() => {
     return calculateNetCustomerDebt(
-      visibleData,
+      orderedVisibleData,
       openingBalance + manualOpeningBalance,
     ) ?? 0;
-  }, [manualOpeningBalance, openingBalance, visibleData]);
+  }, [manualOpeningBalance, openingBalance, orderedVisibleData]);
 
   const dateRange =
     from || to
@@ -352,7 +370,7 @@ function CustomerStatementPrintInner() {
         </div>
 
         {/* Table */}
-        {visibleData.length > 0 ? (
+        {orderedVisibleData.length > 0 ? (
           <table
             style={{
               width: "100%",
@@ -375,7 +393,7 @@ function CustomerStatementPrintInner() {
               </tr>
             </thead>
             <tbody>
-              {visibleData.map((inv, idx) => (
+              {orderedVisibleData.map((inv, idx) => (
                 <tr
                   key={`${inv.record_type}-${inv.invoice_id}-${idx}`}
                   style={{
@@ -436,7 +454,7 @@ function CustomerStatementPrintInner() {
         )}
 
         {/* Summary */}
-        {visibleData.length > 0 && (
+        {orderedVisibleData.length > 0 && (
           <div style={{ textAlign: "right", fontSize: 14 }}>
             {openingBalance > 0 && (
               <p style={{ marginBottom: 4 }}>
