@@ -235,19 +235,19 @@ function CustomerStatementPrintInner() {
   const openingBalance = useMemo(() => {
     if (!from) return 0;
 
-    let balance = 0;
-    for (const row of data) {
+    const rows = [...data];
+    rows.sort((left, right) => {
+      const leftDate = (getRowDate(left) || "").substring(0, 10);
+      const rightDate = (getRowDate(right) || "").substring(0, 10);
+      return leftDate.localeCompare(rightDate);
+    });
+
+    const previousRows = rows.filter((row) => {
       const dateStr = (getRowDate(row) || "").substring(0, 10);
-      if (!dateStr || dateStr >= from) continue;
+      return Boolean(dateStr) && dateStr < from;
+    });
 
-      if (row.record_type === "invoice") {
-        balance += Number(row.total) - Number(row.paid_amount);
-      } else {
-        balance -= Number(row.paid_amount);
-      }
-    }
-
-    return balance;
+    return calculateNetCustomerDebt(previousRows) ?? 0;
   }, [data, from, getRowDate]);
 
   const prevInvoiceRemaining = useMemo(() => {

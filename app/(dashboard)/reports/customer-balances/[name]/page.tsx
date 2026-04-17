@@ -315,21 +315,22 @@ export default function CustomerDebtDetailsPage() {
   // حساب الرصيد الافتتاحي من كل الحركات قبل فترة الفلتر
   const openingBalance = useMemo(() => {
     if (!fromDate) {
-      // بدون فلتر تاريخ → مفيش رصيد افتتاحي
       return 0;
     }
-    // نحسب الرصيد المتراكم من كل الحركات قبل تاريخ البداية
-    let balance = 0;
-    for (const row of data) {
+
+    const rows = [...data];
+    rows.sort((a, b) => {
+      const dateA = (getRowDate(a) || "").substring(0, 10);
+      const dateB = (getRowDate(b) || "").substring(0, 10);
+      return dateA.localeCompare(dateB);
+    });
+
+    const previousRows = rows.filter((row) => {
       const dateStr = (getRowDate(row) || "").substring(0, 10);
-      if (!dateStr || dateStr >= fromDate) continue;
-      if (row.record_type === "invoice") {
-        balance += Number(row.total) - Number(row.paid_amount);
-      } else {
-        balance -= Number(row.paid_amount);
-      }
-    }
-    return balance;
+      return Boolean(dateStr) && dateStr < fromDate;
+    });
+
+    return calculateNetCustomerDebt(previousRows) ?? 0;
   }, [data, fromDate, getRowDate]);
 
   // الحساب السابق = الباقي من الفاتورة السابقة - سندات الدفع بينهم
