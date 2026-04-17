@@ -69,12 +69,10 @@ function CustomerStatementPrintInner() {
   const fetchDetails = useCallback(async () => {
     try {
       setLoading(true);
-      const [detailsRes, cashInRes] = await Promise.all([
+      const [detailsRes, cashInRes, invoicesRes] = await Promise.all([
         api.get("/reports/customer-debt-details", {
           params: {
             customer_name: customerName,
-            from: from || undefined,
-            to: to || undefined,
             warehouse_id: warehouseId || undefined,
           },
         }),
@@ -84,8 +82,53 @@ function CustomerStatementPrintInner() {
             limit: 100000,
           },
         }),
+        api.get("/invoices", {
+          params: {
+            customer_name: customerName,
+            invoice_type: warehouseId === "1" ? "retail" : "wholesale",
+            limit: 10000,
+          },
+        }),
       ]);
-      setData(detailsRes.data || []);
+
+      const debtRows: Invoice[] = detailsRes.data || [];
+      const existingInvoiceIds = new Set(
+        debtRows
+          .filter((row) => row.record_type === "invoice")
+          .map((row) => row.invoice_id),
+      );
+
+      const allInvoices: any[] = Array.isArray(invoicesRes.data)
+        ? invoicesRes.data
+        : (invoicesRes.data?.data ?? []);
+
+      const missingInvoices: Invoice[] = allInvoices
+        .filter(
+          (invoice: any) =>
+            invoice.id &&
+            !existingInvoiceIds.has(invoice.id) &&
+            invoice.movement_type === "sale" &&
+            Number(invoice.remaining_amount || 0) !== 0,
+        )
+        .map((invoice: any) => ({
+          record_type: "invoice" as const,
+          invoice_id: invoice.id,
+          invoice_date: invoice.invoice_date || invoice.created_at || "",
+          subtotal: Number(invoice.subtotal || invoice.total || 0),
+          discount_total: Number(invoice.discount_total || 0),
+          total: Number(invoice.total || 0),
+          paid_amount: Number(invoice.paid_amount || 0),
+          remaining_amount: Number(invoice.remaining_amount || 0),
+        }));
+
+      const allData = [...debtRows, ...missingInvoices];
+      allData.sort((left, right) => {
+        const leftDate = left.invoice_date || "";
+        const rightDate = right.invoice_date || "";
+        return leftDate.localeCompare(rightDate);
+      });
+
+      setData(allData);
       const cashInRows = cashInRes.data?.data || cashInRes.data || [];
       const byId: Record<string, string> = {};
       const byNumber: Record<string, string> = {};
@@ -144,28 +187,27 @@ function CustomerStatementPrintInner() {
   );
 
   const visibleData = useMemo(() => {
-    const filtered =
-      !from && !to
-        ? data
-        : data.filter((row) => {
-            const dateStr = (getRowDate(row) || "").substring(0, 10);
-            if (!dateStr) return false;
-            if (from && dateStr < from) return false;
-            if (to && dateStr > to) return false;
-            return true;
-          });
+    let rows = [...data];
 
-    return [...filtered].sort((left, right) => {
-      if (left.record_type !== right.record_type) {
-        return left.record_type === "invoice" ? -1 : 1;
-      }
-
+    rows.sort((left, right) => {
       const leftDate = (getRowDate(left) || "").substring(0, 10);
       const rightDate = (getRowDate(right) || "").substring(0, 10);
       if (leftDate !== rightDate) return leftDate.localeCompare(rightDate);
 
       return Number(left.invoice_id) - Number(right.invoice_id);
     });
+
+    if (from || to) {
+      rows = rows.filter((row) => {
+        const dateStr = (getRowDate(row) || "").substring(0, 10);
+        if (!dateStr) return false;
+        if (from && dateStr < from) return false;
+        if (to && dateStr > to) return false;
+        return true;
+      });
+    }
+
+    return rows;
   }, [data, from, to, getRowDate]);
 
   /* ========== Totals ========== */
