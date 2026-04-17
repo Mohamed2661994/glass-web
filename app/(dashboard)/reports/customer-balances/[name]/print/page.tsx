@@ -55,6 +55,7 @@ function CustomerStatementPrintInner() {
   const manualOpeningBalance = parseAmountParam(
     searchParams.get("opening_balance"),
   );
+  const isRetailBranch = warehouseId === "1";
 
   const [data, setData] = useState<Invoice[]>([]);
   const [cashInDateById, setCashInDateById] = useState<Record<string, string>>(
@@ -215,8 +216,16 @@ function CustomerStatementPrintInner() {
     () =>
       visibleData
         .filter((i) => i.record_type === "invoice")
-        .reduce((s, i) => s + Number(i.total), 0) + manualOpeningBalance,
-    [manualOpeningBalance, visibleData],
+        .reduce((s, i) => s + Number(i.subtotal), 0),
+    [visibleData],
+  );
+
+  const totalDiscount = useMemo(
+    () =>
+      visibleData
+        .filter((i) => i.record_type === "invoice")
+        .reduce((s, i) => s + Number(i.discount_total), 0),
+    [visibleData],
   );
 
   const totalPaid = useMemo(
@@ -224,23 +233,57 @@ function CustomerStatementPrintInner() {
     [visibleData],
   );
 
-  const netDebt = totalInvoices - totalPaid;
+  const openingBalance = useMemo(() => {
+    if (!from) return 0;
 
-  /* ========== Running Balance ========== */
-  const runningBalances = useMemo(() => {
-    const balances: number[] = [];
-    let balance = manualOpeningBalance;
-    for (let i = 0; i < visibleData.length; i++) {
-      balances.push(balance);
-      const row = visibleData[i];
+    let balance = 0;
+    for (const row of data) {
+      const dateStr = (getRowDate(row) || "").substring(0, 10);
+      if (!dateStr || dateStr >= from) continue;
+
       if (row.record_type === "invoice") {
         balance += Number(row.total) - Number(row.paid_amount);
       } else {
         balance -= Number(row.paid_amount);
       }
     }
+
+    return balance;
+  }, [data, from, getRowDate]);
+
+  const prevInvoiceRemaining = useMemo(() => {
+    const balances: number[] = new Array(visibleData.length).fill(0);
+    let runningBalance = 0;
+
+    for (let i = 0; i < visibleData.length; i++) {
+      const row = visibleData[i];
+
+      if (row.record_type === "invoice") {
+        balances[i] = runningBalance;
+        runningBalance = Number(row.remaining_amount || 0);
+      } else {
+        runningBalance -= Number(row.paid_amount || 0);
+      }
+    }
+
     return balances;
-  }, [manualOpeningBalance, visibleData]);
+  }, [visibleData]);
+
+  const netDebt = useMemo(() => {
+    let lastRemaining = 0;
+    let paymentsAfterLast = 0;
+
+    for (const row of visibleData) {
+      if (row.record_type === "invoice") {
+        lastRemaining = Number(row.remaining_amount || 0);
+        paymentsAfterLast = 0;
+      } else {
+        paymentsAfterLast += Number(row.paid_amount || 0);
+      }
+    }
+
+    return lastRemaining - paymentsAfterLast;
+  }, [visibleData]);
 
   const dateRange =
     from || to
@@ -320,7 +363,8 @@ function CustomerStatementPrintInner() {
                 <th style={thStyle}>رقم</th>
                 <th style={thStyle}>التاريخ</th>
                 <th style={thStyle}>الحساب السابق</th>
-                <th style={thStyle}>الإجمالي بعد الخصم</th>
+                <th style={thStyle}>الإجمالي</th>
+                {!isRetailBranch && <th style={thStyle}>الخصم</th>}
                 <th style={thStyle}>المدفوع</th>
                 <th style={thStyle}>الباقي</th>
               </tr>
@@ -342,15 +386,25 @@ function CustomerStatementPrintInner() {
                     {formatArabicDate(getRowDate(inv), true)}
                   </td>
                   <td style={tdStyle}>
-                    {runningBalances[idx] === 0
-                      ? "—"
-                      : formatMoney(runningBalances[idx])}
+                    {inv.record_type === "invoice"
+                      ? prevInvoiceRemaining[idx] === 0
+                        ? "—"
+                        : formatMoney(prevInvoiceRemaining[idx])
+                      : "—"}
                   </td>
                   <td style={tdStyle}>
                     {inv.record_type === "invoice"
-                      ? formatMoney(Number(inv.total))
+                      ? formatMoney(Number(inv.subtotal))
                       : "—"}
                   </td>
+                  {!isRetailBranch && (
+                    <td style={tdStyle}>
+                      {inv.record_type === "invoice" &&
+                      Number(inv.discount_total) > 0
+                        ? formatMoney(Number(inv.discount_total))
+                        : "—"}
+                    </td>
+                  )}
                   <td style={tdStyle}>
                     {formatMoney(Number(inv.paid_amount))}
                   </td>
@@ -372,10 +426,22 @@ function CustomerStatementPrintInner() {
         {/* Summary */}
         {visibleData.length > 0 && (
           <div style={{ textAlign: "right", fontSize: 14 }}>
+            {openingBalance > 0 && (
+              <p style={{ marginBottom: 4 }}>
+                <span style={{ fontWeight: "bold" }}>رصيد سابق مُرحَّل:</span>{" "}
+                {formatMoney(openingBalance)}
+              </p>
+            )}
             <p style={{ marginBottom: 4 }}>
               <span style={{ fontWeight: "bold" }}>إجمالي الفواتير:</span>{" "}
               {formatMoney(totalInvoices)}
             </p>
+            {!isRetailBranch && totalDiscount > 0 && (
+              <p style={{ marginBottom: 4 }}>
+                <span style={{ fontWeight: "bold" }}>إجمالي الخصم:</span>{" "}
+                {formatMoney(totalDiscount)}
+              </p>
+            )}
             <p style={{ marginBottom: 4 }}>
               <span style={{ fontWeight: "bold" }}>إجمالي المدفوع:</span>{" "}
               {formatMoney(totalPaid)}
