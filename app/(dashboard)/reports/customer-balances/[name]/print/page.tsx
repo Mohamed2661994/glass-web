@@ -16,6 +16,8 @@ type Invoice = {
   total: number;
   paid_amount: number;
   remaining_amount: number;
+  previous_balance?: number;
+  additional_amount?: number;
 };
 
 /* ========== Helpers ========== */
@@ -104,6 +106,34 @@ function CustomerStatementPrintInner() {
         ? invoicesRes.data
         : (invoicesRes.data?.data ?? []);
 
+      const invoiceSourceById = new Map(
+        allInvoices
+          .filter((invoice: any) => invoice?.id != null)
+          .map((invoice: any) => [Number(invoice.id), invoice]),
+      );
+
+      const enrichedDebtRows: Invoice[] = debtRows.map((row) => {
+        if (row.record_type !== "invoice") return row;
+
+        const source = invoiceSourceById.get(Number(row.invoice_id));
+        if (!source) return row;
+
+        return {
+          ...row,
+          subtotal: Number(source.subtotal ?? row.subtotal ?? source.total ?? 0),
+          discount_total: Number(
+            source.discount_total ?? row.discount_total ?? source.extra_discount ?? 0,
+          ),
+          total: Number(source.total ?? row.total ?? 0),
+          paid_amount: Number(source.paid_amount ?? row.paid_amount ?? 0),
+          remaining_amount: Number(
+            source.remaining_amount ?? row.remaining_amount ?? 0,
+          ),
+          previous_balance: Number(source.previous_balance ?? 0),
+          additional_amount: Number(source.additional_amount ?? 0),
+        };
+      });
+
       const missingInvoices: Invoice[] = allInvoices
         .filter(
           (invoice: any) =>
@@ -121,9 +151,11 @@ function CustomerStatementPrintInner() {
           total: Number(invoice.total || 0),
           paid_amount: Number(invoice.paid_amount || 0),
           remaining_amount: Number(invoice.remaining_amount || 0),
+          previous_balance: Number(invoice.previous_balance || 0),
+          additional_amount: Number(invoice.additional_amount || 0),
         }));
 
-      const allData = [...debtRows, ...missingInvoices];
+      const allData = [...enrichedDebtRows, ...missingInvoices];
       allData.sort((left, right) => {
         const leftDate = left.invoice_date || "";
         const rightDate = right.invoice_date || "";
@@ -250,24 +282,6 @@ function CustomerStatementPrintInner() {
     return calculateNetCustomerDebt(previousRows) ?? 0;
   }, [data, from, getRowDate]);
 
-  const prevInvoiceRemaining = useMemo(() => {
-    const balances: number[] = new Array(visibleData.length).fill(0);
-    let runningBalance = openingBalance + manualOpeningBalance;
-
-    for (let i = 0; i < visibleData.length; i++) {
-      const row = visibleData[i];
-
-      if (row.record_type === "invoice") {
-        balances[i] = runningBalance;
-        runningBalance = Number(row.remaining_amount || 0);
-      } else {
-        runningBalance -= Number(row.paid_amount || 0);
-      }
-    }
-
-    return balances;
-  }, [manualOpeningBalance, openingBalance, visibleData]);
-
   const netDebt = useMemo(() => {
     return calculateNetCustomerDebt(
       visibleData,
@@ -353,6 +367,7 @@ function CustomerStatementPrintInner() {
                 <th style={thStyle}>رقم</th>
                 <th style={thStyle}>التاريخ</th>
                 <th style={thStyle}>الحساب السابق</th>
+                <th style={thStyle}>إضافة</th>
                 <th style={thStyle}>الإجمالي</th>
                 {!isRetailBranch && <th style={thStyle}>الخصم</th>}
                 <th style={thStyle}>المدفوع</th>
@@ -377,9 +392,16 @@ function CustomerStatementPrintInner() {
                   </td>
                   <td style={tdStyle}>
                     {inv.record_type === "invoice"
-                      ? prevInvoiceRemaining[idx] === 0
+                      ? Number(inv.previous_balance || 0) === 0
                         ? "—"
-                        : formatMoney(prevInvoiceRemaining[idx])
+                        : formatMoney(Number(inv.previous_balance))
+                      : "—"}
+                  </td>
+                  <td style={tdStyle}>
+                    {inv.record_type === "invoice"
+                      ? Number(inv.additional_amount || 0) === 0
+                        ? "—"
+                        : formatMoney(Number(inv.additional_amount))
                       : "—"}
                   </td>
                   <td style={tdStyle}>

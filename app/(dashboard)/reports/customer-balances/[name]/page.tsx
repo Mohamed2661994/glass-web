@@ -39,6 +39,8 @@ type Invoice = {
   total: number;
   paid_amount: number;
   remaining_amount: number;
+  previous_balance?: number;
+  additional_amount?: number;
 };
 
 const parseAmountInput = (value: string) => {
@@ -159,6 +161,34 @@ export default function CustomerDebtDetailsPage() {
         ? invoicesRes.data
         : (invoicesRes.data?.data ?? []);
 
+      const invoiceSourceById = new Map(
+        allInvoices
+          .filter((inv: any) => inv?.id != null)
+          .map((inv: any) => [Number(inv.id), inv]),
+      );
+
+      const enrichedDebtRows: Invoice[] = debtRows.map((row) => {
+        if (row.record_type !== "invoice") return row;
+
+        const source = invoiceSourceById.get(Number(row.invoice_id));
+        if (!source) return row;
+
+        return {
+          ...row,
+          subtotal: Number(source.subtotal ?? row.subtotal ?? source.total ?? 0),
+          discount_total: Number(
+            source.discount_total ?? row.discount_total ?? source.extra_discount ?? 0,
+          ),
+          total: Number(source.total ?? row.total ?? 0),
+          paid_amount: Number(source.paid_amount ?? row.paid_amount ?? 0),
+          remaining_amount: Number(
+            source.remaining_amount ?? row.remaining_amount ?? 0,
+          ),
+          previous_balance: Number(source.previous_balance ?? 0),
+          additional_amount: Number(source.additional_amount ?? 0),
+        };
+      });
+
       const missingInvoices: Invoice[] = allInvoices
         .filter(
           (inv: any) =>
@@ -176,9 +206,11 @@ export default function CustomerDebtDetailsPage() {
           total: Number(inv.total || 0),
           paid_amount: Number(inv.paid_amount || 0),
           remaining_amount: Number(inv.remaining_amount || 0),
+          previous_balance: Number(inv.previous_balance || 0),
+          additional_amount: Number(inv.additional_amount || 0),
         }));
 
-      const allData = [...debtRows, ...missingInvoices];
+      const allData = [...enrichedDebtRows, ...missingInvoices];
       // ترتيب دائم بالتاريخ
       allData.sort((a, b) => {
         const dateA = a.invoice_date || "";
@@ -333,21 +365,6 @@ export default function CustomerDebtDetailsPage() {
   }, [data, fromDate, getRowDate]);
 
   // الحساب السابق = الباقي من الفاتورة السابقة - سندات الدفع بينهم
-  const prevInvoiceRemaining = useMemo(() => {
-    const map: number[] = new Array(visibleData.length).fill(0);
-    let runningBalance = openingBalance;
-    for (let i = 0; i < visibleData.length; i++) {
-      const row = visibleData[i];
-      if (row.record_type === "invoice") {
-        map[i] = runningBalance;
-        runningBalance = Number(row.remaining_amount || 0);
-      } else {
-        runningBalance -= Number(row.paid_amount || 0);
-      }
-    }
-    return map;
-  }, [openingBalance, visibleData]);
-
   const netDebt = useMemo(() => {
     return calculateNetCustomerDebt(visibleData, openingBalance) ?? 0;
   }, [openingBalance, visibleData]);
@@ -473,6 +490,7 @@ export default function CustomerDebtDetailsPage() {
                         <TableHead className="text-center">
                           الحساب السابق
                         </TableHead>
+                        <TableHead className="text-center">إضافة</TableHead>
                         <TableHead className="text-center">الإجمالي</TableHead>
                         {user?.branch_id !== 1 && (
                           <TableHead className="text-center">الخصم</TableHead>
@@ -506,9 +524,16 @@ export default function CustomerDebtDetailsPage() {
                           </TableCell>
                           <TableCell className="text-center font-medium">
                             {inv.record_type === "invoice"
-                              ? prevInvoiceRemaining[idx] === 0
+                              ? Number(inv.previous_balance || 0) === 0
                                 ? "—"
-                                : prevInvoiceRemaining[idx].toLocaleString()
+                                : Number(inv.previous_balance).toLocaleString()
+                              : "—"}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {inv.record_type === "invoice"
+                              ? Number(inv.additional_amount || 0) === 0
+                                ? "—"
+                                : Number(inv.additional_amount).toLocaleString()
                               : "—"}
                           </TableCell>
                           <TableCell className="text-center">
@@ -600,15 +625,25 @@ export default function CustomerDebtDetailsPage() {
 
                     {/* Row 2: Numbers grid */}
                     <div
-                      className={`grid gap-1 text-center text-xs ${user?.branch_id === 1 ? "grid-cols-4" : "grid-cols-5"}`}
+                      className={`grid gap-1 text-center text-xs ${user?.branch_id === 1 ? "grid-cols-5" : "grid-cols-6"}`}
                     >
                       <div>
                         <p className="text-muted-foreground">الحساب السابق</p>
                         <p className="font-medium">
                           {inv.record_type === "invoice"
-                            ? prevInvoiceRemaining[idx] === 0
+                            ? Number(inv.previous_balance || 0) === 0
                               ? "—"
-                              : prevInvoiceRemaining[idx].toLocaleString()
+                              : Number(inv.previous_balance).toLocaleString()
+                            : "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">إضافة</p>
+                        <p className="font-medium">
+                          {inv.record_type === "invoice"
+                            ? Number(inv.additional_amount || 0) === 0
+                              ? "—"
+                              : Number(inv.additional_amount).toLocaleString()
                             : "—"}
                         </p>
                       </div>
