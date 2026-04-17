@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import api from "@/services/api";
+import { calculateNetCustomerDebt } from "@/lib/customer-balance";
 import { noSpaces, normalizeArabic } from "@/lib/utils";
 
 /* ========== Types ========== */
@@ -268,20 +269,11 @@ function CustomerStatementPrintInner() {
   }, [visibleData]);
 
   const netDebt = useMemo(() => {
-    let lastRemaining = 0;
-    let paymentsAfterLast = 0;
-
-    for (const row of visibleData) {
-      if (row.record_type === "invoice") {
-        lastRemaining = Number(row.remaining_amount || 0);
-        paymentsAfterLast = 0;
-      } else {
-        paymentsAfterLast += Number(row.paid_amount || 0);
-      }
-    }
-
-    return lastRemaining - paymentsAfterLast;
-  }, [visibleData]);
+    return calculateNetCustomerDebt(
+      visibleData,
+      openingBalance + manualOpeningBalance,
+    ) ?? 0;
+  }, [manualOpeningBalance, openingBalance, visibleData]);
 
   const dateRange =
     from || to

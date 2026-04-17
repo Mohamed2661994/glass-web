@@ -9,6 +9,9 @@ type CustomerBalanceResponse = {
 
 type CustomerDebtRow = {
   record_type?: string | null;
+  subtotal?: NumericLike;
+  discount_total?: NumericLike;
+  total?: NumericLike;
   remaining_amount?: NumericLike;
   paid_amount?: NumericLike;
 };
@@ -24,7 +27,11 @@ export const extractCustomerBalance = (
   if (!response) return null;
 
   if (response.total_sales != null && response.total_paid != null) {
-    return Math.round((toNumber(response.total_sales) - toNumber(response.total_paid)) * 100) / 100;
+    return (
+      Math.round(
+        (toNumber(response.total_sales) - toNumber(response.total_paid)) * 100,
+      ) / 100
+    );
   }
 
   if (response.balance != null || response.balance_due != null) {
@@ -34,25 +41,41 @@ export const extractCustomerBalance = (
   return null;
 };
 
-export const calculateNetCustomerDebt = (rows: CustomerDebtRow[]) => {
+export const calculateNetCustomerDebt = (
+  rows: CustomerDebtRow[],
+  openingBalance: NumericLike = 0,
+) => {
   if (!Array.isArray(rows) || rows.length === 0) return null;
 
-  let lastRemaining = 0;
-  let paymentsAfterLastInvoice = 0;
-  let hasInvoice = false;
+  let balance = toNumber(openingBalance);
+  let hasMovement = false;
 
   for (const row of rows) {
     if (row.record_type === "invoice") {
-      hasInvoice = true;
-      lastRemaining = toNumber(row.remaining_amount);
-      paymentsAfterLastInvoice = 0;
+      hasMovement = true;
+
+      const subtotal = toNumber(row.subtotal);
+      const discountTotal = toNumber(row.discount_total);
+      const total = toNumber(row.total);
+      const paidAmount = toNumber(row.paid_amount);
+
+      const invoiceNet =
+        row.subtotal != null || row.discount_total != null
+          ? subtotal - discountTotal
+          : total;
+
+      balance += invoiceNet - paidAmount;
       continue;
     }
 
-    paymentsAfterLastInvoice += toNumber(row.paid_amount);
+    const paymentAmount = toNumber(row.paid_amount);
+    if (paymentAmount !== 0) {
+      hasMovement = true;
+    }
+    balance -= paymentAmount;
   }
 
-  if (!hasInvoice) return null;
+  if (!hasMovement) return null;
 
-  return Math.round((lastRemaining - paymentsAfterLastInvoice) * 100) / 100;
+  return Math.round(balance * 100) / 100;
 };

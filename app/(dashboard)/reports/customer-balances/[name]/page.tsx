@@ -6,6 +6,7 @@ import api from "@/services/api";
 import { useAuth } from "@/app/context/auth-context";
 import { PageContainer } from "@/components/layout/page-container";
 import { noSpaces, normalizeArabic } from "@/lib/utils";
+import { calculateNetCustomerDebt } from "@/lib/customer-balance";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -347,20 +348,9 @@ export default function CustomerDebtDetailsPage() {
     return map;
   }, [visibleData]);
 
-  // صافي المديونية = الباقي من آخر فاتورة - سندات الدفع بعدها
   const netDebt = useMemo(() => {
-    let lastRemaining = 0;
-    let paymentsAfterLast = 0;
-    for (const row of visibleData) {
-      if (row.record_type === "invoice") {
-        lastRemaining = Number(row.remaining_amount || 0);
-        paymentsAfterLast = 0;
-      } else {
-        paymentsAfterLast += Number(row.paid_amount || 0);
-      }
-    }
-    return lastRemaining - paymentsAfterLast;
-  }, [visibleData]);
+    return calculateNetCustomerDebt(visibleData, openingBalance) ?? 0;
+  }, [openingBalance, visibleData]);
   const manualOpeningBalanceValue = parseAmountInput(manualOpeningBalance);
 
   return (
@@ -516,9 +506,9 @@ export default function CustomerDebtDetailsPage() {
                           </TableCell>
                           <TableCell className="text-center font-medium">
                             {inv.record_type === "invoice"
-                              ? (prevInvoiceRemaining[idx] === 0
+                              ? prevInvoiceRemaining[idx] === 0
                                 ? "—"
-                                : prevInvoiceRemaining[idx].toLocaleString())
+                                : prevInvoiceRemaining[idx].toLocaleString()
                               : "—"}
                           </TableCell>
                           <TableCell className="text-center">
@@ -616,9 +606,9 @@ export default function CustomerDebtDetailsPage() {
                         <p className="text-muted-foreground">الحساب السابق</p>
                         <p className="font-medium">
                           {inv.record_type === "invoice"
-                            ? (prevInvoiceRemaining[idx] === 0
+                            ? prevInvoiceRemaining[idx] === 0
                               ? "—"
-                              : prevInvoiceRemaining[idx].toLocaleString())
+                              : prevInvoiceRemaining[idx].toLocaleString()
                             : "—"}
                         </p>
                       </div>
@@ -855,8 +845,12 @@ export default function CustomerDebtDetailsPage() {
               <div className="space-y-1.5">
                 {(() => {
                   const subtotal = Number(previewInvoice.subtotal || 0);
-                  const itemsDiscount = Number(previewInvoice.items_discount || 0);
-                  const extraDiscount = Number(previewInvoice.extra_discount || 0);
+                  const itemsDiscount = Number(
+                    previewInvoice.items_discount || 0,
+                  );
+                  const extraDiscount = Number(
+                    previewInvoice.extra_discount || 0,
+                  );
                   const previousBalance = Number(
                     previewInvoice.previous_balance || 0,
                   );
@@ -874,70 +868,76 @@ export default function CustomerDebtDetailsPage() {
 
                   return (
                     <>
-                {subtotal !== 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">
-                      الإجمالي قبل الخصم
-                    </span>
-                    <span>{subtotal.toLocaleString()}</span>
-                  </div>
-                )}
-                {itemsDiscount > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">خصم الأصناف</span>
-                    <span className="text-red-500">
-                      -{itemsDiscount.toLocaleString()}
-                    </span>
-                  </div>
-                )}
-                {extraDiscount > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">خصم إضافي</span>
-                    <span className="text-red-500">
-                      -{extraDiscount.toLocaleString()}
-                    </span>
-                  </div>
-                )}
-                {previousBalance !== 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">الحساب السابق</span>
-                    <span
-                      className={
-                        previousBalance < 0 ? "text-green-600" : undefined
-                      }
-                    >
-                      {previousBalance.toLocaleString()}
-                    </span>
-                  </div>
-                )}
-                {additionalAmount !== 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">إضافة</span>
-                    <span>{additionalAmount.toLocaleString()}</span>
-                  </div>
-                )}
-                <div className="flex justify-between font-bold text-base">
-                  <span>إجمالي الفاتورة</span>
-                  <span>{invoiceTotal.toLocaleString()}</span>
-                </div>
-                {(previousBalance !== 0 || additionalAmount !== 0) && (
-                  <div className="flex justify-between font-bold text-base">
-                    <span>الإجمالي بعد الحساب السابق</span>
-                    <span>{totalAfterPrevious.toLocaleString()}</span>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">المدفوع</span>
-                  <span className="text-green-600">
-                    {paidAmount.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">المتبقي</span>
-                  <span className="text-red-600">
-                    {remainingAmount.toLocaleString()}
-                  </span>
-                </div>
+                      {subtotal !== 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">
+                            الإجمالي قبل الخصم
+                          </span>
+                          <span>{subtotal.toLocaleString()}</span>
+                        </div>
+                      )}
+                      {itemsDiscount > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">
+                            خصم الأصناف
+                          </span>
+                          <span className="text-red-500">
+                            -{itemsDiscount.toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+                      {extraDiscount > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">
+                            خصم إضافي
+                          </span>
+                          <span className="text-red-500">
+                            -{extraDiscount.toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+                      {previousBalance !== 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">
+                            الحساب السابق
+                          </span>
+                          <span
+                            className={
+                              previousBalance < 0 ? "text-green-600" : undefined
+                            }
+                          >
+                            {previousBalance.toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+                      {additionalAmount !== 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">إضافة</span>
+                          <span>{additionalAmount.toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-bold text-base">
+                        <span>إجمالي الفاتورة</span>
+                        <span>{invoiceTotal.toLocaleString()}</span>
+                      </div>
+                      {(previousBalance !== 0 || additionalAmount !== 0) && (
+                        <div className="flex justify-between font-bold text-base">
+                          <span>الإجمالي بعد الحساب السابق</span>
+                          <span>{totalAfterPrevious.toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">المدفوع</span>
+                        <span className="text-green-600">
+                          {paidAmount.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">المتبقي</span>
+                        <span className="text-red-600">
+                          {remainingAmount.toLocaleString()}
+                        </span>
+                      </div>
                     </>
                   );
                 })()}
