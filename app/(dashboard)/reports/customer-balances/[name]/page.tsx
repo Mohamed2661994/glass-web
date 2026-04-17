@@ -335,18 +335,18 @@ export default function CustomerDebtDetailsPage() {
   // الحساب السابق = الباقي من الفاتورة السابقة - سندات الدفع بينهم
   const prevInvoiceRemaining = useMemo(() => {
     const map: number[] = new Array(visibleData.length).fill(0);
-    let runningBalance = 0;
+    let runningBalance = openingBalance;
     for (let i = 0; i < visibleData.length; i++) {
       const row = visibleData[i];
       if (row.record_type === "invoice") {
         map[i] = runningBalance;
-        runningBalance = Number(row.remaining_amount || 0);
+        runningBalance += Number(row.remaining_amount || 0);
       } else {
         runningBalance -= Number(row.paid_amount || 0);
       }
     }
     return map;
-  }, [visibleData]);
+  }, [openingBalance, visibleData]);
 
   const netDebt = useMemo(() => {
     return calculateNetCustomerDebt(visibleData, openingBalance) ?? 0;

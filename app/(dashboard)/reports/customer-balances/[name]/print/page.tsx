@@ -252,21 +252,21 @@ function CustomerStatementPrintInner() {
 
   const prevInvoiceRemaining = useMemo(() => {
     const balances: number[] = new Array(visibleData.length).fill(0);
-    let runningBalance = 0;
+    let runningBalance = openingBalance + manualOpeningBalance;
 
     for (let i = 0; i < visibleData.length; i++) {
       const row = visibleData[i];
 
       if (row.record_type === "invoice") {
         balances[i] = runningBalance;
-        runningBalance = Number(row.remaining_amount || 0);
+        runningBalance += Number(row.remaining_amount || 0);
       } else {
         runningBalance -= Number(row.paid_amount || 0);
       }
     }
 
     return balances;
-  }, [visibleData]);
+  }, [manualOpeningBalance, openingBalance, visibleData]);
 
   const netDebt = useMemo(() => {
     return calculateNetCustomerDebt(

@@ -54,17 +54,20 @@ export const calculateNetCustomerDebt = (
     if (row.record_type === "invoice") {
       hasMovement = true;
 
+      const remainingAmount = toNumber(row.remaining_amount);
       const subtotal = toNumber(row.subtotal);
       const discountTotal = toNumber(row.discount_total);
       const total = toNumber(row.total);
       const paidAmount = toNumber(row.paid_amount);
 
-      const invoiceNet =
-        row.subtotal != null || row.discount_total != null
-          ? subtotal - discountTotal
-          : total;
+      const invoiceOutstanding =
+        row.remaining_amount != null
+          ? remainingAmount
+          : (row.subtotal != null || row.discount_total != null
+              ? subtotal - discountTotal
+              : total) - paidAmount;
 
-      balance += invoiceNet - paidAmount;
+      balance += invoiceOutstanding;
       continue;
     }
 
