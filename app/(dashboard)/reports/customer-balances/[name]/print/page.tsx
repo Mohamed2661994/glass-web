@@ -193,9 +193,7 @@ function CustomerStatementPrintInner() {
     rows.sort((left, right) => {
       const leftDate = (getRowDate(left) || "").substring(0, 10);
       const rightDate = (getRowDate(right) || "").substring(0, 10);
-      if (leftDate !== rightDate) return leftDate.localeCompare(rightDate);
-
-      return Number(left.invoice_id) - Number(right.invoice_id);
+      return leftDate.localeCompare(rightDate);
     });
 
     if (from || to) {
