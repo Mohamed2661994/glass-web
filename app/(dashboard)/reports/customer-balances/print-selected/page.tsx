@@ -165,14 +165,14 @@ export default function PrintSelectedCustomersPage() {
 /* ========== Shared cell styles ========== */
 const thBase: React.CSSProperties = {
   border: "1px solid #7f8a98",
-  padding: "8px 6px",
+  padding: "12px 8px",
   textAlign: "center",
   fontWeight: "bold",
   whiteSpace: "nowrap",
   fontSize: 15,
   lineHeight: 1.1,
   background: "#e6ebf2",
-  height: 32,
+  height: 42,
 };
 
 const sheetStyle: React.CSSProperties = {
@@ -240,11 +240,11 @@ const thRemaining: React.CSSProperties = {
 
 const tdStyle: React.CSSProperties = {
   border: "1px solid #b0b7c0",
-  padding: "7px 6px",
+  padding: "12px 8px",
   textAlign: "center",
   fontSize: 15,
   lineHeight: 1.1,
-  height: 30,
+  height: 42,
   verticalAlign: "middle",
 };
 
