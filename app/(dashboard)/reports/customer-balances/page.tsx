@@ -130,6 +130,34 @@ export default function CustomerBalancesPage() {
           marketLookup.get(getCustomerLookupKey(item.customer_name)) ?? false,
       }));
 
+      const shouldSeedCustomersFromDirectory =
+        showAllCustomers ||
+        showMarketCustomersOnly ||
+        customerSearch.trim().length >= 2;
+
+      if (shouldSeedCustomersFromDirectory) {
+        const balancesByCustomerKey = new Map(
+          balances.map((item) => [getCustomerLookupKey(item.customer_name), item]),
+        );
+
+        for (const customer of customers) {
+          const customerKey = getCustomerLookupKey(customer.name);
+          if (balancesByCustomerKey.has(customerKey)) continue;
+
+          const seededItem: CustomerBalanceItem = {
+            customer_name: customer.name,
+            total_sales: 0,
+            total_paid: 0,
+            balance_due: 0,
+            last_invoice_date: null,
+            is_market_customer: Boolean(customer.is_market_customer),
+          };
+
+          balancesByCustomerKey.set(customerKey, seededItem);
+          balances.push(seededItem);
+        }
+      }
+
       // تصحيح أرقام كل عميل من بيانات كشف الحساب الفعلية (نفس أسلوب صفحة التفاصيل)
       const invoiceType = user?.branch_id === 1 ? "retail" : "wholesale";
       const corrected = await Promise.all(
@@ -281,7 +309,7 @@ export default function CustomerBalancesPage() {
       if (showAllCustomers) {
         const byName = new Map<string, CustomerBalanceItem>();
         for (const item of balances) {
-          byName.set(item.customer_name, {
+          byName.set(getCustomerLookupKey(item.customer_name), {
             customer_name: item.customer_name,
             total_sales: Number(item.total_sales || 0),
             total_paid: Number(item.total_paid || 0),
@@ -292,8 +320,9 @@ export default function CustomerBalancesPage() {
         }
 
         for (const c of customers) {
-          if (!byName.has(c.name)) {
-            byName.set(c.name, {
+          const customerKey = getCustomerLookupKey(c.name);
+          if (!byName.has(customerKey)) {
+            byName.set(customerKey, {
               customer_name: c.name,
               total_sales: 0,
               total_paid: 0,
