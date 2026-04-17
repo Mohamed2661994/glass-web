@@ -28,9 +28,6 @@ const BALANCE_EPSILON = 0.01;
 const balancesMatch = (left: NumericLike, right: NumericLike) =>
   Math.abs(toNumber(left) - toNumber(right)) <= BALANCE_EPSILON;
 
-const hasLinkedPreviousBalance = (value: NumericLike) =>
-  Math.abs(toNumber(value)) > BALANCE_EPSILON;
-
 export const extractCustomerBalance = (
   response: CustomerBalanceResponse | null | undefined,
 ) => {
@@ -65,7 +62,7 @@ export const calculateNetCustomerDebt = (
       hasMovement = true;
 
       const remainingAmount = toNumber(row.remaining_amount);
-      const hasPreviousBalance = hasLinkedPreviousBalance(row.previous_balance);
+      const hasPreviousBalance = row.previous_balance != null;
       const subtotal = toNumber(row.subtotal);
       const discountTotal = toNumber(row.discount_total);
       const total = toNumber(row.total);
@@ -133,7 +130,6 @@ export const orderCustomerStatementRows = <T extends CustomerDebtRow>(
       let nextIndex = dayRows.findIndex(
         (row) =>
           row.record_type === "invoice" &&
-          hasLinkedPreviousBalance(row.previous_balance) &&
           balancesMatch(row.previous_balance, currentBalance),
       );
 
@@ -144,7 +140,6 @@ export const orderCustomerStatementRows = <T extends CustomerDebtRow>(
             dayRows.some(
               (candidate) =>
                 candidate.record_type === "invoice" &&
-                hasLinkedPreviousBalance(candidate.previous_balance) &&
                 balancesMatch(
                   candidate.previous_balance,
                   currentBalance - toNumber(row.paid_amount),
@@ -161,7 +156,7 @@ export const orderCustomerStatementRows = <T extends CustomerDebtRow>(
       orderedRows.push(row);
 
       if (row.record_type === "invoice") {
-        currentBalance = hasLinkedPreviousBalance(row.previous_balance)
+        currentBalance = row.previous_balance != null
           ? toNumber(row.remaining_amount)
           : currentBalance + toNumber(row.remaining_amount);
       } else {
