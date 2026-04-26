@@ -16,7 +16,6 @@ import {
 import {
   Trash2,
   Loader2,
-  Pencil,
   RefreshCw,
   ChevronDown,
   ArrowLeftRight,
@@ -593,7 +592,8 @@ export default function EditWholesaleInvoicePage() {
               const sorted = [...invoices].sort(
                 (a: any, b: any) => Number(b.id) - Number(a.id),
               );
-              bal = Math.round(Number(sorted[0].remaining_amount || 0) * 100) / 100;
+              bal =
+                Math.round(Number(sorted[0].remaining_amount || 0) * 100) / 100;
             }
           }
         } catch {}
@@ -1550,21 +1550,6 @@ export default function EditWholesaleInvoicePage() {
                         </td>
                         <td className="p-3 text-center">
                           <div className="flex items-center justify-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon-xs"
-                              tabIndex={-1}
-                              onClick={() => {
-                                const prod = products.find(
-                                  (p) => p.id === item.product_id,
-                                );
-                                if (prod) {
-                                  setEditProduct(prod);
-                                }
-                              }}
-                            >
-                              <Pencil className="size-4 text-blue-600" />
-                            </Button>
                             {confirmDeleteId === item.uid ? (
                               <Button
                                 variant="destructive"
@@ -1877,21 +1862,6 @@ export default function EditWholesaleInvoicePage() {
                         مرتجع
                       </label>
                       <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => {
-                            const prod = products.find(
-                              (p) => p.id === item.product_id,
-                            );
-                            if (prod) {
-                              setEditProduct(prod);
-                            }
-                          }}
-                        >
-                          <Pencil className="h-4 w-4 text-blue-600" />
-                        </Button>
                         {confirmDeleteId === item.uid ? (
                           <Button
                             variant="destructive"
