@@ -52,7 +52,7 @@ type Orientation = "portrait" | "landscape";
 type MarginSize = "normal" | "narrow" | "none";
 
 const FIXED_INVOICE_PAPER_SIZE: PaperSize = "A5";
-const INVOICE_QR_VALUE = "https://www.hg-alshour.online";
+const INVOICE_QR_VALUE = "https://www.hg-alshour.online/info";
 
 const PAPER_DIMS: Record<PaperSize, { w: number; h: number }> = {
   A4: { w: 210, h: 297 },
