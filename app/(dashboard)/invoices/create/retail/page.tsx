@@ -967,7 +967,8 @@ export default function CreateRetailInvoicePage() {
               const sorted = [...invoices].sort(
                 (a: any, b: any) => Number(b.id) - Number(a.id),
               );
-              bal = Math.round(Number(sorted[0].remaining_amount || 0) * 100) / 100;
+              bal =
+                Math.round(Number(sorted[0].remaining_amount || 0) * 100) / 100;
             }
           }
         } catch {}
@@ -3252,6 +3253,7 @@ export default function CreateRetailInvoicePage() {
         <QuickTransferModal
           open={showTransferModal}
           onOpenChange={setShowTransferModal}
+          useWholesalePricePricing
           onTransferComplete={() => {
             // Refresh products to reflect updated stock
             refreshProducts();

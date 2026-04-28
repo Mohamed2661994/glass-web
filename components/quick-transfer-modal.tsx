@@ -65,6 +65,7 @@ interface QuickTransferModalProps {
   onOpenChange: (open: boolean) => void;
   /** Called after a successful transfer so the invoice page can refresh stock */
   onTransferComplete?: () => void;
+  useWholesalePricePricing?: boolean;
 }
 
 /* ========== Component ========== */
@@ -73,6 +74,7 @@ export function QuickTransferModal({
   open,
   onOpenChange,
   onTransferComplete,
+  useWholesalePricePricing = false,
 }: QuickTransferModalProps) {
   const FROM_BRANCH_ID = 2; // wholesale
   const TO_BRANCH_ID = 1; // retail
@@ -337,6 +339,14 @@ export function QuickTransferModal({
     setItems((prev) => prev.filter((i) => i.uid !== uid));
   };
 
+  const buildTransferFinalPrice = useCallback(
+    (item: TransferItem) => {
+      if (!useWholesalePricePricing) return 0;
+      return Number(item.quantity || 0) * Number(item.wholesale_price || 0);
+    },
+    [useWholesalePricePricing],
+  );
+
   /* --- Go to confirm step (calls preview API) --- */
   const goToConfirm = useCallback(async () => {
     if (items.length === 0) {
@@ -364,12 +374,15 @@ export function QuickTransferModal({
     const requestPayload = {
       from_branch_id: FROM_BRANCH_ID,
       to_branch_id: TO_BRANCH_ID,
-      total_amount: 0,
+      total_amount: items.reduce(
+        (sum, item) => sum + buildTransferFinalPrice(item),
+        0,
+      ),
       items: items.map((i) => ({
         product_id: i.product_id,
         variant_id: i.variant_id,
         quantity: i.quantity,
-        final_price: 0,
+        final_price: buildTransferFinalPrice(i),
         package_name: i.wholesale_package,
         wholesale_package: i.wholesale_package,
         retail_package: i.retail_package,
@@ -397,7 +410,7 @@ export function QuickTransferModal({
     } finally {
       setPreviewLoading(false);
     }
-  }, [items]);
+  }, [buildTransferFinalPrice, items]);
 
   /* --- Execute transfer --- */
   const executeTransfer = useCallback(async () => {

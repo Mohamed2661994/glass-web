@@ -625,7 +625,8 @@ export default function EditRetailInvoicePage() {
               const sorted = [...invoices].sort(
                 (a: any, b: any) => Number(b.id) - Number(a.id),
               );
-              bal = Math.round(Number(sorted[0].remaining_amount || 0) * 100) / 100;
+              bal =
+                Math.round(Number(sorted[0].remaining_amount || 0) * 100) / 100;
             }
           }
         } catch {}
@@ -2395,6 +2396,7 @@ export default function EditRetailInvoicePage() {
         <QuickTransferModal
           open={showTransferModal}
           onOpenChange={setShowTransferModal}
+          useWholesalePricePricing
           onTransferComplete={() => {
             refreshProducts();
           }}
