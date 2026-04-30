@@ -316,6 +316,7 @@ export default function EditWholesaleInvoicePage() {
           price: item.price,
           quantity: item.quantity,
           discount: item.discount || 0,
+          barcode: item.barcode || "",
           variant_id: Number(item.variant_id || 0),
           is_return: item.is_return || false,
         }));
@@ -470,6 +471,28 @@ export default function EditWholesaleInvoicePage() {
       return Number(resolvedAvailableQtyById[productId] ?? fallbackQuantity);
     },
     [productById, resolvedAvailableQtyById],
+  );
+
+  useEffect(() => {
+    if (products.length === 0 || items.length === 0) return;
+    const needsEnrich = items.some((item: any) => !item.barcode);
+    if (!needsEnrich) return;
+
+    setItems((prev) =>
+      prev.map((item: any) => {
+        if (item.barcode) return item;
+        const product = products.find((p: any) => p.id === item.product_id);
+        return product?.barcode ? { ...item, barcode: product.barcode } : item;
+      }),
+    );
+  }, [items, products]);
+
+  const getItemBarcode = useCallback(
+    (item: any) =>
+      item.barcode ||
+      products.find((product: any) => product.id === item.product_id)?.barcode ||
+      item.product_id,
+    [products],
   );
 
   /* =========================================================
@@ -630,6 +653,7 @@ export default function EditWholesaleInvoicePage() {
           price: product.price,
           quantity: 1,
           discount: 0,
+          barcode: product.barcode || "",
         },
       ];
     });
@@ -657,6 +681,7 @@ export default function EditWholesaleInvoicePage() {
         price: product.price,
         quantity: 1,
         discount: 0,
+        barcode: product.barcode || "",
       },
     ]);
     setLastAddedId(uid);
@@ -1379,7 +1404,7 @@ export default function EditWholesaleInvoicePage() {
                             {item.product_name} - {item.manufacturer}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {item.package}
+                            {item.package} — باركود: {getItemBarcode(item)}
                           </div>
                         </td>
                         <td className="p-3 text-center">{item.price}</td>
@@ -1620,6 +1645,7 @@ export default function EditWholesaleInvoicePage() {
                   const raw = (Number(item.price) - disc) * qty;
                   return item.is_return ? -raw : raw;
                 })();
+                const itemBarcode = getItemBarcode(item);
                 const isExpanded = expandedItemUid === item.uid;
 
                 if (!isExpanded) {
@@ -1666,7 +1692,7 @@ export default function EditWholesaleInvoicePage() {
                           {item.product_name} - {item.manufacturer}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {item.package} — كود: {item.product_id}
+                          {item.package} — باركود: {itemBarcode}
                         </p>
                       </div>
                       <Button
