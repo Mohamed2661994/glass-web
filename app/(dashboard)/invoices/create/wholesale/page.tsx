@@ -134,6 +134,8 @@ export default function CreateWholesaleInvoicePage() {
   const [savedInvoiceId, setSavedInvoiceId] = useState<number | null>(null);
   const [showSavedModal, setShowSavedModal] = useState(false);
   const [journalPosted, setJournalPosted] = useState(false);
+  const [showZeroPaidJournalConfirm, setShowZeroPaidJournalConfirm] =
+    useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewBeforeSaveOpen, setPreviewBeforeSaveOpen] = useState(false);
 
@@ -821,15 +823,15 @@ export default function CreateWholesaleInvoicePage() {
      1️⃣2️⃣ Save Invoice
      ========================================================= */
 
-  const saveInvoice = async () => {
+  const validateBeforeSave = () => {
     if (items.length === 0) {
       toast.error("لا يوجد أصناف");
-      return;
+      return false;
     }
 
     if (movementType !== "purchase" && !customerName.trim()) {
       toast.error("برجاء إدخال اسم العميل");
-      return;
+      return false;
     }
 
     // التحقق من الرصيد المتاح (للبيع فقط) مع استثناء الأصناف المرتجع
@@ -846,9 +848,15 @@ export default function CreateWholesaleInvoicePage() {
             `الصنف "${item.product_name}" الكمية (${item.quantity}) أكبر من الرصيد المتاح (${getResolvedAvailableQuantity(item.product_id)})`,
           );
         });
-        return;
+        return false;
       }
     }
+
+    return true;
+  };
+
+  const submitInvoice = async (forceJournalPostWhenUnpaid = false) => {
+    if (!validateBeforeSave()) return;
 
     setSaving(true);
     try {
@@ -882,6 +890,9 @@ export default function CreateWholesaleInvoicePage() {
         paid_amount: Number(paidAmount) || 0,
         previous_balance: Number(previousBalance) ?? 0,
         additional_amount: Number(additionalAmount) ?? 0,
+        ...(forceJournalPostWhenUnpaid
+          ? { force_journal_post_when_unpaid: true }
+          : {}),
         created_by: user?.id,
         created_by_name: user?.username,
       });
@@ -917,6 +928,17 @@ export default function CreateWholesaleInvoicePage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const saveInvoice = () => {
+    if (!validateBeforeSave()) return;
+
+    if (movementType === "sale" && Number(paidAmount) <= 0) {
+      setShowZeroPaidJournalConfirm(true);
+      return;
+    }
+
+    void submitInvoice(false);
   };
 
   /* =========================================================
@@ -2778,6 +2800,38 @@ export default function CreateWholesaleInvoicePage() {
                 نعم، امسح وابدأ جديد
               </AlertDialogAction>
               <AlertDialogCancel>لا</AlertDialogCancel>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog
+          open={showZeroPaidJournalConfirm}
+          onOpenChange={setShowZeroPaidJournalConfirm}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>ترحيل الفاتورة إلى اليومية؟</AlertDialogTitle>
+              <AlertDialogDescription>
+                الفاتورة ليس بها مبلغ مدفوع. هل تريد ترحيلها إلى اليومية
+                باسم العميل مع مدفوع صفر؟
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction
+                onClick={() => {
+                  setShowZeroPaidJournalConfirm(false);
+                  void submitInvoice(true);
+                }}
+              >
+                نعم، رحل لليومية
+              </AlertDialogAction>
+              <AlertDialogCancel
+                onClick={() => {
+                  void submitInvoice(false);
+                }}
+              >
+                لا، احفظ بدون ترحيل
+              </AlertDialogCancel>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
