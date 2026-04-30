@@ -46,8 +46,7 @@ import { noSpaces, normalizeArabic } from "@/lib/utils";
 
 const DISCOUNT_DIFF_MARKER = "{{discount_diff}}";
 const HIDE_MARKET_CUSTOMERS_STORAGE_KEY = "cash-summary-hide-market-customers";
-const CASH_SUMMARY_PRINT_SETTINGS_STORAGE_KEY =
-  "cash-summary-print-settings";
+const CASH_SUMMARY_PRINT_SETTINGS_STORAGE_KEY = "cash-summary-print-settings";
 
 /* ================= TYPES ================= */
 
@@ -56,6 +55,7 @@ type CashInItem = {
   transaction_date: string;
   amount: number;
   paid_amount: number;
+  remaining_amount?: number;
   source_type: "manual" | "invoice" | "customer_payment";
   customer_name: string;
   invoice_source?: string | null;
@@ -942,7 +942,11 @@ export default function CashSummaryPage() {
                   : i.source_type === "invoice"
                     ? i.paid_amount
                     : i.amount;
-                const displayRemaining = meta ? meta.remaining : null;
+                const displayRemaining = meta
+                  ? meta.remaining
+                  : i.source_type === "invoice"
+                    ? Number(i.remaining_amount || 0)
+                    : null;
                 const displayNotes =
                   i.source_type !== "invoice" ? cleanNotes(i.notes) : null;
                 return (
